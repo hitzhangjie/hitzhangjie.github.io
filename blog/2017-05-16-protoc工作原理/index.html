@@ -207,6 +207,9 @@ Protoc工作原理分析 - 介绍
         
     </div>
     
+    <div>
+
+    
     <div class="container markdown top-pad">
         <p>在进行protoc插件开发之前，首先要了解protoc的工作原理。在protobuf的使用过程中，protoc作为proto文件的编译器，很多开发人员只会用但是不了解其工作原理，更不了解如何扩展其功能。protobuf作为目前常用的数据交换格式在协议开发中被广泛采用，此外，protoc对proto文件的强大解析能力使我们可以开发一些插件，通过插件快速生成特定于proto文件的工具类、配置文件等，从而提高开发效率。</p>
 <p>本文首先会介绍一下protoc的整体工作机制，然后解释一下protoc对proto文件的解析过程，最后给出编写protoc插件扩展protoc功能的一个示例教程。</p>
@@ -2356,6 +2359,19 @@ message MethodOptions {
 </span><span style="color:#75715e"></span>    <span style="color:#f92672">...</span>
 }
 </code></pre></div><p>看完之后我们已经清楚了generator做了什么、grpc子插件又做了什么，以及各自的细节是什么样的。下面我们将在此学习、理解的基础上开发一个自己的protoc插件。</p>
+
+    </div>
+
+    
+    <div id="qrcode" class="right-fbox">
+        <img src="/common/qrcode.jpg" width="256px;" height="256px;"/>
+        <br/>
+        <p>
+            如果文章对您有帮助，请记得打赏哦。帮我家小七🐶、元宝🐱改善下伙食吧，😘
+        </p>
+        <img src="/common/xiaoqi.png" width="256px;" height="256px;"/>
+        <img src="/common/yuanbao.png" width="256px;" height="256px;"/>
+    </div>
 
     </div>
     

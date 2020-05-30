@@ -219,9 +219,6 @@ golang function-closure 实现机制 - 介绍
         
     </div>
     
-    <div>
-
-    
     <div class="container markdown top-pad">
         <p>golang里面函数时first-class citizen，可以作为值进行参数传递，不管是普通函数“func abc()”，还是成员方法“func (x X) xxx()”，还是一个闭包“func () { return func(){&hellip;.}}”……看上去很方便，不禁要问，golang里面funciton和closure是如何实现的呢？扒拉了下源码，这里简单总结下。</p>
 <h1 id="1-golang中函数内部表示是什么样子的">1 golang中函数内部表示是什么样子的？</h1>
@@ -393,17 +390,23 @@ golang function-closure 实现机制 - 介绍
     </div>
 
     
-    <div id="qrcode" class="right-fbox">
-        <img src="/common/qrcode.jpg" width="256px;" height="256px;"/>
-        <br/>
+    <br>
+    <br>
+    <br>
+    <div style="height:auto;align:center;text-align:center;"> 
+        <div>
         <p>
-            如果文章对您有帮助，请记得打赏哦。帮我家小七🐶、元宝🐱改善下伙食吧，😘
+            ~~~ 如果文章对您有帮助，请记得打赏哦。帮我家小七🐶、元宝🐱改善下伙食吧，😘 ~~~
         </p>
-        <img src="/common/xiaoqi.png" width="256px;" height="256px;"/>
-        <img src="/common/yuanbao.png" width="256px;" height="256px;"/>
+        </div>
+
+        <div>
+            <img src="/common/xiaoqi.png" style="height:256px;margin-top:10px;margin-right:10px;"/>
+            <img src="/common/qrcode.jpg" style="height:256px;margin-top:10px;"/>
+            <img src="/common/yuanbao.png" style="height:256px;margin-top:10px;margin-left:10px;"/>
+        </div>
     </div>
 
-    </div>
     
     
 

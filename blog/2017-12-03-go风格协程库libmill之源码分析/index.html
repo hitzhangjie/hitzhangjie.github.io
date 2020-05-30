@@ -172,42 +172,48 @@ go风格协程库libmill之源码分析 - 介绍
             <a href="https://hitzhangjie.github.io/blog/2017-12-03-go%E9%A3%8E%E6%A0%BC%E5%8D%8F%E7%A8%8B%E5%BA%93libmill%E4%B9%8B%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">go风格协程库libmill之源码分析</a>
         </h2>
         <div class="post-data">
-            2017-12-03 |
-            52 分钟
+            发表时间：2017-12-03 <br> 
+            阅读时长：52 分钟 (10897字)
         </div>
+
+        <p>
         
-        <div class="blog-share">
-            分享:
-            
-            <a class="twitter-share-button" href="https://twitter.com/intent/tweet?text=go%e9%a3%8e%e6%a0%bc%e5%8d%8f%e7%a8%8b%e5%ba%93libmill%e4%b9%8b%e6%ba%90%e7%a0%81%e5%88%86%e6%9e%90%20https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2017-12-03-go%25E9%25A3%258E%25E6%25A0%25BC%25E5%258D%258F%25E7%25A8%258B%25E5%25BA%2593libmill%25E4%25B9%258B%25E6%25BA%2590%25E7%25A0%2581%25E5%2588%2586%25E6%259E%2590%2f" onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
-                <i class="fab fa-twitter"></i>
-                <span class="hidden">Twitter</span>
-            </a>
-            
-            
-            <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2017-12-03-go%25E9%25A3%258E%25E6%25A0%25BC%25E5%258D%258F%25E7%25A8%258B%25E5%25BA%2593libmill%25E4%25B9%258B%25E6%25BA%2590%25E7%25A0%2581%25E5%2588%2586%25E6%259E%2590%2f"  onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
-                <i class="fab fa-facebook-f"></i>
-                <span class="hidden">Facebook</span>
-            </a>
-            
-            
-            <a class="icon-pinterest" href="http://pinterest.com/pin/create/button/?url=https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2017-12-03-go%25E9%25A3%258E%25E6%25A0%25BC%25E5%258D%258F%25E7%25A8%258B%25E5%25BA%2593libmill%25E4%25B9%258B%25E6%25BA%2590%25E7%25A0%2581%25E5%2588%2586%25E6%259E%2590%2f&amp;description=go%e9%a3%8e%e6%a0%bc%e5%8d%8f%e7%a8%8b%e5%ba%93libmill%e4%b9%8b%e6%ba%90%e7%a0%81%e5%88%86%e6%9e%90" onclick="window.open(this.href, 'pinterest-share','width=580,height=296');return false;">
-                <i class="fab fa-pinterest-p"></i>
-                <span class="hidden">Pinterest</span>
-            </a>
-            
-            
-            <a class="icon-google-plus" href="https://plus.google.com/share?url=https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2017-12-03-go%25E9%25A3%258E%25E6%25A0%25BC%25E5%258D%258F%25E7%25A8%258B%25E5%25BA%2593libmill%25E4%25B9%258B%25E6%25BA%2590%25E7%25A0%2581%25E5%2588%2586%25E6%259E%2590%2f" onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
-                <i class="fab fa-google-plus-g"></i>
-                <span class="hidden">Google+</span>
-            </a>
-            
-        </div>
-        
+<div class="blog-share">
+    分享：
+    
+    <a class="twitter-share-button" href="https://twitter.com/intent/tweet?text=go%e9%a3%8e%e6%a0%bc%e5%8d%8f%e7%a8%8b%e5%ba%93libmill%e4%b9%8b%e6%ba%90%e7%a0%81%e5%88%86%e6%9e%90%20https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2017-12-03-go%25E9%25A3%258E%25E6%25A0%25BC%25E5%258D%258F%25E7%25A8%258B%25E5%25BA%2593libmill%25E4%25B9%258B%25E6%25BA%2590%25E7%25A0%2581%25E5%2588%2586%25E6%259E%2590%2f" onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+        <i class="fab fa-twitter"></i>
+        <span class="hidden">Twitter</span>
+    </a>
+    
+    
+    <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2017-12-03-go%25E9%25A3%258E%25E6%25A0%25BC%25E5%258D%258F%25E7%25A8%258B%25E5%25BA%2593libmill%25E4%25B9%258B%25E6%25BA%2590%25E7%25A0%2581%25E5%2588%2586%25E6%259E%2590%2f"  onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+        <i class="fab fa-facebook-f"></i>
+        <span class="hidden">Facebook</span>
+    </a>
+    
+    
+    <a class="icon-pinterest" href="http://pinterest.com/pin/create/button/?url=https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2017-12-03-go%25E9%25A3%258E%25E6%25A0%25BC%25E5%258D%258F%25E7%25A8%258B%25E5%25BA%2593libmill%25E4%25B9%258B%25E6%25BA%2590%25E7%25A0%2581%25E5%2588%2586%25E6%259E%2590%2f&amp;description=go%e9%a3%8e%e6%a0%bc%e5%8d%8f%e7%a8%8b%e5%ba%93libmill%e4%b9%8b%e6%ba%90%e7%a0%81%e5%88%86%e6%9e%90" onclick="window.open(this.href, 'pinterest-share','width=580,height=296');return false;">
+        <i class="fab fa-pinterest-p"></i>
+        <span class="hidden">Pinterest</span>
+    </a>
+    
+    
+    <a class="icon-google-plus" href="https://plus.google.com/share?url=https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2017-12-03-go%25E9%25A3%258E%25E6%25A0%25BC%25E5%258D%258F%25E7%25A8%258B%25E5%25BA%2593libmill%25E4%25B9%258B%25E6%25BA%2590%25E7%25A0%2581%25E5%2588%2586%25E6%259E%2590%2f" onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+        <i class="fab fa-google-plus-g"></i>
+        <span class="hidden">Google+</span>
+    </a>
+    
+</div>
+
+
+
+        </p>
+
         
         
         <p>
-            Tags:
+            标签：
             
             <a href="/tags/libmill">libmill</a>,
             
@@ -219,6 +225,7 @@ go风格协程库libmill之源码分析 - 介绍
             
         </p>
         
+
     </div>
     
     <div class="container markdown top-pad">
@@ -3894,8 +3901,40 @@ sudo make install
 </code></pre>
     </div>
 
-    
     <br>
+    <br>
+    
+    <div class="blog-share" align="center">
+        分享：
+        
+        <a class="twitter-share-button" href="https://twitter.com/intent/tweet?text=go%e9%a3%8e%e6%a0%bc%e5%8d%8f%e7%a8%8b%e5%ba%93libmill%e4%b9%8b%e6%ba%90%e7%a0%81%e5%88%86%e6%9e%90%20https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2017-12-03-go%25E9%25A3%258E%25E6%25A0%25BC%25E5%258D%258F%25E7%25A8%258B%25E5%25BA%2593libmill%25E4%25B9%258B%25E6%25BA%2590%25E7%25A0%2581%25E5%2588%2586%25E6%259E%2590%2f" onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+            <i class="fab fa-twitter"></i>
+            <span class="hidden">Twitter</span>
+        </a>
+        
+        
+        <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2017-12-03-go%25E9%25A3%258E%25E6%25A0%25BC%25E5%258D%258F%25E7%25A8%258B%25E5%25BA%2593libmill%25E4%25B9%258B%25E6%25BA%2590%25E7%25A0%2581%25E5%2588%2586%25E6%259E%2590%2f"  onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+            <i class="fab fa-facebook-f"></i>
+            <span class="hidden">Facebook</span>
+        </a>
+        
+        
+        <a class="icon-pinterest" href="http://pinterest.com/pin/create/button/?url=https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2017-12-03-go%25E9%25A3%258E%25E6%25A0%25BC%25E5%258D%258F%25E7%25A8%258B%25E5%25BA%2593libmill%25E4%25B9%258B%25E6%25BA%2590%25E7%25A0%2581%25E5%2588%2586%25E6%259E%2590%2f&amp;description=go%e9%a3%8e%e6%a0%bc%e5%8d%8f%e7%a8%8b%e5%ba%93libmill%e4%b9%8b%e6%ba%90%e7%a0%81%e5%88%86%e6%9e%90" onclick="window.open(this.href, 'pinterest-share','width=580,height=296');return false;">
+            <i class="fab fa-pinterest-p"></i>
+            <span class="hidden">Pinterest</span>
+        </a>
+        
+        
+        <a class="icon-google-plus" href="https://plus.google.com/share?url=https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2017-12-03-go%25E9%25A3%258E%25E6%25A0%25BC%25E5%258D%258F%25E7%25A8%258B%25E5%25BA%2593libmill%25E4%25B9%258B%25E6%25BA%2590%25E7%25A0%2581%25E5%2588%2586%25E6%259E%2590%2f" onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+            <i class="fab fa-google-plus-g"></i>
+            <span class="hidden">Google+</span>
+        </a>
+        
+    </div>
+    
+
+
+    
     <br>
     <br>
     <div style="height:auto;align:center;text-align:center;"> 

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>nio on 介绍</title>
+    <link>https://hitzhangjie.github.io/tags/nio/</link>
+    <description>Recent content in nio on 介绍</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Wed, 05 Apr 2017 14:56:32 +0800</lastBuildDate>
+    
+	<atom:link href="https://hitzhangjie.github.io/tags/nio/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Java NIO Tutorials</title>
+      <link>https://hitzhangjie.github.io/blog/2017-04-20-%E5%AD%A6%E4%B9%A0java-nio/</link>
+      <pubDate>Wed, 05 Apr 2017 14:56:32 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-04-20-%E5%AD%A6%E4%B9%A0java-nio/</guid>
+      <description>1 前言  NIO Channel &amp;amp; Buffer NIO Non-Blocking IO NIO Selector   2 概要  NIO Channel &amp;amp; Buffer NIO Selector   3 NIO Channel 4 NIO Buffer  4.1 capacity 4.2 position 4.3 limit 4.4 常用方法  4.4.1 创建buffer 4.4.2 写数据到buffer 4.4.3 切换buffer为读模式 4.4.4 从buffer中读取数据 4.4.5 rewind读取索引 4.4.6 清空buffer备用 4.4.7 mark &amp;amp; reset 4.4.8 buffer内容比较     5 NIO Scatter &amp;amp; Gather  5.</description>
+    </item>
+    
+  </channel>
+</rss>

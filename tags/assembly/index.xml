@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>assembly on 介绍</title>
+    <link>https://hitzhangjie.github.io/tags/assembly/</link>
+    <description>Recent content in assembly on 介绍</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Sat, 14 Oct 2017 20:13:35 +0800</lastBuildDate>
+    
+	<atom:link href="https://hitzhangjie.github.io/tags/assembly/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Assembly Language</title>
+      <link>https://hitzhangjie.github.io/blog/2017-10-14-assembly-language/</link>
+      <pubDate>Sat, 14 Oct 2017 20:13:35 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-10-14-assembly-language/</guid>
+      <description>本文目录  1.1 PC硬件的基本特征 1.2 开发环境配置 1.3 基本语法 1.4 内存分段 1.5 寄存器 1.6 系统调用 1.7 寻址模式 1.8 定义变量 1.9 定义常量 1.10 算术指令 1.11 逻辑指令 1.12 分支控制 1.13 循环控制 1.14 数字 1.15 字符串 1.16 数组 1.17 函数 1.18 递归 1.19 宏 1.20 文件操作 1.21 内存管理 1.22 总结    本文目录 处理器是算逻运算、控制操作的执行部件，它只能识别机器指令并执行动作。机器指令是一系列的0、1字符串，本质上对应了总线上的高低电平信号，所以机器语言都是特定于硬件的。
+由于0、1字符串很难记忆，用机器语言开发是一个老大难的问题，汇编语言因此被开发出来用于代替机器语言。汇编指令只是机器指令中操作码的助记符，因此汇编语言仍然是机器强相关的，不同的处理器其对应的汇编指令也不同。
+学习汇编语言有助于理解：
+ 程序是如何与操作系统、处理器、bios进行交互的； 数据如何在内存中以及外设中表示的； 处理器如何访问、执行指令； 指令如何访问、处理数据； 程序如何访问外设；  其他使用汇编语言的优势：
+ 消耗更少的内存和处理器执行时间； 允许以更简单的方式来完成硬件特定的复杂作业； 适用于时间敏感的作业； 适用于编写中断服务程序和内存驻留程序；  1.1 PC硬件的基本特征 机器指令是0、1字符串，分别表示ON、OFF，对应数字信号的高低电平。机器中的最低存储单位是bit，通常8bit构成一个byte，为了对数据传输过程中传输数据的有效性进行检查，通常会在数据byte发送之后再追加一个奇偶校验bit。</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+    <head>
+        
+        <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Web站点描述">
+<title>
+golang function-closure 实现机制 - 介绍
+</title>
+
+
+
+        <meta property="og:title" content="golang function-closure 实现机制 - 介绍" />
+<meta property="og:type" content="website" />
+<meta property="og:description" content="Web站点描述"/>
+<meta property="og:url" content="https://hitzhangjie.github.io/blog/2018-05-19-golang-function-closure%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/"/>
+<meta property="og:site_name" content="介绍"/>
+
+
+
+
+<meta property="og:image" content="https://hitzhangjie.github.io/home/me.jpg"/>
+
+<meta property="og:image" content="https://hitzhangjie.github.io/home/profile.jpg"/>
+
+
+
+
+        
+<link rel="shortcut icon" href="/img/fav.ico">
+
+
+        
+
+
+
+
+
+<link rel="stylesheet" href="/css/main.min.5c5478bdd5363758f3e73657d5339b1ac7c131a401ffc3338edd7eb5e1a0114e.css" integrity="sha256-XFR4vdU2N1jz5zZX1TObGsfBMaQB/8Mzjt1&#43;teGgEU4=" crossorigin="anonymous" media="screen">
+
+
+
+
+    <link rel="stylesheet" href="/custom.css" integrity="" crossorigin="anonymous" media="screen">
+
+        
+        
+        
+        
+    </head>
+    <body>
+        <section id="top" class="section">
+            
+            <div class="container hero  fade-in one ">
+                
+
+    <h1 class="bold-title is-1">博客</h1>
+
+
+            </div>
+            
+            <div class="section  fade-in two ">
+                
+<div class="container">
+    <hr>
+    <nav class="navbar" role="navigation" aria-label="main navigation">
+        
+        <a role="button" class="navbar-burger" data-target="navMenu" aria-label="menu" aria-expanded="false" >
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </a>
+        <div class="navbar-menu " id="navMenu">
+            
+            
+            
+            
+            <a class="navbar-item" href="/"></a>
+            
+
+            
+            
+
+            
+                
+            
+
+            
+                
+            
+
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://hitzhangjie.github.io/projects/">
+                  
+                  项目
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://hitzhangjie.github.io/blog/">
+                  
+                  
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#about">关于</a>
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#thanks">致谢</a>
+            
+            
+            
+            
+
+            
+            
+            <a class="navbar-item" href="/#contact">联系方式</a>
+            
+            
+
+            
+            
+            
+            
+            <a class="navbar-item" href="https://hitzhangjie.github.io/en/">English</a>
+            
+            
+
+            
+            
+        </div>
+    </nav>
+    <hr>
+</div>
+
+
+
+                
+    <div class="container">
+        <h2 class="title is-1 top-pad strong-post-title">
+            <a href="https://hitzhangjie.github.io/blog/2018-05-19-golang-function-closure%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/">golang function-closure 实现机制</a>
+        </h2>
+        <div class="post-data">
+            2018-05-19 |
+            
+        </div>
+        
+        <div class="blog-share">
+            :
+            
+            <a class="twitter-share-button" href="https://twitter.com/intent/tweet?text=golang%20function-closure%20%e5%ae%9e%e7%8e%b0%e6%9c%ba%e5%88%b6%20https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2018-05-19-golang-function-closure%25E5%25AE%259E%25E7%258E%25B0%25E6%259C%25BA%25E5%2588%25B6%2f" onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+                <i class="fab fa-twitter"></i>
+                <span class="hidden">Twitter</span>
+            </a>
+            
+            
+            <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2018-05-19-golang-function-closure%25E5%25AE%259E%25E7%258E%25B0%25E6%259C%25BA%25E5%2588%25B6%2f"  onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+                <i class="fab fa-facebook-f"></i>
+                <span class="hidden">Facebook</span>
+            </a>
+            
+            
+            <a class="icon-pinterest" href="http://pinterest.com/pin/create/button/?url=https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2018-05-19-golang-function-closure%25E5%25AE%259E%25E7%258E%25B0%25E6%259C%25BA%25E5%2588%25B6%2f&amp;description=golang%20function-closure%20%e5%ae%9e%e7%8e%b0%e6%9c%ba%e5%88%b6" onclick="window.open(this.href, 'pinterest-share','width=580,height=296');return false;">
+                <i class="fab fa-pinterest-p"></i>
+                <span class="hidden">Pinterest</span>
+            </a>
+            
+            
+            <a class="icon-google-plus" href="https://plus.google.com/share?url=https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2018-05-19-golang-function-closure%25E5%25AE%259E%25E7%258E%25B0%25E6%259C%25BA%25E5%2588%25B6%2f" onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+                <i class="fab fa-google-plus-g"></i>
+                <span class="hidden">Google+</span>
+            </a>
+            
+        </div>
+        
+        
+        
+        <p>
+            Tags:
+            
+            <a href="/tags/go">go</a>,
+            
+            <a href="/tags/golang">golang</a>,
+            
+            <a href="/tags/closure">closure</a>
+            
+        </p>
+        
+    </div>
+    
+    <div class="container markdown top-pad">
+        <p>golang里面函数时first-class citizen，可以作为值进行参数传递，不管是普通函数“func abc()”，还是成员方法“func (x X) xxx()”，还是一个闭包“func () { return func(){&hellip;.}}”……看上去很方便，不禁要问，golang里面funciton和closure是如何实现的呢？扒拉了下源码，这里简单总结下。</p>
+<h1 id="1-golang中函数内部表示是什么样子的">1 golang中函数内部表示是什么样子的？</h1>
+<p>看下golang cmd/compile/internal/types/type.go中对Func类型的定义：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-golang" data-lang="golang"><span style="color:#75715e">// Func contains Type fields specific to func types.
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Func</span> <span style="color:#66d9ef">struct</span> {
+   <span style="color:#a6e22e">Receiver</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Type</span>  <span style="color:#75715e">// function receiver，接受者类型，每个函数定义都包括该字段，可以为nil或non-nil
+</span><span style="color:#75715e"></span>   <span style="color:#a6e22e">Results</span>  <span style="color:#f92672">*</span><span style="color:#a6e22e">Type</span>   <span style="color:#75715e">// function results，返回值类型
+</span><span style="color:#75715e"></span>   <span style="color:#a6e22e">Params</span>   <span style="color:#f92672">*</span><span style="color:#a6e22e">Type</span> <span style="color:#75715e">// function params，参数列表类型
+</span><span style="color:#75715e"></span>   <span style="color:#a6e22e">Nname</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Node</span>   <span style="color:#75715e">// function name，函数名
+</span><span style="color:#75715e"></span>   <span style="color:#75715e">// Argwid is the total width of the function receiver, params, and results.
+</span><span style="color:#75715e"></span>   <span style="color:#75715e">// It gets calculated via a temporary TFUNCARGS type.
+</span><span style="color:#75715e"></span>   <span style="color:#75715e">// Note that TFUNC&#39;s Width is Widthptr.
+</span><span style="color:#75715e"></span>   <span style="color:#a6e22e">Argwid</span> <span style="color:#66d9ef">int64</span>
+   <span style="color:#a6e22e">Outnamed</span> <span style="color:#66d9ef">bool</span> <span style="color:#75715e">// 是否是可导出的？
+</span><span style="color:#75715e"></span>}
+</code></pre></div><p>通过这个Func定义来看，其可以覆盖golang里面所有的函数类型声明了，不管是普通函数，还是成员方法等等。</p>
+<h1 id="2-golang中闭包是怎么实现的">2 golang中闭包是怎么实现的？</h1>
+<p>前端时间组内分享闭包使用的时候，觉得这玩意虽然轻巧但是太容易出错了，究其原因是因为不了解闭包的实现原理。那么闭包是如何实现的呢，抽时间扒拉了一下golang中实现闭包的代码，看完后瞬间觉得闭包很简单。</p>
+<p>来简单总结一下，<strong>闭包就是函数+环境</strong>，问题是<strong>这里的环境是如何与函数进行绑定的呢</strong>？</p>
+<blockquote>
+<p>remark: 一开始看了上面的Func类型定义之后，我以为是golang创建了一个虚拟的类型（里面各个字段值为闭包捕获的变量值）然后将该虚拟类型作为receiver-type来实现的呢，可是仔细一想这种思路站不住脚，因为闭包是golang里面的first-class citizen，闭包实现应该非常轻量才对，如果像我最初这种想法那实在是太复杂了，想想要创建多少虚拟类型及其对象吧。</p>
+</blockquote>
+<p>看了下源代码，总结一下golang中的实现思路，考虑到闭包对象是否能重复使用，分为两个场景进行处理：</p>
+<p><strong>1) 假如闭包定义后立即被调用</strong>
+因为只会被使用一次，所以应该力图避免闭包对象的内存分配操作，那怎么优化一下呢，以下面的示例代码为例。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-golang" data-lang="golang"><span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">a</span> <span style="color:#66d9ef">int</span>) {
+    println(<span style="color:#a6e22e">byval</span>)
+    <span style="color:#a6e22e">byref</span><span style="color:#f92672">++</span>
+}(<span style="color:#ae81ff">42</span>)
+</code></pre></div><p>上面的闭包将被转换为简单函数调用的形式：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-golang" data-lang="golang"><span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">byval</span> <span style="color:#66d9ef">int</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">byref</span> <span style="color:#f92672">*</span><span style="color:#66d9ef">int</span>, <span style="color:#a6e22e">a</span> <span style="color:#66d9ef">int</span>) {
+    println(<span style="color:#a6e22e">byval</span>)
+    (<span style="color:#f92672">*&amp;</span><span style="color:#a6e22e">byref</span>)<span style="color:#f92672">++</span>
+}(<span style="color:#a6e22e">byval</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">byref</span>, <span style="color:#ae81ff">42</span>)
+</code></pre></div><p>注意看函数原型的变化，原来闭包里面捕获的变量都被转换成了通过函数参数来供值：</p>
+<ul>
+<li>因为println操作不涉及对byval变量的修改操作，所以是按值捕获；</li>
+<li>而byref++涉及到对捕获变量的修改，所以是按引用捕获，对于按引用捕获的变量会进行特殊处理，golang编译器会在编译时将按引用捕获的变量名byref转换成“&amp;byref”，同时将其类型转换成pointer类型，捕获变量对应的写操作也会转换为通过pointer来操作。</li>
+</ul>
+<p><strong>2） 假如闭包定以后并不是立即调用</strong>
+闭包定义后不是立即使用，而是后续调用，这种情况下同一个闭包可能调用多次，这种情况下就需要创建闭包对象，如何实现呢？</p>
+<ul>
+<li>如果变量是按值捕获，并且该变量占用存储空间小于2*sizeof(int)，那么就通过在函数体内创建局部变量的形式来shadow捕获的变量，相比于通过引用捕获，这么做的好处应该是考虑到减少引用数量、减少逃逸分析相关的计算。</li>
+<li>如果变量是按引用捕获，或者按值捕获但是捕获的变量占用存储空间较大（拷贝到本地做局部变量代价太大），这种情况下就将捕获的变量var转换成pointer类型的“&amp;var”，并在函数prologue阶段将其初始化为捕获变量的值。</li>
+</ul>
+<p>这部分的代码详见：cmd/compile/gc/closure.go中的方法transformclosure(&hellip;)。
+闭包就是函数体+环境，环境就是像这样绑定的。</p>
+<h1 id="3-总结">3 总结</h1>
+<p>本文简要描述了golang中对函数的内部定义，以及闭包的大致实现思路，加深了理解。</p>
+<h1 id="附golang闭包处理关键代码">附：golang闭包处理关键代码</h1>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-golang" data-lang="golang"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">transformclosure</span>(<span style="color:#a6e22e">xfunc</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Node</span>) {
+	<span style="color:#a6e22e">lno</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">lineno</span>
+	<span style="color:#a6e22e">lineno</span> = <span style="color:#a6e22e">xfunc</span>.<span style="color:#a6e22e">Pos</span>
+	<span style="color:#a6e22e">func_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">xfunc</span>.<span style="color:#a6e22e">Func</span>.<span style="color:#a6e22e">Closure</span>
+
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">func_</span>.<span style="color:#a6e22e">Func</span>.<span style="color:#a6e22e">Top</span><span style="color:#f92672">&amp;</span><span style="color:#a6e22e">Ecall</span> <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span> {
+		<span style="color:#75715e">// If the closure is directly called, we transform it to a plain function call
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">// with variables passed as args. This avoids allocation of a closure object.
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">// Here we do only a part of the transformation. Walk of OCALLFUNC(OCLOSURE)
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">// will complete the transformation later.
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">// For illustration, the following closure:
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//	func(a int) {
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//		println(byval)
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//		byref++
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//	}(42)
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">// becomes:
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//	func(byval int, &amp;byref *int, a int) {
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//		println(byval)
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//		(*&amp;byref)++
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//	}(byval, &amp;byref, 42)
+</span><span style="color:#75715e"></span>
+		<span style="color:#75715e">// f is ONAME of the actual function.
+</span><span style="color:#75715e"></span>		<span style="color:#a6e22e">f</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">xfunc</span>.<span style="color:#a6e22e">Func</span>.<span style="color:#a6e22e">Nname</span>
+
+		<span style="color:#75715e">// We are going to insert captured variables before input args.
+</span><span style="color:#75715e"></span>		<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">params</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">types</span>.<span style="color:#a6e22e">Field</span>
+		<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">decls</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">Node</span>
+		<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">v</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">func_</span>.<span style="color:#a6e22e">Func</span>.<span style="color:#a6e22e">Cvars</span>.<span style="color:#a6e22e">Slice</span>() {
+			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">Op</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">OXXX</span> {
+				<span style="color:#66d9ef">continue</span>
+			}
+			<span style="color:#a6e22e">fld</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">types</span>.<span style="color:#a6e22e">NewField</span>()
+			<span style="color:#a6e22e">fld</span>.<span style="color:#a6e22e">Funarg</span> = <span style="color:#a6e22e">types</span>.<span style="color:#a6e22e">FunargParams</span>
+			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">Name</span>.<span style="color:#a6e22e">Byval</span>() {
+				<span style="color:#75715e">// If v is captured by value, we merely downgrade it to PPARAM.
+</span><span style="color:#75715e"></span>				<span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">SetClass</span>(<span style="color:#a6e22e">PPARAM</span>)
+				<span style="color:#a6e22e">fld</span>.<span style="color:#a6e22e">Nname</span> = <span style="color:#a6e22e">asTypesNode</span>(<span style="color:#a6e22e">v</span>)
+			} <span style="color:#66d9ef">else</span> {
+				<span style="color:#75715e">// If v of type T is captured by reference,
+</span><span style="color:#75715e"></span>				<span style="color:#75715e">// we introduce function param &amp;v *T
+</span><span style="color:#75715e"></span>				<span style="color:#75715e">// and v remains PAUTOHEAP with &amp;v heapaddr
+</span><span style="color:#75715e"></span>				<span style="color:#75715e">// (accesses will implicitly deref &amp;v).
+</span><span style="color:#75715e"></span>				<span style="color:#a6e22e">addr</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">newname</span>(<span style="color:#a6e22e">lookup</span>(<span style="color:#e6db74">&#34;&amp;&#34;</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">Sym</span>.<span style="color:#a6e22e">Name</span>))
+				<span style="color:#a6e22e">addr</span>.<span style="color:#a6e22e">Type</span> = <span style="color:#a6e22e">types</span>.<span style="color:#a6e22e">NewPtr</span>(<span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">Type</span>)
+				<span style="color:#a6e22e">addr</span>.<span style="color:#a6e22e">SetClass</span>(<span style="color:#a6e22e">PPARAM</span>)
+				<span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">Name</span>.<span style="color:#a6e22e">Param</span>.<span style="color:#a6e22e">Heapaddr</span> = <span style="color:#a6e22e">addr</span>
+				<span style="color:#a6e22e">fld</span>.<span style="color:#a6e22e">Nname</span> = <span style="color:#a6e22e">asTypesNode</span>(<span style="color:#a6e22e">addr</span>)
+			}
+
+			<span style="color:#a6e22e">fld</span>.<span style="color:#a6e22e">Type</span> = <span style="color:#a6e22e">asNode</span>(<span style="color:#a6e22e">fld</span>.<span style="color:#a6e22e">Nname</span>).<span style="color:#a6e22e">Type</span>
+			<span style="color:#a6e22e">fld</span>.<span style="color:#a6e22e">Sym</span> = <span style="color:#a6e22e">asNode</span>(<span style="color:#a6e22e">fld</span>.<span style="color:#a6e22e">Nname</span>).<span style="color:#a6e22e">Sym</span>
+
+			<span style="color:#a6e22e">params</span> = append(<span style="color:#a6e22e">params</span>, <span style="color:#a6e22e">fld</span>)
+			<span style="color:#a6e22e">decls</span> = append(<span style="color:#a6e22e">decls</span>, <span style="color:#a6e22e">asNode</span>(<span style="color:#a6e22e">fld</span>.<span style="color:#a6e22e">Nname</span>))
+		}
+
+		<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">params</span>) &gt; <span style="color:#ae81ff">0</span> {
+			<span style="color:#75715e">// Prepend params and decls.
+</span><span style="color:#75715e"></span>			<span style="color:#a6e22e">f</span>.<span style="color:#a6e22e">Type</span>.<span style="color:#a6e22e">Params</span>().<span style="color:#a6e22e">SetFields</span>(append(<span style="color:#a6e22e">params</span>, <span style="color:#a6e22e">f</span>.<span style="color:#a6e22e">Type</span>.<span style="color:#a6e22e">Params</span>().<span style="color:#a6e22e">FieldSlice</span>()<span style="color:#f92672">...</span>))
+			<span style="color:#a6e22e">xfunc</span>.<span style="color:#a6e22e">Func</span>.<span style="color:#a6e22e">Dcl</span> = append(<span style="color:#a6e22e">decls</span>, <span style="color:#a6e22e">xfunc</span>.<span style="color:#a6e22e">Func</span>.<span style="color:#a6e22e">Dcl</span><span style="color:#f92672">...</span>)
+		}
+
+		<span style="color:#a6e22e">dowidth</span>(<span style="color:#a6e22e">f</span>.<span style="color:#a6e22e">Type</span>)
+		<span style="color:#a6e22e">xfunc</span>.<span style="color:#a6e22e">Type</span> = <span style="color:#a6e22e">f</span>.<span style="color:#a6e22e">Type</span> <span style="color:#75715e">// update type of ODCLFUNC
+</span><span style="color:#75715e"></span>	} <span style="color:#66d9ef">else</span> {
+		<span style="color:#75715e">// The closure is not called, so it is going to stay as closure.
+</span><span style="color:#75715e"></span>		<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">body</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">Node</span>
+		<span style="color:#a6e22e">offset</span> <span style="color:#f92672">:=</span> int64(<span style="color:#a6e22e">Widthptr</span>)
+		<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">v</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">func_</span>.<span style="color:#a6e22e">Func</span>.<span style="color:#a6e22e">Cvars</span>.<span style="color:#a6e22e">Slice</span>() {
+			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">Op</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">OXXX</span> {
+				<span style="color:#66d9ef">continue</span>
+			}
+
+			<span style="color:#75715e">// cv refers to the field inside of closure OSTRUCTLIT.
+</span><span style="color:#75715e"></span>			<span style="color:#a6e22e">cv</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">nod</span>(<span style="color:#a6e22e">OCLOSUREVAR</span>, <span style="color:#66d9ef">nil</span>, <span style="color:#66d9ef">nil</span>)
+
+			<span style="color:#a6e22e">cv</span>.<span style="color:#a6e22e">Type</span> = <span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">Type</span>
+			<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">Name</span>.<span style="color:#a6e22e">Byval</span>() {
+				<span style="color:#a6e22e">cv</span>.<span style="color:#a6e22e">Type</span> = <span style="color:#a6e22e">types</span>.<span style="color:#a6e22e">NewPtr</span>(<span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">Type</span>)
+			}
+			<span style="color:#a6e22e">offset</span> = <span style="color:#a6e22e">Rnd</span>(<span style="color:#a6e22e">offset</span>, int64(<span style="color:#a6e22e">cv</span>.<span style="color:#a6e22e">Type</span>.<span style="color:#a6e22e">Align</span>))
+			<span style="color:#a6e22e">cv</span>.<span style="color:#a6e22e">Xoffset</span> = <span style="color:#a6e22e">offset</span>
+			<span style="color:#a6e22e">offset</span> <span style="color:#f92672">+=</span> <span style="color:#a6e22e">cv</span>.<span style="color:#a6e22e">Type</span>.<span style="color:#a6e22e">Width</span>
+
+			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">Name</span>.<span style="color:#a6e22e">Byval</span>() <span style="color:#f92672">&amp;&amp;</span> <span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">Type</span>.<span style="color:#a6e22e">Width</span> <span style="color:#f92672">&lt;=</span> int64(<span style="color:#ae81ff">2</span><span style="color:#f92672">*</span><span style="color:#a6e22e">Widthptr</span>) {
+				<span style="color:#75715e">// If it is a small variable captured by value, downgrade it to PAUTO.
+</span><span style="color:#75715e"></span>				<span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">SetClass</span>(<span style="color:#a6e22e">PAUTO</span>)
+				<span style="color:#a6e22e">xfunc</span>.<span style="color:#a6e22e">Func</span>.<span style="color:#a6e22e">Dcl</span> = append(<span style="color:#a6e22e">xfunc</span>.<span style="color:#a6e22e">Func</span>.<span style="color:#a6e22e">Dcl</span>, <span style="color:#a6e22e">v</span>)
+				<span style="color:#a6e22e">body</span> = append(<span style="color:#a6e22e">body</span>, <span style="color:#a6e22e">nod</span>(<span style="color:#a6e22e">OAS</span>, <span style="color:#a6e22e">v</span>, <span style="color:#a6e22e">cv</span>))
+			} <span style="color:#66d9ef">else</span> {
+				<span style="color:#75715e">// Declare variable holding addresses taken from closure
+</span><span style="color:#75715e"></span>				<span style="color:#75715e">// and initialize in entry prologue.
+</span><span style="color:#75715e"></span>				<span style="color:#a6e22e">addr</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">newname</span>(<span style="color:#a6e22e">lookup</span>(<span style="color:#e6db74">&#34;&amp;&#34;</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">Sym</span>.<span style="color:#a6e22e">Name</span>))
+				<span style="color:#a6e22e">addr</span>.<span style="color:#a6e22e">Type</span> = <span style="color:#a6e22e">types</span>.<span style="color:#a6e22e">NewPtr</span>(<span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">Type</span>)
+				<span style="color:#a6e22e">addr</span>.<span style="color:#a6e22e">SetClass</span>(<span style="color:#a6e22e">PAUTO</span>)
+				<span style="color:#a6e22e">addr</span>.<span style="color:#a6e22e">Name</span>.<span style="color:#a6e22e">SetUsed</span>(<span style="color:#66d9ef">true</span>)
+				<span style="color:#a6e22e">addr</span>.<span style="color:#a6e22e">Name</span>.<span style="color:#a6e22e">Curfn</span> = <span style="color:#a6e22e">xfunc</span>
+				<span style="color:#a6e22e">xfunc</span>.<span style="color:#a6e22e">Func</span>.<span style="color:#a6e22e">Dcl</span> = append(<span style="color:#a6e22e">xfunc</span>.<span style="color:#a6e22e">Func</span>.<span style="color:#a6e22e">Dcl</span>, <span style="color:#a6e22e">addr</span>)
+				<span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">Name</span>.<span style="color:#a6e22e">Param</span>.<span style="color:#a6e22e">Heapaddr</span> = <span style="color:#a6e22e">addr</span>
+				<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">Name</span>.<span style="color:#a6e22e">Byval</span>() {
+					<span style="color:#a6e22e">cv</span> = <span style="color:#a6e22e">nod</span>(<span style="color:#a6e22e">OADDR</span>, <span style="color:#a6e22e">cv</span>, <span style="color:#66d9ef">nil</span>)
+				}
+				<span style="color:#a6e22e">body</span> = append(<span style="color:#a6e22e">body</span>, <span style="color:#a6e22e">nod</span>(<span style="color:#a6e22e">OAS</span>, <span style="color:#a6e22e">addr</span>, <span style="color:#a6e22e">cv</span>))
+			}
+		}
+
+		<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">body</span>) &gt; <span style="color:#ae81ff">0</span> {
+			<span style="color:#a6e22e">typecheckslice</span>(<span style="color:#a6e22e">body</span>, <span style="color:#a6e22e">Etop</span>)
+			<span style="color:#a6e22e">walkstmtlist</span>(<span style="color:#a6e22e">body</span>)
+			<span style="color:#a6e22e">xfunc</span>.<span style="color:#a6e22e">Func</span>.<span style="color:#a6e22e">Enter</span>.<span style="color:#a6e22e">Set</span>(<span style="color:#a6e22e">body</span>)
+			<span style="color:#a6e22e">xfunc</span>.<span style="color:#a6e22e">Func</span>.<span style="color:#a6e22e">SetNeedctxt</span>(<span style="color:#66d9ef">true</span>)
+		}
+	}
+
+	<span style="color:#a6e22e">lineno</span> = <span style="color:#a6e22e">lno</span>
+}
+</code></pre></div>
+    </div>
+    
+    
+
+
+
+                
+                <div class="container">
+    <hr>
+</div>
+<div class="container has-text-centered top-pad">
+    <a href="#top">
+        <i class="fa fa-arrow-up"></i>
+    </a>
+</div>
+
+<div class="container">
+    <hr>
+</div>
+
+                <div class="section" id="footer">
+    <div class="container has-text-centered">
+    
+        <span class="footer-text">
+            
+        </span>
+    
+    </div>
+</div>
+
+                
+            </div>
+        </section>
+        
+        
+
+
+<script src="https://hitzhangjie.github.io/js/bundle.e6934e69d06bb8a213134f4c1468f9478bb7755e786dfb60e3c5a917c5335805.js" integrity="sha256-5pNOadBruKITE09MFGj5R4u3dV54bftg48WpF8UzWAU="></script>
+
+
+
+        
+        
+        
+        
+    </body>
+</html>

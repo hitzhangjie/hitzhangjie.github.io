@@ -60,7 +60,7 @@
   
   <url>
     <loc>https://hitzhangjie.github.io/blog/</loc>
-    <lastmod>2017-11-13T11:58:39-05:00</lastmod>
+    <lastmod>2018-05-19T19:55:15+08:00</lastmod>
     <xhtml:link
                 rel="alternate"
                 hreflang="en"
@@ -74,38 +74,28 @@
   </url>
   
   <url>
-    <loc>https://hitzhangjie.github.io/blog/hipster-ipsum/</loc>
-    <lastmod>2017-11-13T11:58:39-05:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/blog/hipster-ipsum/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh"
-                href="https://hitzhangjie.github.io/blog/hipster-ipsum/"
-                />
+    <loc>https://hitzhangjie.github.io/tags/closure/</loc>
+    <lastmod>2018-05-19T19:55:15+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://hitzhangjie.github.io/tags/ipsum/</loc>
-    <lastmod>2017-11-13T11:58:39-05:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/tags/ipsum/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh"
-                href="https://hitzhangjie.github.io/tags/ipsum/"
-                />
+    <loc>https://hitzhangjie.github.io/tags/go/</loc>
+    <lastmod>2018-05-19T19:55:15+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/golang/</loc>
+    <lastmod>2018-05-19T19:55:15+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/blog/2018-05-19-golang-function-closure%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/</loc>
+    <lastmod>2018-05-19T19:55:15+08:00</lastmod>
   </url>
   
   <url>
     <loc>https://hitzhangjie.github.io/tags/</loc>
-    <lastmod>2017-11-13T11:58:39-05:00</lastmod>
+    <lastmod>2018-05-19T19:55:15+08:00</lastmod>
     <xhtml:link
                 rel="alternate"
                 hreflang="en"
@@ -119,23 +109,8 @@
   </url>
   
   <url>
-    <loc>https://hitzhangjie.github.io/tags/words/</loc>
-    <lastmod>2017-11-13T11:58:39-05:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/tags/words/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh"
-                href="https://hitzhangjie.github.io/tags/words/"
-                />
-  </url>
-  
-  <url>
     <loc>https://hitzhangjie.github.io/</loc>
-    <lastmod>2017-11-13T11:58:39-05:00</lastmod>
+    <lastmod>2018-05-19T19:55:15+08:00</lastmod>
     <xhtml:link
                 rel="alternate"
                 hreflang="en"
@@ -149,92 +124,88 @@
   </url>
   
   <url>
-    <loc>https://hitzhangjie.github.io/tags/code/</loc>
-    <lastmod>2017-11-06T12:04:06-05:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/tags/code/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh"
-                href="https://hitzhangjie.github.io/tags/code/"
-                />
+    <loc>https://hitzhangjie.github.io/blog/2018-05-19-golang-select-case%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/</loc>
+    <lastmod>2018-05-19T19:21:11+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://hitzhangjie.github.io/blog/startup-ipsum/</loc>
-    <lastmod>2017-11-06T12:04:06-05:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/blog/startup-ipsum/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh"
-                href="https://hitzhangjie.github.io/blog/startup-ipsum/"
-                />
+    <loc>https://hitzhangjie.github.io/blog/2017-12-03-go%E9%A3%8E%E6%A0%BC%E5%8D%8F%E7%A8%8B%E5%BA%93libmill%E4%B9%8B%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</loc>
+    <lastmod>2017-12-03T16:49:09+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://hitzhangjie.github.io/tags/coffee/</loc>
-    <lastmod>2017-11-01T12:04:16-05:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/tags/coffee/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh"
-                href="https://hitzhangjie.github.io/tags/coffee/"
-                />
+    <loc>https://hitzhangjie.github.io/blog/2017-10-14-assembly-language/</loc>
+    <lastmod>2017-10-14T20:13:35+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://hitzhangjie.github.io/blog/coffee-ipsum/</loc>
-    <lastmod>2017-11-01T12:04:16-05:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/blog/coffee-ipsum/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh"
-                href="https://hitzhangjie.github.io/blog/coffee-ipsum/"
-                />
+    <loc>https://hitzhangjie.github.io/tags/protobuf/</loc>
+    <lastmod>2017-05-23T16:29:25+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://hitzhangjie.github.io/tags/images/</loc>
-    <lastmod>2017-11-01T12:04:16-05:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/tags/images/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh"
-                href="https://hitzhangjie.github.io/tags/images/"
-                />
+    <loc>https://hitzhangjie.github.io/tags/protoc/</loc>
+    <lastmod>2017-05-23T16:29:25+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://hitzhangjie.github.io/blog/no-date/</loc>
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/blog/no-date/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh"
-                href="https://hitzhangjie.github.io/blog/no-date/"
-                />
+    <loc>https://hitzhangjie.github.io/tags/protoc-gen-go/</loc>
+    <lastmod>2017-05-23T16:29:25+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/blog/2017-05-23-protoc%E5%8F%8A%E6%8F%92%E4%BB%B6%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90%E7%B2%BE%E5%8D%8E%E7%89%88/</loc>
+    <lastmod>2017-05-23T16:29:25+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/blog/2017-05-16-protoc%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86/</loc>
+    <lastmod>2017-05-19T14:29:25+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/blog/2017-05-02-linux-common-io-model/</loc>
+    <lastmod>2017-05-02T21:42:13+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/blog/2017-04-26-coroutine-switching/</loc>
+    <lastmod>2017-04-26T16:23:49+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/blog/2017-04-20-%E5%AD%A6%E4%B9%A0java-nio/</loc>
+    <lastmod>2017-04-05T14:56:32+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/blog/2017-04-01-%E5%AD%A6%E4%B9%A0apache-ant/</loc>
+    <lastmod>2017-04-01T17:45:40+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/blog/2017-02-25-%E6%88%91%E7%9A%84%E5%85%B4%E8%B6%A3%E5%88%97%E8%A1%A8/</loc>
+    <lastmod>2017-02-25T21:07:54+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/blog/2018-05-21-golang-method-receiver-type%E7%9A%84%E6%A2%97/</loc>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/method/</loc>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/blog/2017-03-13-nothing-just-linux/</loc>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/receiver/</loc>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/blog/2017-09-23-%E5%8D%8F%E7%A8%8B%E7%9A%84%E5%8E%86%E5%8F%B2%E7%8E%B0%E5%9C%A8%E5%92%8C%E6%9C%AA%E6%9D%A5/</loc>
   </url>
   
 </urlset>

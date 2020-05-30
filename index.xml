@@ -6,7 +6,7 @@
     <description>Recent content on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Mon, 13 Nov 2017 11:58:39 -0500</lastBuildDate>
+    <lastBuildDate>Sat, 19 May 2018 19:55:15 +0800</lastBuildDate>
     
 	<atom:link href="https://hitzhangjie.github.io/index.xml" rel="self" type="application/rss+xml" />
     
@@ -51,39 +51,196 @@ Go on, stick to your dream! 👍</description>
     </item>
     
     <item>
-      <title>Hipster Ipsum</title>
-      <link>https://hitzhangjie.github.io/blog/hipster-ipsum/</link>
-      <pubDate>Mon, 13 Nov 2017 11:58:39 -0500</pubDate>
+      <title>golang function-closure 实现机制</title>
+      <link>https://hitzhangjie.github.io/blog/2018-05-19-golang-function-closure%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/</link>
+      <pubDate>Sat, 19 May 2018 19:55:15 +0800</pubDate>
       
-      <guid>https://hitzhangjie.github.io/blog/hipster-ipsum/</guid>
-      <description>Occupy mlkshk kale chips woke, listicle locavore next level fingerstache glossier aesthetic man braid before they sold out kitsch prism. Cred copper mug freegan, flannel YOLO single-origin coffee skateboard artisan four loko church-key man bun. Synth literally gastropub, kombucha chillwave helvetica offal truffaut church-key freegan pop-up gentrify narwhal. Kombucha viral vexillologist green juice. Slow-carb hoodie mumblecore tumeric tattooed meditation, lo-fi fap cred affogato forage whatever austin. Shabby chic direct trade migas, brunch gochujang sriracha chambray fanny pack 8-bit mustache letterpress.</description>
+      <guid>https://hitzhangjie.github.io/blog/2018-05-19-golang-function-closure%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/</guid>
+      <description>golang里面函数时first-class citizen，可以作为值进行参数传递，不管是普通函数“func abc()”，还是成员方法“func (x X) xxx()”，还是一个闭包“func () { return func(){&amp;hellip;.}}”……看上去很方便，不禁要问，golang里面funciton和closure是如何实现的呢？扒拉了下源码，这里简单总结下。
+1 golang中函数内部表示是什么样子的？ 看下golang cmd/compile/internal/types/type.go中对Func类型的定义：
+// Func contains Type fields specific to func types. type Func struct { Receiver *Type // function receiver，接受者类型，每个函数定义都包括该字段，可以为nil或non-nil  Results *Type // function results，返回值类型  Params *Type // function params，参数列表类型  Nname *Node // function name，函数名  // Argwid is the total width of the function receiver, params, and results.  // It gets calculated via a temporary TFUNCARGS type.</description>
     </item>
     
     <item>
-      <title>Startup Ipsum</title>
-      <link>https://hitzhangjie.github.io/blog/startup-ipsum/</link>
-      <pubDate>Mon, 06 Nov 2017 12:04:06 -0500</pubDate>
+      <title>golang select-case 实现机制</title>
+      <link>https://hitzhangjie.github.io/blog/2018-05-19-golang-select-case%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/</link>
+      <pubDate>Sat, 19 May 2018 19:21:11 +0800</pubDate>
       
-      <guid>https://hitzhangjie.github.io/blog/startup-ipsum/</guid>
-      <description>SpaceTeam affordances quantitative vs. qualitative SpaceTeam physical computing earned media thinker-maker-doer pair programming. Bootstrapping pitch deck physical computing driven cortado human-centered design innovate human-centered design driven. Grok pitch deck fund pitch deck sticky note affordances minimum viable product integrate paradigm viral iterate. Driven fund thought leader personas workflow SpaceTeam viral pair programming physical computing intuitive 360 campaign latte bootstrapping minimum viable product. Bootstrapping physical computing responsive pitch deck SpaceTeam parallax long shadow pitch deck bootstrapping ideate.</description>
+      <guid>https://hitzhangjie.github.io/blog/2018-05-19-golang-select-case%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/</guid>
+      <description>1 chan操作规则 在介绍select-case实现机制之前，最好先了解下chan操作规则，明白goroutine何时阻塞，又在什么时机被唤醒，这对后续理解select-case实现有帮助。所以接下来先介绍chan操作规则，然后再介绍select-case的实现。
+1.1 chan操作规则1 当一个goroutine要从一个non-nil &amp;amp; non-closed chan上接收数据时，goroutine首先会去获取chan上的锁，然后执行如下操作直到某个条件被满足：
+1）如果chan上的value buffer不空，这也意味着chan上的recv goroutine queue也一定是空的，该接收goroutine将从value buffer中unshift出一个value。这个时候，如果send goroutine队列不空的情况下，因为刚才value buffer中空出了一个位置，有位置可写，所以这个时候会从send goroutine queue中unshift出一个发送goroutine并让其恢复执行，让其执行把数据写入chan的操作，实际上是恢复该发送该goroutine执行，并把该发送goroutine要发送的数据push到value buffer中。然后呢，该接收goroutine也拿到了数据了，就继续执行。这种情景，channel的接收操作称为non-blocking操作。
+2）另一种情况，如果value buffer是空的，但是send goroutine queue不空，这种情况下，该chan一定是unbufferred chan，不然value buffer肯定有数据嘛，这个时候接收goroutine将从send goroutine queue中unshift出一个发送goroutine，并将该发送goroutine要发送的数据接收过来（两个goroutine一个有发送数据地址，一个有接收数据地址，拷贝过来就ok），然后这个取出的发送goroutine将恢复执行，这个接收goroutine也可以继续执行。这种情况下，chan接收操作也是non-blocking操作。
+3）另一种情况，如果value buffer和send goroutine queue都是空的，没有数据可接收，将把该接收goroutine push到chan的recv goroutine queue，该接收goroutine将转入blocking状态，什么时候恢复期执行呢，要等到有一个goroutine尝试向chan发送数据的时候了。这种场景下，chan接收操作是blocking操作。
+1.2 chan操作规则2 当一个goroutine常识向一个non-nil &amp;amp; non-closed chan发送数据的时候，该goroutine将先尝试获取chan上的锁，然后执行如下操作直到满足其中一种情况。
+1）如果chan的recv goroutine queue不空，这种情况下，value buffer一定是空的。发送goroutine将从recv goroutine queue中unshift出一个recv goroutine，然后直接将自己要发送的数据拷贝到该recv goroutine的接收地址处，然后恢复该recv goroutine的运行，当前发送goroutine也继续执行。这种情况下，chan send操作是non-blocking操作。
+2）如果chan的recv goroutine queue是空的，并且value buffer不满，这种情况下，send goroutine queue一定是空的，因为value buffer不满发送goroutine可以发送完成不可能会阻塞。该发送goroutine将要发送的数据push到value buffer中然后继续执行。这种情况下，chan send操作是non-blocking操作。
+3）如果chan的recv goroutine queue是空的，并且value buffer是满的，发送goroutine将被push到send goroutine queue中进入阻塞状态。等到有其他goroutine尝试从chan接收数据的时候才能将其唤醒恢复执行。这种情况下，chan send操作是blocking操作。
+1.3 chan操作规则3 当一个goroutine尝试close一个non-nil &amp;amp; non-closed chan的时候，close操作将依次执行如下操作。</description>
     </item>
     
     <item>
-      <title>Coffee Ipsum</title>
-      <link>https://hitzhangjie.github.io/blog/coffee-ipsum/</link>
-      <pubDate>Wed, 01 Nov 2017 12:04:16 -0500</pubDate>
+      <title>go风格协程库libmill之源码分析</title>
+      <link>https://hitzhangjie.github.io/blog/2017-12-03-go%E9%A3%8E%E6%A0%BC%E5%8D%8F%E7%A8%8B%E5%BA%93libmill%E4%B9%8B%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</link>
+      <pubDate>Sun, 03 Dec 2017 16:49:09 +0800</pubDate>
       
-      <guid>https://hitzhangjie.github.io/blog/coffee-ipsum/</guid>
-      <description>Aromatic aroma con panna, crema so coffee robust coffee barista, café au lait trifecta that strong blue mountain cortado aftertaste. Aroma extraction french press, skinny sweet, blue mountain cup roast barista, beans, extra cappuccino mug crema strong. Americano caffeine white, con panna saucer sit, con panna eu, carajillo aftertaste kopi-luwak, body aftertaste cup single origin café au lait saucer. Macchiato java sweet arabica, turkish cup, eu flavour mug extraction white cortado saucer est white brewed instant, rich, barista breve cappuccino barista organic.</description>
+      <guid>https://hitzhangjie.github.io/blog/2017-12-03-go%E9%A3%8E%E6%A0%BC%E5%8D%8F%E7%A8%8B%E5%BA%93libmill%E4%B9%8B%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</guid>
+      <description>1 Preface 2 Introduction  2.1 libmill简介 2.2 libmill vs goroutine   3 Coroutine  3.1 libmill  3.1.1 ABI版本 3.1.2 符号可见性 3.1.3 定时器精度 3.1.4 mill_fdwait关注的io事件 3.1.5 协程上下文的保存和切换  3.1.5.1 协程上下文 3.1.5.2 协程上下文的保存 3.1.5.3 协程上下文的恢复   3.1.6 go(func)实现 3.1.7 chan实现  3.1.7.1 常用数据结构 3.1.7.2 发送数据到chan 3.1.7.3 从chan接收数据 3.1.7.4 chan操作结束   3.1.8 choose从句实现  3.1.8.1 从句初始化 3.1.8.2 读就绪事件 3.1.8.3 写就绪事件 3.1.8.4 deadline实现 3.1.8.5 otherwise实现 3.1.8.6 从句结束     3.</description>
     </item>
     
     <item>
-      <title>Undated post</title>
-      <link>https://hitzhangjie.github.io/blog/no-date/</link>
+      <title>Assembly Language</title>
+      <link>https://hitzhangjie.github.io/blog/2017-10-14-assembly-language/</link>
+      <pubDate>Sat, 14 Oct 2017 20:13:35 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-10-14-assembly-language/</guid>
+      <description>本文目录  1.1 PC硬件的基本特征 1.2 开发环境配置 1.3 基本语法 1.4 内存分段 1.5 寄存器 1.6 系统调用 1.7 寻址模式 1.8 定义变量 1.9 定义常量 1.10 算术指令 1.11 逻辑指令 1.12 分支控制 1.13 循环控制 1.14 数字 1.15 字符串 1.16 数组 1.17 函数 1.18 递归 1.19 宏 1.20 文件操作 1.21 内存管理 1.22 总结    本文目录 处理器是算逻运算、控制操作的执行部件，它只能识别机器指令并执行动作。机器指令是一系列的0、1字符串，本质上对应了总线上的高低电平信号，所以机器语言都是特定于硬件的。
+由于0、1字符串很难记忆，用机器语言开发是一个老大难的问题，汇编语言因此被开发出来用于代替机器语言。汇编指令只是机器指令中操作码的助记符，因此汇编语言仍然是机器强相关的，不同的处理器其对应的汇编指令也不同。
+学习汇编语言有助于理解：
+ 程序是如何与操作系统、处理器、bios进行交互的； 数据如何在内存中以及外设中表示的； 处理器如何访问、执行指令； 指令如何访问、处理数据； 程序如何访问外设；  其他使用汇编语言的优势：
+ 消耗更少的内存和处理器执行时间； 允许以更简单的方式来完成硬件特定的复杂作业； 适用于时间敏感的作业； 适用于编写中断服务程序和内存驻留程序；  1.1 PC硬件的基本特征 机器指令是0、1字符串，分别表示ON、OFF，对应数字信号的高低电平。机器中的最低存储单位是bit，通常8bit构成一个byte，为了对数据传输过程中传输数据的有效性进行检查，通常会在数据byte发送之后再追加一个奇偶校验bit。</description>
+    </item>
+    
+    <item>
+      <title>Protoc及其插件工作原理分析(精华版)</title>
+      <link>https://hitzhangjie.github.io/blog/2017-05-23-protoc%E5%8F%8A%E6%8F%92%E4%BB%B6%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90%E7%B2%BE%E5%8D%8E%E7%89%88/</link>
+      <pubDate>Tue, 23 May 2017 16:29:25 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-05-23-protoc%E5%8F%8A%E6%8F%92%E4%BB%B6%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90%E7%B2%BE%E5%8D%8E%E7%89%88/</guid>
+      <description>在进行protoc插件开发之前，首先要了解protoc的工作原理。protobuf具有诸多优点被广泛使用，由于protoc对proto文件的强大解析能力使我们可以更进一步来开发一些插件，通过插件快速生成特定于proto文件的工具类、配置文件等，从而提高开发效率。
+本文首先会介绍一下protoc的整体工作原理，然后详细介绍一下protoc对proto文件的解析过程，最后给出编写protoc插件来扩展protoc功能的一个示例（这里以protoc-gen-go插件为例）。
+1. protoc工作原理分析 1.0. protoc源代码准备 要想了解protoc的工作机制，查看其源代码了解其核心流程是最靠谱的方法。
+获取程序源代码的方式如下：
+git co https://github.com/google/protobuf 由于我们工程中常用的protoc版本是v2.5.0，所以这里检出对应版本的tag。
+git ck v2.5.0 考虑到可能会进行测试、修改、注释等学习过程，这里最好创建一个新的分支来操作。
+git branch -b ${new-branch-name} 现在源代码准备好了，下面可以阅读protoc的源码梳理一下其工作原理了。
+上述git检出后的protobuf路径，记为${protobuf}，后面如果出现${protobuf}请知晓其含义。如果在描述源代码时没有提及代码起始路径${protobuf}，那么起始路径均为${protobuf}。
+1.1. protoc执行流程说明 protoc执行流程的相关源码，主要包括如下两个部分。
+1.1.1. protoc程序入口 protoc程序入口为以下源文件main函数，该入口函数中完成protoc命令行接口初始化、编程语言及代码生成器注册后，调用cli.Run(argc,argv)解析proto文件并生成特定语言的源代码。
+file: src/google/protobuf/compiler/main.cc
+// Author: kenton@google.com (Kenton Varda)  // 这个头文件定义了protoc的命令行接口 #include &amp;lt;google/protobuf/compiler/command_line_interface.h&amp;gt; // protoc中内置了对cpp、python、java语言的支持，对其他语言的支持需要以plugin的方式来支持 #include &amp;lt;google/protobuf/compiler/cpp/cpp_generator.h&amp;gt;#include &amp;lt;google/protobuf/compiler/python/python_generator.h&amp;gt;#include &amp;lt;google/protobuf/compiler/java/java_generator.h&amp;gt; int main(int argc, char* argv[]) { // 初始化protoc命令行接口并开启插件 	// - 插件只是普通的可执行程序，其文件名以AllowPlugins参数protoc-开头 	// - 假定protoc --foo_out，那么实际调用的插件是protoc-foo 	google::protobuf::compiler::CommandLineInterface cli; cli.AllowPlugins(&amp;#34;protoc-&amp;#34;); // Proto2 C++ (指定了--cpp_out将调用cpp::Generator) 	google::protobuf::compiler::cpp::CppGenerator cpp_generator; cli.</description>
+    </item>
+    
+    <item>
+      <title>Protoc工作原理分析</title>
+      <link>https://hitzhangjie.github.io/blog/2017-05-16-protoc%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86/</link>
+      <pubDate>Fri, 19 May 2017 14:29:25 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-05-16-protoc%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86/</guid>
+      <description>在进行protoc插件开发之前，首先要了解protoc的工作原理。在protobuf的使用过程中，protoc作为proto文件的编译器，很多开发人员只会用但是不了解其工作原理，更不了解如何扩展其功能。protobuf作为目前常用的数据交换格式在协议开发中被广泛采用，此外，protoc对proto文件的强大解析能力使我们可以开发一些插件，通过插件快速生成特定于proto文件的工具类、配置文件等，从而提高开发效率。
+本文首先会介绍一下protoc的整体工作机制，然后解释一下protoc对proto文件的解析过程，最后给出编写protoc插件扩展protoc功能的一个示例教程。
+1. protoc源代码准备 要想了解protoc的工作机制，查看其源代码了解其核心流程是最靠谱的方法。
+获取程序源代码的方式如下：
+git co https://github.com/google/protobuf 由于我们工程中常用的protoc版本是v2.5.0，所以这里检出对应版本的tag。
+git ck v2.5.0 考虑到可能会进行测试、修改、注释等学习过程，这里最好创建一个新的分支来操作。
+git branch ${new-branch-name} git ck ${new-branch-name} 现在源代码准备好了，我比较喜欢使用vim、ctags、cscope来阅读源码，根据个人习惯吧，下面可以阅读protoc的源码梳理以下工作机制。
+2. protoc源码分析 上述git检出后的protobuf路径，记为${protobuf}，后面如果出现${protobuf}请知晓其含义。如果在描述源代码时没有提及起始路径${protobuf}，那么起始路径均为${protobuf}。
+2.1. protoc程序入口 src/google/protobuf/compiler/main.cc中的main函数，为protoc的入口函数。
+file: src/google/protobuf/compiler/main.cc
+// Author: kenton@google.com (Kenton Varda)  // 这个头文件定义了protoc的命令行接口 #include &amp;lt;google/protobuf/compiler/command_line_interface.h&amp;gt; // protoc中内置了对cpp、python、java语言的支持，对其他语言的支持需要以plugin的方式来支持 #include &amp;lt;google/protobuf/compiler/cpp/cpp_generator.h&amp;gt;#include &amp;lt;google/protobuf/compiler/python/python_generator.h&amp;gt;#include &amp;lt;google/protobuf/compiler/java/java_generator.h&amp;gt; int main(int argc, char* argv[]) { // 初始化protoc命令行接口并开启插件  // - 插件只是普通的可执行程序，其文件名以AllowPlugins参数protoc-开头  // - 假定protoc --foo_out，那么实际调用的插件是protoc-foo  google::protobuf::compiler::CommandLineInterface cli; cli.AllowPlugins(&amp;#34;protoc-&amp;#34;); // Proto2 C++ (指定了--cpp_out将调用cpp::Generator)  google::protobuf::compiler::cpp::CppGenerator cpp_generator; cli.</description>
+    </item>
+    
+    <item>
+      <title>Linux常见IO模型</title>
+      <link>https://hitzhangjie.github.io/blog/2017-05-02-linux-common-io-model/</link>
+      <pubDate>Tue, 02 May 2017 21:42:13 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-05-02-linux-common-io-model/</guid>
+      <description>0 目录结构  1. 阻塞IO模型 2. 非阻塞IO模型 3. IO多路复用模型  3.1. select 3.2. poll 3.3. epoll   4. 实时信号驱动IO模型  4.1 rtsig在udp中应用 4.2 rtsig在tcp中应用   5. 异步IO模型  5.1. AIO API说明  5.1.1. POSIX AIO API 5.1.2. Linux AIO SysCall   5.2. AIO操作示例  5.2.1. Kernel AIO SysCall 5.2.2. POSIX AIO API   5.3 AIO在服务端开发中的应用 5.4 关于AIO的结论   6 本文总结 附录A. 错误码定义 附录B. 插图信息  目前Linux下可用的IO模型有5种，分别为阻塞IO、非阻塞IO、IO多路复用、信号驱动IO、异步IO，其中较为成熟且高效、稳定的是IO多路复用模型，因此当前众多网络服务程序几乎都是采用这种IO操作策略。</description>
+    </item>
+    
+    <item>
+      <title>Coroutine-Switching</title>
+      <link>https://hitzhangjie.github.io/blog/2017-04-26-coroutine-switching/</link>
+      <pubDate>Wed, 26 Apr 2017 16:23:49 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-04-26-coroutine-switching/</guid>
+      <description>1. 协程Coroutine 1.1. 协程coroutine声明 file: coroutine.h
+#include &amp;lt;stdint.h&amp;gt; typedef int64_t (*EntryCallback)(void*); //硬件上下文信息 struct stRegister { uint64_t rax; uint64_t rbx; uint64_t rcx; uint64_t rdx; uint64_t rsi; uint64_t rdi; uint64_t r8; uint64_t r9; uint64_t r10; uint64_t r11; uint64_t r12; uint64_t r13; uint64_t r14; uint64_t r15; uint64_t rbp; uint64_t rsp; uint64_t rip; }; //协程上下文 struct stContext { struct stRegister cpu_register; void *arg; uint8_t *stack; }; typedef struct stContext Coroutine; //创建协程 Coroutine* CreateCoroutine(EntryCallback entry, void *arg); //删除协程 void DeleteCoroutine(Coroutine *ptr); //设置协程栈尺寸 void SetStackSize(uint32_t size); //协程切换 void __SwitchCoroutine__(Coroutine *cur, const Coroutine *next); 1.</description>
+    </item>
+    
+    <item>
+      <title>Java NIO Tutorials</title>
+      <link>https://hitzhangjie.github.io/blog/2017-04-20-%E5%AD%A6%E4%B9%A0java-nio/</link>
+      <pubDate>Wed, 05 Apr 2017 14:56:32 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-04-20-%E5%AD%A6%E4%B9%A0java-nio/</guid>
+      <description>1 前言  NIO Channel &amp;amp; Buffer NIO Non-Blocking IO NIO Selector   2 概要  NIO Channel &amp;amp; Buffer NIO Selector   3 NIO Channel 4 NIO Buffer  4.1 capacity 4.2 position 4.3 limit 4.4 常用方法  4.4.1 创建buffer 4.4.2 写数据到buffer 4.4.3 切换buffer为读模式 4.4.4 从buffer中读取数据 4.4.5 rewind读取索引 4.4.6 清空buffer备用 4.4.7 mark &amp;amp; reset 4.4.8 buffer内容比较     5 NIO Scatter &amp;amp; Gather  5.</description>
+    </item>
+    
+    <item>
+      <title>学习Apache Ant</title>
+      <link>https://hitzhangjie.github.io/blog/2017-04-01-%E5%AD%A6%E4%B9%A0apache-ant/</link>
+      <pubDate>Sat, 01 Apr 2017 17:45:40 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-04-01-%E5%AD%A6%E4%B9%A0apache-ant/</guid>
+      <description>Apache Ant是由Apache开发的基于Java的构建工具，本文对tutorialspoint上面的Apache Ant教程进行简要总结。
+1 为什么需要这样一个构建工具？ Ant是Another Neat Tool的缩写形式，为什么需要这样一个工具呢？跟它的名字一样，就是希望我们开发人员的工作能够更加neat！
+开发人员有些琐碎的、重复性的工作，包括：编译代码、打包可执行程序、部署程序到测试服务器、测试改变、拷贝代码到不同的地方。Ant可以帮助我们自动化上面列举的这几个步骤，简化我们的工作。
+Ant是tomcat的作者开发出来的，最初适用于构建tomcat的，并且作为tomcat的一部分，之所以开发它是为了弥补当初Apache Make工具（没有在apache项目列表中搜索到该项目）的不足之处，2000年的时候Ant从tomcat项目中独立出来作为一个独立的项目开发。
+至于Apache Ant的优势具体在哪，这个我们最后在给出来，目的是让大家结合自身工作经历，根据Apache Ant的功能自己主动去发现它的优势。
+2 Ant build.xml Ant的构建脚本默认是build.xml，也可以用其他的文件名。build.xml里面通常包括tag ，这里name指定了工程的名字，default是默认名字，basedir指定了工程的根目录。另外还包括多个tag ，其中name指定了目标动作的名字，例如compile、package、clean等等，它们之间存在某种依赖关系，可以通过depends指定。例如package依赖clean、compile，就可以指定depends=&amp;quot;clean,package&amp;rdquo;，注意依赖先后顺序，不要写成depends=&amp;quot;package,clean&amp;rdquo;。
+示例1：
+&amp;lt;?xml version=&amp;#34;1.0&amp;#34;?&amp;gt; &amp;lt;project name=&amp;#34;Hello World Project&amp;#34; default=&amp;#34;info&amp;#34;&amp;gt; &amp;lt;target name=&amp;#34;info&amp;#34;&amp;gt; &amp;lt;echo&amp;gt;Hello World - Welcome to Apache Ant!&amp;lt;/echo&amp;gt; &amp;lt;/target&amp;gt; &amp;lt;/project&amp;gt; 示例2：
+&amp;lt;target name=&amp;#34;deploy&amp;#34; depends=&amp;#34;package&amp;#34;&amp;gt; .... &amp;lt;/target&amp;gt; &amp;lt;target name=&amp;#34;package&amp;#34; depends=&amp;#34;clean,compile&amp;#34;&amp;gt; .... &amp;lt;/target&amp;gt; &amp;lt;target name=&amp;#34;clean&amp;#34; &amp;gt; .... &amp;lt;/target&amp;gt; &amp;lt;target name=&amp;#34;compile&amp;#34; &amp;gt; .... &amp;lt;/target&amp;gt; build.xml里面可以使用ant预先定义的一些变量，例如：
+   property desc     ant.</description>
+    </item>
+    
+    <item>
+      <title>我的兴趣列表</title>
+      <link>https://hitzhangjie.github.io/blog/2017-02-25-%E6%88%91%E7%9A%84%E5%85%B4%E8%B6%A3%E5%88%97%E8%A1%A8/</link>
+      <pubDate>Sat, 25 Feb 2017 21:07:54 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-02-25-%E6%88%91%E7%9A%84%E5%85%B4%E8%B6%A3%E5%88%97%E8%A1%A8/</guid>
+      <description>hitzhangjie&amp;rsquo;s blog 2016-07-04 11:12:22 AM ==============================================================================
+With the help of github.io,I start my personal blog - hitzhangjie&amp;rsquo;s blog. I will share my ideas, experience, lessons taught during my study and work, which includes but not limited to:
+1. Computer Engineering Techniques  Programming Languages  C C++ Java Shell JavaScript Python Perl Go   Unix/Linux System Administration  Start to Shutdown internals Important Scripts Systemd vs. Initd Services Control Job Control Process Control Web Server Setup  Httpd (Apache Web Server) Nginx Tomcat   Database Server Setup  MySQL MarialDB Oracle PostgreSQL SQLite etc   Distributed Cache Server  Memcached etc   Email Server Git Server Bugzilla TheBugGennie   Linux Kernel Internals  C Prerequisitives Virtual Memory Manangement Process Schedule Network Interrupt, Exception and Signal FileSystems etc.</description>
+    </item>
+    
+    <item>
+      <title>golang method receiver-type的梗</title>
+      <link>https://hitzhangjie.github.io/blog/2018-05-21-golang-method-receiver-type%E7%9A%84%E6%A2%97/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://hitzhangjie.github.io/blog/no-date/</guid>
-      <description>I was born yesterday, tomorrow.</description>
+      <guid>https://hitzhangjie.github.io/blog/2018-05-21-golang-method-receiver-type%E7%9A%84%E6%A2%97/</guid>
+      <description>这里来聊聊method receiver type为什么不能是pointer和interface类型。
+1 receiver-type必须满足的条件 golang里面提供了一定的面向对象支持，比如我们可以为类型T或者*T定义成员方法（类型T称为成员方法的receiver-type），但是这里的类型T必须满足如下几个条件：
+ T必须是已经定义过的类型； T与当前方法定义必须在同一个package下面； T不能是指针； T不能是接口类型；  前面两点都比较容易理解，下面两点是什么梗？为什么就不能在指针类型上添加方法？为什么就不能在interface上添加方法？当然可以一句话待过，golang不支持，但是我想问下为什么？
+2 receiver-type为什么不能是指针类型？ golang允许为 类型指针*T 添加方法，但是不允许为 指针类型本身 添加方法。按现有golang的实现方式，为指针类型添加方法会导致方法调用时的歧义。
+看下面这个示例程序。
+type T int func (t *T) Get() T { return *t + 1 } type P *T func (p P) Get() T { return *p + 2 } func F() { var v1 T var v2 = &amp;amp;v1 var v3 P = &amp;amp;v1 fmt.Println(v1.Get(), v2.Get(), v3.Get()) } 示例程序中 v3.Get() 存在调用歧义，编译器不知道该调用哪个方法了。如果要支持在指针这种receiver-type上定义方法，golang编译器势必要实现地更复杂才能支持到，指针本来就比较容易破坏可读性，还要在一种指针类型上定义方法，对使用者、编译器开发者而言可能都是件费力不讨好的事情。</description>
+    </item>
+    
+    <item>
+      <title>Nothing, Just Linux!</title>
+      <link>https://hitzhangjie.github.io/blog/2017-03-13-nothing-just-linux/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-03-13-nothing-just-linux/</guid>
+      <description>1 邂逅Linux 初次接触Linux操作系统是在什么时候？想想～～
+高三毕业后买了第一台电脑，一台清华同方的台式机，随机赠送的光盘里面有一张操作系 统光盘“家电下乡Linux适农版”……那是我第一次接触并运行Linux，但那时的我并没有意识 到，放在我面前的是一个即将深深地吸引我并要在多年的职业生涯中去不断锤炼的存在。
+大一、大二这两年，我或多或少地接触到了Linux，但是并没有产生多大兴趣，直到有一 天我激怒了一个同学。当时他正在摆弄Ubuntu，错误地GRUB配置导致系统引导失败，着急 的他在QQ空间发了一条状态，意思就是大神求救之类的。当时我回了一个字“水”。他看后 很生气，系统都启动不了了能不着急吗？于是呢，就言辞激烈地“回敬”了我几句……
+事后我想，Linux有这么复杂吗？于是我开始试图取了解Linux，当然这只是个引子，后面 陆陆续续看到有不少同学都在使用各种Linux的发行版，我才决定认真去了解、学习一下 Linux，没想到这竟是一条不归路……
+ LiveCD &amp;amp; RemasterSys &amp;amp; dump &amp;amp; restore GRUB 2 &amp;amp; Customize Boot Menu to bootstrap Multiple OS Plymouth Tweak KDE/GNOME/Unity Appearance (Colors &amp;amp; Themes) Linux Commandline Techs &amp;amp; Administration Unix/Linux Programming Linux Kernel 0.11 Linux Kernel 2.4 Keep going along the roadmap to Linux World!  上面大体上是我初识、折腾、学习、应用、研究Linux的过程，而且这个过程在相当长一 段事时间内还将一直向前延伸下去。与其说对Linux感兴趣，不如说是好奇心驱使，还有 很多疑问没有揭开，这里当然不只是Linux操作系统内核本身。
+我这个博客所要描述的东西可能就比较杂了，这里面我会穿插着记录很多东西～与其说是 博客，不如说是我自己的一个学习笔记了，但是我这个人比较喜欢分享，但有不想那么刻 意，所以我就把它丢在这，谁看见就看，看不见就当作我个人的笔记了。
+2 LiveCD &amp;amp; RemasterSys &amp;amp; dump &amp;amp; restore 3 GRUB 2 &amp;amp; Customize Boot Menu to bootstrap Multiple OS 4 Plymouth 5 Tweak KDE/GNOME/Unity Appearance (Colors &amp;amp; Themes) 6 Linux Commandline Techs &amp;amp; Administration 7 Unix/Linux Programming 8 Linux Kernel 0.</description>
+    </item>
+    
+    <item>
+      <title>协程的历史、现在和未来!</title>
+      <link>https://hitzhangjie.github.io/blog/2017-09-23-%E5%8D%8F%E7%A8%8B%E7%9A%84%E5%8E%86%E5%8F%B2%E7%8E%B0%E5%9C%A8%E5%92%8C%E6%9C%AA%E6%9D%A5/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-09-23-%E5%8D%8F%E7%A8%8B%E7%9A%84%E5%8E%86%E5%8F%B2%E7%8E%B0%E5%9C%A8%E5%92%8C%E6%9C%AA%E6%9D%A5/</guid>
+      <description>计算机科学是一门应用科学，几乎所有概念都是为了理解或解决实际问题而生的。协程 (Coroutine) 的出现也不例外。协程的概念，最早可以追溯到写作 COBOL 语言编译器中的技术难题。
+1.从磁带到协程 COBOL 是最早的高级语言之一。编译器则是高级语言必不可少的一部分。现如今，我们对编译器了解，已经到了可以把核心内容浓缩成一本教科书的程度。然而在六十年代，如何写作高效的语言编译器是那个时代绕不过的现实问题。比如，1960 年夏天，D. E. Knuth 就是利用开车横穿美国去加州理工读研究生的时间，对着 Burroughs 205 机器指令集手写 COBOL 编译器。最早提出“协程”概念的 Melvin Conway 的出发点，也是如何写一个只扫描一遍程序 (one-pass) 的 COBOL 编译器。众多的“高手”纷纷投入编译器书写，可见一门新科学发展之初也是筚路蓝缕
+以现代眼光来看，高级语言编译器实际上是多个步骤组合而成：词法解析，语法解析，语法树构建，以及优化和目标代码生成等等。编译实质上就是从源程序出发，依次将这些步骤的输出作为下一步的输入，最终输出目标代码。在现代计算机上实现这种管道式的架构毫无困难：只需要依次运行，中间结果存为中间文件或放入内存即可。GCC 和 Clang 编译器，以及 ANTLR 构建的编译器，都遵循这样的设计。
+在 Conway 的设计里，词法和语法解析不再是两个独立运行的步骤，而是交织在一起。编译器的控制流在词法和语法解析之间来回切换：当词法模块读入足够多的 token 时，控制流交给语法分析；当语法分析消化完所有 token 后，控制流交给词法分析。词法和语法分别独立维护自身的运行状态。Conway 构建的这种协同工作机制，需要参与者“让出 (yield)”控制流时，记住自身状态，以便在控制流返回时能够从上次让出的位置恢复(resume)执行。简言之，协程的全部精神就在于控制流的主动让出和恢复。我们熟悉的子过程调用可以看作在返回时让出控制流的一种特殊的协程，其内部状态在返回时被丢弃了，因此不存在“恢复”这个操作。
+以现在眼光来看，编译器的实现并不必然需要协程。然而，Conway 用协程实现 COBOL 编译器在当时绝不是舍近求远。
+2.自顶向下，无需协同 虽然协程是伴随着高级语言诞生的，它却没有能像子过程一样成为通用编程语言的基本元素。
+从 1963 年首次提出到上个世纪九十年代，我们在 ALOGL, Pascal, C, FORTRAN 等主流的命令式编程语言中都没有看到原生的协程支持。协程只稀疏地出现在 Simula，Modular-2 (Pascal 升级版) 和 Smalltalk 等相对小众的语言中。协程作为一个比子进程更加通用的概念，在实际编程却没有取代子进程，这一点不得不说是出乎意外的。如果我们结合当时的程序设计思想看，这一点又是意料之中的：协程是不符合那个时代所崇尚的“自顶向下”的程序设计思想的，自然也就不会成为当时主流的命令式编程语言 (imperative programming) 的一部分。
+正如面向对象的语言是围绕面向对象的开发理念设计一样，命令式编程语言是围绕自顶向下(top-down)的开发理念设计的。在自顶向下的理念指导下，程序被切分为一个主程序和大大小小的子模块，每一个子模块又可能调用更多子模块等等。C 家族语言的 main() 函数就是这种自顶而下思想的体现。在这种理念指导下，各模块形成层次调用关系，而程序设计就是制作这些子过程。在“自顶向下”这种层次化的理念下，具有鲜明层次的子过程调用成为软件系统最自然的组织方式，也是理所当然。相较之下，具有执行中让出和恢复功能的协程在这种架构下无用武之地。可以说，自上而下的设计思想从一开始就排除了对协程的需求。其后的结构化编程(Structural Programming) 思想，更是进一步强化了“子过程调用作为唯一控制结构”的基本假设。在这样的指导思想下，协程一直没有成为当时编程语言的一等公民。
+尽管从提出到上世纪 90 年代，协程在编程语言中没有普遍成为一等公民，但作为一种易于理解的控制结构，协程的概念渗入到了软件设计的许多方面。在结构化编程思想一统天下之时， D.</description>
     </item>
     
   </channel>

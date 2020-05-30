@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>go on 介绍</title>
+    <link>https://hitzhangjie.github.io/tags/go/</link>
+    <description>Recent content in go on 介绍</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Sat, 19 May 2018 19:55:15 +0800</lastBuildDate>
+    
+	<atom:link href="https://hitzhangjie.github.io/tags/go/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>golang function-closure 实现机制</title>
+      <link>https://hitzhangjie.github.io/blog/2018-05-19-golang-function-closure%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/</link>
+      <pubDate>Sat, 19 May 2018 19:55:15 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2018-05-19-golang-function-closure%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/</guid>
+      <description>golang里面函数时first-class citizen，可以作为值进行参数传递，不管是普通函数“func abc()”，还是成员方法“func (x X) xxx()”，还是一个闭包“func () { return func(){&amp;hellip;.}}”……看上去很方便，不禁要问，golang里面funciton和closure是如何实现的呢？扒拉了下源码，这里简单总结下。
+1 golang中函数内部表示是什么样子的？ 看下golang cmd/compile/internal/types/type.go中对Func类型的定义：
+// Func contains Type fields specific to func types. type Func struct { Receiver *Type // function receiver，接受者类型，每个函数定义都包括该字段，可以为nil或non-nil  Results *Type // function results，返回值类型  Params *Type // function params，参数列表类型  Nname *Node // function name，函数名  // Argwid is the total width of the function receiver, params, and results.  // It gets calculated via a temporary TFUNCARGS type.</description>
+    </item>
+    
+    <item>
+      <title>golang method receiver-type的梗</title>
+      <link>https://hitzhangjie.github.io/blog/2018-05-21-golang-method-receiver-type%E7%9A%84%E6%A2%97/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2018-05-21-golang-method-receiver-type%E7%9A%84%E6%A2%97/</guid>
+      <description>这里来聊聊method receiver type为什么不能是pointer和interface类型。
+1 receiver-type必须满足的条件 golang里面提供了一定的面向对象支持，比如我们可以为类型T或者*T定义成员方法（类型T称为成员方法的receiver-type），但是这里的类型T必须满足如下几个条件：
+ T必须是已经定义过的类型； T与当前方法定义必须在同一个package下面； T不能是指针； T不能是接口类型；  前面两点都比较容易理解，下面两点是什么梗？为什么就不能在指针类型上添加方法？为什么就不能在interface上添加方法？当然可以一句话待过，golang不支持，但是我想问下为什么？
+2 receiver-type为什么不能是指针类型？ golang允许为 类型指针*T 添加方法，但是不允许为 指针类型本身 添加方法。按现有golang的实现方式，为指针类型添加方法会导致方法调用时的歧义。
+看下面这个示例程序。
+type T int func (t *T) Get() T { return *t + 1 } type P *T func (p P) Get() T { return *p + 2 } func F() { var v1 T var v2 = &amp;amp;v1 var v3 P = &amp;amp;v1 fmt.Println(v1.Get(), v2.Get(), v3.Get()) } 示例程序中 v3.Get() 存在调用歧义，编译器不知道该调用哪个方法了。如果要支持在指针这种receiver-type上定义方法，golang编译器势必要实现地更复杂才能支持到，指针本来就比较容易破坏可读性，还要在一种指针类型上定义方法，对使用者、编译器开发者而言可能都是件费力不讨好的事情。</description>
+    </item>
+    
+  </channel>
+</rss>

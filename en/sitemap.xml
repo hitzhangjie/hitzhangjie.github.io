@@ -76,16 +76,6 @@
   <url>
     <loc>https://hitzhangjie.github.io/en/blog/hipster-ipsum/</loc>
     <lastmod>2017-11-13T11:58:39-05:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh"
-                href="https://hitzhangjie.github.io/blog/hipster-ipsum/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/blog/hipster-ipsum/"
-                />
   </url>
   
   <url>
@@ -106,16 +96,6 @@
   <url>
     <loc>https://hitzhangjie.github.io/en/tags/ipsum/</loc>
     <lastmod>2017-11-13T11:58:39-05:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh"
-                href="https://hitzhangjie.github.io/tags/ipsum/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/tags/ipsum/"
-                />
   </url>
   
   <url>
@@ -136,105 +116,35 @@
   <url>
     <loc>https://hitzhangjie.github.io/en/tags/words/</loc>
     <lastmod>2017-11-13T11:58:39-05:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh"
-                href="https://hitzhangjie.github.io/tags/words/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/tags/words/"
-                />
   </url>
   
   <url>
     <loc>https://hitzhangjie.github.io/en/tags/code/</loc>
     <lastmod>2017-11-06T12:04:06-05:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh"
-                href="https://hitzhangjie.github.io/tags/code/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/tags/code/"
-                />
   </url>
   
   <url>
     <loc>https://hitzhangjie.github.io/en/blog/startup-ipsum/</loc>
     <lastmod>2017-11-06T12:04:06-05:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh"
-                href="https://hitzhangjie.github.io/blog/startup-ipsum/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/blog/startup-ipsum/"
-                />
   </url>
   
   <url>
     <loc>https://hitzhangjie.github.io/en/tags/coffee/</loc>
     <lastmod>2017-11-01T12:04:16-05:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh"
-                href="https://hitzhangjie.github.io/tags/coffee/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/tags/coffee/"
-                />
   </url>
   
   <url>
     <loc>https://hitzhangjie.github.io/en/blog/coffee-ipsum/</loc>
     <lastmod>2017-11-01T12:04:16-05:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh"
-                href="https://hitzhangjie.github.io/blog/coffee-ipsum/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/blog/coffee-ipsum/"
-                />
   </url>
   
   <url>
     <loc>https://hitzhangjie.github.io/en/tags/images/</loc>
     <lastmod>2017-11-01T12:04:16-05:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh"
-                href="https://hitzhangjie.github.io/tags/images/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/tags/images/"
-                />
   </url>
   
   <url>
     <loc>https://hitzhangjie.github.io/en/blog/no-date/</loc>
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh"
-                href="https://hitzhangjie.github.io/blog/no-date/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/blog/no-date/"
-                />
   </url>
   
 </urlset>

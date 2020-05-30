@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Tags on 介绍</title>
+    <link>https://hitzhangjie.github.io/tags/</link>
+    <description>Recent content in Tags on 介绍</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Mon, 13 Nov 2017 11:58:39 -0500</lastBuildDate>
+    
+	<atom:link href="https://hitzhangjie.github.io/tags/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>ipsum</title>
+      <link>https://hitzhangjie.github.io/tags/ipsum/</link>
+      <pubDate>Mon, 13 Nov 2017 11:58:39 -0500</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/tags/ipsum/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>words</title>
+      <link>https://hitzhangjie.github.io/tags/words/</link>
+      <pubDate>Mon, 13 Nov 2017 11:58:39 -0500</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/tags/words/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>code</title>
+      <link>https://hitzhangjie.github.io/tags/code/</link>
+      <pubDate>Mon, 06 Nov 2017 12:04:06 -0500</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/tags/code/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>coffee</title>
+      <link>https://hitzhangjie.github.io/tags/coffee/</link>
+      <pubDate>Wed, 01 Nov 2017 12:04:16 -0500</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/tags/coffee/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>images</title>
+      <link>https://hitzhangjie.github.io/tags/images/</link>
+      <pubDate>Wed, 01 Nov 2017 12:04:16 -0500</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/tags/images/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>

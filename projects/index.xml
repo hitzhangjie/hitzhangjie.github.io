@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>项目 on 介绍</title>
+    <link>https://hitzhangjie.github.io/projects/</link>
+    <description>Recent content in 项目 on 介绍</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    
+	<atom:link href="https://hitzhangjie.github.io/projects/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>写我的书</title>
+      <link>https://hitzhangjie.github.io/projects/writing/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/projects/writing/</guid>
+      <description>文字是一种表达的载体，驾驭文字来抒发情感也是一种惬意，或者通过文字来沉淀一个生命对这个世界的认识，也算是一种成长。当然了，在这里，更多的还是分享一些工作学习上的总结，比如写几本书，写几个教程，写几个产品雏形。
+当前，我确实在写几本书，也和大家分享一下：
+  《从0到1构建一个微服务框架》
+主体内容是介绍微服务架构模式的出现、演进、面临的问题与挑战，以及微服务框架应如何设计，如何开发、测试、优化、发布、推广、社区运营，及持续打磨。
+在腾讯工作期间，2018.3~至今，一直在维护一套微服务框架GoNeat，至今线上已经稳定运行了近千个服务实例。相比以前的开发方式，大幅提升了团队的研发效率，也获得了2019年腾讯代码文华奖；2019年下旬开始投入公司微服务框架的设计、实现、推广，至今已经上线了近3000个线上服务（仍在推广初期）。
+在上述过程中，我学习收获了很多，很多业务开发者更专注于业务侧开发，可能很少有机会会完整地从0到1完成一个微服务框架的建设，鉴于此我想分享一下过程中的心得体会。
+  《从0到1开发一个go调试器》
+主题内容是介绍go调试器的工作原理，如调试依赖，包括操作系统支持、调试信息格式、硬件支持等，还有编译器、连接器、调试器、操作系统之间的协作关系，如何描述一个语言的特性，以及具体开发相关的工作。
+  《调试器视角：认识计算机系统》
+主题内容是介绍如何透过调试器，来认识你的程序，来认识计算机系统。俗话说，授人以鱼不如授人以渔，调试器提供了一种能力可以让你窥探计算机程序的完整运行过程，以及刺探程序执行期间所经历的软硬件交互。很多开发同学最初入门时也是借助调试器来理解变量、程序控制逻辑等，即便是一个老资格程序员，调试器依然是解决困难问题时的神兵利器。
+  我计划今年完成上述几本书的草稿，然后，根据大家的反馈再优化一下内容编排、细节调整，最后根据情况考虑要不要出版。</description>
+    </item>
+    
+    <item>
+      <title>生活胶片</title>
+      <link>https://hitzhangjie.github.io/projects/photography/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/projects/photography/</guid>
+      <description>有时我也摄影，记录生活点滴 这里有我的一些照片，有时是闺女小七的，有时是儿子元宝的&amp;hellip;</description>
+    </item>
+    
+    <item>
+      <title>设计创意</title>
+      <link>https://hitzhangjie.github.io/projects/design/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/projects/design/</guid>
+      <description>生活中从来不缺乏创意，缺乏的是创意可靠落地的计划。
+Go on, explore your ideas! 💪
+Go on, stick to your dream! 👍</description>
+    </item>
+    
+  </channel>
+</rss>

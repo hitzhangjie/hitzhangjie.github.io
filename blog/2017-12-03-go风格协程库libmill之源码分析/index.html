@@ -234,100 +234,136 @@ go风格协程库libmill之源码分析 - 介绍
         
 
         
-        <div>
+        <div> 
             
 <aside>
+    <hr/>
     <header>
-    <h2>go风格协程库libmill之源码分析</h2>
+    <b>《go风格协程库libmill之源码分析》目录：</b>
+    <br/>
     </header>
     <nav id="TableOfContents">
   <ul>
-    <li><a href="#21-libmill简介">2.1 libmill简介</a></li>
-    <li><a href="#22-libmill-vs-goroutine">2.2 libmill vs goroutine</a></li>
-  </ul>
-
-  <ul>
-    <li><a href="#31-libmill">3.1 libmill</a>
+    <li><a href="#1-preface">1 Preface</a></li>
+    <li><a href="#2-introduction">2 Introduction</a>
       <ul>
-        <li><a href="#311-abi版本">3.1.1 ABI版本</a></li>
-        <li><a href="#312-符号可见性">3.1.2 符号可见性</a></li>
-        <li><a href="#313-定时器精度">3.1.3 定时器精度</a></li>
-        <li><a href="#314-mill_fdwait关注的io事件">3.1.4 mill_fdwait关注的io事件</a></li>
-        <li><a href="#315-协程上下文的保存和切换">3.1.5 协程上下文的保存和切换</a></li>
-        <li><a href="#316-gofunc实现">3.1.6 go(func)实现</a></li>
-        <li><a href="#317-chan实现">3.1.7 chan实现</a></li>
-        <li><a href="#318-choose从句实现">3.1.8 choose从句实现</a></li>
+        <li><a href="#21-libmill简介">2.1 libmill简介</a></li>
+        <li><a href="#22-libmill-vs-goroutine">2.2 libmill vs goroutine</a></li>
       </ul>
     </li>
-    <li><a href="#32-stack">3.2 stack</a>
+    <li><a href="#3-coroutine">3 Coroutine</a>
       <ul>
-        <li><a href="#321-stackh">3.2.1 stack.h</a></li>
-        <li><a href="#322-stackc">3.2.2 stack.c</a></li>
+        <li><a href="#31-libmill">3.1 libmill</a>
+          <ul>
+            <li><a href="#311-abi版本">3.1.1 ABI版本</a></li>
+            <li><a href="#312-符号可见性">3.1.2 符号可见性</a></li>
+            <li><a href="#313-定时器精度">3.1.3 定时器精度</a></li>
+            <li><a href="#314-mill_fdwait关注的io事件">3.1.4 mill_fdwait关注的io事件</a></li>
+            <li><a href="#315-协程上下文的保存和切换">3.1.5 协程上下文的保存和切换</a>
+              <ul>
+                <li><a href="#3151-协程上下文">3.1.5.1 协程上下文</a></li>
+                <li><a href="#3152-协程上下文的保存">3.1.5.2 协程上下文的保存</a></li>
+                <li><a href="#3153-协程上下文的恢复">3.1.5.3 协程上下文的恢复</a></li>
+              </ul>
+            </li>
+            <li><a href="#316-gofunc实现">3.1.6 go(func)实现</a></li>
+            <li><a href="#317-chan实现">3.1.7 chan实现</a>
+              <ul>
+                <li><a href="#3171-常用数据结构">3.1.7.1 常用数据结构</a></li>
+                <li><a href="#3172-发送数据到chan">3.1.7.2 发送数据到chan</a></li>
+                <li><a href="#3173-从chan接收数据">3.1.7.3 从chan接收数据</a></li>
+                <li><a href="#3174-chan操作结束">3.1.7.4 chan操作结束</a></li>
+              </ul>
+            </li>
+            <li><a href="#318-choose从句实现">3.1.8 choose从句实现</a>
+              <ul>
+                <li><a href="#3181-从句初始化">3.1.8.1 从句初始化</a></li>
+                <li><a href="#3182-读就绪事件">3.1.8.2 读就绪事件</a></li>
+                <li><a href="#3183-写就绪事件">3.1.8.3 写就绪事件</a></li>
+                <li><a href="#3184-deadline实现">3.1.8.4 deadline实现</a></li>
+                <li><a href="#3185-otherwise实现">3.1.8.5 otherwise实现</a></li>
+                <li><a href="#3186-从句结束">3.1.8.6 从句结束</a></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li><a href="#32-stack">3.2 stack</a>
+          <ul>
+            <li><a href="#321-stackh">3.2.1 stack.h</a></li>
+            <li><a href="#322-stackc">3.2.2 stack.c</a></li>
+          </ul>
+        </li>
+        <li><a href="#33-chan">3.3 chan</a>
+          <ul>
+            <li><a href="#331-chanh">3.3.1 chan.h</a></li>
+            <li><a href="#332-chanc">3.3.2 chan.c</a></li>
+          </ul>
+        </li>
+        <li><a href="#34-cr">3.4 cr</a>
+          <ul>
+            <li><a href="#341-crh">3.4.1 cr.h</a></li>
+            <li><a href="#342-crc">3.4.2 cr.c</a></li>
+          </ul>
+        </li>
+        <li><a href="#35-mfork">3.5 mfork</a></li>
       </ul>
     </li>
-    <li><a href="#33-chan">3.3 chan</a>
+    <li><a href="#4-network">4 Network</a>
       <ul>
-        <li><a href="#331-chanh">3.3.1 chan.h</a></li>
-        <li><a href="#332-chanc">3.3.2 chan.c</a></li>
+        <li><a href="#41-tcp">4.1 tcp</a></li>
+        <li><a href="#42-udp">4.2 udp</a></li>
+        <li><a href="#43-unix">4.3 unix</a></li>
+        <li><a href="#44-ip">4.4 ip</a>
+          <ul>
+            <li><a href="#441-iph">4.4.1 ip.h</a></li>
+            <li><a href="#442-ipc">4.4.2 ip.c</a></li>
+          </ul>
+        </li>
       </ul>
     </li>
-    <li><a href="#34-cr">3.4 cr</a>
+    <li><a href="#5-io-multiplex">5 IO Multiplex</a>
       <ul>
-        <li><a href="#341-crh">3.4.1 cr.h</a></li>
-        <li><a href="#342-crc">3.4.2 cr.c</a></li>
+        <li><a href="#51-poller">5.1 poller</a>
+          <ul>
+            <li><a href="#511-pollerh">5.1.1 poller.h</a></li>
+            <li><a href="#512-pollerc">5.1.2 poller.c</a></li>
+            <li><a href="#513-epollinc">5.1.3 epoll.inc</a></li>
+          </ul>
+        </li>
+        <li><a href="#52-file">5.2 file</a></li>
       </ul>
     </li>
-    <li><a href="#35-mfork">3.5 mfork</a></li>
-  </ul>
-
-  <ul>
-    <li><a href="#41-tcp">4.1 tcp</a></li>
-    <li><a href="#42-udp">4.2 udp</a></li>
-    <li><a href="#43-unix">4.3 unix</a></li>
-    <li><a href="#44-ip">4.4 ip</a>
+    <li><a href="#6-data-structure">6 Data Structure</a>
       <ul>
-        <li><a href="#441-iph">4.4.1 ip.h</a></li>
-        <li><a href="#442-ipc">4.4.2 ip.c</a></li>
+        <li><a href="#61-slist">6.1 slist</a>
+          <ul>
+            <li><a href="#611-slisth">6.1.1 slist.h</a></li>
+            <li><a href="#612-slistc">6.1.2 slist.c</a></li>
+          </ul>
+        </li>
+        <li><a href="#62-list">6.2 list</a>
+          <ul>
+            <li><a href="#621-listh">6.2.1 list.h</a></li>
+            <li><a href="#612-listc">6.1.2 list.c</a></li>
+          </ul>
+        </li>
       </ul>
     </li>
-  </ul>
-
-  <ul>
-    <li><a href="#51-poller">5.1 poller</a>
+    <li><a href="#7-common-utils">7 Common Utils</a>
       <ul>
-        <li><a href="#511-pollerh">5.1.1 poller.h</a></li>
-        <li><a href="#512-pollerc">5.1.2 poller.c</a></li>
-        <li><a href="#513-epollinc">5.1.3 epoll.inc</a></li>
+        <li><a href="#71-utils">7.1 utils</a></li>
+        <li><a href="#72-timer">7.2 timer</a>
+          <ul>
+            <li><a href="#721-timerh">7.2.1 timer.h</a></li>
+            <li><a href="#722-timerc">7.2.2 timer.c</a></li>
+          </ul>
+        </li>
       </ul>
     </li>
-    <li><a href="#52-file">5.2 file</a></li>
-  </ul>
-
-  <ul>
-    <li><a href="#61-slist">6.1 slist</a>
-      <ul>
-        <li><a href="#611-slisth">6.1.1 slist.h</a></li>
-        <li><a href="#612-slistc">6.1.2 slist.c</a></li>
-      </ul>
-    </li>
-    <li><a href="#62-list">6.2 list</a>
-      <ul>
-        <li><a href="#621-listh">6.2.1 list.h</a></li>
-        <li><a href="#612-listc">6.1.2 list.c</a></li>
-      </ul>
-    </li>
-  </ul>
-
-  <ul>
-    <li><a href="#71-utils">7.1 utils</a></li>
-    <li><a href="#72-timer">7.2 timer</a>
-      <ul>
-        <li><a href="#721-timerh">7.2.1 timer.h</a></li>
-        <li><a href="#722-timerc">7.2.2 timer.c</a></li>
-      </ul>
-    </li>
+    <li><a href="#8-debug">8 Debug</a></li>
   </ul>
 </nav>
+    <hr/>
 </aside>
 
 

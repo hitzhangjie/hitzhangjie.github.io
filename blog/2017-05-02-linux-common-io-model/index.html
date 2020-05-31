@@ -234,42 +234,59 @@ Linux常见IO模型 - 介绍
         
 
         
-        <div>
+        <div> 
             
 <aside>
+    <hr/>
     <header>
-    <h2>Linux常见IO模型</h2>
+    <b>《Linux常见IO模型》目录：</b>
+    <br/>
     </header>
     <nav id="TableOfContents">
   <ul>
-    <li><a href="#1-阻塞io模型">1. 阻塞IO模型</a></li>
-    <li><a href="#2-非阻塞io模型">2. 非阻塞IO模型</a></li>
-    <li><a href="#3-io多路复用模型">3. IO多路复用模型</a>
+    <li>
       <ul>
-        <li><a href="#31-select">3.1. select</a></li>
-        <li><a href="#32-poll">3.2. poll</a></li>
-        <li><a href="#33-epoll">3.3. epoll</a></li>
+        <li><a href="#1-阻塞io模型">1. 阻塞IO模型</a></li>
+        <li><a href="#2-非阻塞io模型">2. 非阻塞IO模型</a></li>
+        <li><a href="#3-io多路复用模型">3. IO多路复用模型</a>
+          <ul>
+            <li><a href="#31-select">3.1. select</a></li>
+            <li><a href="#32-poll">3.2. poll</a></li>
+            <li><a href="#33-epoll">3.3. epoll</a></li>
+          </ul>
+        </li>
+        <li><a href="#4-实时信号驱动io模型">4. 实时信号驱动IO模型</a>
+          <ul>
+            <li><a href="#41-rtsig在udp中应用">4.1 rtsig在udp中应用</a></li>
+            <li><a href="#42-rtsig在tcp中应用">4.2 rtsig在tcp中应用</a></li>
+          </ul>
+        </li>
+        <li><a href="#5-异步io模型">5. 异步IO模型</a>
+          <ul>
+            <li><a href="#51-aio-api说明">5.1. AIO API说明</a>
+              <ul>
+                <li><a href="#511-posix-aio-api">5.1.1. POSIX AIO API</a></li>
+                <li><a href="#512-linux-aio-syscall">5.1.2. Linux AIO SysCall</a></li>
+              </ul>
+            </li>
+            <li><a href="#52-aio操作示例">5.2. AIO操作示例</a>
+              <ul>
+                <li><a href="#521-kernel-aio-syscall">5.2.1. Kernel AIO SysCall</a></li>
+                <li><a href="#522-posix-aio-api">5.2.2. POSIX AIO API</a></li>
+              </ul>
+            </li>
+            <li><a href="#53-aio在服务端开发中的应用">5.3 AIO在服务端开发中的应用</a></li>
+            <li><a href="#54-关于aio的结论">5.4 关于AIO的结论</a></li>
+          </ul>
+        </li>
+        <li><a href="#6-本文总结">6 本文总结</a></li>
+        <li><a href="#附录a-错误码定义">附录A. 错误码定义</a></li>
+        <li><a href="#附录b-插图信息">附录B. 插图信息</a></li>
       </ul>
     </li>
-    <li><a href="#4-实时信号驱动io模型">4. 实时信号驱动IO模型</a>
-      <ul>
-        <li><a href="#41-rtsig在udp中应用">4.1 rtsig在udp中应用</a></li>
-        <li><a href="#42-rtsig在tcp中应用">4.2 rtsig在tcp中应用</a></li>
-      </ul>
-    </li>
-    <li><a href="#5-异步io模型">5. 异步IO模型</a>
-      <ul>
-        <li><a href="#51-aio-api说明">5.1. AIO API说明</a></li>
-        <li><a href="#52-aio操作示例">5.2. AIO操作示例</a></li>
-        <li><a href="#53-aio在服务端开发中的应用">5.3 AIO在服务端开发中的应用</a></li>
-        <li><a href="#54-关于aio的结论">5.4 关于AIO的结论</a></li>
-      </ul>
-    </li>
-    <li><a href="#6-本文总结">6 本文总结</a></li>
-    <li><a href="#附录a-错误码定义">附录A. 错误码定义</a></li>
-    <li><a href="#附录b-插图信息">附录B. 插图信息</a></li>
   </ul>
 </nav>
+    <hr/>
 </aside>
 
 

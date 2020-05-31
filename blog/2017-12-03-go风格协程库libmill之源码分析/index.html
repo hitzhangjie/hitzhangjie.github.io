@@ -180,11 +180,11 @@ go风格协程库libmill之源码分析 - 介绍
         </h2>
         <div class="post-data">
             发表时间：2017-12-03 <br> 
-            阅读时长：52 分钟 (10897字)
+            阅读时长：51 分钟 (10766字)
         </div>
 
         <p>
-        
+            
 <div class="blog-share">
     分享：
     
@@ -233,130 +233,109 @@ go风格协程库libmill之源码分析 - 介绍
         </p>
         
 
+        
+        <div>
+            
+<aside>
+    <header>
+    <h2>go风格协程库libmill之源码分析</h2>
+    </header>
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#21-libmill简介">2.1 libmill简介</a></li>
+    <li><a href="#22-libmill-vs-goroutine">2.2 libmill vs goroutine</a></li>
+  </ul>
 
-    </div>
-    
-    <div class="container markdown top-pad">
-        <ul>
-<li><a href="#1-preface">1 Preface</a></li>
-<li><a href="#2-introduction">2 Introduction</a>
-<ul>
-<li><a href="#21-libmill%E7%AE%80%E4%BB%8B">2.1 libmill简介</a></li>
-<li><a href="#22-libmill-vs-goroutine">2.2 libmill vs goroutine</a></li>
-</ul>
-</li>
-<li><a href="#3-coroutine">3 Coroutine</a>
-<ul>
-<li><a href="#31-libmill">3.1 libmill</a>
-<ul>
-<li><a href="#311-abi%E7%89%88%E6%9C%AC">3.1.1 ABI版本</a></li>
-<li><a href="#312-%E7%AC%A6%E5%8F%B7%E5%8F%AF%E8%A7%81%E6%80%A7">3.1.2 符号可见性</a></li>
-<li><a href="#313-%E5%AE%9A%E6%97%B6%E5%99%A8%E7%B2%BE%E5%BA%A6">3.1.3 定时器精度</a></li>
-<li><a href="#314-mill_fdwait%E5%85%B3%E6%B3%A8%E7%9A%84io%E4%BA%8B%E4%BB%B6">3.1.4 mill_fdwait关注的io事件</a></li>
-<li><a href="#315-%E5%8D%8F%E7%A8%8B%E4%B8%8A%E4%B8%8B%E6%96%87%E7%9A%84%E4%BF%9D%E5%AD%98%E5%92%8C%E5%88%87%E6%8D%A2">3.1.5 协程上下文的保存和切换</a>
-<ul>
-<li><a href="#3151-%E5%8D%8F%E7%A8%8B%E4%B8%8A%E4%B8%8B%E6%96%87">3.1.5.1 协程上下文</a></li>
-<li><a href="#3152-%E5%8D%8F%E7%A8%8B%E4%B8%8A%E4%B8%8B%E6%96%87%E7%9A%84%E4%BF%9D%E5%AD%98">3.1.5.2 协程上下文的保存</a></li>
-<li><a href="#3153-%E5%8D%8F%E7%A8%8B%E4%B8%8A%E4%B8%8B%E6%96%87%E7%9A%84%E6%81%A2%E5%A4%8D">3.1.5.3 协程上下文的恢复</a></li>
-</ul>
-</li>
-<li><a href="#316-go(func)%E5%AE%9E%E7%8E%B0">3.1.6 go(func)实现</a></li>
-<li><a href="#317-chan%E5%AE%9E%E7%8E%B0">3.1.7 chan实现</a>
-<ul>
-<li><a href="#3171-%E5%B8%B8%E7%94%A8%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84">3.1.7.1 常用数据结构</a></li>
-<li><a href="#3172-%E5%8F%91%E9%80%81%E6%95%B0%E6%8D%AE%E5%88%B0chan">3.1.7.2 发送数据到chan</a></li>
-<li><a href="#3173-%E4%BB%8Echan%E6%8E%A5%E6%94%B6%E6%95%B0%E6%8D%AE">3.1.7.3 从chan接收数据</a></li>
-<li><a href="#3174-chan%E6%93%8D%E4%BD%9C%E7%BB%93%E6%9D%9F">3.1.7.4 chan操作结束</a></li>
-</ul>
-</li>
-<li><a href="#318-choose%E4%BB%8E%E5%8F%A5%E5%AE%9E%E7%8E%B0">3.1.8 choose从句实现</a>
-<ul>
-<li><a href="#3181-%E4%BB%8E%E5%8F%A5%E5%88%9D%E5%A7%8B%E5%8C%96">3.1.8.1 从句初始化</a></li>
-<li><a href="#3182-%E8%AF%BB%E5%B0%B1%E7%BB%AA%E4%BA%8B%E4%BB%B6">3.1.8.2 读就绪事件</a></li>
-<li><a href="#3183-%E5%86%99%E5%B0%B1%E7%BB%AA%E4%BA%8B%E4%BB%B6">3.1.8.3 写就绪事件</a></li>
-<li><a href="#3184-deadline%E5%AE%9E%E7%8E%B0">3.1.8.4 deadline实现</a></li>
-<li><a href="#3185-otherwise%E5%AE%9E%E7%8E%B0">3.1.8.5 otherwise实现</a></li>
-<li><a href="#3186-%E4%BB%8E%E5%8F%A5%E7%BB%93%E6%9D%9F">3.1.8.6 从句结束</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a href="#32-stack">3.2 stack</a>
-<ul>
-<li><a href="#321-stackh">3.2.1 stack.h</a></li>
-<li><a href="#322-stackc">3.2.2 stack.c</a></li>
-</ul>
-</li>
-<li><a href="#33-chan">3.3 chan</a>
-<ul>
-<li><a href="#331-chanh">3.3.1 chan.h</a></li>
-<li><a href="#332-chanc">3.3.2 chan.c</a></li>
-</ul>
-</li>
-<li><a href="#34-cr">3.4 cr</a>
-<ul>
-<li><a href="#341-crh">3.4.1 cr.h</a></li>
-<li><a href="#342-crc">3.4.2 cr.c</a></li>
-</ul>
-</li>
-<li><a href="#35-mfork">3.5 mfork</a></li>
-</ul>
-</li>
-<li><a href="#4-network">4 Network</a>
-<ul>
-<li><a href="#41-tcp">4.1 tcp</a></li>
-<li><a href="#42-udp">4.2 udp</a></li>
-<li><a href="#43-unix">4.3 unix</a></li>
-<li><a href="#44-ip">4.4 ip</a>
-<ul>
-<li><a href="#441-iph">4.4.1 ip.h</a></li>
-<li><a href="#442-ipc">4.4.2 ip.c</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a href="#5-io-multiplex">5 IO Multiplex</a>
-<ul>
-<li><a href="#51-poller">5.1 poller</a>
-<ul>
-<li><a href="#511-pollerh">5.1.1 poller.h</a></li>
-<li><a href="#512-pollerc">5.1.2 poller.c</a></li>
-<li><a href="#513-epollinc">5.1.3 epoll.inc</a></li>
-</ul>
-</li>
-<li><a href="#52-file">5.2 file</a></li>
-</ul>
-</li>
-<li><a href="#6-data-structure">6 Data Structure</a>
-<ul>
-<li><a href="#61-slist">6.1 slist</a>
-<ul>
-<li><a href="#611-slisth">6.1.1 slist.h</a></li>
-<li><a href="#612-slistc">6.1.2 slist.c</a></li>
-</ul>
-</li>
-<li><a href="#62-list">6.2 list</a>
-<ul>
-<li><a href="#621-listh">6.2.1 list.h</a></li>
-<li><a href="#612-listc">6.1.2 list.c</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a href="#7-common-utils">7 Common Utils</a>
-<ul>
-<li><a href="#71-utils">7.1 utils</a></li>
-<li><a href="#72-timer">7.2 timer</a>
-<ul>
-<li><a href="#721-timerh">7.2.1 timer.h</a></li>
-<li><a href="#722-timerc">7.2.2 timer.c</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a href="#8-debug">8 Debug</a></li>
-</ul>
-<h1 id="1-preface">1 Preface</h1>
+  <ul>
+    <li><a href="#31-libmill">3.1 libmill</a>
+      <ul>
+        <li><a href="#311-abi版本">3.1.1 ABI版本</a></li>
+        <li><a href="#312-符号可见性">3.1.2 符号可见性</a></li>
+        <li><a href="#313-定时器精度">3.1.3 定时器精度</a></li>
+        <li><a href="#314-mill_fdwait关注的io事件">3.1.4 mill_fdwait关注的io事件</a></li>
+        <li><a href="#315-协程上下文的保存和切换">3.1.5 协程上下文的保存和切换</a></li>
+        <li><a href="#316-gofunc实现">3.1.6 go(func)实现</a></li>
+        <li><a href="#317-chan实现">3.1.7 chan实现</a></li>
+        <li><a href="#318-choose从句实现">3.1.8 choose从句实现</a></li>
+      </ul>
+    </li>
+    <li><a href="#32-stack">3.2 stack</a>
+      <ul>
+        <li><a href="#321-stackh">3.2.1 stack.h</a></li>
+        <li><a href="#322-stackc">3.2.2 stack.c</a></li>
+      </ul>
+    </li>
+    <li><a href="#33-chan">3.3 chan</a>
+      <ul>
+        <li><a href="#331-chanh">3.3.1 chan.h</a></li>
+        <li><a href="#332-chanc">3.3.2 chan.c</a></li>
+      </ul>
+    </li>
+    <li><a href="#34-cr">3.4 cr</a>
+      <ul>
+        <li><a href="#341-crh">3.4.1 cr.h</a></li>
+        <li><a href="#342-crc">3.4.2 cr.c</a></li>
+      </ul>
+    </li>
+    <li><a href="#35-mfork">3.5 mfork</a></li>
+  </ul>
+
+  <ul>
+    <li><a href="#41-tcp">4.1 tcp</a></li>
+    <li><a href="#42-udp">4.2 udp</a></li>
+    <li><a href="#43-unix">4.3 unix</a></li>
+    <li><a href="#44-ip">4.4 ip</a>
+      <ul>
+        <li><a href="#441-iph">4.4.1 ip.h</a></li>
+        <li><a href="#442-ipc">4.4.2 ip.c</a></li>
+      </ul>
+    </li>
+  </ul>
+
+  <ul>
+    <li><a href="#51-poller">5.1 poller</a>
+      <ul>
+        <li><a href="#511-pollerh">5.1.1 poller.h</a></li>
+        <li><a href="#512-pollerc">5.1.2 poller.c</a></li>
+        <li><a href="#513-epollinc">5.1.3 epoll.inc</a></li>
+      </ul>
+    </li>
+    <li><a href="#52-file">5.2 file</a></li>
+  </ul>
+
+  <ul>
+    <li><a href="#61-slist">6.1 slist</a>
+      <ul>
+        <li><a href="#611-slisth">6.1.1 slist.h</a></li>
+        <li><a href="#612-slistc">6.1.2 slist.c</a></li>
+      </ul>
+    </li>
+    <li><a href="#62-list">6.2 list</a>
+      <ul>
+        <li><a href="#621-listh">6.2.1 list.h</a></li>
+        <li><a href="#612-listc">6.1.2 list.c</a></li>
+      </ul>
+    </li>
+  </ul>
+
+  <ul>
+    <li><a href="#71-utils">7.1 utils</a></li>
+    <li><a href="#72-timer">7.2 timer</a>
+      <ul>
+        <li><a href="#721-timerh">7.2.1 timer.h</a></li>
+        <li><a href="#722-timerc">7.2.2 timer.c</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+</aside>
+
+
+        </div>
+   
+        
+        <div class="container markdown top-pad">
+            <h1 id="1-preface">1 Preface</h1>
 <p>libmill, 是Martin Sustrik发起的一个面向unix平台下c语言开发的协程库，实现了一种类似goroutine风格的协程，也支持channel，“通过通信共享数据，而非通过共享数据来完成通信”。</p>
 <p>觉得挺有意思的，就抽周末时间看了下。大神的代码干净利索，也看到了不少令自己眼前一亮的tricks，举几个例子吧。</p>
 <p><strong>1 通用链表及迭代器实现</strong></p>
@@ -3907,14 +3886,13 @@ cd libmill
 make -j8
 sudo make install
 </code></pre>
+        </div>
+        
+
     </div>
 
-    <br>
-    <br>
-    
-
     <div align="center">
-    
+        
 <div class="blog-share">
     分享：
     
@@ -3952,9 +3930,9 @@ sudo make install
     <br>
     <div style="height:auto;align:center;text-align:center;"> 
         <div>
-        <p>
-            ~~~ 如果文章对您有帮助，请记得打赏哦。帮我家小七🐶、元宝🐱改善下伙食吧，😘 ~~~
-        </p>
+            <p>
+                ~~~ 如果文章对您有帮助，请记得打赏哦。帮我家小七🐶、元宝🐱改善下伙食吧，😘 ~~~
+            </p>
         </div>
 
         <div>
@@ -3965,7 +3943,6 @@ sudo make install
     </div>
 
     
-
 
 
                 

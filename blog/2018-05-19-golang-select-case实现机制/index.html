@@ -184,7 +184,7 @@ golang select-case 实现机制 - 介绍
         </div>
 
         <p>
-        
+            
 <div class="blog-share">
     分享：
     
@@ -229,11 +229,15 @@ golang select-case 实现机制 - 介绍
         </p>
         
 
+        
+        <div>
+            
 
-    </div>
-    
-    <div class="container markdown top-pad">
-        <h1 id="1-chan操作规则">1 chan操作规则</h1>
+        </div>
+   
+        
+        <div class="container markdown top-pad">
+            <h1 id="1-chan操作规则">1 chan操作规则</h1>
 <p>在介绍select-case实现机制之前，最好先了解下chan操作规则，明白goroutine何时阻塞，又在什么时机被唤醒，这对后续理解select-case实现有帮助。所以接下来先介绍chan操作规则，然后再介绍select-case的实现。</p>
 <h2 id="11-chan操作规则1">1.1 chan操作规则1</h2>
 <p>当一个goroutine要从一个non-nil &amp; non-closed chan上接收数据时，goroutine首先会去获取chan上的锁，然后执行如下操作直到某个条件被满足：</p>
@@ -332,14 +336,13 @@ golang select-case 实现机制 - 介绍
 <h1 id="3-总结">3 总结</h1>
 <p>本文简要描述了golang中select-case的实现逻辑，介绍了goroutine与chan操作之间的协作关系。之前ZMQ作者Martin Sustrik仿着golang写过一个面向c的库，libmill，实际实现思路差不多，感兴趣的也可以翻翻看，<a href="https://hitzhangjie.github.io/2017/12/03/go%E9%A3%8E%E6%A0%BC%E5%8D%8F%E7%A8%8B%E5%BA%93libmill%E4%B9%8B%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90.html">libmill源码分析</a>。</p>
 
+        </div>
+        
+
     </div>
 
-    <br>
-    <br>
-    
-
     <div align="center">
-    
+        
 <div class="blog-share">
     分享：
     
@@ -377,9 +380,9 @@ golang select-case 实现机制 - 介绍
     <br>
     <div style="height:auto;align:center;text-align:center;"> 
         <div>
-        <p>
-            ~~~ 如果文章对您有帮助，请记得打赏哦。帮我家小七🐶、元宝🐱改善下伙食吧，😘 ~~~
-        </p>
+            <p>
+                ~~~ 如果文章对您有帮助，请记得打赏哦。帮我家小七🐶、元宝🐱改善下伙食吧，😘 ~~~
+            </p>
         </div>
 
         <div>
@@ -390,7 +393,6 @@ golang select-case 实现机制 - 介绍
     </div>
 
     
-
 
 
                 

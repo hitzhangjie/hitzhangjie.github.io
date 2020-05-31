@@ -184,7 +184,7 @@ golang function-closure 实现机制 - 介绍
         </div>
 
         <p>
-        
+            
 <div class="blog-share">
     分享：
     
@@ -231,11 +231,22 @@ golang function-closure 实现机制 - 介绍
         </p>
         
 
+        
+        <div>
+            
+<aside>
+    <header>
+    <h2>golang function-closure 实现机制</h2>
+    </header>
+    <nav id="TableOfContents"></nav>
+</aside>
 
-    </div>
-    
-    <div class="container markdown top-pad">
-        <p>golang里面函数时first-class citizen，可以作为值进行参数传递，不管是普通函数“func abc()”，还是成员方法“func (x X) xxx()”，还是一个闭包“func () { return func(){&hellip;.}}”……看上去很方便，不禁要问，golang里面funciton和closure是如何实现的呢？扒拉了下源码，这里简单总结下。</p>
+
+        </div>
+   
+        
+        <div class="container markdown top-pad">
+            <p>golang里面函数时first-class citizen，可以作为值进行参数传递，不管是普通函数“func abc()”，还是成员方法“func (x X) xxx()”，还是一个闭包“func () { return func(){&hellip;.}}”……看上去很方便，不禁要问，golang里面funciton和closure是如何实现的呢？扒拉了下源码，这里简单总结下。</p>
 <h1 id="1-golang中函数内部表示是什么样子的">1 golang中函数内部表示是什么样子的？</h1>
 <p>看下golang cmd/compile/internal/types/type.go中对Func类型的定义：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-golang" data-lang="golang"><span style="color:#75715e">// Func contains Type fields specific to func types.
@@ -402,14 +413,13 @@ golang function-closure 实现机制 - 介绍
 	<span style="color:#a6e22e">lineno</span> = <span style="color:#a6e22e">lno</span>
 }
 </code></pre></div>
+        </div>
+        
+
     </div>
 
-    <br>
-    <br>
-    
-
     <div align="center">
-    
+        
 <div class="blog-share">
     分享：
     
@@ -447,9 +457,9 @@ golang function-closure 实现机制 - 介绍
     <br>
     <div style="height:auto;align:center;text-align:center;"> 
         <div>
-        <p>
-            ~~~ 如果文章对您有帮助，请记得打赏哦。帮我家小七🐶、元宝🐱改善下伙食吧，😘 ~~~
-        </p>
+            <p>
+                ~~~ 如果文章对您有帮助，请记得打赏哦。帮我家小七🐶、元宝🐱改善下伙食吧，😘 ~~~
+            </p>
         </div>
 
         <div>
@@ -460,7 +470,6 @@ golang function-closure 实现机制 - 介绍
     </div>
 
     
-
 
 
                 

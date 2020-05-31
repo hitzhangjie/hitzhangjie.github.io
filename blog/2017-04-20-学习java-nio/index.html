@@ -180,11 +180,11 @@ Java NIO Tutorials - 介绍
         </h2>
         <div class="post-data">
             发表时间：2017-04-05 <br> 
-            阅读时长：12 分钟 (2366字)
+            阅读时长：10 分钟 (2085字)
         </div>
 
         <p>
-        
+            
 <div class="blog-share">
     分享：
     
@@ -229,181 +229,51 @@ Java NIO Tutorials - 介绍
         </p>
         
 
+        
+        <div>
+            
+<aside>
+    <header>
+    <h2>Java NIO Tutorials</h2>
+    </header>
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-前言">1 前言</a>
+      <ul>
+        <li></li>
+        <li><a href="#2-概要">2 概要</a></li>
+        <li><a href="#3-nio-channel">3 NIO Channel</a></li>
+        <li><a href="#4-nio-buffer">4 NIO Buffer</a></li>
+        <li><a href="#5-nio-scatter--gather">5 NIO Scatter &amp; Gather</a></li>
+        <li><a href="#7-nio-selector">7 NIO Selector</a></li>
+        <li><a href="#8-filechannel">8 FileChannel</a></li>
+        <li><a href="#9-nio-socketchannel">9 NIO SocketChannel</a></li>
+        <li><a href="#10-nio-serversocketchannel">10 NIO ServerSocketChannel</a></li>
+        <li><a href="#11-nio-non-blocking-server">11 NIO Non-blocking Server</a></li>
+        <li><a href="#114-basic-non-blocking-io-pipeline-design">11.4 Basic Non-blocking IO Pipeline Design</a></li>
+        <li><a href="#115-reading-partial-messages">11.5 Reading Partial Messages</a></li>
+        <li><a href="#116-storing-partial-messages">11.6 Storing Partial Messages</a></li>
+        <li><a href="#117-writing-partial-messages">11.7 Writing Partial Messages</a></li>
+        <li><a href="#118-putting-it-all-together">11.8 Putting it All Together</a></li>
+        <li><a href="#12-nio-datagramchannel">12 NIO DatagramChannel</a></li>
+        <li><a href="#13-nio-pipe">13 NIO Pipe</a></li>
+        <li><a href="#14-nio-vs-io">14 NIO vs IO</a></li>
+        <li><a href="#15-nio-path">15 NIO Path</a></li>
+        <li><a href="#16-nio-files">16 NIO Files</a></li>
+        <li><a href="#17-nio-asynchronousfilechannel">17 NIO AsynchronousFileChannel</a></li>
+        <li><a href="#参考内容">参考内容</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+</aside>
 
-    </div>
-    
-    <div class="container markdown top-pad">
-        <ul>
-<li><a href="#1-%E5%89%8D%E8%A8%80">1 前言</a>
-<ul>
-<li><a href="#nio-channel--buffer">NIO Channel &amp; Buffer</a></li>
-<li><a href="#nio-non-blocking-io">NIO Non-Blocking IO</a></li>
-<li><a href="#nio-selector">NIO Selector</a></li>
-</ul>
-</li>
-<li><a href="#2-%E6%A6%82%E8%A6%81">2 概要</a>
-<ul>
-<li><a href="#nio-channel--buffer-1">NIO Channel &amp; Buffer</a></li>
-<li><a href="#nio-selector-1">NIO Selector</a></li>
-</ul>
-</li>
-<li><a href="#3-nio-channel">3 NIO Channel</a></li>
-<li><a href="#4-nio-buffer">4 NIO Buffer</a>
-<ul>
-<li><a href="#41-capacity">4.1 capacity</a></li>
-<li><a href="#42-position">4.2 position</a></li>
-<li><a href="#43-limit">4.3 limit</a></li>
-<li><a href="#44-%E5%B8%B8%E7%94%A8%E6%96%B9%E6%B3%95">4.4 常用方法</a>
-<ul>
-<li><a href="#441-%E5%88%9B%E5%BB%BAbuffer">4.4.1 创建buffer</a></li>
-<li><a href="#442-%E5%86%99%E6%95%B0%E6%8D%AE%E5%88%B0buffer">4.4.2 写数据到buffer</a></li>
-<li><a href="#443-%E5%88%87%E6%8D%A2buffer%E4%B8%BA%E8%AF%BB%E6%A8%A1%E5%BC%8F">4.4.3 切换buffer为读模式</a></li>
-<li><a href="#444-%E4%BB%8Ebuffer%E4%B8%AD%E8%AF%BB%E5%8F%96%E6%95%B0%E6%8D%AE">4.4.4 从buffer中读取数据</a></li>
-<li><a href="#445-rewind%E8%AF%BB%E5%8F%96%E7%B4%A2%E5%BC%95">4.4.5 rewind读取索引</a></li>
-<li><a href="#446-%E6%B8%85%E7%A9%BAbuffer%E5%A4%87%E7%94%A8">4.4.6 清空buffer备用</a></li>
-<li><a href="#447-mark--reset">4.4.7 mark &amp; reset</a></li>
-<li><a href="#448-buffer%E5%86%85%E5%AE%B9%E6%AF%94%E8%BE%83">4.4.8 buffer内容比较</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a href="#5-nio-scatter--gather">5 NIO Scatter &amp; Gather</a>
-<ul>
-<li><a href="#51-scatter">5.1 Scatter</a></li>
-<li><a href="#52-gather">5.2 Gather</a></li>
-<li><a href="#6-nio-channel%E9%97%B4%E6%95%B0%E6%8D%AE%E4%BC%A0%E8%BE%93">6 NIO Channel间数据传输</a></li>
-</ul>
-</li>
-<li><a href="#7-nio-selector">7 NIO Selector</a>
-<ul>
-<li><a href="#71-%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%BF%E7%94%A8selector">7.1 为什么使用Selector？</a>
-<ul>
-<li><a href="#711-java%E7%BA%BF%E7%A8%8Blwp%E8%BF%9B%E7%A8%8Bklt%E7%BA%BF%E7%A8%8B%E5%AE%83%E4%BB%AC%E4%B9%8B%E9%97%B4%E6%98%AF%E4%BB%80%E4%B9%88%E5%85%B3%E7%B3%BB">7.1.1 Java线程、LWP进程、KLT线程，它们之间是什么关系？</a></li>
-<li><a href="#712-%E9%9D%A2%E5%AF%B9%E4%B8%8D%E5%90%8C%E4%BB%BB%E5%8A%A1%E5%A4%9A%E8%BF%9B%E7%A8%8B%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%9A%84%E9%80%89%E6%8B%A9">7.1.2 面对不同任务，多进程、多线程的选择？</a></li>
-</ul>
-</li>
-<li><a href="#72-%E5%88%9B%E5%BB%BAselector">7.2 创建Selector</a></li>
-<li><a href="#73-%E5%90%91selector%E4%B8%AD%E6%B3%A8%E5%86%8Cchannel">7.3 向Selector中注册Channel</a></li>
-<li><a href="#74-selectionkey">7.4 SelectionKey</a>
-<ul>
-<li><a href="#741-%E6%84%9F%E5%85%B4%E8%B6%A3%E4%BA%8B%E4%BB%B6%E9%9B%86%E5%90%88interesting-set">7.4.1 感兴趣事件集合interesting set</a></li>
-<li><a href="#742-%E5%B0%B1%E7%BB%AA%E4%BA%8B%E4%BB%B6%E9%9B%86%E5%90%88ready-set">7.4.2 就绪事件集合ready set</a></li>
-<li><a href="#743-channel--selector">7.4.3 channel + selector</a></li>
-<li><a href="#744-attach-object">7.4.4 attach object</a></li>
-<li><a href="#745-selector%E9%80%89%E6%8B%A9%E4%BA%8B%E4%BB%B6%E5%B0%B1%E7%BB%AA%E7%9A%84channel">7.4.5 selector选择事件就绪的Channel</a></li>
-<li><a href="#746-selectedkeys">7.4.6 selectedKeys()</a></li>
-<li><a href="#747-wakeup">7.4.7 wakeup</a></li>
-<li><a href="#748-close">7.4.8 close</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a href="#8-filechannel">8 FileChannel</a>
-<ul>
-<li><a href="#81-%E6%89%93%E5%BC%80%E4%B8%80%E4%B8%AAfilechannel">8.1 打开一个FileChannel</a></li>
-<li><a href="#82-%E9%80%9A%E8%BF%87filechannel%E8%AF%BB%E5%8F%96%E6%95%B0%E6%8D%AE">8.2 通过FileChannel读取数据</a></li>
-<li><a href="#83-%E5%90%91filechannel%E5%86%99%E5%85%A5%E6%95%B0%E6%8D%AE">8.3 向FileChannel写入数据</a></li>
-<li><a href="#84-%E5%85%B3%E9%97%ADfilechannel">8.4 关闭FileChannel</a></li>
-<li><a href="#85-filechannel%E4%B8%AD%E6%96%87%E4%BB%B6%E4%BD%8D%E7%BD%AE">8.5 FileChannel中文件位置</a></li>
-<li><a href="#86-filechannel-size">8.6 FileChannel Size</a></li>
-<li><a href="#87-filechannel-truncate">8.7 FileChannel Truncate</a></li>
-<li><a href="#88-filechannel-force">8.8 FileChannel Force</a></li>
-</ul>
-</li>
-<li><a href="#9-nio-socketchannel">9 NIO SocketChannel</a>
-<ul>
-<li><a href="#91-%E5%88%9B%E5%BB%BAsocketchannel">9.1 创建SocketChannel</a></li>
-<li><a href="#92-%E5%85%B3%E9%97%ADsocketchannel">9.2 关闭SocketChannel</a></li>
-<li><a href="#93-%E4%BB%8Esocketchannel%E8%AF%BB%E5%8F%96%E6%95%B0%E6%8D%AE">9.3 从SocketChannel读取数据</a></li>
-<li><a href="#94-%E5%86%99%E6%95%B0%E6%8D%AE%E5%88%B0socketchannel">9.4 写数据到SocketChannel</a></li>
-<li><a href="#95-non-blocking%E6%A8%A1%E5%BC%8F">9.5 Non-blocking模式</a>
-<ul>
-<li><a href="#951-connect">9.5.1 connect</a></li>
-<li><a href="#952-read">9.5.2 read</a></li>
-<li><a href="#953-write">9.5.3 write</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a href="#10-nio-serversocketchannel">10 NIO ServerSocketChannel</a></li>
-<li><a href="#11-nio-non-blocking-server">11 NIO Non-blocking Server</a>
-<ul>
-<li><a href="#111-non-blocking-server---github-repo">11.1 NON-Blocking Server - Github Repo</a></li>
-<li><a href="#112-non-blocking-io-pipelines">11.2 NON-Blocking IO Pipelines</a></li>
-<li><a href="#112-non-blocking-vs-blocking-io-pipelines">11.2 NON-Blocking vs Blocking IO Pipelines</a></li>
-<li><a href="#113-blocking-io-pipelines-drawbacks">11.3 Blocking IO Pipelines Drawbacks</a></li>
-</ul>
-</li>
-<li><a href="#114-basic-non-blocking-io-pipeline-design">11.4 Basic Non-blocking IO Pipeline Design</a></li>
-<li><a href="#115-reading-partial-messages">11.5 Reading Partial Messages</a></li>
-<li><a href="#116-storing-partial-messages">11.6 Storing Partial Messages</a>
-<ul>
-<li><a href="#%E4%B8%BA%E6%AF%8F%E4%B8%AAmessage-reader%E5%88%86%E9%85%8D%E4%B8%80%E4%B8%AA%E7%8B%AC%E7%AB%8B%E7%9A%84buffer">为每个Message Reader分配一个独立的Buffer</a></li>
-<li><a href="#%E5%AE%B9%E9%87%8F%E5%8F%AF%E8%B0%83%E6%95%B4%E7%9A%84buffers">容量可调整的Buffers</a></li>
-<li><a href="#%E9%80%9A%E8%BF%87%E6%8B%B7%E8%B4%9D%E6%93%8D%E4%BD%9C%E5%AE%9E%E7%8E%B0buffer%E5%AE%B9%E9%87%8F%E8%B0%83%E6%95%B4">通过“拷贝”操作实现Buffer容量调整</a></li>
-<li><a href="#%E9%80%9A%E8%BF%87%E8%BF%BD%E5%8A%A0%E6%93%8D%E4%BD%9C%E5%AE%9E%E7%8E%B0buffer%E5%AE%B9%E9%87%8F%E8%B0%83%E6%95%B4">通过“追加”操作实现Buffer容量调整</a></li>
-<li><a href="#tlv%E7%BC%96%E7%A0%81%E7%9A%84message">TLV编码的Message</a></li>
-</ul>
-</li>
-<li><a href="#117-writing-partial-messages">11.7 Writing Partial Messages</a></li>
-<li><a href="#118-putting-it-all-together">11.8 Putting it All Together</a></li>
-<li><a href="#12-nio-datagramchannel">12 NIO DatagramChannel</a>
-<ul>
-<li><a href="#121-%E6%89%93%E5%BC%80%E4%B8%80%E4%B8%AAdatagramchannel">12.1 打开一个DatagramChannel</a></li>
-<li><a href="#122-%E6%8E%A5%E6%94%B6%E6%95%B0%E6%8D%AE">12.2 接收数据</a></li>
-<li><a href="#123-%E5%8F%91%E9%80%81%E6%95%B0%E6%8D%AE">12.3 发送数据</a></li>
-<li><a href="#124-%E8%BF%9E%E6%8E%A5%E5%88%B0%E7%89%B9%E5%AE%9A%E5%9C%B0%E5%9D%80">12.4 连接到特定地址</a></li>
-</ul>
-</li>
-<li><a href="#13-nio-pipe">13 NIO Pipe</a>
-<ul>
-<li><a href="#131-%E5%88%9B%E5%BB%BA%E4%B8%80%E4%B8%AApipe">13.1 创建一个Pipe</a></li>
-<li><a href="#132-%E5%90%91pipe%E4%B8%AD%E5%86%99%E5%85%A5%E6%95%B0%E6%8D%AE">13.2 向Pipe中写入数据</a></li>
-<li><a href="#133-%E4%BB%8Epipe%E4%B8%AD%E8%AF%BB%E5%8F%96%E6%95%B0%E6%8D%AE">13.3 从Pipe中读取数据</a></li>
-</ul>
-</li>
-<li><a href="#14-nio-vs-io">14 NIO vs IO</a>
-<ul>
-<li><a href="#141-nio%E5%92%8Cio%E4%B9%8B%E9%97%B4%E7%9A%84%E4%B8%BB%E8%A6%81%E5%8C%BA%E5%88%AB">14.1 NIO和IO之间的主要区别</a></li>
-<li><a href="#141-stream-oriented-vs-buffer-oriented">14.1 Stream Oriented vs Buffer Oriented</a></li>
-<li><a href="#142-%E9%98%BB%E5%A1%9Eio%E5%92%8C%E9%9D%9E%E9%98%BB%E5%A1%9Eio">14.2 阻塞IO和非阻塞IO</a></li>
-<li><a href="#143-selectors">14.3 Selectors</a></li>
-<li><a href="#143-%E9%80%89%E6%8B%A9nio%E6%88%96io%E5%AF%B9%E7%A8%8B%E5%BA%8F%E8%AE%BE%E8%AE%A1%E7%9A%84%E5%BD%B1%E5%93%8D">14.3 选择NIO或IO对程序设计的影响</a>
-<ul>
-<li><a href="#1431-api-calls">14.3.1 API Calls</a></li>
-<li><a href="#1432-%E6%95%B0%E6%8D%AE%E5%A4%84%E7%90%86">14.3.2 数据处理</a></li>
-<li><a href="#1433-%E6%80%BB%E7%BB%93">14.3.3 总结</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a href="#15-nio-path">15 NIO Path</a></li>
-<li><a href="#16-nio-files">16 NIO Files</a>
-<ul>
-<li><a href="#161-%E6%A3%80%E6%9F%A5%E6%96%87%E4%BB%B6%E6%98%AF%E5%90%A6%E5%AD%98%E5%9C%A8">16.1 检查文件是否存在</a></li>
-<li><a href="#162-%E5%88%9B%E5%BB%BA%E7%9B%AE%E5%BD%95">16.2 创建目录</a></li>
-<li><a href="#163-%E6%96%87%E4%BB%B6%E6%8B%B7%E8%B4%9D">16.3 文件拷贝</a></li>
-<li><a href="#164-%E8%A6%86%E7%9B%96%E6%96%87%E4%BB%B6">16.4 覆盖文件</a></li>
-<li><a href="#165-%E6%96%87%E4%BB%B6%E7%A7%BB%E5%8A%A8">16.5 文件移动</a></li>
-<li><a href="#166-%E6%96%87%E4%BB%B6%E5%88%A0%E9%99%A4">16.6 文件删除</a></li>
-<li><a href="#167-%E9%80%92%E5%BD%92%E9%81%8D%E5%8E%86%E7%9B%AE%E5%BD%95">16.7 递归遍历目录</a></li>
-<li><a href="#168-%E6%96%87%E4%BB%B6%E6%90%9C%E7%B4%A2">16.8 文件搜索</a></li>
-<li><a href="#169-%E9%80%92%E5%BD%92%E5%88%A0%E9%99%A4%E7%9B%AE%E5%BD%95%E4%B8%8B%E6%96%87%E4%BB%B6">16.9 递归删除目录下文件</a></li>
-<li><a href="#1610-%E5%85%B6%E4%BB%96%E6%96%B9%E6%B3%95">16.10 其他方法</a></li>
-</ul>
-</li>
-<li><a href="#17-nio-asynchronousfilechannel">17 NIO AsynchronousFileChannel</a>
-<ul>
-<li><a href="#171-%E5%88%9B%E5%BB%BA%E4%B8%80%E4%B8%AAasynchronousfilechannel">17.1 创建一个AsynchronousFileChannel</a></li>
-<li><a href="#172-%E9%80%9A%E8%BF%87future%E5%AF%B9%E8%B1%A1%E6%9D%A5%E5%BC%82%E6%AD%A5%E8%AF%BB%E5%8F%96%E6%95%B0%E6%8D%AE">17.2 通过Future对象来异步读取数据</a></li>
-<li><a href="#173-%E5%BC%82%E6%AD%A5%E6%95%B0%E6%8D%AE%E8%AF%BB%E5%AE%8C%E6%88%90%E5%90%8E%E6%89%A7%E8%A1%8Ccompletionhandler">17.3 异步数据读完成后执行CompletionHandler</a></li>
-<li><a href="#174-%E9%80%9A%E8%BF%87future%E5%AF%B9%E8%B1%A1%E6%9D%A5%E5%BC%82%E6%AD%A5%E5%86%99%E5%85%A5%E6%95%B0%E6%8D%AE">17.4 通过Future对象来异步写入数据</a></li>
-<li><a href="#175-%E5%BC%82%E6%AD%A5%E5%86%99%E5%85%A5%E6%95%B0%E6%8D%AE%E5%AE%8C%E6%88%90%E5%90%8E%E6%89%A7%E8%A1%8Ccompletionhandler">17.5 异步写入数据完成后执行CompletionHandler</a></li>
-</ul>
-</li>
-<li><a href="#%E5%8F%82%E8%80%83%E5%86%85%E5%AE%B9">参考内容</a></li>
-</ul>
-<h3 id="1-前言">1 前言</h3>
+
+        </div>
+   
+        
+        <div class="container markdown top-pad">
+            <h2 id="1-前言">1 前言</h2>
 <p>Java NIO，意为Java New IO，是一种相对于Java标准IO、网络API的替代方案。从JDK 1.4开始NIO就被引入了进来，它提供了另一种IO处理的方式，这使得Java在IO处理方面向前迈进了一大步。</p>
 <h4 id="nio-channel--buffer">NIO Channel &amp; Buffer</h4>
 <p>在Java标准IO里面，IO处理的对象是字节流或字符流，在NIO里面我们处理的对象是channel和buffer，数据读总是从channel中读入到buffer，输入写总是从buffer写入到channel。</p>
@@ -1459,14 +1329,13 @@ fileChannel<span style="color:#f92672">.</span><span style="color:#a6e22e">write
 <p><a href="http://tutorials.jenkov.com/java-nio/index.html">1</a> <a href="http://tutorials.jenkov.com/java-nio/index.html">http://tutorials.jenkov.com/java-nio/index.html</a></p>
 <p><a href="https://github.com/jjenkov/java-nio-server">2</a> <a href="https://github.com/jjenkov/java-nio-server">https://github.com/jjenkov/java-nio-server</a></p>
 
+        </div>
+        
+
     </div>
 
-    <br>
-    <br>
-    
-
     <div align="center">
-    
+        
 <div class="blog-share">
     分享：
     
@@ -1504,9 +1373,9 @@ fileChannel<span style="color:#f92672">.</span><span style="color:#a6e22e">write
     <br>
     <div style="height:auto;align:center;text-align:center;"> 
         <div>
-        <p>
-            ~~~ 如果文章对您有帮助，请记得打赏哦。帮我家小七🐶、元宝🐱改善下伙食吧，😘 ~~~
-        </p>
+            <p>
+                ~~~ 如果文章对您有帮助，请记得打赏哦。帮我家小七🐶、元宝🐱改善下伙食吧，😘 ~~~
+            </p>
         </div>
 
         <div>
@@ -1517,7 +1386,6 @@ fileChannel<span style="color:#f92672">.</span><span style="color:#a6e22e">write
     </div>
 
     
-
 
 
                 

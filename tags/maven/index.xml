@@ -17,16 +17,7 @@
       <pubDate>Sat, 01 Apr 2017 17:45:40 +0800</pubDate>
       
       <guid>https://hitzhangjie.github.io/blog/2017-04-01-%E5%AD%A6%E4%B9%A0apache-ant/</guid>
-      <description>Apache Ant是由Apache开发的基于Java的构建工具，本文对tutorialspoint上面的Apache Ant教程进行简要总结。
-1 为什么需要这样一个构建工具？ Ant是Another Neat Tool的缩写形式，为什么需要这样一个工具呢？跟它的名字一样，就是希望我们开发人员的工作能够更加neat！
-开发人员有些琐碎的、重复性的工作，包括：编译代码、打包可执行程序、部署程序到测试服务器、测试改变、拷贝代码到不同的地方。Ant可以帮助我们自动化上面列举的这几个步骤，简化我们的工作。
-Ant是tomcat的作者开发出来的，最初适用于构建tomcat的，并且作为tomcat的一部分，之所以开发它是为了弥补当初Apache Make工具（没有在apache项目列表中搜索到该项目）的不足之处，2000年的时候Ant从tomcat项目中独立出来作为一个独立的项目开发。
-至于Apache Ant的优势具体在哪，这个我们最后在给出来，目的是让大家结合自身工作经历，根据Apache Ant的功能自己主动去发现它的优势。
-2 Ant build.xml Ant的构建脚本默认是build.xml，也可以用其他的文件名。build.xml里面通常包括tag ，这里name指定了工程的名字，default是默认名字，basedir指定了工程的根目录。另外还包括多个tag ，其中name指定了目标动作的名字，例如compile、package、clean等等，它们之间存在某种依赖关系，可以通过depends指定。例如package依赖clean、compile，就可以指定depends=&amp;quot;clean,package&amp;rdquo;，注意依赖先后顺序，不要写成depends=&amp;quot;package,clean&amp;rdquo;。
-示例1：
-&amp;lt;?xml version=&amp;#34;1.0&amp;#34;?&amp;gt; &amp;lt;project name=&amp;#34;Hello World Project&amp;#34; default=&amp;#34;info&amp;#34;&amp;gt; &amp;lt;target name=&amp;#34;info&amp;#34;&amp;gt; &amp;lt;echo&amp;gt;Hello World - Welcome to Apache Ant!&amp;lt;/echo&amp;gt; &amp;lt;/target&amp;gt; &amp;lt;/project&amp;gt; 示例2：
-&amp;lt;target name=&amp;#34;deploy&amp;#34; depends=&amp;#34;package&amp;#34;&amp;gt; .... &amp;lt;/target&amp;gt; &amp;lt;target name=&amp;#34;package&amp;#34; depends=&amp;#34;clean,compile&amp;#34;&amp;gt; .... &amp;lt;/target&amp;gt; &amp;lt;target name=&amp;#34;clean&amp;#34; &amp;gt; .... &amp;lt;/target&amp;gt; &amp;lt;target name=&amp;#34;compile&amp;#34; &amp;gt; .... &amp;lt;/target&amp;gt; build.xml里面可以使用ant预先定义的一些变量，例如：
-   property desc     ant.</description>
+      <description>Apache Ant是由Apache开发的基于Java的构建工具，本文对tutorialspoint上面的Apache Ant教程进行简要总结。 1 为什么需要这样一个构建工具？ Ant是Another Neat Tool的缩写形式，为什么需要这样一个工具呢？跟它的名字一样，就是希望我们开发人员的工作能够更加neat！ 开发人员有些琐碎的、重复性的工作，包括：编译代码、打包可执行程序、部署程序到测试服务器、测试改变、拷贝代码到不同的地方。Ant可以帮助我们自动化上面列举的这几个步骤，简化我们的工作。 Ant是tomcat的作者开发出来的，最</description>
     </item>
     
   </channel>

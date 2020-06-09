@@ -60,7 +60,7 @@
   
   <url>
     <loc>https://hitzhangjie.github.io/blog/</loc>
-    <lastmod>2020-06-05T20:03:35+08:00</lastmod>
+    <lastmod>2020-06-09T20:25:07+08:00</lastmod>
     <xhtml:link
                 rel="alternate"
                 hreflang="en"
@@ -74,8 +74,33 @@
   </url>
   
   <url>
+    <loc>https://hitzhangjie.github.io/blog/2020-06-09-a-golang-debugger-book/</loc>
+    <lastmod>2020-06-09T20:25:07+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/debugger/</loc>
+    <lastmod>2020-06-09T20:25:07+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/delve/</loc>
+    <lastmod>2020-06-09T20:25:07+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/dwarf/</loc>
+    <lastmod>2020-06-09T20:25:07+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/golang/</loc>
+    <lastmod>2020-06-09T20:25:07+08:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://hitzhangjie.github.io/tags/</loc>
-    <lastmod>2020-06-05T20:03:35+08:00</lastmod>
+    <lastmod>2020-06-09T20:25:07+08:00</lastmod>
     <xhtml:link
                 rel="alternate"
                 hreflang="en"
@@ -85,6 +110,21 @@
                 rel="alternate"
                 hreflang="zh-cn"
                 href="https://hitzhangjie.github.io/tags/"
+                />
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/</loc>
+    <lastmod>2020-06-09T20:25:07+08:00</lastmod>
+    <xhtml:link
+                rel="alternate"
+                hreflang="en"
+                href="https://hitzhangjie.github.io/en/"
+                />
+    <xhtml:link
+                rel="alternate"
+                hreflang="zh-cn"
+                href="https://hitzhangjie.github.io/"
                 />
   </url>
   
@@ -99,21 +139,6 @@
   </url>
   
   <url>
-    <loc>https://hitzhangjie.github.io/</loc>
-    <lastmod>2020-06-05T20:03:35+08:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh-cn"
-                href="https://hitzhangjie.github.io/"
-                />
-  </url>
-  
-  <url>
     <loc>https://hitzhangjie.github.io/blog/2020-06-05-%E6%88%91%E5%9C%A8%E8%85%BE%E8%AE%AF%E8%BF%99%E5%87%A0%E5%B9%B4/</loc>
     <lastmod>2020-06-05T20:03:35+08:00</lastmod>
   </url>
@@ -125,11 +150,6 @@
   
   <url>
     <loc>https://hitzhangjie.github.io/tags/go/</loc>
-    <lastmod>2018-05-19T19:55:15+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/tags/golang/</loc>
     <lastmod>2018-05-19T19:55:15+08:00</lastmod>
   </url>
   

@@ -84,6 +84,15 @@
     </item>
     
     <item>
+      <title>golang method receiver-type的梗</title>
+      <link>https://hitzhangjie.github.io/blog/2018-05-21-golang-method-receiver-type%E7%9A%84%E6%A2%97/</link>
+      <pubDate>Mon, 21 May 2018 12:33:23 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2018-05-21-golang-method-receiver-type%E7%9A%84%E6%A2%97/</guid>
+      <description>这里来聊聊method receiver type为什么不能是pointer和interface类型。 1 receiver-type必须满足的条件 golang里面提供了一定的面向对象支持，比如我们可以为类型T或者*T定义成员方法（类型T称为成员方法的receiver-type），但是这里的类型T必须满足如下几个条件： T必须是已经定义过的类型； T与当前方法定义必须在同一个package下面； T不能是指针； T不能是接口类型； 前面两点都比较容易理解，下面两点是什么梗？为什么就不能在指针类型上添加方法？为什么就不能在interface</description>
+    </item>
+    
+    <item>
       <title>golang function-closure 实现机制</title>
       <link>https://hitzhangjie.github.io/blog/2018-05-19-golang-function-closure%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/</link>
       <pubDate>Sat, 19 May 2018 19:55:15 +0800</pubDate>
@@ -189,15 +198,6 @@
       
       <guid>https://hitzhangjie.github.io/blog/2017-02-25-%E6%88%91%E7%9A%84%E5%85%B4%E8%B6%A3%E5%88%97%E8%A1%A8/</guid>
       <description>hitzhangjie&amp;rsquo;s blog 2016-07-04 11:12:22 AM ============================================================================== With the help of github.io,I start my personal blog - hitzhangjie&amp;rsquo;s blog. I will share my ideas, experience, lessons taught during my study and work, which includes but not limited to: 1. Computer Engineering Techniques Programming Languages C C++ Java Shell JavaScript Python Perl Go Unix/Linux System Administration Start to Shutdown internals Important Scripts Systemd vs. Initd Services Control Job Control Process Control Web Server Setup Httpd (Apache Web Server) Nginx Tomcat Database Server Setup MySQL MarialDB Oracle PostgreSQL SQLite etc Distributed Cache Server Memcached etc Email Server Git Server Bugzilla TheBugGennie Linux Kernel Internals C Prerequisitives Virtual Memory Manangement Process Schedule Network Interrupt, Exception and Signal FileSystems etc. Data Structure &amp;amp; Algorithms Linear Array, List, Queue, Stack Non-Linear Tree, Graph Software Architect CDN (Content Delivery Network) Reverse Proxy Server Load Balancer Application Server Farm Database Server Farm File Server Farm Distributed Cache Server Farm Message Queue etc. Design Patterns 2. Computer Science Exploration &amp;amp; Study Condition-based Maintenance for Information Devices State Acquire Manners SNMP, IPMI, WMI, etc. State Assess Manners Rules-based Model BPANN-based Model Failure Prediction Manners BPANN-based Model Naive Bayesian based Model Bayesian Network based Model Fault Diagnose Manners Discriminate Transient/Persistent Faults Root Cause Analysis Fix the Faults etc. I am very proud to be a programmer. I love the programming atmosphere and culture - love to study, communicate and share! Anything posted here can be referenced. If you have some new ideas and want to talk with me, please send email to hit.zhangjie@gmail.com, I will try to</description>
-    </item>
-    
-    <item>
-      <title>golang method receiver-type的梗</title>
-      <link>https://hitzhangjie.github.io/blog/2018-05-21-golang-method-receiver-type%E7%9A%84%E6%A2%97/</link>
-      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      
-      <guid>https://hitzhangjie.github.io/blog/2018-05-21-golang-method-receiver-type%E7%9A%84%E6%A2%97/</guid>
-      <description>这里来聊聊method receiver type为什么不能是pointer和interface类型。 1 receiver-type必须满足的条件 golang里面提供了一定的面向对象支持，比如我们可以为类型T或者*T定义成员方法（类型T称为成员方法的receiver-type），但是这里的类型T必须满足如下几个条件： T必须是已经定义过的类型； T与当前方法定义必须在同一个package下面； T不能是指针； T不能是接口类型； 前面两点都比较容易理解，下面两点是什么梗？为什么就不能在指针类型上添加方法？为什么就不能在interface</description>
     </item>
     
     <item>

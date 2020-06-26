@@ -6,10 +6,28 @@
     <description>Recent content in 博客 on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Tue, 09 Jun 2020 20:25:07 +0800</lastBuildDate>
+    <lastBuildDate>Fri, 26 Jun 2020 10:38:34 +0800</lastBuildDate>
     
 	<atom:link href="https://hitzhangjie.github.io/blog/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>如何高效开发一个命令行工具</title>
+      <link>https://hitzhangjie.github.io/blog/2020-06-26-%E5%A6%82%E4%BD%95%E9%AB%98%E6%95%88%E5%BC%80%E5%8F%91%E4%B8%80%E4%B8%AA%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%B7%A5%E5%85%B7/</link>
+      <pubDate>Fri, 26 Jun 2020 10:38:34 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-06-26-%E5%A6%82%E4%BD%95%E9%AB%98%E6%95%88%E5%BC%80%E5%8F%91%E4%B8%80%E4%B8%AA%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%B7%A5%E5%85%B7/</guid>
+      <description>我经常会开发一些命令行工具来协助处理一些事情，如开发一个代码生成工具快速生成服务代码，或者开发一个工具来方便管理github上的工具，或者开发一个工具rm来替换掉不安全的rm，等等。 命令行工具开发过程中，比较常见的一个问题就是对功能进行分组，开发多个命令不利于使用，在命令中支持子命令是一个更常见、更友好的做法，如go build，go tool，go pprof，等等。我们还希望为不同的子命令添加不同的命令行选项，如go build -gcflags=，go pprof --seconds=，等等。 如何支持子命令字呢？ 假如我们开发一个命</description>
+    </item>
+    
+    <item>
+      <title>父亲节，于我已是种奢侈</title>
+      <link>https://hitzhangjie.github.io/blog/2020-06-21-%E7%88%B6%E4%BA%B2%E8%8A%82%E4%BA%8E%E6%88%91%E5%B7%B2%E6%98%AF%E7%A7%8D%E5%A5%A2%E4%BE%88/</link>
+      <pubDate>Sun, 21 Jun 2020 13:04:45 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-06-21-%E7%88%B6%E4%BA%B2%E8%8A%82%E4%BA%8E%E6%88%91%E5%B7%B2%E6%98%AF%E7%A7%8D%E5%A5%A2%E4%BE%88/</guid>
+      <description>昨天是周六，优化了一下代码生成工具gorpc，解决了几个遗留的问题，总算是做了点有意思的事情，心里有点窃喜。临睡前，掏出手机，惯例地刷了刷推送的消息，原来明天是父亲节了。心里忍不住被扎了一下，父亲节，于我已是种奢侈。30岁的年纪，或好或坏，或小有成绩或满怀迷茫，不管怎样，至少你们还有父亲，我只能在一个人的时候才能去享受下那久违的回忆，那些有父亲的时光。 在我还很小的时候，家里很是拮据，父母很辛苦，为了维持一家人生活，父母付出了很多。父母的辛苦，在我很小的时候就埋进了心底……如今，二三十年过去，那每逢下雨就要滴</description>
+    </item>
     
     <item>
       <title>A Golang Debugger Book</title>
@@ -27,6 +45,15 @@
       
       <guid>https://hitzhangjie.github.io/blog/2020-06-05-%E6%88%91%E5%9C%A8%E8%85%BE%E8%AE%AF%E8%BF%99%E5%87%A0%E5%B9%B4/</guid>
       <description>写在前面 很长一段时间没有更新个人博客了，回头一看竟然有一年没更新，这一年工作上确实比以前忙了很多。有点时间也拿来体验生活、钻研感兴趣的技术了。感兴趣也可以看下我的github，这一年几乎也在不停地探索、尝试，因为兴趣和那份好奇，还有就是，想做点有深度的东西取悦自己。 自从2016年7月份入职腾讯以来，也算是勤勤恳恳地工作，至少不让自己成为团队的瓶颈吧，事实上做的应该还可以吧。当然和自己的兴趣、领导的指点、工作项的安排，也有密切的关系，绝大部分工作时间，我还是比较开心的。 今天收拾房间，无意中发现了腾讯学院的一个</description>
+    </item>
+    
+    <item>
+      <title>波音737坠毁事故的背后</title>
+      <link>https://hitzhangjie.github.io/blog/2019-03-17-%E6%B3%A2%E9%9F%B3737%E5%9D%A0%E6%AF%81%E4%BA%8B%E6%95%85%E7%9A%84%E8%83%8C%E5%90%8E/</link>
+      <pubDate>Sun, 17 Mar 2019 17:40:26 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2019-03-17-%E6%B3%A2%E9%9F%B3737%E5%9D%A0%E6%AF%81%E4%BA%8B%E6%95%85%E7%9A%84%E8%83%8C%E5%90%8E/</guid>
+      <description>text goes here 波音，从诞生到现在，一直都是全球空客市场的强有力竞争者，然而，就是这么一家顶尖的企业，却接连制造了惨不忍睹的杀人事故。波音737 Max，在人们心目中已然成为了一款“杀人”机器，几百个家庭就此陷入无尽的悲伤，即便能获取高额赔偿，又有什么用呢？忍不住内心的怒火，忍不住要追问，究竟是谁导致了这一系列事故的发生！ 波音737 Max机型事故回顾 2019年3月10日，一架载有149名乘客和8位机组人员的波音737 Max，从埃色俄比亚的亚的斯亚贝巴机场起飞后大约6分钟坠毁。飞机起飞后，垂直速度一直不稳定，机长也非常警</description>
     </item>
     
     <item>

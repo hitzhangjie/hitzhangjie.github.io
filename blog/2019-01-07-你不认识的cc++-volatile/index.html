@@ -301,7 +301,7 @@
 </ul>
 <h2 id="3-对volatile持何观点">3. 对volatile持何观点</h2>
 <p>为了引起大家对CC++ volatile的重视并及时表明观点，先贴一个页面“<a href="https://isocpp.org/blog/2018/06/is-volatile-useful-with-threads-isvolatileusefulwiththreads.com">Is-Volatile-Useful-with-Threads</a>”，网站中简明扼要的告知大家，“Friends don’t let friends use volatile for inter-thread communication in C and C++”。But why？</p>
-<img src="/blog/assets/volatile/is-volatile-useful-with-threads.png" style="width:440px;"/>
+<img src="/blog/assets/volatile/is-volatile-useful-with-threads.png" style="width:660px;"/>
 <p>isocpp专门挂了这么个页面来强调volatile在不同编程语言中的差异，可见它是一个多么难缠的问题。即便是有这么个页面，要彻底搞清楚volatile，也不是说读完上面列出的几个技术博客就能解决，那也太轻描淡写了，所以我搜索、整理、讨论，希望能将学到的内容总结下来供其他开发者参考，我也不想再因为这个问题而困扰。</p>
 <p>结合CC++ volatile qualifier以及abstract machine中对volatile相关sequence points的描述，可以确定volatile的语义：</p>
 <ul>

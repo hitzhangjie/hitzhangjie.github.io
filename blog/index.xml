@@ -6,19 +6,10 @@
     <description>Recent content in 博客 on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Sat, 25 Jul 2020 19:46:11 +0800</lastBuildDate>
+    <lastBuildDate>Sat, 25 Jul 2020 17:26:01 +0800</lastBuildDate>
     
 	<atom:link href="https://hitzhangjie.github.io/blog/index.xml" rel="self" type="application/rss+xml" />
     
-    
-    <item>
-      <title>你不认识的cc&#43;&#43; volatile</title>
-      <link>https://hitzhangjie.github.io/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc&#43;&#43;-volatile/</link>
-      <pubDate>Sat, 25 Jul 2020 19:46:11 +0800</pubDate>
-      
-      <guid>https://hitzhangjie.github.io/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc&#43;&#43;-volatile/</guid>
-      <description>1. 令人困惑的volatile volatile字面意思是“不稳定的、易变的”，不少编程语言中存在volatile关键字，也有共同之处，如“表示程序执行期间数据可能会被外部操作修改”，如被外设修改或者被其他线程修改等。这只是字面上给我们的一般性认识，然而具体到不同的编程语言中volatile的语义可能相差甚远。 很多人以为自己精通CC++，但是被问起volatile的时候却无法清晰、果断地表明态度，那只能说明还是处在“从入门到精通”的路上，如果了解一门语言常见特性的使用、能够写健壮高效的程序就算精通的话，那实在是</description>
-    </item>
     
     <item>
       <title>如何在go二进制程序中打包静态资源文件</title>
@@ -27,6 +18,15 @@
       
       <guid>https://hitzhangjie.github.io/blog/2020-07-25-%E5%A6%82%E4%BD%95%E5%9C%A8go%E4%BA%8C%E8%BF%9B%E5%88%B6%E7%A8%8B%E5%BA%8F%E4%B8%AD%E6%89%93%E5%8C%85%E9%9D%99%E6%80%81%E8%B5%84%E6%BA%90%E6%96%87%E4%BB%B6/</guid>
       <description>Why? 有时我们希望在go二进制程序中打包一些静态资源文件，目的可能有多种，比较常见的是为了简化安装。通常我们安装一个go编写的工具，更倾向于使用 go get $repo 的方式来完成，这似乎已经成为了一种共识。当然，也有些项目还依赖一些静态资源文件，这些静态资源文件是不会被自动安装的，就需要借助其他方式来完成静态资源的安装，比如通过install.sh脚本，后者Makefile构建脚本等等。 今天，我想讨论下，如何简单快速地支持静态资源打包到二进制程序中，以及在二进制程序中对这些静态资源加以引用。 How? github上已经有不少开发者在探</description>
+    </item>
+    
+    <item>
+      <title>你不认识的cc&#43;&#43; volatile</title>
+      <link>https://hitzhangjie.github.io/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc&#43;&#43;-volatile/</link>
+      <pubDate>Fri, 24 Jul 2020 19:46:11 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc&#43;&#43;-volatile/</guid>
+      <description>1. 令人困惑的volatile volatile字面意思是“不稳定的、易变的”，不少编程语言中存在volatile关键字，也有共同之处，如“表示程序执行期间数据可能会被外部操作修改”，如被外设修改或者被其他线程修改等。这只是字面上给我们的一般性认识，然而具体到不同的编程语言中volatile的语义可能相差甚远。 很多人以为自己精通CC++，但是被问起volatile的时候却无法清晰、果断地表明态度，那只能说明还是处在“从入门到精通”的路上，如果了解一门语言常见特性的使用、能够写健壮高效的程序就算精通的话，那实在是</description>
     </item>
     
     <item>

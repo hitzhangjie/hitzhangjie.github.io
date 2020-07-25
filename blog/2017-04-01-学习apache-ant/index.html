@@ -278,7 +278,7 @@
 <p>Ant是tomcat的作者开发出来的，最初适用于构建tomcat的，并且作为tomcat的一部分，之所以开发它是为了弥补当初Apache Make工具（没有在apache项目列表中搜索到该项目）的不足之处，2000年的时候Ant从tomcat项目中独立出来作为一个独立的项目开发。</p>
 <p>至于Apache Ant的优势具体在哪，这个我们最后在给出来，目的是让大家结合自身工作经历，根据Apache Ant的功能自己主动去发现它的优势。</p>
 <h3 id="2-ant-buildxml">2 Ant build.xml</h3>
-<p>Ant的构建脚本默认是build.xml，也可以用其他的文件名。build.xml里面通常包括tag <!-- raw HTML omitted -->，这里name指定了工程的名字，default是默认名字，basedir指定了工程的根目录。另外还包括多个tag <!-- raw HTML omitted -->，其中name指定了目标动作的名字，例如compile、package、clean等等，它们之间存在某种依赖关系，可以通过depends指定。例如package依赖clean、compile，就可以指定depends=&quot;clean,package&rdquo;，注意依赖先后顺序，不要写成depends=&quot;package,clean&rdquo;。</p>
+<p>Ant的构建脚本默认是build.xml，也可以用其他的文件名。build.xml里面通常包括tag <project name="" default="" basedir=""/>，这里name指定了工程的名字，default是默认名字，basedir指定了工程的根目录。另外还包括多个tag <target name="" depends=""/>，其中name指定了目标动作的名字，例如compile、package、clean等等，它们之间存在某种依赖关系，可以通过depends指定。例如package依赖clean、compile，就可以指定depends=&quot;clean,package&rdquo;，注意依赖先后顺序，不要写成depends=&quot;package,clean&rdquo;。</p>
 <p>示例1：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">&lt;?</span>xml version<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;1.0&#34;</span><span style="color:#f92672">?&gt;</span>
    <span style="color:#f92672">&lt;</span>project name<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Hello World Project&#34;</span> <span style="color:#66d9ef">default</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;info&#34;</span><span style="color:#f92672">&gt;</span>
@@ -429,7 +429,7 @@ buildversion<span style="color:#f92672">=</span>3<span style="color:#f92672">.</
    <span style="color:#f92672">&lt;</span>file name<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;web.xml&#34;</span><span style="color:#f92672">/&gt;</span>
    <span style="color:#f92672">&lt;</span>file name<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;portlet.xml&#34;</span><span style="color:#f92672">/&gt;</span>
 <span style="color:#f92672">&lt;/</span>filelist<span style="color:#f92672">&gt;</span>
-</code></pre></div><p>上面这里定义了一个文件列表，包括了<!-- raw HTML omitted -->所指定的这些文件。</p>
+</code></pre></div><p>上面这里定义了一个文件列表，包括了<file/>所指定的这些文件。</p>
 <p>filterset类型往往用于筛选满足指定条件的文件，例如在copy任务中与fileset相结合拷贝指定版本的文件，看下这里的示例吧。</p>
 <p>示例1：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">&lt;</span>copy todir<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;${output.dir}&#34;</span><span style="color:#f92672">&gt;</span>
@@ -909,7 +909,7 @@ tomcat<span style="color:#f92672">.</span><span style="color:#a6e22e">manager</s
     <div class="container has-text-centered">
     
         <span class="footer-text">
-            <a href="https://github.com/victoriadrake/hugo-theme-introduction/"><strong>Introduction</strong></a> 主题为 <a href="http://gohugo.io/">Hugo</a> 而设。由开源社群贡献者以 <a href="https://victoria.dev"><!-- raw HTML omitted --><!-- raw HTML omitted --> 和 <!-- raw HTML omitted --><!-- raw HTML omitted --></a> 创造。
+            <a href="https://github.com/victoriadrake/hugo-theme-introduction/"><strong>Introduction</strong></a> 主题为 <a href="http://gohugo.io/">Hugo</a> 而设。由开源社群贡献者以 <a href="https://victoria.dev"><i class="fa fa-heart"></i> 和 <i class="fa fa-coffee"></i></a> 创造。
         </span>
     
     </div>

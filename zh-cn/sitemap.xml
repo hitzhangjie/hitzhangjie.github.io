@@ -60,7 +60,7 @@
   
   <url>
     <loc>https://hitzhangjie.github.io/blog/</loc>
-    <lastmod>2020-07-25T17:26:01+08:00</lastmod>
+    <lastmod>2020-07-25T19:46:11+08:00</lastmod>
     <xhtml:link
                 rel="alternate"
                 hreflang="en"
@@ -74,18 +74,23 @@
   </url>
   
   <url>
-    <loc>https://hitzhangjie.github.io/tags/bindata/</loc>
-    <lastmod>2020-07-25T17:26:01+08:00</lastmod>
+    <loc>https://hitzhangjie.github.io/tags/cache/</loc>
+    <lastmod>2020-07-25T19:46:11+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://hitzhangjie.github.io/tags/go/</loc>
-    <lastmod>2020-07-25T17:26:01+08:00</lastmod>
+    <loc>https://hitzhangjie.github.io/tags/cc&#43;&#43;/</loc>
+    <lastmod>2020-07-25T19:46:11+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/mesi/</loc>
+    <lastmod>2020-07-25T19:46:11+08:00</lastmod>
   </url>
   
   <url>
     <loc>https://hitzhangjie.github.io/tags/</loc>
-    <lastmod>2020-07-25T17:26:01+08:00</lastmod>
+    <lastmod>2020-07-25T19:46:11+08:00</lastmod>
     <xhtml:link
                 rel="alternate"
                 hreflang="en"
@@ -99,8 +104,13 @@
   </url>
   
   <url>
+    <loc>https://hitzhangjie.github.io/tags/volatile/</loc>
+    <lastmod>2020-07-25T19:46:11+08:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://hitzhangjie.github.io/</loc>
-    <lastmod>2020-07-25T17:26:01+08:00</lastmod>
+    <lastmod>2020-07-25T19:46:11+08:00</lastmod>
     <xhtml:link
                 rel="alternate"
                 hreflang="en"
@@ -111,6 +121,21 @@
                 hreflang="zh-cn"
                 href="https://hitzhangjie.github.io/"
                 />
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc&#43;&#43;-volatile/</loc>
+    <lastmod>2020-07-25T19:46:11+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/bindata/</loc>
+    <lastmod>2020-07-25T17:26:01+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/go/</loc>
+    <lastmod>2020-07-25T17:26:01+08:00</lastmod>
   </url>
   
   <url>

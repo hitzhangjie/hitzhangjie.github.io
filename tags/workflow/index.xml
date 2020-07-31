@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>workflow on 介绍</title>
+    <link>https://hitzhangjie.github.io/tags/workflow/</link>
+    <description>Recent content in workflow on 介绍</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Fri, 31 Jul 2020 14:53:15 +0800</lastBuildDate>
+    
+	<atom:link href="https://hitzhangjie.github.io/tags/workflow/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>使用awgo开发alfred.workflow</title>
+      <link>https://hitzhangjie.github.io/blog/2020-07-31-%E4%BD%BF%E7%94%A8awgo%E5%BC%80%E5%8F%91alfred.workflow/</link>
+      <pubDate>Fri, 31 Jul 2020 14:53:15 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-07-31-%E4%BD%BF%E7%94%A8awgo%E5%BC%80%E5%8F%91alfred.workflow/</guid>
+      <description>本文简介 该workflow主要是为了对 &amp;ldquo;时间戳&amp;rdquo; &amp;amp;&amp;amp; &amp;ldquo;格式化日期+时间字符串&amp;rdquo; 进行快速转换，方便使用。 开发人员，经常会涉及到时间相关的转换操作，有个趁手的工具还是很有必要的。 我平时使用alfred比较多，自然就想通过workflow的方式来实现，当然用hammerspoon、pet等其他工具也可以。 alfred workflow和alfred本身的交互是通过管道方式进行连接的： alfred将用户输入的信息转发给匹配的workflow； workflow对接收到的参数进行处理，</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+    <head>
+        
+        <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Web站点描述">
+<title>
+使用awgo开发alfred.workflow - 介绍
+</title>
+
+
+
+
+
+
+
+
+
+        <meta property="og:title" content="使用awgo开发alfred.workflow - 介绍" />
+<meta property="og:type" content="website" />
+<meta property="og:description" content="Web站点描述"/>
+<meta property="og:url" content="https://hitzhangjie.github.io/blog/2020-07-31-%E4%BD%BF%E7%94%A8awgo%E5%BC%80%E5%8F%91alfred.workflow/"/>
+<meta property="og:site_name" content="介绍"/>
+
+
+
+
+<meta property="og:image" content="https://hitzhangjie.github.io/home/me.jpg"/>
+
+<meta property="og:image" content="https://hitzhangjie.github.io/home/profile.jpg"/>
+
+
+
+
+        
+<link rel="shortcut icon" href="/img/fav.ico">
+
+
+        
+
+
+
+
+
+<link rel="stylesheet" href="/css/main.min.5c5478bdd5363758f3e73657d5339b1ac7c131a401ffc3338edd7eb5e1a0114e.css" integrity="sha256-XFR4vdU2N1jz5zZX1TObGsfBMaQB/8Mzjt1&#43;teGgEU4=" crossorigin="anonymous" media="screen">
+
+
+
+
+    <link rel="stylesheet" href="/custom.css" integrity="" crossorigin="anonymous" media="screen">
+
+        
+        
+        
+        
+    </head>
+    <body>
+        <section id="top" class="section">
+            
+            <div class="container hero  fade-in one ">
+                
+
+    <h1 class="bold-title is-1">博客</h1>
+
+
+            </div>
+            
+            <div class="section  fade-in two ">
+                
+<div class="container">
+    <hr>
+    <nav class="navbar" role="navigation" aria-label="main navigation">
+        
+        <a role="button" class="navbar-burger" data-target="navMenu" aria-label="menu" aria-expanded="false" >
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </a>
+        <div class="navbar-menu " id="navMenu">
+            
+            
+            
+            
+            <a class="navbar-item" href="/">主页</a>
+            
+
+            
+            
+
+            
+                
+            
+
+            
+                
+            
+
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://hitzhangjie.github.io/projects/">
+                  
+                  项目
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://hitzhangjie.github.io/blog/">
+                  
+                  返回 博客
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#about">关于</a>
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#thanks">致谢</a>
+            
+            
+            
+            
+
+            
+            
+            <a class="navbar-item" href="/#contact">联系方式</a>
+            
+            
+
+            
+            
+            
+            
+            <a class="navbar-item" href="https://hitzhangjie.github.io/en/">English</a>
+            
+            
+
+            
+            
+        </div>
+    </nav>
+    <hr>
+</div>
+
+
+
+                
+    <div class="container">
+
+        <h2 class="title is-1 top-pad strong-post-title">
+            <a href="https://hitzhangjie.github.io/blog/2020-07-31-%E4%BD%BF%E7%94%A8awgo%E5%BC%80%E5%8F%91alfred.workflow/">使用awgo开发alfred.workflow</a>
+        </h2>
+        <div class="post-data">
+            发表时间：2020-07-31 <br> 
+            阅读时长：5 分钟 (2340字)
+        </div>
+
+        <p>
+            
+<div class="blog-share">
+    分享：
+    
+    <a class="twitter-share-button" href="https://twitter.com/intent/tweet?text=%e4%bd%bf%e7%94%a8awgo%e5%bc%80%e5%8f%91alfred.workflow%20https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2020-07-31-%25E4%25BD%25BF%25E7%2594%25A8awgo%25E5%25BC%2580%25E5%258F%2591alfred.workflow%2f" onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+        <i class="fab fa-twitter"></i>
+        <span class="hidden">Twitter</span>
+    </a>
+    
+    
+    <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2020-07-31-%25E4%25BD%25BF%25E7%2594%25A8awgo%25E5%25BC%2580%25E5%258F%2591alfred.workflow%2f"  onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+        <i class="fab fa-facebook-f"></i>
+        <span class="hidden">Facebook</span>
+    </a>
+    
+    
+    <a class="icon-pinterest" href="http://pinterest.com/pin/create/button/?url=https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2020-07-31-%25E4%25BD%25BF%25E7%2594%25A8awgo%25E5%25BC%2580%25E5%258F%2591alfred.workflow%2f&amp;description=%e4%bd%bf%e7%94%a8awgo%e5%bc%80%e5%8f%91alfred.workflow" onclick="window.open(this.href, 'pinterest-share','width=580,height=296');return false;">
+        <i class="fab fa-pinterest-p"></i>
+        <span class="hidden">Pinterest</span>
+    </a>
+    
+    
+    <a class="icon-google-plus" href="https://plus.google.com/share?url=https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2020-07-31-%25E4%25BD%25BF%25E7%2594%25A8awgo%25E5%25BC%2580%25E5%258F%2591alfred.workflow%2f" onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+        <i class="fab fa-google-plus-g"></i>
+        <span class="hidden">Google+</span>
+    </a>
+    
+</div>
+
+
+
+        </p>
+
+        
+        
+        <p>
+            标签：
+            
+            <a href="/tags/go">go</a>,
+            
+            <a href="/tags/awgo">awgo</a>,
+            
+            <a href="/tags/alfred">alfred</a>,
+            
+            <a href="/tags/workflow">workflow</a>
+            
+        </p>
+        
+
+        
+        <div> 
+            
+<aside>
+    <hr/>
+    <header>
+    <b>《使用awgo开发alfred.workflow》目录：</b>
+    <br/>
+    </header>
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#本文简介">本文简介</a></li>
+    <li><a href="#如何安装">如何安装？</a></li>
+    <li><a href="#如何使用">如何使用？</a></li>
+    <li><a href="#如何实现">如何实现？</a>
+      <ul>
+        <li><a href="#流程图梳理下逻辑">流程图梳理下逻辑</a></li>
+        <li><a href="#alfredworkflow编排">alfred.workflow编排</a></li>
+        <li><a href="#alfredworkflow时间转换程序">alfred.workflow时间转换程序</a></li>
+        <li><a href="#实现时间转换逻辑">实现时间转换逻辑</a></li>
+        <li><a href="#导出alfredworkflow">导出alfred.workflow</a></li>
+      </ul>
+    </li>
+    <li><a href="#awgo试用小结">awgo试用小结</a></li>
+  </ul>
+</nav>
+    <hr/>
+</aside>
+
+
+        </div>
+   
+        
+        <div class="container markdown top-pad">
+            <h1 id="本文简介">本文简介</h1>
+<p>该workflow主要是为了对 &ldquo;时间戳&rdquo; &amp;&amp; &ldquo;格式化日期+时间字符串&rdquo; 进行快速转换，方便使用。</p>
+<p>开发人员，经常会涉及到时间相关的转换操作，有个趁手的工具还是很有必要的。</p>
+<p>我平时使用alfred比较多，自然就想通过workflow的方式来实现，当然用hammerspoon、pet等其他工具也可以。</p>
+<p>alfred workflow和alfred本身的交互是通过管道方式进行连接的：</p>
+<ul>
+<li>alfred将用户输入的信息转发给匹配的workflow；</li>
+<li>workflow对接收到的参数进行处理，并将处理的结果按照指定格式输出到stdout；</li>
+<li>alfred读取stdout中的数据作为响应展示到用户界面；</li>
+</ul>
+<p>这里主要使用了awgo来编写workflow，实现逻辑可以参考下代码，逻辑很简单。下面主要介绍下如何使用。</p>
+<h1 id="如何安装">如何安装？</h1>
+<p>下载项目下<code>workflow/Date Formats Go.alfredworkflow</code>，双击即可安装。</p>
+<h1 id="如何使用">如何使用？</h1>
+<ol>
+<li>
+<p>运行 <code>datex</code> 唤起workflow<br>
+<img src="/blog/assets/alfred/1.jpg" alt="运行datex换起workflow"></p>
+</li>
+<li>
+<p>常用转换操作: 获取当前时间对应的Unix时间戳，以及格式化字符串<br>
+<code>datex now</code>，将当前时间转换为时间戳以及格式化后的字符串(多种日期格式)。<br>
+可以用上下键移动进行选择，当按下回车键时，会将对应的结果拷贝到剪贴板，方便粘贴使用。
+<img src="/blog/assets/alfred/2.jpg" alt="获取当前时间"></p>
+</li>
+<li>
+<p>常用转换操作: 将时间戳转换为对应的格式化字符串<br>
+以时间戳1596137272为例，<code>datex 1596137272</code>，此时会将时间戳转换为格式化后的字符串。<br>
+选择、复制数据操作类似。
+<img src="/blog/assets/alfred/3.jpg" alt="转换时间戳"></p>
+</li>
+<li>
+<p>常用转换操作: 将格式化字符串转换为时间戳，或其他格式<br>
+以字符串<code>2020-07-30</code>为例，<code>datex 2020-07-30</code>，此时会先将其与候选的格式化字符串进行匹配。<br>
+并转换成一个有效的时间戳。 然后再根据此时间戳，转换为其他格式对应的字符串。选择、复制数据操作类似。
+<img src="/blog/assets/alfred/4.jpg" alt="转换字符串"></p>
+</li>
+</ol>
+<p>这大致就是该workflow的使用方式。</p>
+<p>关于日期时间格式转换的workflow，github上已经有几个比较好的实现了，轮子不好用就得自己造。</p>
+<ul>
+<li>实现对timezone支持不好;</li>
+<li>采用的时间格式不符合国人习惯;</li>
+<li>掌握awgo开发alfred workflow以后可以写更多效率工具;</li>
+</ul>
+<p>希望这个小工具能帮助到有需要的同学，也给准备开发alfred workflow或使用awgo开发workflow的同学提供一个示例。</p>
+<h1 id="如何实现">如何实现？</h1>
+<h2 id="流程图梳理下逻辑">流程图梳理下逻辑</h2>
+<p>先画个流程图，简单理下思路，思路理清楚了，写代码就快了。</p>
+<p><img src="/blog/assets/alfred/0.png" alt="流程图"></p>
+<h2 id="alfredworkflow编排">alfred.workflow编排</h2>
+<p>好，理清楚思路之后，我们开始尝试对worklow进行编排，如下所示：</p>
+<p><img src="/blog/assets/alfred/5.jpg" alt="workflow编排"></p>
+<p>workflow中包含2个节点：</p>
+<ul>
+<li>
+<p>节点1，是一个script filter，我们可以配置一个关键字datex来激活它，当然还可以继续输入参数。激活该script filter之后，它将调用我们编写的时间转换程序alfred-datetime-workflow，程序返回的结果将在alfred界面上进行展示，展示的样式是列表。如我们输入datex now，将显示现在的时间戳以及其他格式的datetime字符串。   <br>
+<img src="/blog/assets/alfred/8.jpg" alt="script filter配置"></p>
+</li>
+<li>
+<p>节点2，是Copy to Clipboard，它干什么呢？节点1中显示了列表之后，用户选择一个列表项+回车之后，选中的列表项对应的参数值将被传递给该节点作为参数，Copy to Clipboard就是将参数拷贝到剪贴板；</p>
+</li>
+</ul>
+<blockquote>
+<p>如果希望在workflow各节点中传递参数，则可以通过 <code>workflow.Var(envname, value)</code> 来设置变量，通过 <code>workflow.Config.Get${Type}(envname)</code> 来获取变量。</p>
+</blockquote>
+<p>好的，下面来看下这里的时间转换程序怎么写，怎么与alfred衔接起来。</p>
+<h2 id="alfredworkflow时间转换程序">alfred.workflow时间转换程序</h2>
+<p>这里的时间转换程序，可以是任意语言编写构建的二进制程序，也可以是shell脚本，都可以，只要能解析alfred传递的输入参数、返回alfred指定格式的结果就可以。awgo这个库简化了和alfred交互的部分，我们用这个库主要是简化和alfred数据格式的衔接。</p>
+<p>主体逻辑很简单，实例化awgo.Workflow，然后注册回调函数，等待用户输入后唤醒执行。这里的回调函数，就是这里的run方法，在该方法内部完成时间的转换逻辑即可。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+
+<span style="color:#f92672">import</span> (
+	<span style="color:#a6e22e">aw</span> <span style="color:#e6db74">&#34;github.com/deanishe/awgo&#34;</span>
+)
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+	<span style="color:#a6e22e">workflow</span> = <span style="color:#a6e22e">aw</span>.<span style="color:#a6e22e">New</span>()
+	<span style="color:#a6e22e">workflow</span>.<span style="color:#a6e22e">Run</span>(<span style="color:#a6e22e">run</span>)
+}
+</code></pre></div><h2 id="实现时间转换逻辑">实现时间转换逻辑</h2>
+<p>前面我们给出的流程图，大部分是run方法的逻辑，照着流程图来写代码逻辑，基本上一遍完成。so easy!</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+
+<span style="color:#f92672">import</span> (
+	<span style="color:#f92672">...</span>
+	<span style="color:#a6e22e">aw</span> <span style="color:#e6db74">&#34;github.com/deanishe/awgo&#34;</span>
+)
+
+<span style="color:#66d9ef">var</span> (
+	<span style="color:#a6e22e">workflow</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">aw</span>.<span style="color:#a6e22e">Workflow</span>
+
+	<span style="color:#a6e22e">icon</span> = <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">aw</span>.<span style="color:#a6e22e">Icon</span>{
+		<span style="color:#a6e22e">Value</span>: <span style="color:#a6e22e">aw</span>.<span style="color:#a6e22e">IconClock</span>.<span style="color:#a6e22e">Value</span>,
+		<span style="color:#a6e22e">Type</span>:  <span style="color:#a6e22e">aw</span>.<span style="color:#a6e22e">IconClock</span>.<span style="color:#a6e22e">Type</span>,
+	}
+
+	<span style="color:#a6e22e">layouts</span> = []<span style="color:#66d9ef">string</span>{
+		<span style="color:#e6db74">&#34;2006-01-02 15:04:05.999 MST&#34;</span>,
+		<span style="color:#e6db74">&#34;2006-01-02 15:04:05.999 -0700&#34;</span>,
+		<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">RFC3339</span>,
+		<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">RFC3339Nano</span>,
+		<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">UnixDate</span>,
+		<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">RubyDate</span>,
+		<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">RFC1123Z</span>,
+	}
+
+	<span style="color:#a6e22e">moreLayouts</span> = []<span style="color:#66d9ef">string</span>{
+		<span style="color:#e6db74">&#34;2006-01-02&#34;</span>,
+		<span style="color:#e6db74">&#34;2006-01-02 15:04&#34;</span>,
+		<span style="color:#e6db74">&#34;2006-01-02 15:04:05&#34;</span>,
+		<span style="color:#e6db74">&#34;2006-01-02 15:04:05.999&#34;</span>,
+	}
+
+	<span style="color:#a6e22e">regexpTimestamp</span> = <span style="color:#a6e22e">regexp</span>.<span style="color:#a6e22e">MustCompile</span>(<span style="color:#e6db74">`^[1-9]{1}\d+$`</span>)
+)
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">run</span>() {
+
+	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>
+
+	<span style="color:#a6e22e">args</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">workflow</span>.<span style="color:#a6e22e">Args</span>()
+
+	<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">args</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+		<span style="color:#66d9ef">return</span>
+	}
+
+	<span style="color:#66d9ef">defer</span> <span style="color:#66d9ef">func</span>() {
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#a6e22e">workflow</span>.<span style="color:#a6e22e">SendFeedback</span>()
+			<span style="color:#66d9ef">return</span>
+		}
+	}()
+
+	<span style="color:#75715e">// 处理 now
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">input</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">strings</span>.<span style="color:#a6e22e">Join</span>(<span style="color:#a6e22e">args</span>, <span style="color:#e6db74">&#34; &#34;</span>)
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">input</span> <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;now&#34;</span> {
+		<span style="color:#a6e22e">processNow</span>()
+		<span style="color:#66d9ef">return</span>
+	}
+
+	<span style="color:#75715e">// 处理时间戳
+</span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">regexpTimestamp</span>.<span style="color:#a6e22e">MatchString</span>(<span style="color:#a6e22e">input</span>) {
+		<span style="color:#a6e22e">v</span>, <span style="color:#a6e22e">e</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">strconv</span>.<span style="color:#a6e22e">ParseInt</span>(<span style="color:#a6e22e">args</span>[<span style="color:#ae81ff">0</span>], <span style="color:#ae81ff">10</span>, <span style="color:#ae81ff">32</span>)
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">e</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#a6e22e">processTimestamp</span>(<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Unix</span>(<span style="color:#a6e22e">v</span>, <span style="color:#ae81ff">0</span>))
+			<span style="color:#66d9ef">return</span>
+		}
+		<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">e</span>
+		<span style="color:#66d9ef">return</span>
+	}
+
+	<span style="color:#75715e">// 处理时间字符串
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">processTimeStr</span>(<span style="color:#a6e22e">input</span>)
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">processNow</span>() {
+
+	<span style="color:#a6e22e">now</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Now</span>()
+
+	<span style="color:#75715e">// prepend unix timestamp
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">secs</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Sprintf</span>(<span style="color:#e6db74">&#34;%d&#34;</span>, <span style="color:#a6e22e">now</span>.<span style="color:#a6e22e">Unix</span>())
+	<span style="color:#a6e22e">workflow</span>.<span style="color:#a6e22e">NewItem</span>(<span style="color:#a6e22e">secs</span>).
+		<span style="color:#a6e22e">Subtitle</span>(<span style="color:#e6db74">&#34;unix timestamp&#34;</span>).
+		<span style="color:#a6e22e">Icon</span>(<span style="color:#a6e22e">icon</span>).
+		<span style="color:#a6e22e">Arg</span>(<span style="color:#a6e22e">secs</span>).
+		<span style="color:#a6e22e">Valid</span>(<span style="color:#66d9ef">true</span>)
+
+	<span style="color:#75715e">// process all time layouts
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">processTimestamp</span>(<span style="color:#a6e22e">now</span>)
+}
+
+<span style="color:#75715e">// process all time layouts
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">processTimestamp</span>(<span style="color:#a6e22e">timestamp</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Time</span>) {
+	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">layout</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">layouts</span> {
+		<span style="color:#a6e22e">v</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">timestamp</span>.<span style="color:#a6e22e">Format</span>(<span style="color:#a6e22e">layout</span>)
+		<span style="color:#a6e22e">workflow</span>.<span style="color:#a6e22e">NewItem</span>(<span style="color:#a6e22e">v</span>).
+			<span style="color:#a6e22e">Subtitle</span>(<span style="color:#a6e22e">layout</span>).
+			<span style="color:#a6e22e">Icon</span>(<span style="color:#a6e22e">icon</span>).
+			<span style="color:#a6e22e">Arg</span>(<span style="color:#a6e22e">v</span>).
+			<span style="color:#a6e22e">Valid</span>(<span style="color:#66d9ef">true</span>)
+	}
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">processTimeStr</span>(<span style="color:#a6e22e">timestr</span> <span style="color:#66d9ef">string</span>) <span style="color:#66d9ef">error</span> {
+
+	<span style="color:#a6e22e">timestamp</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Time</span>{}
+	<span style="color:#a6e22e">layoutMatch</span> <span style="color:#f92672">:=</span> <span style="color:#e6db74">&#34;&#34;</span>
+
+	<span style="color:#a6e22e">layoutMatch</span>, <span style="color:#a6e22e">timestamp</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">matchedLayout</span>(<span style="color:#a6e22e">layouts</span>, <span style="color:#a6e22e">timestr</span>)
+	<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">ok</span> {
+		<span style="color:#a6e22e">layoutMatch</span>, <span style="color:#a6e22e">timestamp</span>, <span style="color:#a6e22e">ok</span> = <span style="color:#a6e22e">matchedLayout</span>(<span style="color:#a6e22e">moreLayouts</span>, <span style="color:#a6e22e">timestr</span>)
+		<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">ok</span> {
+			<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">errors</span>.<span style="color:#a6e22e">New</span>(<span style="color:#e6db74">&#34;no matched time layout found&#34;</span>)
+		}
+	}
+
+	<span style="color:#75715e">// prepend unix timestamp
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">secs</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Sprintf</span>(<span style="color:#e6db74">&#34;%d&#34;</span>, <span style="color:#a6e22e">timestamp</span>.<span style="color:#a6e22e">Unix</span>())
+	<span style="color:#a6e22e">workflow</span>.<span style="color:#a6e22e">NewItem</span>(<span style="color:#a6e22e">secs</span>).
+		<span style="color:#a6e22e">Subtitle</span>(<span style="color:#e6db74">&#34;unix timestamp&#34;</span>).
+		<span style="color:#a6e22e">Icon</span>(<span style="color:#a6e22e">icon</span>).
+		<span style="color:#a6e22e">Arg</span>(<span style="color:#a6e22e">secs</span>).
+		<span style="color:#a6e22e">Valid</span>(<span style="color:#66d9ef">true</span>)
+
+	<span style="color:#75715e">// other time layouts
+</span><span style="color:#75715e"></span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">layout</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">layouts</span> {
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">layout</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">layoutMatch</span> {
+			<span style="color:#66d9ef">continue</span>
+		}
+		<span style="color:#a6e22e">v</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">timestamp</span>.<span style="color:#a6e22e">Format</span>(<span style="color:#a6e22e">layout</span>)
+		<span style="color:#a6e22e">workflow</span>.<span style="color:#a6e22e">NewItem</span>(<span style="color:#a6e22e">v</span>).
+			<span style="color:#a6e22e">Subtitle</span>(<span style="color:#a6e22e">layout</span>).
+			<span style="color:#a6e22e">Icon</span>(<span style="color:#a6e22e">icon</span>).
+			<span style="color:#a6e22e">Arg</span>(<span style="color:#a6e22e">v</span>).
+			<span style="color:#a6e22e">Valid</span>(<span style="color:#66d9ef">true</span>)
+	}
+
+	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">matchedLayout</span>(<span style="color:#a6e22e">layouts</span> []<span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">timestr</span> <span style="color:#66d9ef">string</span>) (<span style="color:#a6e22e">matched</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">timestamp</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Time</span>, <span style="color:#a6e22e">ok</span> <span style="color:#66d9ef">bool</span>) {
+
+	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">layout</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">layouts</span> {
+		<span style="color:#a6e22e">v</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Parse</span>(<span style="color:#a6e22e">layout</span>, <span style="color:#a6e22e">timestr</span>)
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">layout</span>, <span style="color:#a6e22e">v</span>, <span style="color:#66d9ef">true</span>
+		}
+	}
+	<span style="color:#66d9ef">return</span>
+}
+</code></pre></div><h2 id="导出alfredworkflow">导出alfred.workflow</h2>
+<p>开发、测试、验证，一切ok之后，就可以在alfred内部将workflow整个导出了，导出后的文件以*.alfredworkflow作为扩展名，这个文件是可以拿来分发的文件，使用者直接双击就可以安装使用。</p>
+<h1 id="awgo试用小结">awgo试用小结</h1>
+<p>这是使用awgo编写的第一个workflow程序，整体感觉来说，开发者可以专注于功能的实现，不用过度关注alfred数据格式方面的问题。</p>
+<p>alfred本身很强大，支持各种各样的workflow算子，awgo到底能支持到什么程度，这个还要在后续使用中逐渐探索。</p>
+<p>感兴趣的话，不妨一试，至少比写apple script脚本、bash脚本等要方便多了。</p>
+
+        </div>
+        
+
+    </div>
+
+    <br>
+    <br>
+    <div align="center">
+        
+<div class="blog-share">
+    分享：
+    
+    <a class="twitter-share-button" href="https://twitter.com/intent/tweet?text=%e4%bd%bf%e7%94%a8awgo%e5%bc%80%e5%8f%91alfred.workflow%20https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2020-07-31-%25E4%25BD%25BF%25E7%2594%25A8awgo%25E5%25BC%2580%25E5%258F%2591alfred.workflow%2f" onclick="window.open(this.href, 'twitter-share', 'width=550,height=235');return false;">
+        <i class="fab fa-twitter"></i>
+        <span class="hidden">Twitter</span>
+    </a>
+    
+    
+    <a class="icon-facebook" href="https://www.facebook.com/sharer/sharer.php?u=https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2020-07-31-%25E4%25BD%25BF%25E7%2594%25A8awgo%25E5%25BC%2580%25E5%258F%2591alfred.workflow%2f"  onclick="window.open(this.href, 'facebook-share','width=580,height=296');return false;">
+        <i class="fab fa-facebook-f"></i>
+        <span class="hidden">Facebook</span>
+    </a>
+    
+    
+    <a class="icon-pinterest" href="http://pinterest.com/pin/create/button/?url=https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2020-07-31-%25E4%25BD%25BF%25E7%2594%25A8awgo%25E5%25BC%2580%25E5%258F%2591alfred.workflow%2f&amp;description=%e4%bd%bf%e7%94%a8awgo%e5%bc%80%e5%8f%91alfred.workflow" onclick="window.open(this.href, 'pinterest-share','width=580,height=296');return false;">
+        <i class="fab fa-pinterest-p"></i>
+        <span class="hidden">Pinterest</span>
+    </a>
+    
+    
+    <a class="icon-google-plus" href="https://plus.google.com/share?url=https%3a%2f%2fhitzhangjie.github.io%2fblog%2f2020-07-31-%25E4%25BD%25BF%25E7%2594%25A8awgo%25E5%25BC%2580%25E5%258F%2591alfred.workflow%2f" onclick="window.open(this.href, 'google-plus-share', 'width=490,height=530');return false;">
+        <i class="fab fa-google-plus-g"></i>
+        <span class="hidden">Google+</span>
+    </a>
+    
+</div>
+
+
+
+    </div>
+
+    
+    
+    <br>
+    <br>
+    <div style="height:auto;align:center;text-align:center;"> 
+        <div>
+            <p>
+                ~~~ 如果文章对您有帮助，请记得打赏哦。帮我家小七🐶、元宝🐱改善下伙食吧，😘 ~~~
+            </p>
+        </div>
+
+        <div>
+            <img src="/common/xiaoqi.png" style="height:238px;margin-top:10px;margin-right:5px;"/>
+            <img src="/common/qrcode.jpg" style="height:238px;margin-top:10px;"/>
+            <img src="/common/yuanbao.png" style="height:238px;margin-top:10px;margin-left:5px;"/>
+        </div>
+    </div>
+    
+
+    
+
+
+                
+                <div class="container">
+    <hr>
+</div>
+<div class="container has-text-centered top-pad">
+    <a href="#top">
+        <i class="fa fa-arrow-up"></i>
+    </a>
+</div>
+
+<div class="container">
+    <hr>
+</div>
+
+                <div class="section" id="footer">
+    <div class="container has-text-centered">
+    
+        <span class="footer-text">
+            <a href="https://github.com/victoriadrake/hugo-theme-introduction/"><strong>Introduction</strong></a> 主题为 <a href="http://gohugo.io/">Hugo</a> 而设。由开源社群贡献者以 <a href="https://victoria.dev"><i class="fa fa-heart"></i> 和 <i class="fa fa-coffee"></i></a> 创造。
+        </span>
+    
+    </div>
+</div>
+
+                
+            </div>
+        </section>
+        
+        
+
+
+<script src="https://hitzhangjie.github.io/js/bundle.e6934e69d06bb8a213134f4c1468f9478bb7755e786dfb60e3c5a917c5335805.js" integrity="sha256-5pNOadBruKITE09MFGj5R4u3dV54bftg48WpF8UzWAU="></script>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-168027530-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+        
+        
+        
+        
+    </body>
+</html>

@@ -60,7 +60,7 @@
   
   <url>
     <loc>https://hitzhangjie.github.io/blog/</loc>
-    <lastmod>2020-07-25T17:26:01+08:00</lastmod>
+    <lastmod>2020-07-31T14:53:15+08:00</lastmod>
     <xhtml:link
                 rel="alternate"
                 hreflang="en"
@@ -74,18 +74,23 @@
   </url>
   
   <url>
-    <loc>https://hitzhangjie.github.io/tags/bindata/</loc>
-    <lastmod>2020-07-25T17:26:01+08:00</lastmod>
+    <loc>https://hitzhangjie.github.io/tags/alfred/</loc>
+    <lastmod>2020-07-31T14:53:15+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/awgo/</loc>
+    <lastmod>2020-07-31T14:53:15+08:00</lastmod>
   </url>
   
   <url>
     <loc>https://hitzhangjie.github.io/tags/go/</loc>
-    <lastmod>2020-07-25T17:26:01+08:00</lastmod>
+    <lastmod>2020-07-31T14:53:15+08:00</lastmod>
   </url>
   
   <url>
     <loc>https://hitzhangjie.github.io/tags/</loc>
-    <lastmod>2020-07-25T17:26:01+08:00</lastmod>
+    <lastmod>2020-07-31T14:53:15+08:00</lastmod>
     <xhtml:link
                 rel="alternate"
                 hreflang="en"
@@ -99,8 +104,13 @@
   </url>
   
   <url>
+    <loc>https://hitzhangjie.github.io/tags/workflow/</loc>
+    <lastmod>2020-07-31T14:53:15+08:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://hitzhangjie.github.io/</loc>
-    <lastmod>2020-07-25T17:26:01+08:00</lastmod>
+    <lastmod>2020-07-31T14:53:15+08:00</lastmod>
     <xhtml:link
                 rel="alternate"
                 hreflang="en"
@@ -111,6 +121,16 @@
                 hreflang="zh-cn"
                 href="https://hitzhangjie.github.io/"
                 />
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/blog/2020-07-31-%E4%BD%BF%E7%94%A8awgo%E5%BC%80%E5%8F%91alfred.workflow/</loc>
+    <lastmod>2020-07-31T14:53:15+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/bindata/</loc>
+    <lastmod>2020-07-25T17:26:01+08:00</lastmod>
   </url>
   
   <url>

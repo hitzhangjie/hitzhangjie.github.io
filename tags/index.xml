@@ -6,10 +6,46 @@
     <description>Recent content in Tags on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Sat, 25 Jul 2020 17:26:01 +0800</lastBuildDate>
+    <lastBuildDate>Fri, 31 Jul 2020 14:53:15 +0800</lastBuildDate>
     
 	<atom:link href="https://hitzhangjie.github.io/tags/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>alfred</title>
+      <link>https://hitzhangjie.github.io/tags/alfred/</link>
+      <pubDate>Fri, 31 Jul 2020 14:53:15 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/tags/alfred/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>awgo</title>
+      <link>https://hitzhangjie.github.io/tags/awgo/</link>
+      <pubDate>Fri, 31 Jul 2020 14:53:15 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/tags/awgo/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>go</title>
+      <link>https://hitzhangjie.github.io/tags/go/</link>
+      <pubDate>Fri, 31 Jul 2020 14:53:15 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/tags/go/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>workflow</title>
+      <link>https://hitzhangjie.github.io/tags/workflow/</link>
+      <pubDate>Fri, 31 Jul 2020 14:53:15 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/tags/workflow/</guid>
+      <description></description>
+    </item>
     
     <item>
       <title>bindata</title>
@@ -17,15 +53,6 @@
       <pubDate>Sat, 25 Jul 2020 17:26:01 +0800</pubDate>
       
       <guid>https://hitzhangjie.github.io/tags/bindata/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>go</title>
-      <link>https://hitzhangjie.github.io/tags/go/</link>
-      <pubDate>Sat, 25 Jul 2020 17:26:01 +0800</pubDate>
-      
-      <guid>https://hitzhangjie.github.io/tags/go/</guid>
       <description></description>
     </item>
     

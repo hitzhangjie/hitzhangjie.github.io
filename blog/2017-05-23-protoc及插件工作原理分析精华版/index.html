@@ -267,8 +267,25 @@ div#st-2 .st-btn > img {
         <li><a href="#1-protoc工作原理分析">1. protoc工作原理分析</a>
           <ul>
             <li><a href="#10-protoc源代码准备">1.0. protoc源代码准备</a></li>
-            <li><a href="#11-protoc执行流程说明">1.1. protoc执行流程说明</a></li>
-            <li><a href="#2-protoc插件工作原理分析">2. protoc插件工作原理分析</a></li>
+            <li><a href="#11-protoc执行流程说明">1.1. protoc执行流程说明</a>
+              <ul>
+                <li><a href="#111-protoc程序入口">1.1.1. protoc程序入口</a></li>
+                <li><a href="#112-命令接口clirunargcargv执行流程">1.1.2. 命令接口cli.Run(argc,argv)执行流程</a></li>
+                <li><a href="#113-protoc执行逻辑总结">1.1.3. protoc执行逻辑总结</a></li>
+              </ul>
+            </li>
+            <li><a href="#2-protoc插件工作原理分析">2. protoc插件工作原理分析</a>
+              <ul>
+                <li><a href="#21-protoc-gen-go源代码准备">2.1. protoc-gen-go源代码准备</a></li>
+                <li><a href="#22-descriptorproto对proto文件的抽象描述">2.2. descriptor.proto，对proto文件的抽象&amp;描述</a></li>
+                <li><a href="#23-可以提取proto文件中的哪些信息--如何提取">2.3. 可以提取proto文件中的哪些信息 &amp; 如何提取</a></li>
+                <li><a href="#24-proto-gen-go源代码分析">2.4. proto-gen-go源代码分析</a></li>
+                <li><a href="#241-protoc-gen-go入口函数">2.4.1. protoc-gen-go入口函数</a></li>
+                <li><a href="#242-回顾一下codegeneratorrequest--codegeneratorresponse的定义">2.4.2. 回顾一下CodeGeneratorRequest &amp; CodeGeneratorResponse的定义</a></li>
+                <li><a href="#243-proto-gen-go-generator实现分析">2.4.3. proto-gen-go generator实现分析</a></li>
+                <li><a href="#244-protoc-gen-go-grpc子插件实现">2.4.4. protoc-gen-go grpc子插件实现</a></li>
+              </ul>
+            </li>
           </ul>
         </li>
         <li><a href="#3-总结">3. 总结</a></li>

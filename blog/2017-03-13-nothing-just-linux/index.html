@@ -214,7 +214,7 @@ div#st-2 .st-btn > img {
         </h2>
         <div class="post-data">
             发表时间：
-            阅读时长：2 分钟 (745字)
+            阅读时长：5 分钟 (2100字)
         </div>
 
         
@@ -269,7 +269,13 @@ div#st-2 .st-btn > img {
     <nav id="TableOfContents">
   <ul>
     <li><a href="#1-邂逅linux">1 邂逅Linux</a></li>
-    <li><a href="#2-livecd--remastersys--dump--restore">2 LiveCD &amp; RemasterSys &amp; dump &amp; restore</a></li>
+    <li><a href="#2-livecd--remastersys--dump--restore">2 LiveCD &amp; RemasterSys &amp; dump &amp; restore</a>
+      <ul>
+        <li><a href="#21-livecd">2.1 LiveCD</a></li>
+        <li><a href="#22-remastersys">2.2 RemasterSys</a></li>
+        <li><a href="#23-dump--restore">2.3 dump &amp; restore</a></li>
+      </ul>
+    </li>
     <li><a href="#3-grub-2--customize-boot-menu-to-bootstrap-multiple-os">3 GRUB 2 &amp; Customize Boot Menu to bootstrap Multiple OS</a></li>
     <li><a href="#4-plymouth">4 Plymouth</a></li>
     <li><a href="#5-tweak-kdegnomeunity-appearance-colors--themes">5 Tweak KDE/GNOME/Unity Appearance (Colors &amp; Themes)</a></li>
@@ -316,8 +322,24 @@ Linux，没想到这竟是一条不归路……</p>
 很多疑问没有揭开，这里当然不只是Linux操作系统内核本身。</p>
 <p>我这个博客所要描述的东西可能就比较杂了，这里面我会穿插着记录很多东西～与其说是
 博客，不如说是我自己的一个学习笔记了，但是我这个人比较喜欢分享，但有不想那么刻
-意，所以我就把它丢在这，谁看见就看，看不见就当作我个人的笔记了。</p>
+意，所以我就把它丢在这，谁看见了找到点自己感兴趣的东西，也算是种缘分。</p>
 <h1 id="2-livecd--remastersys--dump--restore">2 LiveCD &amp; RemasterSys &amp; dump &amp; restore</h1>
+<h2 id="21-livecd">2.1 LiveCD</h2>
+<p>在学习Linux过程中，会有体验不同Linux发行版这样的需求的，这个时候你有不想频繁地安装系统来解决。LiveCD就是发行版厂商针对用户的这种需求推出的一个玩意，用户可以插入光盘到光驱、BIOS引导从光驱启动来体验。</p>
+<p>可能吧，时间让你明白，Linux最吸引人的地方，并不是有很多的发行版供你换来换去，而是内在的自由。最后，你还是会深度使用某一个发行版并安定下来，而那些各种各样的桌面环境也会有点选择困难。Ubuntu-&gt;Debian-&gt;Fedora-&gt;OpenSuSE-&gt;RHEL-&gt;CentOS-&gt;&hellip;Fedora! Unity-&gt;GNOME3-&gt;GNOME2-&gt;KDE-&gt;&hellip;-&gt;KDE! 我已经坚守在Fedora/CentOS+KDE很多年了，适合自己的就是最好的！</p>
+<p>LiveCD不仅可以帮助我们预先体验Linux发行版，也可以用来安装Linux发行版、修复系统问题。带着一张LiveCD或者Bootable USB Installer，就好像随身携带了一个移动版的操作系统。还是很方便、很酷的一件事情。</p>
+<p>UNetBootin等类似的将USB变身成可引导的Bootable Linux Installer的工具，也是必不可少的工具。</p>
+<h2 id="22-remastersys">2.2 RemasterSys</h2>
+<p>当你深度使用了一段时间之后，会发现不管是配置文件，还是GUI，还是软件列表&hellip;都已经被自己深度定制化过了，这个时候就很自然会去想系统备份的事情，以免准备多台设备办公时能遍历地迁移备份，或者在设备系统出现问题时能够便捷地还原的问题。</p>
+<p>当你了解了Linux定制化意味着什么的时候，你就应该能体会到定制化背后意味着的工作量、投入的时间，你不会愿意再从安装开始重新定制化了，
+没有规划的人才将这种重复性劳动当做是习惯。我为什么不能将现在的完整的系统做成一个初始的可安装的系统呢？</p>
+<p>虽然这要花费的时间、存储可能会大一点，但是适当精简下软件列表、用户文件，完全可以控制在一个合理的范围内，按市面上常见的DVD存储容量来看，完全是hold得住的。而且DVD是真的便宜，存放时间也更长久。</p>
+<p>RemasterSys就是为了满足这样的需求而设计出来的，它就可以把我们当前运行的系统重新做成一个可安装的系统，安装完成后就是现在的样子。但是原作者可能很久没有再更新了吧，在我了解到这款系统工具时，它已经接近失修的边缘了。Sad</p>
+<h2 id="23-dump--restore">2.3 dump &amp; restore</h2>
+<p>慢慢地意识到，所谓的定制都是私人潜意识里面的思想固化，总有不适合他人应用场景的时候，除非你有能力自己给自己定制。最简单的东西，就是最好用的、最靠谱的。一段时间下来，我发现dump &amp; restore就是逼近完美的选择。它专注于转储、恢复操作，非常原始。</p>
+<p>dd最原始直接读写存储设备原始数据，甚至都不理解你的文件系统，但是它缺少一点灵活性。</p>
+<p>dump允许我们在文件系统之上做一些选择，如选择备份哪些目录、文件等等，dump备份的时候会同时备份文件的属性信息，整个打包成一个文件，后续备份恢复的时候你也可以通过restore选择恢复哪些文件到文件系统。</p>
+<p>刚开始的时候，可能觉得全是命令行操作，好复杂？万一出错了怎么办？Linux强大的地方就是命令行操作，习惯了之后就真的爱上了。dump &amp; restore是目前我觉得比较好用的，虽然看上去不像macOS timemachine那样方便，但是它真的算得上最灵活的。</p>
 <h1 id="3-grub-2--customize-boot-menu-to-bootstrap-multiple-os">3 GRUB 2 &amp; Customize Boot Menu to bootstrap Multiple OS</h1>
 <h1 id="4-plymouth">4 Plymouth</h1>
 <h1 id="5-tweak-kdegnomeunity-appearance-colors--themes">5 Tweak KDE/GNOME/Unity Appearance (Colors &amp; Themes)</h1>

@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+    <head>
+        
+        <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Web站点描述">
+<title>
+go程序如何实现热重启 - 介绍
+</title>
+
+
+
+
+<script type="text/javascript" src="https://platform-api.sharethis.com/js/sharethis.js#property=5f24f50fc2418c0012d52ac3&product=inline-share-buttons" async="async">
+</script>
+
+<style>
+ 
+[alt~=sharing] {
+    border: 0px;
+    box-shadow: none;
+}
+div#st-1 {
+    text-align: unset;
+}
+
+ 
+div#st-1 .st-btn {
+    height: 24px;
+    padding: 0 4px;
+}
+
+div#st-1 .st-btn > img {
+    top: 4.2px;
+}
+
+div#st-2 .st-btn {
+    height: 24px;
+    padding: 0 4px;
+}
+
+div#st-2 .st-btn > img {
+    top: 4.2px;
+}
+</style>
+
+
+
+
+
+
+
+        <meta property="og:title" content="go程序如何实现热重启 - 介绍" />
+<meta property="og:type" content="website" />
+<meta property="og:description" content="Web站点描述"/>
+<meta property="og:url" content="https://hitzhangjie.github.io/blog/2020-08-17-go%E7%A8%8B%E5%BA%8F%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%83%AD%E9%87%8D%E5%90%AF/"/>
+<meta property="og:site_name" content="介绍"/>
+
+
+
+
+<meta property="og:image" content="https://hitzhangjie.github.io/home/me.jpg"/>
+
+<meta property="og:image" content="https://hitzhangjie.github.io/home/profile.jpg"/>
+
+
+
+
+        
+<link rel="shortcut icon" href="/img/fav.ico">
+
+
+        
+
+
+
+
+
+<link rel="stylesheet" href="/css/main.min.daa833377fb1636f8cbfa65c601050bb5475623deb7aa6e6fdde94a064a6185d.css" integrity="sha256-2qgzN3&#43;xY2&#43;Mv6ZcYBBQu1R1Yj3reqbm/d6UoGSmGF0=" crossorigin="anonymous" media="screen">
+
+
+
+
+    <link rel="stylesheet" href="/custom.css" integrity="" crossorigin="anonymous" media="screen">
+
+        
+        
+        
+        
+    </head>
+    <body>
+        <section id="top" class="section">
+            
+            <div class="container hero  fade-in one ">
+                
+
+    <h1 class="bold-title is-1">博客</h1>
+
+
+            </div>
+            
+            <div class="section  fade-in two ">
+                
+<div class="container">
+    <hr>
+    <nav class="navbar" role="navigation" aria-label="main navigation">
+        
+        <a role="button" class="navbar-burger" data-target="navMenu" aria-label="menu" aria-expanded="false" >
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </a>
+        <div class="navbar-menu " id="navMenu">
+            
+            
+            
+            
+            <a class="navbar-item" href="/">主页</a>
+            
+
+            
+            
+
+            
+                
+            
+
+            
+                
+            
+
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://hitzhangjie.github.io/projects/">
+                  
+                  项目
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://hitzhangjie.github.io/blog/">
+                  
+                  返回 博客
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#about">关于</a>
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#thanks">致谢</a>
+            
+            
+            
+            
+
+            
+            
+            <a class="navbar-item" href="/#contact">联系方式</a>
+            
+            
+
+            
+            
+            
+            
+            <a class="navbar-item" href="https://hitzhangjie.github.io/en/">English</a>
+            
+            
+
+            
+            
+        </div>
+    </nav>
+    <hr>
+</div>
+
+
+
+                
+    <div class="container">
+
+        <h2 class="title is-1 top-pad strong-post-title">
+            <a href="https://hitzhangjie.github.io/blog/2020-08-17-go%E7%A8%8B%E5%BA%8F%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%83%AD%E9%87%8D%E5%90%AF/">go程序如何实现热重启</a>
+        </h2>
+        <div class="post-data">
+            发表时间：2020-08-17 <br> 
+            阅读时长：5 分钟 (2441字)
+        </div>
+
+        
+        <div>
+            <div>
+            
+            
+            <p>
+                标签：
+                
+                <a href="/tags/go">go</a>,
+                
+                <a href="/tags/%E7%83%AD%E9%87%8D%E5%90%AF">热重启</a>,
+                
+                <a href="/tags/%E7%AB%AF%E5%8F%A3%E9%87%8D%E7%94%A8">端口重用</a>,
+                
+                <a href="/tags/fd">fd</a>,
+                
+                <a href="/tags/backlog">backlog</a>,
+                
+                <a href="/tags/unix%E5%A5%97%E6%8E%A5%E5%AD%97">unix套接字</a>
+                
+            </p>
+            
+            </div>
+
+            <div>
+            <br>
+            
+
+
+<div style="display:flex;">
+    <div>分享：</div>
+    <div>
+        <div class="sharethis-inline-share-buttons"></div>
+    </div>
+</div>
+
+
+            </div>
+
+        </div>
+
+        
+        
+
+        
+        <div> 
+            
+<aside>
+    <hr/>
+    <header>
+    <b>《go程序如何实现热重启》目录：</b>
+    <br/>
+    </header>
+    <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#1什么是热重启">1.什么是热重启？</a></li>
+        <li><a href="#2如何实现热重启">2.如何实现热重启？</a>
+          <ul>
+            <li><a href="#21认识fork">2.1.认识fork</a></li>
+            <li><a href="#22返回值">2.2.返回值</a></li>
+            <li><a href="#23fork返回值">2.3.fork返回值</a></li>
+            <li><a href="#24局限性">2.4.局限性</a></li>
+          </ul>
+        </li>
+        <li><a href="#3单进程单线程模型">3.单进程单线程模型</a></li>
+        <li><a href="#4单进程多线程模型">4.单进程多线程模型</a></li>
+        <li><a href="#附录">附录</a>
+          <ul>
+            <li><a href="#附录1一个返回值的例子">附录1.一个返回值的例子</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    <hr/>
+</aside>
+
+
+        </div>
+   
+        
+        <div class="container markdown top-pad">
+            <p>最近在修改公司框架源码时，发现了其中一个热重启相关的bug，几番修改、测试之后确认已经修复了，嗯，不错不错。这里也针对这方面的内容做一个简单的梳理。</p>
+<h2 id="1什么是热重启">1.什么是热重启？</h2>
+<p>热重启（Hot Restart），是一项保证服务可用性的手段，它允许服务重启期间，不中断已经建立的连接，原来的服务进程不再接受新的连接请求（也可以将连接套接字设置为读端关闭，不再接受新的请求），新的连接请求将在新的服务进程中受理。通过这种方式，可以保证已经建立的连接不中断，连接上的事务（请求、处理、响应）可以正常完成，老的服务进程等所有连接上的请求处理完毕之后，再退出，这期间新的服务进程可以正常接受连接、处理连接上的请求。以上就是热重启的一个大致描述。</p>
+<h2 id="2如何实现热重启">2.如何实现热重启？</h2>
+<p>如何实现热重启，这里其实不能一概而论，要结合实际的场景来看。但是，大致的实现思路，可以先抛一下。</p>
+<p>一般要实现热重启，大致要包括如下步骤：</p>
+<ul>
+<li>首先，要让老进程，这里称之为父进程了，先要fork出一个子进程来代替它执行接受连接、处理连接请求的任务；</li>
+<li>然后，子进程就绪之后，通知父进程；</li>
+<li>再然后，父进程处理完已建立连接上的请求后，慢慢退出。</li>
+</ul>
+<p>听上去是挺简单的，但是真的这么三言两语就说完了吗？No！</p>
+<p>这里，和具体采用的什么编程模型也有关系，下文如无特殊提及，所列出的操作均指在Linux平台上的操作。</p>
+<h3 id="21认识fork">2.1.认识fork</h3>
+<p><code>fork()</code> 系统调用大家都知道，父进程调用fork会创建一个进程副本，代码中还可以通过fork返回值是否为0来区分是子进程还是父进程。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">char</span> <span style="color:#f92672">**</span>argv, <span style="color:#66d9ef">int</span> argc) {
+    pid_t pid <span style="color:#f92672">=</span> fork();
+    <span style="color:#66d9ef">if</span> (pid <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) {
+        printf(<span style="color:#e6db74">&#34;i am child process&#34;</span>);
+    } <span style="color:#66d9ef">else</span> {
+        printf(<span style="color:#e6db74">&#34;i am parent process, i have a child process named %d&#34;</span>, pid);
+    }
+}
+</code></pre></div><p>很多开发人员不知道fork的实现原理，或者不知道fork返回值为什么在父子进程中不同，或者不知道如何做到父子进程中返回值不同……了解这些还是要有点知识积累的。</p>
+<h3 id="22返回值">2.2.返回值</h3>
+<p>简单说吧，ABI往往定义了进行函数调用的一些规范，如何传递参数，如何返回值等等，以x86为例，返回值往往都是通过rax寄存器返回的，比如返回值类型是一些rax寄存器可以容纳的整数，这种好理解。</p>
+<p>还有一种是寄存器位宽无法容纳的数据类型，那返回值如何存储呢？其实也简单，编译器会安插些指令来完成这些神秘的操作，具体是什么指令，就跟编译器实现相关了。</p>
+<ul>
+<li>可能会将返回值的地址，传递到rdi或其他寄存器，被调函数内部呢，通过多条指令将返回值写入rdi代指的内存区；</li>
+<li>也可能在被调函数内部，用多个寄存器rax,rdx&hellip;一起暂存返回结果，函数返回时再将多个寄存器的值赋值到变量中；</li>
+</ul>
+<p>附录1中提供了一个简单的实例。</p>
+<h3 id="23fork返回值">2.3.fork返回值</h3>
+<p>fork系统调用的返回值，有点特殊，在父进程和子进程中，这个函数返回的值是不同的，如何做到的呢？</p>
+<p>其实，你想啊，父进程调用fork的时候，操作系统内核需要干些什么呢？分配进程控制块、分配pid、分配内存空间……肯定有很多东西啦，这里注意下进程的硬件上下文信息，这些是非常重要的，在进程被调度算法选中进行调度时，是需要还原硬件上下文信息的。</p>
+<p>哎，对了，就是这玩意，Linux fork的时候，会对子进程的硬件上下文进行一定的篡改，我就是让你fork之后拿到的pid是0，怎么办呢？前面2.2节提过了，对于那些小整数，rax寄存器存下绰绰有余，fork返回时就是将操作系统分配的pid放到rax寄存器的。</p>
+<p>那，对于子进程而言，我只要在fork的时候将它的硬件上下文rax寄存器清0，然后等其他设置全ok后，再将其状态从不可中断等待状态修改为可运行状态，等其被调度器调度时，会先还原其硬件上下文信息，包括PC、rax等等，这样fork返回后，rax中值为0，最终赋值给pid的值就是0。</p>
+<p>因此，也就可以通过这种判断 “pid是否等于0” 的方式来区分当前进程是父进程还是子进程了。</p>
+<h3 id="24局限性">2.4.局限性</h3>
+<p>很多人只知道fork可以创建一个进程的副本并继续往下执行，可以根据fork返回值来执行不同的分支逻辑。你再问他，如果一个进程是多线程程序，在一个线程中调用fork会复制整个进程吗？他很可能就答不上来了。</p>
+<p>fork只能创建调用该函数的线程的副本，进程中其他运行的线程，fork不予处理。这就意味着，对于多线程程序而言，寄希望于通过fork来创建一个完整进程副本是不可行的。</p>
+<p>前面我们也提到了，fork是实现热重启的重要一环，fork这里的这个局限性，就制约着不同服务编程模型下的热重启实现方式。所以我们说具体问题具体分析，不同编程模型下实际上可以采用不同的实现方式。</p>
+<h2 id="3单进程单线程模型">3.单进程单线程模型</h2>
+<p>单进程单线程模型，可能很多人一听觉得它已经被淘汰了，生产环境中绝对不能用，真的么？牛逼如redis，不就是单线程。强调下并非单线程模型没用，ok，收回来，现在关注下单进程单线程模型如何实现热重启。</p>
+<p>未完待续</p>
+<h2 id="4单进程多线程模型">4.单进程多线程模型</h2>
+<p>未完待续</p>
+<h2 id="附录">附录</h2>
+<h3 id="附录1一个返回值的例子">附录1.一个返回值的例子</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span> num {
+    <span style="color:#66d9ef">long</span> <span style="color:#66d9ef">long</span> a;
+    <span style="color:#66d9ef">long</span> <span style="color:#66d9ef">long</span> b;
+} NUM;
+
+NUM <span style="color:#a6e22e">add</span>(NUM a, NUM b) {
+    NUM res;
+    res.a <span style="color:#f92672">=</span> a.a<span style="color:#f92672">+</span>b.a;
+    res.b <span style="color:#f92672">=</span> a.b <span style="color:#f92672">+</span>b.b;
+    <span style="color:#66d9ef">return</span> res;
+}
+
+<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>() {
+    NUM a,b;
+    a.a<span style="color:#f92672">=</span><span style="color:#ae81ff">100</span>; a.b<span style="color:#f92672">=</span><span style="color:#ae81ff">100</span>;
+    b.a<span style="color:#f92672">=</span><span style="color:#ae81ff">200</span>; b.b<span style="color:#f92672">=</span><span style="color:#ae81ff">300</span>;
+
+    NUM c <span style="color:#f92672">=</span> add(a,b);
+}
+</code></pre></div><p>运行：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ gcc -g -o main main.c
+$ objdump -dS main
+
+...
+
+NUM add<span style="color:#f92672">(</span>NUM a, NUM b<span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+  4004ed:       <span style="color:#ae81ff">55</span>                      push   %rbp
+  4004ee:       <span style="color:#ae81ff">48</span> <span style="color:#ae81ff">89</span> e5                mov    %rsp,%rbp
+  4004f1:       <span style="color:#ae81ff">48</span> <span style="color:#ae81ff">89</span> f8                mov    %rdi,%rax
+  4004f4:       <span style="color:#ae81ff">49</span> <span style="color:#ae81ff">89</span> f0                mov    %rsi,%r8
+  4004f7:       <span style="color:#ae81ff">48</span> <span style="color:#ae81ff">89</span> c6                mov    %rax,%rsi
+  4004fa:       <span style="color:#ae81ff">48</span> <span style="color:#ae81ff">89</span> d7                mov    %rdx,%rdi
+  4004fd:       4c <span style="color:#ae81ff">89</span> c7                mov    %r8,%rdi
+  400500:       <span style="color:#ae81ff">48</span> <span style="color:#ae81ff">89</span> <span style="color:#ae81ff">75</span> e0             mov    %rsi,-0x20<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>
+  400504:       <span style="color:#ae81ff">48</span> <span style="color:#ae81ff">89</span> 7d e8             mov    %rdi,-0x18<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>
+  400508:       <span style="color:#ae81ff">48</span> <span style="color:#ae81ff">89</span> <span style="color:#ae81ff">55</span> d0             mov    %rdx,-0x30<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>
+  40050c:       <span style="color:#ae81ff">48</span> <span style="color:#ae81ff">89</span> 4d d8             mov    %rcx,-0x28<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>
+    NUM res;
+    res.a <span style="color:#f92672">=</span> a.a+b.a;
+  400510:       <span style="color:#ae81ff">48</span> 8b <span style="color:#ae81ff">55</span> e0             mov    -0x20<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>,%rdx
+  400514:       <span style="color:#ae81ff">48</span> 8b <span style="color:#ae81ff">45</span> d0             mov    -0x30<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>,%rax
+  400518:       <span style="color:#ae81ff">48</span> <span style="color:#ae81ff">01</span> d0                add    %rdx,%rax
+  40051b:       <span style="color:#ae81ff">48</span> <span style="color:#ae81ff">89</span> <span style="color:#ae81ff">45</span> f0             mov    %rax,-0x10<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>
+    res.b <span style="color:#f92672">=</span> a.b +b.b;
+  40051f:       <span style="color:#ae81ff">48</span> 8b <span style="color:#ae81ff">55</span> e8             mov    -0x18<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>,%rdx
+  400523:       <span style="color:#ae81ff">48</span> 8b <span style="color:#ae81ff">45</span> d8             mov    -0x28<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>,%rax
+  400527:       <span style="color:#ae81ff">48</span> <span style="color:#ae81ff">01</span> d0                add    %rdx,%rax
+  40052a:       <span style="color:#ae81ff">48</span> <span style="color:#ae81ff">89</span> <span style="color:#ae81ff">45</span> f8             mov    %rax,-0x8<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>
+    <span style="color:#66d9ef">return</span> res;
+  40052e:       <span style="color:#ae81ff">48</span> 8b <span style="color:#ae81ff">45</span> f0             mov    -0x10<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>,%rax		//<span style="color:#f92672">=</span>&gt; 这里的-0x10<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>，-0x8<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>就是NUM res
+  400532:       <span style="color:#ae81ff">48</span> 8b <span style="color:#ae81ff">55</span> f8             mov    -0x8<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>,%rdx
+<span style="color:#f92672">}</span>
+  400536:       5d                      pop    %rbp
+  400537:       c3                      retq   
+
+<span style="color:#ae81ff">0000000000400538</span> &lt;main&gt;:
+
+int main<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+  400538:       <span style="color:#ae81ff">55</span>                      push   %rbp
+  400539:       <span style="color:#ae81ff">48</span> <span style="color:#ae81ff">89</span> e5                mov    %rsp,%rbp
+  40053c:       <span style="color:#ae81ff">48</span> <span style="color:#ae81ff">83</span> ec <span style="color:#ae81ff">30</span>             sub    $0x30,%rsp			//<span style="color:#f92672">=</span>&gt; 分配了3个NUM结构体，地址最低的就是NUM c
+    NUM a,b;
+    a.a<span style="color:#f92672">=</span>100; a.b<span style="color:#f92672">=</span>100;
+  400540:       <span style="color:#ae81ff">48</span> c7 <span style="color:#ae81ff">45</span> f0 <span style="color:#ae81ff">64</span> <span style="color:#ae81ff">00</span> <span style="color:#ae81ff">00</span>    movq   $0x64,-0x10<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>
+  400547:       <span style="color:#ae81ff">00</span> 
+  400548:       <span style="color:#ae81ff">48</span> c7 <span style="color:#ae81ff">45</span> f8 <span style="color:#ae81ff">64</span> <span style="color:#ae81ff">00</span> <span style="color:#ae81ff">00</span>    movq   $0x64,-0x8<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>
+  40054f:       <span style="color:#ae81ff">00</span> 
+    b.a<span style="color:#f92672">=</span>200; b.b<span style="color:#f92672">=</span>300;
+  400550:       <span style="color:#ae81ff">48</span> c7 <span style="color:#ae81ff">45</span> e0 c8 <span style="color:#ae81ff">00</span> <span style="color:#ae81ff">00</span>    movq   $0xc8,-0x20<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>
+  400557:       <span style="color:#ae81ff">00</span> 
+  400558:       <span style="color:#ae81ff">48</span> c7 <span style="color:#ae81ff">45</span> e8 2c <span style="color:#ae81ff">01</span> <span style="color:#ae81ff">00</span>    movq   $0x12c,-0x18<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>
+  40055f:       <span style="color:#ae81ff">00</span> 
+    
+    NUM c <span style="color:#f92672">=</span> add<span style="color:#f92672">(</span>a,b<span style="color:#f92672">)</span>;
+  400560:       <span style="color:#ae81ff">48</span> 8b <span style="color:#ae81ff">45</span> e0             mov    -0x20<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>,%rax 	//<span style="color:#f92672">=</span>&gt; 分别将NUM a.a, a.b, b.a, b.b加载到对应寄存器，准备add
+  400564:       <span style="color:#ae81ff">48</span> 8b <span style="color:#ae81ff">55</span> e8             mov    -0x18<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>,%rdx
+  400568:       <span style="color:#ae81ff">48</span> 8b 7d f0             mov    -0x10<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>,%rdi
+  40056c:       <span style="color:#ae81ff">48</span> 8b <span style="color:#ae81ff">75</span> f8             mov    -0x8<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>,%rsi
+  400570:       <span style="color:#ae81ff">48</span> <span style="color:#ae81ff">89</span> d1                mov    %rdx,%rcx
+  400573:       <span style="color:#ae81ff">48</span> <span style="color:#ae81ff">89</span> c2                mov    %rax,%rdx
+  400576:       e8 <span style="color:#ae81ff">72</span> ff ff ff          callq  4004ed &lt;add&gt;
+  40057b:       <span style="color:#ae81ff">48</span> <span style="color:#ae81ff">89</span> <span style="color:#ae81ff">45</span> d0             mov    %rax,-0x30<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>		//<span style="color:#f92672">=</span>&gt; 将rax、rdx中的值写到NUM c结构中
+  40057f:       <span style="color:#ae81ff">48</span> <span style="color:#ae81ff">89</span> <span style="color:#ae81ff">55</span> d8             mov    %rdx,-0x28<span style="color:#f92672">(</span>%rbp<span style="color:#f92672">)</span>
+<span style="color:#f92672">}</span>
+</code></pre></div>
+        </div>
+        
+
+        
+        <hr>
+        <div style="float:right;">
+        
+
+
+<div style="display:flex;">
+    <div>分享：</div>
+    <div>
+        <div class="sharethis-inline-share-buttons"></div>
+    </div>
+</div>
+
+
+        </div>
+
+        <br>
+        <br>
+
+    </div>
+
+    
+    
+    <br>
+    <br>
+    <div style="height:auto;align:center;text-align:center;"> 
+        <div>
+            <img src="/common/xiaoqi.png" style="height:238px;margin-top:10px;margin-right:5px;"/>
+            <img src="/common/qrcode.jpg" style="height:238px;margin-top:10px;"/>
+            <img src="/common/yuanbao.png" style="height:238px;margin-top:10px;margin-left:5px;"/>
+        </div>
+
+        <div>
+            <p>
+                感谢打赏，小七🐶、元宝🐱可以改善伙食咯 😘
+            </p>
+        </div>
+
+
+    </div>
+    
+
+    
+
+
+                
+                <div class="container">
+    <hr>
+</div>
+<div class="container has-text-centered top-pad">
+    <a href="#top">
+        <i class="fa fa-arrow-up"></i>
+    </a>
+</div>
+
+<div class="container">
+    <hr>
+</div>
+
+                <div class="section" id="footer">
+    <div class="container has-text-centered">
+    
+        <span class="footer-text">
+            <a href="https://github.com/victoriadrake/hugo-theme-introduction/"><strong>Introduction</strong></a> 主题为 <a href="http://gohugo.io/">Hugo</a> 而设。由开源社群贡献者以 <a href="https://victoria.dev"><i class="fa fa-heart"></i> 和 <i class="fa fa-coffee"></i></a> 创造。
+        </span>
+    
+    </div>
+</div>
+
+                
+            </div>
+        </section>
+        
+        
+
+
+
+
+
+<script src="https://hitzhangjie.github.io/js/bundle.23f18222425179f754965a36c9b211bd8cff5e5ab61ee23b52f026cef6699139.js" integrity="sha256-I/GCIkJRefdUllo2ybIRvYz/Xlq2HuI7UvAmzvZpkTk="></script>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-168027530-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+        
+        
+        
+        
+    </body>
+</html>

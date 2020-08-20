@@ -214,7 +214,7 @@ div#st-2 .st-btn > img {
         </h2>
         <div class="post-data">
             发表时间：2020-08-20 <br> 
-            阅读时长：9 分钟 (4040字)
+            阅读时长：10 分钟 (4813字)
         </div>
 
         
@@ -486,7 +486,18 @@ div#st-2 .st-btn > img {
 </table>
 <h2 id="工具">工具</h2>
 <h3 id="assemblers">assemblers</h3>
+<p>互联网搜索显示了具有x64功能的汇编程序，例如Netwide汇编程序NASM，在NASM基础上重写的YASM，快速的Flat Assembler FASM和传统的Microsoft MASM。甚至还有一个免费的用于x86和x64程序集的IDE，称为WinASM。每个汇编程序对其他汇编程序的宏和语法都有不同的支持，并不是完全兼容的。</p>
+<p>对于以下示例，我使用平台SDK中免费提供的MASM的64位版本ML64.EXE。对于以下示例，请注意，MASM语法的格式为：“指令 目标操作数或地址，源操作数或地址”，有些汇编器中的语法中的源操作、目的操作的顺序是反着的。请参考对应汇编器的语法说明。</p>
 <h3 id="cc-compilers">c/c++ compilers</h3>
+<p>C/C++编译器通常允许使用内联汇编将汇编嵌入代码中，但是Microsoft Visual Studio C/C++为x64代码删除了该汇编，这可能简化了代码优化器的工作。剩下两个选择：使用单独的汇编文件和外部汇编器，或使用头文件“ intrn.h”中的内在函数（请参见Birtolo和MSDN）。其他编译器具有类似的选项。</p>
+<p>使用启发式的理由：</p>
+<ul>
+<li>x64中不支持内联汇编了；</li>
+<li>方便使用，你可以使用变量名，来代替对寄存器的手动分配；</li>
+<li>启发式相比写汇编而言更容易实现跨平台，编译器会针对不同的平台做对应的启发式优化处理；</li>
+<li>配合启发式操作，优化器工作的更好；</li>
+</ul>
+<p>例如，Microsoft Visual Studio 2008就有启发式操作，<code>unsigned short _rotr16(unsigned short_rot16 b, unsigned char c)</code>，这个操作将一个16位操作数b中向右rotate c位，并返回结果。使用c来实现的话，可以这么写<code>unsigned short a1 = (b&gt;&gt;c)|(b&lt;&lt;(16-c))</code>，这个汇编完成后大约是15条指令（debug模式下，如果是release模式下的话也差不太多），但是如果使用启发式操作<code>unsigned short a1 = _rotr16(b,c)</code>的话呢，汇编完成后只有4条指令，你说哪个更牛逼呢？！</p>
 <h2 id="指令基础">指令基础</h2>
 <h3 id="寻址模式">寻址模式</h3>
 <h3 id="指令集">指令集</h3>

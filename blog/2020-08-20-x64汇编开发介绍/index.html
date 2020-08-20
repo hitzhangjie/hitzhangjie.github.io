@@ -214,7 +214,7 @@ div#st-2 .st-btn > img {
         </h2>
         <div class="post-data">
             发表时间：2020-08-20 <br> 
-            阅读时长：10 分钟 (4813字)
+            阅读时长：15 分钟 (7217字)
         </div>
 
         
@@ -289,9 +289,6 @@ div#st-2 .st-btn > img {
         </li>
         <li><a href="#操作系统">操作系统</a></li>
         <li><a href="#调用惯例">调用惯例</a></li>
-        <li><a href="#示例">示例</a></li>
-        <li><a href="#总结">总结</a></li>
-        <li><a href="#参考内容">参考内容</a></li>
       </ul>
     </li>
   </ul>
@@ -500,23 +497,165 @@ div#st-2 .st-btn > img {
 <p>例如，Microsoft Visual Studio 2008就有启发式操作，<code>unsigned short _rotr16(unsigned short_rot16 b, unsigned char c)</code>，这个操作将一个16位操作数b中向右rotate c位，并返回结果。使用c来实现的话，可以这么写<code>unsigned short a1 = (b&gt;&gt;c)|(b&lt;&lt;(16-c))</code>，这个汇编完成后大约是15条指令（debug模式下，如果是release模式下的话也差不太多），但是如果使用启发式操作<code>unsigned short a1 = _rotr16(b,c)</code>的话呢，汇编完成后只有4条指令，你说哪个更牛逼呢？！</p>
 <h2 id="指令基础">指令基础</h2>
 <h3 id="寻址模式">寻址模式</h3>
-<h3 id="指令集">指令集</h3>
-<h2 id="操作系统">操作系统</h2>
-<h2 id="调用惯例">调用惯例</h2>
-<h2 id="示例">示例</h2>
-<h2 id="总结">总结</h2>
-<h2 id="参考内容">参考内容</h2>
+<p>在学习之前，得先了解下寻址模式，寻址模式指明了指令访问寄存器或者内存的方式 ，以下是常见的几种寻址模式：</p>
 <ul>
-<li>原文地址: <a href="https://software.intel.com/content/www/us/en/develop/articles/introduction-to-x64-assembly.html">https://software.intel.com/content/www/us/en/develop/articles/introduction-to-x64-assembly.html</a></li>
-<li>NASM: <a href="http://www.nasm.us/">http://www.nasm.us/</a></li>
-<li>YASM: <a href="http://www.tortall.net/projects/yasm/">http://www.tortall.net/projects/yasm/</a></li>
-<li>Flat Assembler (FASM): <a href="http://www.flatassembler.net/">http://www.flatassembler.net/</a></li>
-<li>&ldquo;Intel® 64 and IA-32 Architectures Software Developer&rsquo;s Manuals,&rdquo; available online at <a href="http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html">http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html</a></li>
-<li>&ldquo;Compiler Intrinsics&rdquo;, available online at <a href="http://msdn.microsoft.com/en-us/library/26td21ds.aspx">http://msdn.microsoft.com/en-us/library/26td21ds.aspx</a></li>
-<li>Matt Pietrek, &ldquo;Everything You Need To Know To Start Programming 64-Bit Windows Systems&rdquo;, available online at <a href="http://msdn.microsoft.com/en-us/magazine/cc300794.aspx,">http://msdn.microsoft.com/en-us/magazine/cc300794.aspx,</a> 2009.</li>
-<li>Intel® 64 and IA-32 Architectures Software Developer Manuals</li>
+<li>
+<p>立即数寻址（immediate）：操作数就在指令中，如<code>ADD EAX, 14 ;将操作数14与32位寄存器EAX中值相加并存储到EAX中</code></p>
+</li>
+<li>
+<p>寄存器寻址（register to register）：操作数就在寄存器中，如<code>ADD R8L, AL ;将AL中的值与R8L中的值相加</code></p>
+</li>
+<li>
+<p>间接寻址（indirect）：就是指令中给出的不是操作数本身，也不是操作数本身所在的地址，而是存储操作数地址的地址，甚至有可能出现多重间址的情况。这样的寻址中允许使用8，16，32位偏移量，或者任何通用目的寄存器来作为基地址或者索引，也允许使用1，2，4，8来对索引进行乘积运算。也可以为其加上段前缀，如FS:, GS:等，但是比较少使用。下面是一个示例，<code>MOV R8W, 1234[8*RAX+RCX] ;将地址8*RAX+RCX+1234处的一个word移动到R8W</code>，这种方式常用来访问结构体数组中的成员，1234往往是数组起始地址，8表示数组元素大小，RAX表示数组索引，RCX表示结构体字段相对结构体起始地址的偏移量。</p>
+<p>这种寻址方式，起始有很多种写法了，下面这些都是等价的。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">MOV     ECX, dword ptr table<span style="color:#f92672">[</span>RBX<span style="color:#f92672">][</span>RDI<span style="color:#f92672">]</span>
+MOV     ECX, dword ptr table<span style="color:#f92672">[</span>RDI<span style="color:#f92672">][</span>RBX<span style="color:#f92672">]</span>
+MOV     ECX, dword ptr table<span style="color:#f92672">[</span>RBX+RDI<span style="color:#f92672">]</span>
+MOV     ECX, dword ptr <span style="color:#f92672">[</span>table+RBX+RDI<span style="color:#f92672">]</span>
+</code></pre></div><p>这里的dword ptr告诉汇编器如何编码MOV指令。</p>
+</li>
+<li>
+<p>RIP相对寻址：这是x64中新加的寻址模式，它允许访问相对当前指令地址某偏移量出的数据，使得实现位置无关的代码更加容易了。如<code>MOV AL,[RIP] ;RIP指向下一条待执行指令的低质，aka NOP NOP</code>。可是，并不是所有汇编器都支持这种操作，MASM就不支持，但是FASM、YASM支持。MASM隐式地嵌入了RIP相对寻址，如<code>MOV EAX, TABLE ;使用RIP相对寻址来获取表地址</code>。</p>
+</li>
+<li>
+<p>其他比较特殊的寻址：有些操作码使用寄存器的方式比较不一样，例如，有符号整数除操作IDIV，128位操作数RDX:RAX除以一个64位的操作数，会将商存储到RAX中，将余数存储到RDX中。</p>
+</li>
 </ul>
+<h3 id="指令集">指令集</h3>
+<p>下表列出了一些比较常见的指令，其中*表示改指令有多个操作码，*表示后缀的意思：</p>
+<table>
+<thead>
+<tr>
+<th align="left">Opcode</th>
+<th align="left">Meaning</th>
+<th align="left">Opcode</th>
+<th align="left">Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">MOV</td>
+<td align="left">Move to/from/between memory and registers</td>
+<td align="left">AND/OR/XOR/NOT</td>
+<td align="left">Bitwise operations</td>
+</tr>
+<tr>
+<td align="left">CMOV*</td>
+<td align="left">Various conditional moves</td>
+<td align="left">SHR/SAR</td>
+<td align="left">Shift right logical/arithmetic</td>
+</tr>
+<tr>
+<td align="left">XCHG</td>
+<td align="left">Exchange</td>
+<td align="left">SHL/SAL</td>
+<td align="left">Shift left logical/arithmetic</td>
+</tr>
+<tr>
+<td align="left">BSWAP</td>
+<td align="left">Byte swap</td>
+<td align="left">ROR/ROL</td>
+<td align="left">Rotate right/left</td>
+</tr>
+<tr>
+<td align="left">PUSH/POP</td>
+<td align="left">Stack usage</td>
+<td align="left">RCR/RCL</td>
+<td align="left">Rotate right/left through carry bit</td>
+</tr>
+<tr>
+<td align="left">ADD/ADC</td>
+<td align="left">Add/with carry</td>
+<td align="left">BT/BTS/BTR</td>
+<td align="left">Bit test/and set/and reset</td>
+</tr>
+<tr>
+<td align="left">SUB/SBC</td>
+<td align="left">Subtract/with carry</td>
+<td align="left">JMP</td>
+<td align="left">Unconditional jump</td>
+</tr>
+<tr>
+<td align="left">MUL/IMUL</td>
+<td align="left">Multiply/unsigned</td>
+<td align="left">JE/JNE/JC/JNC/J*</td>
+<td align="left">Jump if equal/not equal/carry/not carry/ many others</td>
+</tr>
+<tr>
+<td align="left">DIV/IDIV</td>
+<td align="left">Divide/unsigned</td>
+<td align="left">LOOP/LOOPE/LOOPNE</td>
+<td align="left">Loop with ECX</td>
+</tr>
+<tr>
+<td align="left">INC/DEC</td>
+<td align="left">Increment/Decrement</td>
+<td align="left">CALL/RETCall</td>
+<td align="left">subroutine/return</td>
+</tr>
+<tr>
+<td align="left">NEG</td>
+<td align="left">Negate</td>
+<td align="left">NOP</td>
+<td align="left">No operation</td>
+</tr>
+<tr>
+<td align="left">CMP</td>
+<td align="left">Compare</td>
+<td align="left">CPUID</td>
+<td align="left">CPU information</td>
+</tr>
+</tbody>
+</table>
+<p>一个常见的指令就是LOOP指令，它将RCX，ECX或者CX的值减去1，然后如果结果不是0的话，就执行跳转，下面是个示例：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-asm" data-lang="asm">   <span style="color:#a6e22e">XOR</span>	<span style="color:#66d9ef">EAX</span>, <span style="color:#66d9ef">EAX</span>	<span style="color:#75715e">; zero out eax
+</span><span style="color:#75715e"></span>   <span style="color:#66d9ef">MOV</span> 	<span style="color:#66d9ef">ECX</span>, <span style="color:#ae81ff">10</span> 	<span style="color:#75715e">; loop 10 times
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">Label</span>:			<span style="color:#75715e">; this is a label in assembly
+</span><span style="color:#75715e"></span>   <span style="color:#66d9ef">INX</span> 	<span style="color:#66d9ef">EAX</span>   	<span style="color:#75715e">; increment eax
+</span><span style="color:#75715e"></span>   <span style="color:#66d9ef">LOOP</span> 	<span style="color:#66d9ef">Label</span>		<span style="color:#75715e">; decrement ECX, loop if not 0
+</span></code></pre></div><p>不太常见的操作码可实现字符串操作，重复指令前缀，端口I / O指令，标志设置/清除/测试，浮点操作（通常以F开头，并支持move from一个整数、move to一个整数，算术，比较，先验，代数移入/移出）以及控制功能），用于多线程和性能问题的缓存和内存操作码等。英特尔®64和IA-32体系结构软件开发人员手册第2卷分为两部分，详细介绍了每个操作码。</p>
+<h2 id="操作系统">操作系统</h2>
+<p>从理论上讲，64位系统允许寻址2^64字节的数据，但是当前没有芯片允许访问所有16 EB字节（18,446,744,073,709,551,616字节）。例如，AMD体系结构仅使用地址的低48位，并且48至63位必须是47位的副本，否则处理器会引发异常。因此，地址为0到00007FFFFFFFFFFF，从FFFF800000000000到FFFFFFFFFFFFFFFF，总共有256 TB（281,474,976,710,656字节）的可用虚拟地址空间。另一个缺点是，要寻址所有64位内存，需要更多的页表供OS存储，需要使用宝贵的内存。请注意，这些是虚拟地址，而不是物理地址。</p>
+<p>结果，许多操作系统使用此空间的上半部分，从顶部开始，然后向下扩展；而用户程序则使用下半部分，从底部开始，然后向上扩展。当前的Windows *版本使用44位寻址（16 TB = 17,592,186,044,416字节）。结果地址如下图所示。由于地址是由OS分配的，因此结果地址对用户程序而言不太重要，但是用户地址和内核地址之间的区别对于调试很有用。</p>
+<p><img src="https://software.intel.com/content/dam/develop/external/us/en/images/29530-figure-2-181178.jpg" alt="内存寻址"></p>
+<p>最后一个与OS相关的问题与多线程编程有关，但是此主题太大，无法在此处讨论。唯一要提到的是，有内存屏障操作码可帮助保护共享资源不受破坏。</p>
+<h2 id="调用惯例">调用惯例</h2>
+<p>每种架构都有自己的例程（函数）调用的一些约束，操作系统与对应架构的CPU打交道都必须要考虑如何传递对应的参数、如何获取返回值的问题，这里的具体到某个平台的约束，就称为调用约定。</p>
+<p>常见的x64调用约定是用于C样式函数调用的Microsoft 64调用约定（请参阅MSDN，Chen和Pietrek）。在Linux下，也将其称为应用程序二进制接口（ABI）。</p>
+<p>请注意，此处涉及的调用约定与x64 Linux系统上使用的约定不同：对于Microsoft x64调用约定，附加的寄存器空间使fastcall成为唯一的调用约定（在x86下有很多：stdcall，thiscall，fastcall，cdecl等）。与C / C ++样式函数接口的规则：</p>
+<ul>
+<li>RCX, RDX, R8, R9 are used for integer and pointer arguments in that order left to right.</li>
+<li>XMM0, 1, 2, and 3 are used for floating point arguments.</li>
+<li>Additional arguments are pushed on the stack left to right.</li>
+<li>Parameters less than 64 bits long are not zero extended; the high bits contain garbage.</li>
+<li>It is the caller&rsquo;s responsibility to allocate 32 bytes of &ldquo;shadow space&rdquo; (for storing RCX, RDX, R8, and R9 if needed) before calling the function.</li>
+<li>It is the caller&rsquo;s responsibility to clean the stack after the call.</li>
+<li>Integer return values (similar to x86) are returned in RAX if 64 bits or less.</li>
+<li>Floating point return values are returned in XMM0.</li>
+<li>Larger return values (structs) have space allocated on the stack by the caller, and RCX then contains a pointer to the return space when the callee is called. Register usage for integer parameters is then pushed one to the right. RAX returns this address to the caller.</li>
+<li>The stack is 16-byte aligned. The &ldquo;call&rdquo; instruction pushes an 8-byte return value, so the all non-leaf functions must adjust the stack by a value of the form 16n+8 when allocating stack space.</li>
+<li>Registers RAX, RCX, RDX, R8, R9, R10, and R11 are considered volatile and must be considered destroyed on function calls.</li>
+<li>RBX, RBP, RDI, RSI, R12, R14, R14, and R15 must be saved in any function using them.</li>
+<li>Note there is no calling convention for the floating point (and thus MMX) registers.</li>
+<li>Further details (varargs, exception handling, stack unwinding) are at Microsoft&rsquo;s site.</li>
+</ul>
+<p>我们再看下Linux man手册，这里整理了两张调用约定相关的表: <a href="https://man7.org/linux/man-pages/man2/syscall.2.html">https://man7.org/linux/man-pages/man2/syscall.2.html</a>，读后可以加深我们对调用约定 or ABI的认识。</p>
+<pre><code>
+## 示例
 
+## 总结
+
+## 参考内容
+
+- 原文地址: https://software.intel.com/content/www/us/en/develop/articles/introduction-to-x64-assembly.html
+- NASM: http://www.nasm.us/
+- YASM: http://www.tortall.net/projects/yasm/
+- Flat Assembler (FASM): http://www.flatassembler.net/
+- &quot;Intel® 64 and IA-32 Architectures Software Developer's Manuals,&quot; available online at http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html
+- &quot;Compiler Intrinsics&quot;, available online at http://msdn.microsoft.com/en-us/library/26td21ds.aspx
+- Matt Pietrek, &quot;Everything You Need To Know To Start Programming 64-Bit Windows Systems&quot;, available online at http://msdn.microsoft.com/en-us/magazine/cc300794.aspx, 2009.
+- Intel® 64 and IA-32 Architectures Software Developer Manuals
+</code></pre>
         </div>
         
 

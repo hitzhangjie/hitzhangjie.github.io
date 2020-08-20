@@ -214,7 +214,7 @@ div#st-2 .st-btn > img {
         </h2>
         <div class="post-data">
             发表时间：2020-08-20 <br> 
-            阅读时长：15 分钟 (7217字)
+            阅读时长：17 分钟 (8368字)
         </div>
 
         
@@ -288,7 +288,13 @@ div#st-2 .st-btn > img {
           </ul>
         </li>
         <li><a href="#操作系统">操作系统</a></li>
-        <li><a href="#调用惯例">调用惯例</a></li>
+        <li><a href="#调用惯例">调用惯例</a>
+          <ul>
+            <li><a href="#heading"></a></li>
+          </ul>
+        </li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考内容">参考内容</a></li>
       </ul>
     </li>
   </ul>
@@ -643,19 +649,97 @@ MOV     ECX, dword ptr <span style="color:#f92672">[</span>table+RBX+RDI<span st
 <pre><code>
 ## 示例
 
-## 总结
+### MessageBox
 
-## 参考内容
+前面讲这么多，现在用上面讲过的内容来写一个demo展示下x64汇编的使用，第一个demo是一个x64独立可运行的程序，运行之后会弹出一个Windows MessageBox。
 
-- 原文地址: https://software.intel.com/content/www/us/en/develop/articles/introduction-to-x64-assembly.html
-- NASM: http://www.nasm.us/
-- YASM: http://www.tortall.net/projects/yasm/
-- Flat Assembler (FASM): http://www.flatassembler.net/
-- &quot;Intel® 64 and IA-32 Architectures Software Developer's Manuals,&quot; available online at http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html
-- &quot;Compiler Intrinsics&quot;, available online at http://msdn.microsoft.com/en-us/library/26td21ds.aspx
-- Matt Pietrek, &quot;Everything You Need To Know To Start Programming 64-Bit Windows Systems&quot;, available online at http://msdn.microsoft.com/en-us/magazine/cc300794.aspx, 2009.
-- Intel® 64 and IA-32 Architectures Software Developer Manuals
-</code></pre>
+```asm
+; Sample x64 Assembly Program
+; Chris Lomont 2009 www.lomont.org
+extrn ExitProcess: PROC   ; external functions in system libraries
+extrn MessageBoxA: PROC
+.data
+caption db '64-bit hello!', 0
+message db 'Hello World!', 0
+.code
+Start PROC
+  sub    rsp,28h      ; shadow space, aligns stack
+  mov    rcx, 0       ; hWnd = HWND_DESKTOP
+  lea    rdx, message ; LPCSTR lpText
+  lea    r8,  caption ; LPCSTR lpCaption
+  mov    r9d, 0       ; uType = MB_OK
+  call   MessageBoxA  ; call MessageBox API function
+  mov    ecx, eax     ; uExitCode = MessageBox(...)
+  call ExitProcess
+Start ENDP
+End
+</code></pre><p>将上述汇编程序保存为hello.asm，然后使用ML64进行编译，在Microsoft Windows x64 SDK中有这个程序的，这么编译：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"> ml64 hello.asm /link /subsystem:windows /defaultlib:kernel32.lib /defaultlib:user32.lib /entry:Start
+</code></pre></div><p>执行完成后会构建出一个可执行程序（已经链接好库函数、启动代码了），运行这个程序hello.exe，就会看到弹出一个消息窗口。</p>
+<h3 id="heading"></h3>
+<p>第二个示例，是在Visual Studio 2008这个IDE中，在C/C++文件中引用一个x64汇编文件中的代码，还记得Visual Studio后续删除了对支持内联汇编的支持吧。好。</p>
+<ul>
+<li>Create a new empty C++ console project. Create a function you&rsquo;d like to port to assembly, and call it from main.</li>
+<li>To change the default 32-bit build, select Build/Configuration Manager.</li>
+<li>Under Active Platform, select New&hellip;</li>
+<li>Under Platform, select x64. If it does not appear figure out how to add the 64-bit SDK tools and repeat.</li>
+<li>Compile and step into the code. Look under Debug/Windows/Disassembly to see the resulting code and interface needed for your assembly function.</li>
+<li>Create an assembly file, and add it to the project. It defaults to a 32 bit assembler which is fine.</li>
+<li>Open the assembly file properties, select all configurations, and edit the custom build step.</li>
+<li>Put command line
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">ml64.exe /DWIN_X64 /Zi /c /Cp /Fl /Fo <span style="color:#66d9ef">$(</span>IntDir<span style="color:#66d9ef">)</span><span style="color:#ae81ff">\$</span><span style="color:#f92672">(</span>InputName<span style="color:#f92672">)</span>.obj <span style="color:#66d9ef">$(</span>InputName<span style="color:#66d9ef">)</span>.asm j:w
+</code></pre></div></li>
+</ul>
+<p>ok，下面开始，我们先写一个c++文件，如下，main里面会调用两个函数CombineC、CombineA先后打印出计算的结果，实际上我们准备让CombineA和CombineC实现完全一致的逻辑，区别就是CombineA是在外部的汇编文件中实现的。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">// C++ code to demonstrate x64 assembly file linking
+</span><span style="color:#75715e"></span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;iostream&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span>using namespace std;
+<span style="color:#66d9ef">double</span> <span style="color:#a6e22e">CombineC</span>(<span style="color:#66d9ef">int</span> a, <span style="color:#66d9ef">int</span> b, <span style="color:#66d9ef">int</span> c, <span style="color:#66d9ef">int</span> d, <span style="color:#66d9ef">int</span> e, <span style="color:#66d9ef">double</span> f)
+{
+     <span style="color:#66d9ef">return</span> (a<span style="color:#f92672">+</span>b<span style="color:#f92672">+</span>c<span style="color:#f92672">+</span>d<span style="color:#f92672">+</span>e)<span style="color:#f92672">/</span>(f<span style="color:#f92672">+</span><span style="color:#ae81ff">1.5</span>);
+}
+
+<span style="color:#75715e">// NOTE: 这里必须加上extern &#34;C&#34;来阻止C++ name mangling，否则连接的时候会出现符号解析错误
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">extern</span> <span style="color:#e6db74">&#34;C&#34;</span> <span style="color:#66d9ef">double</span> CombineA(<span style="color:#66d9ef">int</span> a, <span style="color:#66d9ef">int</span> b, <span style="color:#66d9ef">int</span> c, <span style="color:#66d9ef">int</span> d, <span style="color:#66d9ef">int</span> e, <span style="color:#66d9ef">double</span> f);
+
+<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">void</span>)
+{
+     cout <span style="color:#f92672">&lt;&lt;</span> <span style="color:#e6db74">&#34;CombineC: &#34;</span> <span style="color:#f92672">&lt;&lt;</span> CombineC(<span style="color:#ae81ff">1</span>,<span style="color:#ae81ff">2</span>,<span style="color:#ae81ff">3</span>,<span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">5</span>, <span style="color:#ae81ff">6.1</span>) <span style="color:#f92672">&lt;&lt;</span> endl;
+     cout <span style="color:#f92672">&lt;&lt;</span> <span style="color:#e6db74">&#34;CombineA: &#34;</span> <span style="color:#f92672">&lt;&lt;</span> CombineA(<span style="color:#ae81ff">1</span>,<span style="color:#ae81ff">2</span>,<span style="color:#ae81ff">3</span>,<span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">5</span>, <span style="color:#ae81ff">6.1</span>) <span style="color:#f92672">&lt;&lt;</span> endl;
+     <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+}
+</code></pre></div><p>好的，下面继续写汇编文件：</p>
+<p>file: CombineA.asm</p>
+<pre><code>.code
+PUBLIC CombineA
+CombineA PROC
+   ADD    ECX, DWORD PTR [RSP+28H] ; add overflow parameter to first parameter
+   ADD    ECX, R9D                 ; add other three register parameters
+   ADD    ECX, R8D                 ;
+   ADD    ECX, EDX                 ;
+   MOVD   XMM0, ECX                ; move doubleword ECX into XMM0
+   CVTDQ2PD  XMM0, XMM0            ; convert doubleword to floating point
+   MOVSD  XMM1, realVal            ; load 1.5
+   ADDSD  XMM1, MMWORD PTR [RSP+30H]  ; add parameter
+   DIVSD  XMM0, XMM1               ; do division, answer in xmm0
+   RET                             ; return
+CombineA ENDP
+End
+</code></pre><p>编译并运行上述程序，会发现输出了两次1.97368，第一次是CombineC的运算结果，第二次就是汇编实现的CombineA的运算结果</p>
+<h2 id="总结">总结</h2>
+<p>这是对x64汇编编程的必要的简要介绍。下一步是浏览《英特尔®64和IA-32架构软件开发人员手册》。第1卷包含体系结构的详细信息，如果您知道汇编的话，这是一个很好的开始。其他地方是汇编书籍或在线汇编教程。为了了解代码的执行方式，指导您在调试器中逐步执行代码，查看反汇编，直到您可以阅读汇编代码以及您喜欢的语言为止，这对您很有帮助。对于C / C ++编译器，调试版本比发行版本更容易阅读，因此请确保从此处开始。最后，阅读masm32.com上的论坛以获取大量材料。</p>
+<h2 id="参考内容">参考内容</h2>
+<ul>
+<li>原文地址: <a href="https://software.intel.com/content/www/us/en/develop/articles/introduction-to-x64-assembly.html">https://software.intel.com/content/www/us/en/develop/articles/introduction-to-x64-assembly.html</a></li>
+<li>NASM: <a href="http://www.nasm.us/">http://www.nasm.us/</a></li>
+<li>YASM: <a href="http://www.tortall.net/projects/yasm/">http://www.tortall.net/projects/yasm/</a></li>
+<li>Flat Assembler (FASM): <a href="http://www.flatassembler.net/">http://www.flatassembler.net/</a></li>
+<li>&ldquo;Intel® 64 and IA-32 Architectures Software Developer&rsquo;s Manuals,&rdquo; available online at <a href="http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html">http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html</a></li>
+<li>&ldquo;Compiler Intrinsics&rdquo;, available online at <a href="http://msdn.microsoft.com/en-us/library/26td21ds.aspx">http://msdn.microsoft.com/en-us/library/26td21ds.aspx</a></li>
+<li>Matt Pietrek, &ldquo;Everything You Need To Know To Start Programming 64-Bit Windows Systems&rdquo;, available online at <a href="http://msdn.microsoft.com/en-us/magazine/cc300794.aspx,">http://msdn.microsoft.com/en-us/magazine/cc300794.aspx,</a> 2009.</li>
+<li>Intel® 64 and IA-32 Architectures Software Developer Manuals</li>
+</ul>
+
         </div>
         
 

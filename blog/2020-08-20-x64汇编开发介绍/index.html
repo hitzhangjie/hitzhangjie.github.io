@@ -214,7 +214,7 @@ div#st-2 .st-btn > img {
         </h2>
         <div class="post-data">
             发表时间：2020-08-20 <br> 
-            阅读时长：7 分钟 (3274字)
+            阅读时长：9 分钟 (4040字)
         </div>
 
         
@@ -431,6 +431,59 @@ div#st-2 .st-btn > img {
 <p>还有就是，段寄存器（在x64下大多数没有用）、控制寄存器、内存管理寄存器、调试寄存器、虚拟化寄存器、性能寄存器（跟踪记录各种类型的内部参数，如cache命中、miss，分支预测命中、miss，微码执行，定时等等）。最突出的性能相关的操作码就是RDTSC，它是用来技术处理器时钟周期的，经常通过它来测量一小段代码的执行耗时。通常c库里面提供的函数gettimeofday是比较耗时间的，所以在高频使用的时候会有性能问题，一般在网络框架里面做定时器、时间测量相关的任务，是会通过RDTSC来推送系统时间进而推算耗时的（在我的文章libmill定时器中也有提及，hitzhangjie.gitbook.io/libmill）。</p>
 <p>更多其他细节信息，可以参考全5卷 &ldquo;Intel 64 And IA-32 Architectures Software Developer&rsquo;s Manuals&rdquo;，可以从这里免费下载，http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html。</p>
 <h3 id="simd架构">SIMD架构</h3>
+<p>单指令多数据（SIMD）指令对多条数据并行执行一条命令，这是汇编例程的常用用法。 MMX和SSE命令（分别使用MMX和XMM寄存器）支持SIMD操作，该操作可并行处理多达八段数据。例如，可以使用MMX在一条指令中将八个字节与另外八个字节相加。</p>
+<p>八个64位MMX寄存器MMX0-MMX7是FPR0-7的别名，这意味着任何将FPR和MMX混合起来操作的代码都必须小心，不要覆盖所需的值。 MMX指令对整数类型进行操作，允许对MMX寄存器中的值并行执行字节，字和双字操作。大多数MMX指令以“P”开头表示“packed”。算术，移位/旋转，比较，例如：PCMPGTB表示“比较packed的的有符号1字节整数是否大于”。</p>
+<p>16个128位XMM寄存器允许每条指令对四个单精度或两个双精度值进行并行运算。一些指令还适用于压缩字节，字，双字和四字整数。这些称为流式SIMD扩展（SSE）的指令具有多种形式：SSE，SSE2，SSE3，SSSE3，SSE4，以及在本文印制之时可能还会更多。英特尔已经宣布了这些扩展，称为英特尔®高级矢量扩展（Intel®AVX），具有新的256位宽数据路径。 SSE指令包含对浮点和整数类型的移动，算术，比较，重排和拆包以及按位运算。指令名称包括诸如PMULHUW和RSQRTPS之类的。最后，SSE引入了一些有关内存预取（出于性能）和内存屏障（出于多线程安全）的指令。</p>
+<p>下表列出了一些命令集，操作的寄存器类型，并行操作的项目数以及项目类型。例如，使用SSE3和128位XMM寄存器，您可以并行处理2个（必须为64位）浮点值，或者并行处理16个（必须为字节大小）整数值。</p>
+<p>为了找到给定芯片支持的技术，有一条CPUID指令返回特定于处理器的信息。</p>
+<table>
+<thead>
+<tr>
+<th align="left">Technology</th>
+<th align="left">Register size/type</th>
+<th align="left">Item type</th>
+<th align="left">Items in Parallel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">MMX</td>
+<td align="left">64 MMX</td>
+<td align="left">Integer</td>
+<td align="left">8, 4, 2, 1</td>
+</tr>
+<tr>
+<td align="left">SSE</td>
+<td align="left">64 MMX</td>
+<td align="left">Integer</td>
+<td align="left">8,4,2,1</td>
+</tr>
+<tr>
+<td align="left">SSE</td>
+<td align="left">128 XMM</td>
+<td align="left">Float</td>
+<td align="left">4</td>
+</tr>
+<tr>
+<td align="left">SSE2/SSE3/SSSE3&hellip;</td>
+<td align="left">64 MMX</td>
+<td align="left">Integer</td>
+<td align="left">2,1</td>
+</tr>
+<tr>
+<td align="left">SSE2/SSE3/SSSE3&hellip;</td>
+<td align="left">128 XMM</td>
+<td align="left">Float</td>
+<td align="left">2</td>
+</tr>
+<tr>
+<td align="left">SSE2/SSE3/SSSE3&hellip;</td>
+<td align="left">128 XMM</td>
+<td align="left">Integer</td>
+<td align="left">16,8,4,2,1</td>
+</tr>
+</tbody>
+</table>
 <h2 id="工具">工具</h2>
 <h3 id="assemblers">assemblers</h3>
 <h3 id="cc-compilers">c/c++ compilers</h3>

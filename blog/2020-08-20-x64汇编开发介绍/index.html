@@ -288,7 +288,7 @@ div#st-2 .st-btn > img {
           </ul>
         </li>
         <li><a href="#操作系统">操作系统</a></li>
-        <li><a href="#调用惯例">调用惯例</a>
+        <li><a href="#调用约定">调用约定</a>
           <ul>
             <li><a href="#heading"></a></li>
           </ul>
@@ -625,7 +625,7 @@ MOV     ECX, dword ptr <span style="color:#f92672">[</span>table+RBX+RDI<span st
 <p>结果，许多操作系统使用此空间的上半部分，从顶部开始，然后向下扩展；而用户程序则使用下半部分，从底部开始，然后向上扩展。当前的Windows *版本使用44位寻址（16 TB = 17,592,186,044,416字节）。结果地址如下图所示。由于地址是由OS分配的，因此结果地址对用户程序而言不太重要，但是用户地址和内核地址之间的区别对于调试很有用。</p>
 <p><img src="https://software.intel.com/content/dam/develop/external/us/en/images/29530-figure-2-181178.jpg" alt="内存寻址"></p>
 <p>最后一个与OS相关的问题与多线程编程有关，但是此主题太大，无法在此处讨论。唯一要提到的是，有内存屏障操作码可帮助保护共享资源不受破坏。</p>
-<h2 id="调用惯例">调用惯例</h2>
+<h2 id="调用约定">调用约定</h2>
 <p>每种架构都有自己的例程（函数）调用的一些约束，操作系统与对应架构的CPU打交道都必须要考虑如何传递对应的参数、如何获取返回值的问题，这里的具体到某个平台的约束，就称为调用约定。</p>
 <p>常见的x64调用约定是用于C样式函数调用的Microsoft 64调用约定（请参阅MSDN，Chen和Pietrek）。在Linux下，也将其称为应用程序二进制接口（ABI）。</p>
 <p>请注意，此处涉及的调用约定与x64 Linux系统上使用的约定不同：对于Microsoft x64调用约定，附加的寄存器空间使fastcall成为唯一的调用约定（在x86下有很多：stdcall，thiscall，fastcall，cdecl等）。与C / C ++样式函数接口的规则：</p>

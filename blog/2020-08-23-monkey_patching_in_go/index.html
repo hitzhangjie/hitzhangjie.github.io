@@ -282,9 +282,9 @@ div#st-2 .st-btn > img {
           <ul>
             <li><a href="#r2-wa汇编指令">r2: wa+汇编指令</a></li>
             <li><a href="#r2-wxhex">r2: wx+hex</a></li>
+            <li><a href="#monkey-patching">Monkey Patching</a></li>
           </ul>
         </li>
-        <li><a href="#monkey-patching">Monkey Patching</a></li>
         <li><a href="#put-it-together">Put It Together</a></li>
       </ul>
     </li>
@@ -622,7 +622,7 @@ ffe2
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ./mainx
 <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">2</span>
 </code></pre></div><p>上面只是为了测试下，行还是不行，肯定是行啊，我只是想炫耀下radare2有多强大好玩而已。</p>
-<h2 id="monkey-patching">Monkey Patching</h2>
+<h3 id="monkey-patching">Monkey Patching</h3>
 <p>上面兜了个圈子，给大家演示了下radare2怎么使用，接下来我们运行时patch下指令测试下。还是mainx.go这个程序。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
 

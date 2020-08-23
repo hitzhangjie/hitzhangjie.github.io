@@ -60,7 +60,7 @@
   
   <url>
     <loc>https://hitzhangjie.github.io/blog/</loc>
-    <lastmod>2020-08-20T20:27:19+08:00</lastmod>
+    <lastmod>2020-08-23T15:41:28+08:00</lastmod>
     <xhtml:link
                 rel="alternate"
                 hreflang="en"
@@ -70,6 +70,56 @@
                 rel="alternate"
                 hreflang="zh-cn"
                 href="https://hitzhangjie.github.io/blog/"
+                />
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/go/</loc>
+    <lastmod>2020-08-23T15:41:28+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/mock/</loc>
+    <lastmod>2020-08-23T15:41:28+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/blog/2020-08-23-monkey_patching_in_go/</loc>
+    <lastmod>2020-08-23T15:41:28+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/monkey-patching/</loc>
+    <lastmod>2020-08-23T15:41:28+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/</loc>
+    <lastmod>2020-08-23T15:41:28+08:00</lastmod>
+    <xhtml:link
+                rel="alternate"
+                hreflang="en"
+                href="https://hitzhangjie.github.io/en/tags/"
+                />
+    <xhtml:link
+                rel="alternate"
+                hreflang="zh-cn"
+                href="https://hitzhangjie.github.io/tags/"
+                />
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/</loc>
+    <lastmod>2020-08-23T15:41:28+08:00</lastmod>
+    <xhtml:link
+                rel="alternate"
+                hreflang="en"
+                href="https://hitzhangjie.github.io/en/"
+                />
+    <xhtml:link
+                rel="alternate"
+                hreflang="zh-cn"
+                href="https://hitzhangjie.github.io/"
                 />
   </url>
   
@@ -84,21 +134,6 @@
   </url>
   
   <url>
-    <loc>https://hitzhangjie.github.io/tags/</loc>
-    <lastmod>2020-08-20T20:27:19+08:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/tags/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh-cn"
-                href="https://hitzhangjie.github.io/tags/"
-                />
-  </url>
-  
-  <url>
     <loc>https://hitzhangjie.github.io/tags/x64/</loc>
     <lastmod>2020-08-20T20:27:19+08:00</lastmod>
   </url>
@@ -109,32 +144,12 @@
   </url>
   
   <url>
-    <loc>https://hitzhangjie.github.io/</loc>
-    <lastmod>2020-08-20T20:27:19+08:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh-cn"
-                href="https://hitzhangjie.github.io/"
-                />
-  </url>
-  
-  <url>
     <loc>https://hitzhangjie.github.io/tags/backlog/</loc>
     <lastmod>2020-08-17T23:28:38+08:00</lastmod>
   </url>
   
   <url>
     <loc>https://hitzhangjie.github.io/tags/fd/</loc>
-    <lastmod>2020-08-17T23:28:38+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/tags/go/</loc>
     <lastmod>2020-08-17T23:28:38+08:00</lastmod>
   </url>
   
@@ -221,11 +236,6 @@
   <url>
     <loc>https://hitzhangjie.github.io/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc&#43;&#43;-volatile/</loc>
     <lastmod>2020-07-24T19:46:11+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/tags/mock/</loc>
-    <lastmod>2020-07-01T20:30:01+08:00</lastmod>
   </url>
   
   <url>

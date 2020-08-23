@@ -6,7 +6,7 @@
     <description>Recent content on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Thu, 20 Aug 2020 20:27:19 +0800</lastBuildDate>
+    <lastBuildDate>Sun, 23 Aug 2020 15:41:28 +0800</lastBuildDate>
     
 	<atom:link href="https://hitzhangjie.github.io/index.xml" rel="self" type="application/rss+xml" />
     
@@ -36,6 +36,15 @@
       
       <guid>https://hitzhangjie.github.io/projects/design/</guid>
       <description>生活中从来不缺乏创意，缺乏的是创意可靠落地的计划。 Go on, explore your ideas! 💪 Go on, stick to your dream! 👍</description>
+    </item>
+    
+    <item>
+      <title>Monkey Patching in Go</title>
+      <link>https://hitzhangjie.github.io/blog/2020-08-23-monkey_patching_in_go/</link>
+      <pubDate>Sun, 23 Aug 2020 15:41:28 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-08-23-monkey_patching_in_go/</guid>
+      <description>前几天写了篇x64汇编开发介绍的文章，当时有提到接下来会介绍下go中如何实现monkey patching，嗯，今天就来说下这个事情。 Monkey Patching 简介 monkey patching，一说到这个，很多熟悉go的同学可能会联想起gomonkey这个mock测试框架。该术语的定义取决于使用它的社区。在Ruby，Python 和许多其他动态编程语言中，“monkey patching”一词仅指在运行时对类或模块的动态修改，其目的是为了修补现有的第三方代码，以此作为解决方法。错误或功能无法正常运行。根据其不同的意图，在运行时修改类的其他形式也</description>
     </item>
     
     <item>

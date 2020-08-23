@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+    <head>
+        
+        <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Web站点描述">
+<title>
+Monkey Patching in Go - 介绍
+</title>
+
+
+
+
+<script type="text/javascript" src="https://platform-api.sharethis.com/js/sharethis.js#property=5f24f50fc2418c0012d52ac3&product=inline-share-buttons" async="async">
+</script>
+
+<style>
+ 
+[alt~=sharing] {
+    border: 0px;
+    box-shadow: none;
+}
+div#st-1 {
+    text-align: unset;
+}
+
+ 
+div#st-1 .st-btn {
+    height: 24px;
+    padding: 0 4px;
+}
+
+div#st-1 .st-btn > img {
+    top: 4.2px;
+}
+
+div#st-2 .st-btn {
+    height: 24px;
+    padding: 0 4px;
+}
+
+div#st-2 .st-btn > img {
+    top: 4.2px;
+}
+</style>
+
+
+
+
+
+
+
+        <meta property="og:title" content="Monkey Patching in Go - 介绍" />
+<meta property="og:type" content="website" />
+<meta property="og:description" content="Web站点描述"/>
+<meta property="og:url" content="https://hitzhangjie.github.io/blog/2020-08-23-monkey_patching_in_go/"/>
+<meta property="og:site_name" content="介绍"/>
+
+
+
+
+<meta property="og:image" content="https://hitzhangjie.github.io/home/me.jpg"/>
+
+<meta property="og:image" content="https://hitzhangjie.github.io/home/profile.jpg"/>
+
+
+
+
+        
+<link rel="shortcut icon" href="/img/fav.ico">
+
+
+        
+
+
+
+
+
+<link rel="stylesheet" href="/css/main.min.daa833377fb1636f8cbfa65c601050bb5475623deb7aa6e6fdde94a064a6185d.css" integrity="sha256-2qgzN3&#43;xY2&#43;Mv6ZcYBBQu1R1Yj3reqbm/d6UoGSmGF0=" crossorigin="anonymous" media="screen">
+
+
+
+
+    <link rel="stylesheet" href="/custom.css" integrity="" crossorigin="anonymous" media="screen">
+
+        
+        
+        
+        
+    </head>
+    <body>
+        <section id="top" class="section">
+            
+            <div class="container hero  fade-in one ">
+                
+
+    <h1 class="bold-title is-1">博客</h1>
+
+
+            </div>
+            
+            <div class="section  fade-in two ">
+                
+<div class="container">
+    <hr>
+    <nav class="navbar" role="navigation" aria-label="main navigation">
+        
+        <a role="button" class="navbar-burger" data-target="navMenu" aria-label="menu" aria-expanded="false" >
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </a>
+        <div class="navbar-menu " id="navMenu">
+            
+            
+            
+            
+            <a class="navbar-item" href="/">主页</a>
+            
+
+            
+            
+
+            
+                
+            
+
+            
+                
+            
+
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://hitzhangjie.github.io/projects/">
+                  
+                  项目
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://hitzhangjie.github.io/blog/">
+                  
+                  返回 博客
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#about">关于</a>
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#thanks">致谢</a>
+            
+            
+            
+            
+
+            
+            
+            <a class="navbar-item" href="/#contact">联系方式</a>
+            
+            
+
+            
+            
+            
+            
+            <a class="navbar-item" href="https://hitzhangjie.github.io/en/">English</a>
+            
+            
+
+            
+            
+        </div>
+    </nav>
+    <hr>
+</div>
+
+
+
+                
+    <div class="container">
+
+        <h2 class="title is-1 top-pad strong-post-title">
+            <a href="https://hitzhangjie.github.io/blog/2020-08-23-monkey_patching_in_go/">Monkey Patching in Go</a>
+        </h2>
+        <div class="post-data">
+            发表时间：2020-08-23 <br> 
+            阅读时长：15 分钟 (7387字)
+        </div>
+
+        
+        <div>
+            <div>
+            
+            
+            <p>
+                标签：
+                
+                <a href="/tags/go">go</a>,
+                
+                <a href="/tags/monkey-patching">monkey-patching</a>,
+                
+                <a href="/tags/mock">mock</a>
+                
+            </p>
+            
+            </div>
+
+            <div>
+            <br>
+            
+
+
+<div style="display:flex;">
+    <div>分享：</div>
+    <div>
+        <div class="sharethis-inline-share-buttons"></div>
+    </div>
+</div>
+
+
+            </div>
+
+        </div>
+
+        
+        
+
+        
+        <div> 
+            
+<aside>
+    <hr/>
+    <header>
+    <b>《Monkey Patching in Go》目录：</b>
+    <br/>
+    </header>
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#monkey-patching-简介">Monkey Patching 简介</a></li>
+    <li><a href="#monkey-patching-in-go">Monkey Patching in Go</a>
+      <ul>
+        <li><a href="#go函数表示">Go函数表示</a>
+          <ul>
+            <li><a href="#demo1">demo1</a></li>
+            <li><a href="#demo2">demo2</a></li>
+            <li><a href="#demo3">demo3</a></li>
+          </ul>
+        </li>
+        <li><a href="#指令patching">指令Patching</a></li>
+        <li><a href="#大致实现">大致实现</a></li>
+        <li><a href="#指令级调试">指令级调试</a>
+          <ul>
+            <li><a href="#r2-wa汇编指令">r2: wa+汇编指令</a></li>
+            <li><a href="#r2-wxhex">r2: wx+hex</a></li>
+          </ul>
+        </li>
+        <li><a href="#monkey-patching">Monkey Patching</a></li>
+        <li><a href="#put-it-together">Put It Together</a></li>
+      </ul>
+    </li>
+    <li><a href="#总结">总结</a></li>
+    <li><a href="#参考文章">参考文章</a></li>
+  </ul>
+</nav>
+    <hr/>
+</aside>
+
+
+        </div>
+   
+        
+        <div class="container markdown top-pad">
+            <p>前几天写了篇<a href="https://hitzhangjie.github.io/blog/2020-08-20-x64%E6%B1%87%E7%BC%96%E5%BC%80%E5%8F%91%E4%BB%8B%E7%BB%8D/">x64汇编开发介绍</a>的文章，当时有提到接下来会介绍下go中如何实现monkey patching，嗯，今天就来说下这个事情。</p>
+<h1 id="monkey-patching-简介">Monkey Patching 简介</h1>
+<p>monkey patching，一说到这个，很多熟悉go的同学可能会联想起gomonkey这个mock测试框架。该术语的定义取决于使用它的社区。在Ruby，Python 和许多其他动态编程语言中，“monkey patching”一词仅指在运行时对类或模块的动态修改，其目的是为了修补现有的第三方代码，以此作为解决方法。错误或功能无法正常运行。根据其不同的意图，在运行时修改类的其他形式也具有不同的名称。例如，在Zope和Plone中，安全补丁通常是使用动态类修改来提供的，但它们被称为热修补程序(hot fixes)。</p>
+<p>monkey pathcing，它常用语如下场景：</p>
+<ul>
+<li>在运行时替换方法/类/属性/函数，例如在测试过程中取消功能；</li>
+<li>修改/扩展第三方产品的行为，而无需维护源代码的私有副本；</li>
+<li>在运行时将补丁程序的结果应用于内存中的状态，而不是磁盘上的源代码；</li>
+<li>分发与原始源代码一起存在的安全性或行为修复程序（例如，将其作为Ruby on Rails平台的插件分发）；</li>
+<li>探索各种自动修复程序以提供自我修复。</li>
+</ul>
+<h1 id="monkey-patching-in-go">Monkey Patching in Go</h1>
+<p>最近在写mock测试的时候，有些场景下用到了gomonkey，这个测试框架挺好用的，之前也简单了解过大致的实现，最近也在看些底层工具链相关的东西，就想整理下这方面的一点东西。也希望能帮助到想了解这方面内容的同学。</p>
+<p>那现在就就开始吧，首先我会简单介绍下go函数的实现、指令patching的概念，然后看下反汇编、指令级调试如何帮助快速定位问题，然后通过一个简单的demo来演示下monkey patching in go。</p>
+<h2 id="go函数表示">Go函数表示</h2>
+<h3 id="demo1">demo1</h3>
+<p>下面定义了一个简单的函数<code>a()</code>，然后再main函数中调用它，然后调用通过print打印出它的返回值。</p>
+<p>file: main.go</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">a</span>() <span style="color:#66d9ef">int</span> { <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span> }
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+  print(<span style="color:#a6e22e">a</span>())
+}
+</code></pre></div><p>这个函数非常简单，monkey patching离不开汇编，所以我们先看下其对应的汇编代码，了解这个程序干了些啥。</p>
+<p>这里顺便推荐几个工具:</p>
+<ul>
+<li>dlv，适用于go的调试器</li>
+<li>radare2，静态分析工具，类似的IDA、Hopper</li>
+</ul>
+<p>我这里就先试用radare2（下文简称r2）来演示如何操作了。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ go build -gcflags<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;all=-N -l&#34;</span> -o main main.go
+$ r2 ./main
+-- give | and &gt; a try piping and redirection
+<span style="color:#f92672">[</span>0x00454330<span style="color:#f92672">]</span>&gt; s sym.main.main
+<span style="color:#f92672">[</span>0x00459270<span style="color:#f92672">]</span>&gt; af
+<span style="color:#f92672">[</span>0x00459270<span style="color:#f92672">]</span>&gt; pdf
+            ; CODE XREF from sym.main.main @ 0x4592c2
+┌ 84: sym.main.main <span style="color:#f92672">()</span>;
+│           ; var int64_t var_10h @ rsp+0x8
+│           ; var int64_t var_8h @ rsp+0x10
+│       ┌─&gt; 0x00459270      64488b0c25f8.  mov rcx, qword fs:<span style="color:#f92672">[</span>0xfffffffffffffff8<span style="color:#f92672">]</span> ;; 这里是go函数栈检查
+│       ╎   0x00459279      483b6110       cmp rsp, qword <span style="color:#f92672">[</span>rcx + 0x10<span style="color:#f92672">]</span>
+│      ┌──&lt; 0x0045927d      763e           jbe 0x4592bd
+│      │╎   0x0045927f      4883ec18       sub rsp, 0x18                          ;; 栈没问题开始执行
+│      │╎   0x00459283      48896c2410     mov qword <span style="color:#f92672">[</span>var_8h<span style="color:#f92672">]</span>, rbp
+│      │╎   0x00459288      488d6c2410     lea rbp, qword <span style="color:#f92672">[</span>var_8h<span style="color:#f92672">]</span>
+│      │╎   0x0045928d      e8beffffff     call sym.main.a                        ;; 调用函数sym.main.a
+│      │╎   0x00459292      488b0424       mov rax, qword <span style="color:#f92672">[</span>rsp<span style="color:#f92672">]</span>
+│      │╎   0x00459296      <span style="color:#ae81ff">4889442408</span>     mov qword <span style="color:#f92672">[</span>var_10h<span style="color:#f92672">]</span>, rax
+│      │╎   0x0045929b      e83003fdff     call sym.runtime.printlock
+│      │╎   0x004592a0      488b442408     mov rax, qword <span style="color:#f92672">[</span>var_10h<span style="color:#f92672">]</span>
+│      │╎   0x004592a5      <span style="color:#ae81ff">48890424</span>       mov qword <span style="color:#f92672">[</span>rsp<span style="color:#f92672">]</span>, rax
+│      │╎   0x004592a9      e8a20afdff     call sym.runtime.printint
+│      │╎   0x004592ae      e89d03fdff     call sym.runtime.printunlock
+│      │╎   0x004592b3      488b6c2410     mov rbp, qword <span style="color:#f92672">[</span>var_8h<span style="color:#f92672">]</span>
+│      │╎   0x004592b8      4883c418       add rsp, 0x18
+│      │╎   0x004592bc      c3             ret
+│      └──&gt; 0x004592bd      e83e7affff     call sym.runtime.morestack_noctxt
+└       └─&lt; 0x004592c2      ebac           jmp sym.main.main
+<span style="color:#f92672">[</span>0x00459270<span style="color:#f92672">]</span>&gt; s sym.main.a                                                        ;; 查看sym.main.a地址为0x00459250
+<span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt;
+</code></pre></div><p>函数main中调用函数a的过程就这么简单<code>call sym.main.a</code>，也就是call 0x00459250，再看下a这个函数，它很简单将返回值1存储到[arg_8h]中，就是前一个栈帧中的一个8字节空间，之后的我们就先不关心了。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt; af
+<span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt; pdf
+            ; CALL XREF from sym.main.main @ 0x45928d
+┌ 19: sym.main.a <span style="color:#f92672">(</span>int64_t arg_8h<span style="color:#f92672">)</span>;
+│           ; arg int64_t arg_8h @ rsp+0x8
+│           0x00459250      48c744240800.  mov qword <span style="color:#f92672">[</span>arg_8h<span style="color:#f92672">]</span>, <span style="color:#ae81ff">0</span>
+│           0x00459259      48c744240801.  mov qword <span style="color:#f92672">[</span>arg_8h<span style="color:#f92672">]</span>, <span style="color:#ae81ff">1</span>
+└           0x00459262      c3             ret
+</code></pre></div><h3 id="demo2">demo2</h3>
+<p>看完上面这个，我们看点跟monkey patching相关的一个demo。</p>
+<p>这个demo也很简单，定义了一个函数a，然后定义了一个变量b，将a赋值给b。有过cc++基础的同学，会自然联想到函数指针，我也是写cc++过来的，所以很自然会想到，f是一个函数指针，它指向a这个函数。下面的打印语句呢，它应该打印出函数a的地址。</p>
+<p>file: main2.go</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+
+<span style="color:#f92672">import</span> (
+  <span style="color:#e6db74">&#34;fmt&#34;</span>
+  <span style="color:#e6db74">&#34;unsafe&#34;</span>
+)
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">a</span>() <span style="color:#66d9ef">int</span> { <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span> }
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+  <span style="color:#a6e22e">f</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">a</span>
+  <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;%p\n&#34;</span>, <span style="color:#a6e22e">a</span>)
+  <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;0x%x\n&#34;</span>, <span style="color:#f92672">*</span>(<span style="color:#f92672">*</span><span style="color:#66d9ef">uintptr</span>)(<span style="color:#a6e22e">unsafe</span>.<span style="color:#a6e22e">Pointer</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">f</span>)))
+}
+</code></pre></div><p>测试下看下结果：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ go build -gcflags<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;all=-N -l&#34;</span> -o main2 main2.go
+$ ./main2
+
+0x4abf20
+0x4ecc28
+</code></pre></div><p>发现这两个地址并不相同，说明什么，说明我们对go函数值的理解有偏差，至少可以确定的是它不是一个函数指针。要想理解go的函数值表示，可以参考<a href="https://github.com/golang/go/blob/e9d9d0befc634f6e9f906b5ef7476fbd7ebd25e3/src/runtime/runtime2.go#L75-L78">funcval表示</a>。</p>
+<p>那这么看应该是一个指针的指针，验证一下：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#f92672">[</span>0x0045c410<span style="color:#f92672">]</span>&gt; px/1ag 0x4ecc28
+0x004ecc28  0x004abf20 0x00000000                         .J.....
+</code></pre></div><p>px/1ag就是就是类似gdb调试器里面的x/FMT或者dlv里面的x -FMT hex -len 8 address。我们打印地址0x4ecc28地址处的一个8字节地址出来，发现刚好就是函数a的地址0x004abf20。所以，上述<code>f := a</code> 关于f结构的猜想就得到了验证，它就是一个funcval，并非cc++意义上的函数指针。</p>
+<h3 id="demo3">demo3</h3>
+<p>理解了funcval之后，再来一个demo，再来一个修改版的demo，这下应该可以打印出相同的地址了。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+
+<span style="color:#f92672">import</span> (
+  <span style="color:#e6db74">&#34;fmt&#34;</span>
+  <span style="color:#e6db74">&#34;unsafe&#34;</span>
+)
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">a</span>() <span style="color:#66d9ef">int</span> { <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span> }
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+  <span style="color:#a6e22e">f</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">a</span>
+  <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;%p\n&#34;</span>, <span style="color:#a6e22e">a</span>)
+  <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;0x%x\n&#34;</span>, <span style="color:#f92672">**</span>(<span style="color:#f92672">**</span><span style="color:#66d9ef">uintptr</span>)(<span style="color:#a6e22e">unsafe</span>.<span style="color:#a6e22e">Pointer</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">f</span>)))
+}
+</code></pre></div><p>运行一下：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ go build -gcflags<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;all=-N -l&#34;</span> -o main3 main3.go
+$ ./main3
+0x4abf20
+0x4abf20
+</code></pre></div><p>OK，到这里，我们理解了funcval，那么当我们调用 <code>f()</code> 的时候，编译器安插了什么指令来实现对a这个函数的调用呢？</p>
+<p>file: main4.go</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>() 
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">a</span>() <span style="color:#66d9ef">int</span> { <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span> }
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+    <span style="color:#a6e22e">f</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">a</span>
+    <span style="color:#a6e22e">f</span>()
+}
+</code></pre></div><p>运行以下操作：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ go build -gcflags<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;all=-N -l&#34;</span> -o main4 main4.go
+$
+$ r2 ./main4
+ -- Enable ascii-art jump lines in disassembly by setting <span style="color:#e6db74">&#39;e asm.lines=true&#39;</span>. asm.lines.out and asm.linestyle may interest you as well
+<span style="color:#f92672">[</span>0x00454330<span style="color:#f92672">]</span>&gt; s sym.main.main
+<span style="color:#f92672">[</span>0x00459270<span style="color:#f92672">]</span>&gt; af
+<span style="color:#f92672">[</span>0x00459270<span style="color:#f92672">]</span>&gt; pdf
+            ; CODE XREF from sym.main.main @ 0x4592b1
+┌ 67: sym.main.main <span style="color:#f92672">()</span>;
+│           ; var int64_t var_10h @ rsp+0x8
+│           ; var int64_t var_8h @ rsp+0x10
+│       ┌─&gt; 0x00459270      64488b0c25f8.  mov rcx, qword fs:<span style="color:#f92672">[</span>0xfffffffffffffff8<span style="color:#f92672">]</span>
+│       ╎   0x00459279      483b6110       cmp rsp, qword <span style="color:#f92672">[</span>rcx + 0x10<span style="color:#f92672">]</span>
+│      ┌──&lt; 0x0045927d      762d           jbe 0x4592ac
+│      │╎   0x0045927f      4883ec18       sub rsp, 0x18
+│      │╎   0x00459283      48896c2410     mov qword <span style="color:#f92672">[</span>var_8h<span style="color:#f92672">]</span>, rbp
+│      │╎   0x00459288      488d6c2410     lea rbp, qword <span style="color:#f92672">[</span>var_8h<span style="color:#f92672">]</span>
+│      │╎   0x0045928d      488d15fc7002.  lea rdx, qword <span style="color:#f92672">[</span>0x00480390<span style="color:#f92672">]</span>
+│      │╎   0x00459294      <span style="color:#ae81ff">4889542408</span>     mov qword <span style="color:#f92672">[</span>var_10h<span style="color:#f92672">]</span>, rdx
+│      │╎   0x00459299      488b05f07002.  mov rax, qword <span style="color:#f92672">[</span>0x00480390<span style="color:#f92672">]</span> ; <span style="color:#f92672">[</span>0x480390:8<span style="color:#f92672">]=</span>0x459250 sym.main.a
+│      │╎   0x004592a0      ffd0           call rax
+│      │╎   0x004592a2      488b6c2410     mov rbp, qword <span style="color:#f92672">[</span>var_8h<span style="color:#f92672">]</span>
+│      │╎   0x004592a7      4883c418       add rsp, 0x18
+│      │╎   0x004592ab      c3             ret
+│      └──&gt; 0x004592ac      e84f7affff     call sym.runtime.morestack_noctxt
+└       └─&lt; 0x004592b1      ebbd           jmp sym.main.main
+</code></pre></div><p>这里其实可以确定的是，0x00480390 就是变量f这个funcval的地址，下面又取 [0x00480390] 这个内存单元中的内容送rax，此时rax中的内容也就是函数a的地址了，最后 <code>call rax</code> 完成函数调用。</p>
+<p>这里其实实现了一个操作，本来f也可以指向另一个函数b，但是我却通过赋值操作 <code>f := a</code> 将其执行了另一个函数a去执行。这样类似的操作，提炼下是否可以拿来用于实现monkey patching呢？可以。</p>
+<p>现在要在程序运行的时候，动态调整一个函数要执行的目的代码，其实也可以通过类似的操作。</p>
+<h2 id="指令patching">指令Patching</h2>
+<p>指令patching是一个比monkey patching覆盖面更广的范畴，意思就是运行时修改程序执行的指令。其实，指令patching技术大家都已经用过无数次了，只不过不是你亲自操作的。</p>
+<p>比如，当你调试一个程序的时候，就需要指令patch让你的被调试任务（俗称tracee）停下来，这个时候就需要将tracee下一条要执行的指令的首字节篡改为<code>0xcc</code>，处理器遇到这个指令就会让你的程序停下来。通常<code>int3</code>用来生成一字节指令<code>0xcc</code>，处理器取值、译码、执行完之后就会停下来触发中断，然后内核提供的中断服务程序开始执行。正常BIOS提供的都是16位中断服务程序，以Linux为例，内核初始化的时候会重建保护模式下的32/64中断服务程序，意思也就是说，碰到这个指令之后，内核就相当于收到了通知来处理tracee的暂停工作。等tracee停下来之后就会通知tracer（也就是调试器），tracer就可以通过系统调用等手段来检查tracee的运行时信息，包括registers、ram等等。</p>
+<p>这里的monkey patching呢，其实也是有点类似，简单一句就是篡改指令而已。问题是这里该怎么篡改？</p>
+<p>其实这里的改法，也比较简单，假如我们有这样的一个函数 <code>func a() int {return 1}</code>，我们希望main函数中调用<code>a()</code>的时候，执行的是<code>func b() int {return 2}</code>，那怎么搞呢？我们可以写一个函数<code>replace(a, b)</code>将对a的调用替换成对b的调用。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">a</span>() <span style="color:#66d9ef">int</span> { <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span> }
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">b</span>() <span style="color:#66d9ef">int</span> { <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">2</span> }
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+	<span style="color:#a6e22e">replace</span>(<span style="color:#a6e22e">a</span>, <span style="color:#a6e22e">b</span>)
+	print(<span style="color:#a6e22e">a</span>())
+}
+</code></pre></div><h2 id="大致实现">大致实现</h2>
+<p>因为是在运行时修改，在运行时能干什么呢？我们不能修改a的地址，只能再a的地址处玩些花招：指令patch，篡改这里的指令。怎么篡改呢？</p>
+<ul>
+<li>前面讲过，我们是可以拿到一个funcval变量中保存的目的函数地址的；</li>
+<li>操作系统，提供了一些可以使用的系统调用来让我们修改进程地址空间中的数据；</li>
+</ul>
+<p>两个条件都具备了，我们可以通过ptrace+peekdata/pokedata来读写指令，也可以获取函数对应的页面（注意对齐），然后申请对这个页面的读写执行权限。两种办法应该都可行。更安全、细粒度的控制，ptrace+peekdata/pokedata要好些，这里纯粹是为了演示，就用后面这个办法了。大致实现如下。</p>
+<p>file5: main5.go</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+
+<span style="color:#f92672">import</span> (
+	<span style="color:#e6db74">&#34;syscall&#34;</span>
+	<span style="color:#e6db74">&#34;unsafe&#34;</span>
+)
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">a</span>() <span style="color:#66d9ef">int</span> { <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span> }
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">b</span>() <span style="color:#66d9ef">int</span> { <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">2</span> }
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">rawMemoryAccess</span>(<span style="color:#a6e22e">b</span> <span style="color:#66d9ef">uintptr</span>) []<span style="color:#66d9ef">byte</span> {
+	<span style="color:#66d9ef">return</span> (<span style="color:#f92672">*</span>(<span style="color:#f92672">*</span>[<span style="color:#ae81ff">0xFF</span>]<span style="color:#66d9ef">byte</span>)(<span style="color:#a6e22e">unsafe</span>.<span style="color:#a6e22e">Pointer</span>(<span style="color:#a6e22e">b</span>)))[:]
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">assembleJump</span>(<span style="color:#a6e22e">f</span> <span style="color:#66d9ef">func</span>() <span style="color:#66d9ef">int</span>) []<span style="color:#66d9ef">byte</span> {
+	<span style="color:#a6e22e">funcVal</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">*</span>(<span style="color:#f92672">*</span><span style="color:#66d9ef">uintptr</span>)(<span style="color:#a6e22e">unsafe</span>.<span style="color:#a6e22e">Pointer</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">f</span>))
+	<span style="color:#66d9ef">return</span> []<span style="color:#66d9ef">byte</span>{
+        <span style="color:#75715e">// TODO 动态生成跳转到函数funcval f目的地址的指令
+</span><span style="color:#75715e"></span>
+		<span style="color:#75715e">// MOV rdx, funcVal
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">// JMP [rdx]
+</span><span style="color:#75715e"></span>	}
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">replace</span>(<span style="color:#a6e22e">orig</span>, <span style="color:#a6e22e">replacement</span> <span style="color:#66d9ef">func</span>() <span style="color:#66d9ef">int</span>) {
+	<span style="color:#a6e22e">bytes</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">assembleJump</span>(<span style="color:#a6e22e">replacement</span>)
+	<span style="color:#a6e22e">functionLocation</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">**</span>(<span style="color:#f92672">**</span><span style="color:#66d9ef">uintptr</span>)(<span style="color:#a6e22e">unsafe</span>.<span style="color:#a6e22e">Pointer</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">orig</span>))
+	<span style="color:#a6e22e">window</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">rawMemoryAccess</span>(<span style="color:#a6e22e">functionLocation</span>)
+
+	copy(<span style="color:#a6e22e">window</span>, <span style="color:#a6e22e">bytes</span>)
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+	<span style="color:#a6e22e">replace</span>(<span style="color:#a6e22e">a</span>, <span style="color:#a6e22e">b</span>)           <span style="color:#75715e">// 将对a的调用替换成对b的调用
+</span><span style="color:#75715e"></span>	print(<span style="color:#a6e22e">a</span>())              <span style="color:#75715e">// 这里输出的不是1，是2，注意禁用内联-gcflags=&#34;all=-N -l&#34;
+</span><span style="color:#75715e"></span>}
+</code></pre></div><p>大致实现思路就是上面这样，replace内部：</p>
+<ul>
+<li>会首先生成跳转到函数b的汇编指令，</li>
+<li>然后再找到函数a的内存地址，</li>
+<li>再将生成的跳转指令拷贝到函数a的地址处，覆盖a原来的指令；</li>
+</ul>
+<p>这样当程序跑起来之后，跑到a的地址处，立即就JMP到函数b的地址处执行函数b的指令。我们这里不考虑将a数据恢复的问题，其实要做也很简单，你记录一下哪个地址，覆写了多少哪些数据就行了。调试器调试安插0xcc指令的时候都是需要做好保存、恢复类操作的，不然生成的端点（0xcc）就把指令弄乱套了。我们这里就不做这些了。</p>
+<p>OK，那这里的函数 <code>assembleJump(f func() int)</code> 如何动态生成它的跳转指令呢？这里可以先借助指令级调试先自己测试下。</p>
+<h2 id="指令级调试">指令级调试</h2>
+<p>调试器，大家都熟悉吧？其实调试器也是可以分成好几类比较通俗的分类是源码级调试器、指令级调试器。</p>
+<p>指令级调试器，大家听说过的应该有IDA、OlleDbg、Hopper、Cutter、Radare2，指令级调试器一般工作在汇编指令层级，对上层高级语言的东西不怎么理解，它理解的就是一些最原始的信息，指令、数据、寄存器、内存，没有文件、源码、行号、变量名&hellip;各自有各自的用途，一些符号级调试器如dlv、gdb、lldb等等的也会支持一些基础的指令级调试的能力，比如反汇编、step、step reverse等等的。</p>
+<p>我们这里希望在指令级完成调试，比如修改些指令看看效果之类的，一般的工具还是不方便的。Radare2支持指令级调试、指令修改、根据调用约定动态生成调用图等之类的，还是很方便的。</p>
+<p>今天就用Radare2来演示下这个如何操作，要调试的是下面这段代码。我们在函数跳转到a地址执行之后，将a地址处的指令篡改下，比如写个JMP到b函数地址的指令，看能不能正常跳转到b处执行，调试成功应该输出<code>2 2</code>。</p>
+<p>file: mainx.go</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">a</span>() <span style="color:#66d9ef">int</span> { <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span> }
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">b</span>() <span style="color:#66d9ef">int</span> { <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">2</span> }
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+	println(<span style="color:#a6e22e">a</span>(), <span style="color:#a6e22e">b</span>())
+}
+</code></pre></div><p>运行以下操作：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ go build -gcflags<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;all=-N -l&#34;</span> -o mainx mainx.go
+$
+$ r2 -w ./mainx
+$ r2 -w ./mainx
+ -- To debug a program, you can call r2 with <span style="color:#e6db74">&#39;dbg://&lt;path-to-program&gt;&#39;</span> or <span style="color:#e6db74">&#39;-d &lt;path..&gt;&#39;</span>
+<span style="color:#f92672">[</span>0x00454330<span style="color:#f92672">]</span>&gt; s sym.main.
+sym.main.a      sym.main.b      sym.main.main
+<span style="color:#f92672">[</span>0x00454330<span style="color:#f92672">]</span>&gt; s sym.main.a                          ; 发现函数a的低质是0x00454330
+<span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt; af
+<span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt; s sym.main.b                          ; 发现函数b的地址是0x00459250
+<span style="color:#f92672">[</span>0x00459270<span style="color:#f92672">]</span>&gt; af
+</code></pre></div><p>好，我们接着操作看下在sym.main.a地址处写入个跳转到b的指令。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#f92672">[</span>0x00459270<span style="color:#f92672">]</span>&gt; s sym.main.a
+<span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt; pdf
+┌ 19: sym.main.a <span style="color:#f92672">(</span>int64_t arg_8h<span style="color:#f92672">)</span>;
+│           ; arg int64_t arg_8h @ rsp+0x8
+│           0x00459250      48c744240800.  mov qword <span style="color:#f92672">[</span>arg_8h<span style="color:#f92672">]</span>, <span style="color:#ae81ff">0</span>
+│           0x00459259      48c744240801.  mov qword <span style="color:#f92672">[</span>arg_8h<span style="color:#f92672">]</span>, <span style="color:#ae81ff">1</span>
+└           0x00459262      c3             ret
+<span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt;
+</code></pre></div><p>我们看到函数a处的逻辑是返回值1，我们从起起始地址0x00459250处开始，用JMP bAddress的指令覆盖。</p>
+<p>我们希望写到此处的指令有：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">mov rdx, 0x00459270   ; 首先将函数b地址放到rdx寄存器
+jmp rdx               ; 然后直接跳转过去执行
+</code></pre></div><p>这里有这么两个办法：</p>
+<ul>
+<li>r2 -w写模式下，直接用<code>wa+汇编指令</code>替换函数a的指令；</li>
+<li>r2附带工具生成汇编对应的16进制数据，用<code>wx+16进制数</code>来覆写指令；</li>
+<li>其实你也可以用一些<a href="https://defuse.ca/online-x86-assembler.htm#disassembly">在线的汇编工具</a>生成，再用其他16进制工具打开可执行程序，然后修改替换。</li>
+</ul>
+<h3 id="r2-wa汇编指令">r2: wa+汇编指令</h3>
+<p>通过wa来直接写入汇编指令，这个比较省事，不用单独运行rasm2去得到汇编后的指令16禁止数据再去覆写。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#f92672">[</span>root@centos test<span style="color:#f92672">]</span><span style="color:#75715e"># r2 -w ./mainx</span>
+ -- The <span style="color:#e6db74">&#39;?&#39;</span> command can be used to evaluate math expressions. Like this: <span style="color:#e6db74">&#39;? (0x34+22)*4&#39;</span>
+<span style="color:#f92672">[</span>0x00454330<span style="color:#f92672">]</span>&gt; s sym.main.b
+<span style="color:#f92672">[</span>0x00459270<span style="color:#f92672">]</span>&gt; af
+<span style="color:#f92672">[</span>0x00459270<span style="color:#f92672">]</span>&gt; s sym.main.a
+<span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt; af
+<span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt; pdf
+┌ 19: sym.main.a <span style="color:#f92672">(</span>int64_t arg_8h<span style="color:#f92672">)</span>;
+│           ; arg int64_t arg_8h @ rsp+0x8
+│           0x00459250      48c744240800.  mov qword <span style="color:#f92672">[</span>arg_8h<span style="color:#f92672">]</span>, <span style="color:#ae81ff">0</span>
+│           0x00459259      48c744240801.  mov qword <span style="color:#f92672">[</span>arg_8h<span style="color:#f92672">]</span>, <span style="color:#ae81ff">1</span>
+└           0x00459262      c3             ret
+<span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt; wa mov rdx, 0x00459270                                ;; 写mov指令，提示成功，写入了7个字节
+Written <span style="color:#ae81ff">7</span> byte<span style="color:#f92672">(</span>s<span style="color:#f92672">)</span> <span style="color:#f92672">(</span>mov rdx, 0x00459270<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> wx 48c7c270924500
+<span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt; wa jmp rdx @0x00459257                                ;; 写jmp指令，提示成功，写入了2个字节
+Written <span style="color:#ae81ff">2</span> byte<span style="color:#f92672">(</span>s<span style="color:#f92672">)</span> <span style="color:#f92672">(</span>jmp rdx<span style="color:#f92672">)</span> <span style="color:#f92672">=</span> wx ffe2
+<span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt; px/20xb 0x00459250                                    ;; 校验一下写入的9个字节
+<span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt; wci                                                   ;; 保存退出
+<span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt; q
+</code></pre></div><p>注意一下，就是我们写入指令之后，直接运行命令pdf（print disassembly function）看到的指令有些是没正常显示的，不过我们<code>px/</code>校验数据是成功写入的就ok。</p>
+<p>运行下patch之后的程序：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ./mainx
+<span style="color:#ae81ff">2</span> <span style="color:#ae81ff">2</span>
+</code></pre></div><p>完全符合预期。</p>
+<h3 id="r2-wxhex">r2: wx+hex</h3>
+<p>那我们得看下这些汇编指令对应的机器指令是啥样的，radare2也提供了工具来处理。</p>
+<p>汇编、机器指令都是平台相关的，汇编前先看下平台相关信息，好，我的是Intel x86_64, 64位。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ uname -a Linux centos 4.19.76-linuxkit <span style="color:#75715e">#1 SMP Tue May 26 11:42:35 UTC 2020 x86_64 x86_64 x86_64 GNU/Linux</span>
+$
+$ rasm2 -a x86 -b <span style="color:#ae81ff">64</span> <span style="color:#e6db74">&#39;mov rdx, 0x00459270&#39;</span>
+48c7c270924500
+$ rasm2 -a x86 -b <span style="color:#ae81ff">64</span> <span style="color:#e6db74">&#39;jump rdx&#39;</span>
+ffe2
+</code></pre></div><p>生成机器指令后，在r2会话窗口中执行：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span> wx 48c7c270924500ffe2
+<span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt; px/9xb
+- offset -   <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span>  <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">3</span>  <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">5</span>  <span style="color:#ae81ff">6</span> <span style="color:#ae81ff">7</span>  <span style="color:#ae81ff">8</span> <span style="color:#ae81ff">9</span>  A B  C D  E F  0123456789ABCDEF
+0x00459250  48c7 c270 <span style="color:#ae81ff">9245</span> 00ff e2                   H..p.E...          ;; 写入成功了
+<span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt; wci                                                       ;; 保存退出
+<span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt; q
+</code></pre></div><p>运行下patch之后的程序：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ./mainx
+<span style="color:#ae81ff">2</span> <span style="color:#ae81ff">2</span>
+</code></pre></div><p>上面只是为了测试下，行还是不行，肯定是行啊，我只是想炫耀下radare2有多强大好玩而已。</p>
+<h2 id="monkey-patching">Monkey Patching</h2>
+<p>上面兜了个圈子，给大家演示了下radare2怎么使用，接下来我们运行时patch下指令测试下。还是mainx.go这个程序。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">a</span>() <span style="color:#66d9ef">int</span> { <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span> }
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">b</span>() <span style="color:#66d9ef">int</span> { <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">2</span> }
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+	println(<span style="color:#a6e22e">a</span>(), <span style="color:#a6e22e">b</span>())
+}
+</code></pre></div><p>前面radare2都是运行在修改模式下，这次运行再调试模式下<code>radare2 -d</code>。</p>
+<p>执行如下操作：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ r2 -d ./mainx
+Process with PID <span style="color:#ae81ff">1243</span> started...                                            ;; 显示已经attach到tracee
+<span style="color:#f92672">=</span> attach <span style="color:#ae81ff">1243</span> <span style="color:#ae81ff">1243</span>
+bin.baddr 0x00400000
+Using 0x400000
+asm.bits <span style="color:#ae81ff">64</span>
+ -- Use <span style="color:#e6db74">&#39;e&#39;</span> and <span style="color:#e6db74">&#39;t&#39;</span> in Visual mode to edit configuration and track flags.
+<span style="color:#f92672">[</span>0x00454330<span style="color:#f92672">]</span>&gt; s sym.main.b                                                  ;; 继续看下b函数地址
+<span style="color:#f92672">[</span>0x00459270<span style="color:#f92672">]</span>&gt; af
+<span style="color:#f92672">[</span>0x00459270<span style="color:#f92672">]</span>&gt; s sym.main.a                                                  ;; 继续看下a函数地址
+<span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt; af
+<span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt; pdf                                                           ;; 看下a函数包含的指令
+┌ 9: sym.main.a <span style="color:#f92672">()</span>;
+│ bp: <span style="color:#ae81ff">0</span> <span style="color:#f92672">(</span>vars 0, args 0<span style="color:#f92672">)</span>
+│ sp: <span style="color:#ae81ff">0</span> <span style="color:#f92672">(</span>vars 0, args 0<span style="color:#f92672">)</span>
+│ rg: <span style="color:#ae81ff">0</span> <span style="color:#f92672">(</span>vars 0, args 0<span style="color:#f92672">)</span>
+│           0x00459250      48c7c2709245.  mov rdx, sym.main.b         ; 0x459270 ; <span style="color:#e6db74">&#34;H\xc7D</span>$<span style="color:#e6db74">\b&#34;</span>
+└           0x00459257      ffe2           jmp rdx
+<span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt; wx 48c7c270924500ffe2                                         ;; 跟前面讲的一样，指令patch，调到b去
+<span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt; 
+<span style="color:#f92672">[</span>0x00459250<span style="color:#f92672">]</span>&gt; s sym.main.main                                               ;; 定位到main函数
+<span style="color:#f92672">[</span>0x00459290<span style="color:#f92672">]</span>&gt; af                                                            ;; 分析main函数
+<span style="color:#f92672">[</span>0x00459290<span style="color:#f92672">]</span>&gt; pdf                                                           ;; 看下main函数指令集调用关系
+            ; CODE XREF from sym.main.main @ 0x459308
+┌ 122: sym.main.main <span style="color:#f92672">()</span>;
+│           ; var int64_t var_18h @ rsp+0x8
+│           ; var int64_t var_10h @ rsp+0x10
+│           ; var int64_t var_8h @ rsp+0x18
+│       ┌─&gt; 0x00459290      64488b0c25f8.  mov rcx, qword fs:<span style="color:#f92672">[</span>0xfffffffffffffff8<span style="color:#f92672">]</span>
+│       ╎   0x00459299      483b6110       cmp rsp, qword <span style="color:#f92672">[</span>rcx + 0x10<span style="color:#f92672">]</span>
+│      ┌──&lt; 0x0045929d      <span style="color:#ae81ff">7664</span>           jbe 0x459303
+│      │╎   0x0045929f      4883ec20       sub rsp, 0x20
+│      │╎   0x004592a3      48896c2418     mov qword <span style="color:#f92672">[</span>var_8h<span style="color:#f92672">]</span>, rbp
+│      │╎   0x004592a8      488d6c2418     lea rbp, qword <span style="color:#f92672">[</span>var_8h<span style="color:#f92672">]</span>
+│      │╎   0x004592ad      e89effffff     call sym.main.a
+│      │╎   0x004592b2      488b0424       mov rax, qword <span style="color:#f92672">[</span>rsp<span style="color:#f92672">]</span>
+│      │╎   0x004592b6      <span style="color:#ae81ff">4889442410</span>     mov qword <span style="color:#f92672">[</span>var_10h<span style="color:#f92672">]</span>, rax
+│      │╎   0x004592bb      e8b0ffffff     call sym.main.b
+│      │╎   0x004592c0      488b0424       mov rax, qword <span style="color:#f92672">[</span>rsp<span style="color:#f92672">]</span>
+│      │╎   0x004592c4      <span style="color:#ae81ff">4889442408</span>     mov qword <span style="color:#f92672">[</span>var_18h<span style="color:#f92672">]</span>, rax
+│      │╎   0x004592c9      e80203fdff     call sym.runtime.printlock
+│      │╎   0x004592ce      488b442410     mov rax, qword <span style="color:#f92672">[</span>var_10h<span style="color:#f92672">]</span>
+│      │╎   0x004592d3      <span style="color:#ae81ff">48890424</span>       mov qword <span style="color:#f92672">[</span>rsp<span style="color:#f92672">]</span>, rax
+│      │╎   0x004592d7      e8740afdff     call sym.runtime.printint
+│      │╎   0x004592dc      e82f05fdff     call sym.runtime.printsp
+│      │╎   0x004592e1      488b442408     mov rax, qword <span style="color:#f92672">[</span>var_18h<span style="color:#f92672">]</span>
+│      │╎   0x004592e6      <span style="color:#ae81ff">48890424</span>       mov qword <span style="color:#f92672">[</span>rsp<span style="color:#f92672">]</span>, rax
+│      │╎   0x004592ea      e8610afdff     call sym.runtime.printint
+│      │╎   0x004592ef      e86c05fdff     call sym.runtime.printnl
+│      │╎   0x004592f4      e85703fdff     call sym.runtime.printunlock
+│      │╎   0x004592f9      488b6c2418     mov rbp, qword <span style="color:#f92672">[</span>var_8h<span style="color:#f92672">]</span>
+│      │╎   0x004592fe      4883c420       add rsp, 0x20
+│      │╎   0x00459302      c3             ret
+│      └──&gt; 0x00459303      e8f879ffff     call sym.runtime.morestack_noctxt
+└       └─&lt; 0x00459308      eb86           jmp sym.main.main
+<span style="color:#f92672">[</span>0x00459290<span style="color:#f92672">]</span>&gt; dc                                                            ;; 我们这里没有什么加断点的必要了，直接continue
+<span style="color:#f92672">(</span>1243<span style="color:#f92672">)</span> Created thread <span style="color:#ae81ff">1244</span>
+<span style="color:#f92672">(</span>1243<span style="color:#f92672">)</span> Created thread <span style="color:#ae81ff">1245</span>
+PTRACE_CONT: No such process
+<span style="color:#f92672">(</span>1243<span style="color:#f92672">)</span> Created thread <span style="color:#ae81ff">1246</span>
+PTRACE_CONT: No such process
+<span style="color:#f92672">[</span>+<span style="color:#f92672">]</span> SIGNAL <span style="color:#ae81ff">19</span> errno<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span> addr<span style="color:#f92672">=</span>0x00000000 code<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span> ret<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>
+<span style="color:#f92672">[</span>+<span style="color:#f92672">]</span> signal <span style="color:#ae81ff">19</span> aka SIGSTOP received <span style="color:#ae81ff">0</span>
+<span style="color:#f92672">[</span>0x004549f3<span style="color:#f92672">]</span>&gt; dc                                                            ;; 再来一次，continue到tracee结束
+<span style="color:#ae81ff">2</span> <span style="color:#ae81ff">2</span>                                                                         ;; 输出了结果 <span style="color:#e6db74">`</span><span style="color:#ae81ff">2</span> 2<span style="color:#e6db74">`</span>
+</code></pre></div><p>OK，经过上面相关的演示之后，应该已经了解了我们patch的大致方法及实际效果了，也介绍了radare2的常用操作。</p>
+<h2 id="put-it-together">Put It Together</h2>
+<p>现在我们收一下，将前面掌握的技能点综合起来，来实现我们前面遗留的任务：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">assembleJump</span>(<span style="color:#a6e22e">f</span> <span style="color:#66d9ef">func</span>() <span style="color:#66d9ef">int</span>) []<span style="color:#66d9ef">byte</span> {
+	<span style="color:#a6e22e">funcVal</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">*</span>(<span style="color:#f92672">*</span><span style="color:#66d9ef">uintptr</span>)(<span style="color:#a6e22e">unsafe</span>.<span style="color:#a6e22e">Pointer</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">f</span>))
+	<span style="color:#66d9ef">return</span> []<span style="color:#66d9ef">byte</span>{
+        <span style="color:#75715e">// TODO 动态生成跳转到函数funcval f目的地址的指令
+</span><span style="color:#75715e"></span>
+		<span style="color:#75715e">// MOV rdx, funcVal
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">// JMP [rdx]
+</span><span style="color:#75715e"></span>	}
+}
+</code></pre></div><p>那这里就很简单了，就是填充这里的<code>[]byte{}</code>，构造出我们前面<code>radare2 wx</code>命令写入的数据而已。
+多次测试下rasm2对jmp指令的编码你可以发现：</p>
+<ul>
+<li>mov操作码编码为<code>48c7</code></li>
+<li>rdx编码为为<code>c2</code></li>
+<li>接下来是要移动的数据funcval地址，这个通过移位运算符搞下就行了，多少个字节呢？看mov操作码知道操作数位宽32bits，所以4个字节</li>
+</ul>
+<p>那么 <code>MOV rdx, funcVal</code> 对应的就是:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">[]<span style="color:#66d9ef">byte</span>{
+    <span style="color:#ae81ff">0x48</span>, <span style="color:#ae81ff">0xC7</span>, <span style="color:#ae81ff">0xC2</span>,
+    byte(<span style="color:#a6e22e">funcVal</span> <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">0</span>),
+	byte(<span style="color:#a6e22e">funcVal</span> <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">8</span>),
+	byte(<span style="color:#a6e22e">funcVal</span> <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">16</span>),
+	byte(<span style="color:#a6e22e">funcVal</span> <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">24</span>), <span style="color:#75715e">// MOV rdx, funcVal
+</span></code></pre></div><p>再看下 <code>JMP [rdx]</code>，注意这里和我们前面举的例子不同，前面是对<code>JMP rdx</code>编码的，这两种方式涉及到处理器寻址方式的差异。</p>
+<ul>
+<li><code>JMP [rdx]</code>，是说rdx中存储的是地址，取出这个地址对应内存单元中的数据作为有效地址；</li>
+<li><code>JMP rdx</code>，是说rdx中存储的就是有效地址，前面的例子中我们是直接将<code>func b</code>的地址拿来用的；</li>
+</ul>
+<p>这里的assembleJump函数接受的参数是funcVal，拿到的是funcVal的地址，需要再解一次引用，才能拿到<code>func b</code>的有效地址。</p>
+<p>说这么多，应该没有歧义了，使用rasm2继续对<code>JMP [rdx]</code>编码得到<code>ff22</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ rasm2 -a x86 -b <span style="color:#ae81ff">64</span> <span style="color:#e6db74">&#39;jmp [rdx]&#39;</span>
+$ ff22
+</code></pre></div><p>那我们这个函数就可以写完了：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">assembleJump</span>(<span style="color:#a6e22e">f</span> <span style="color:#66d9ef">func</span>() <span style="color:#66d9ef">int</span>) []<span style="color:#66d9ef">byte</span> {
+	<span style="color:#a6e22e">funcVal</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">*</span>(<span style="color:#f92672">*</span><span style="color:#66d9ef">uintptr</span>)(<span style="color:#a6e22e">unsafe</span>.<span style="color:#a6e22e">Pointer</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">f</span>))
+	<span style="color:#66d9ef">return</span> []<span style="color:#66d9ef">byte</span>{
+        <span style="color:#75715e">// TODO 动态生成跳转到函数funcval f目的地址的指令
+</span><span style="color:#75715e"></span>        <span style="color:#ae81ff">0x48</span>, <span style="color:#ae81ff">0xC7</span>, <span style="color:#ae81ff">0xC2</span>,
+        byte(<span style="color:#a6e22e">funcVal</span> <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">0</span>),
+	    byte(<span style="color:#a6e22e">funcVal</span> <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">8</span>),
+	    byte(<span style="color:#a6e22e">funcVal</span> <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">16</span>),
+	    byte(<span style="color:#a6e22e">funcVal</span> <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">24</span>), <span style="color:#75715e">// MOV rdx, funcVal
+</span><span style="color:#75715e"></span>		<span style="color:#ae81ff">0xff</span>, <span style="color:#ae81ff">0x22</span>,          <span style="color:#75715e">// JMP [rdx]
+</span><span style="color:#75715e"></span>	}
+}
+
+</code></pre></div><p>那最后的示例就是这样的，你可以直接运行下面的程序来测试下，期望的结果是输出<code>2</code>，而不是<code>1</code>。</p>
+<p>如果你测试的时候输出了1，说明你可能忽视了一个问题：这里的monkey patching是基于函数地址处的指令patch来实现的。如果编译过程中，不巧期望被patch的函数被go inline处理掉了，那这里的patch铁定就失效了。</p>
+<p>所以测试的时候记得禁用内联，比如<code>go run -gcflags=&quot;all=-N -l&quot; jump.go</code>。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+
+<span style="color:#f92672">import</span> (
+	<span style="color:#e6db74">&#34;fmt&#34;</span>
+	<span style="color:#e6db74">&#34;syscall&#34;</span>
+	<span style="color:#e6db74">&#34;unsafe&#34;</span>
+)
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">a</span>() <span style="color:#66d9ef">int</span> { <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span> }
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">b</span>() <span style="color:#66d9ef">int</span> { <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">2</span> }
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">getPage</span>(<span style="color:#a6e22e">p</span> <span style="color:#66d9ef">uintptr</span>) []<span style="color:#66d9ef">byte</span> {
+	<span style="color:#66d9ef">return</span> (<span style="color:#f92672">*</span>(<span style="color:#f92672">*</span>[<span style="color:#ae81ff">0xFFFFFF</span>]<span style="color:#66d9ef">byte</span>)(<span style="color:#a6e22e">unsafe</span>.<span style="color:#a6e22e">Pointer</span>(<span style="color:#a6e22e">p</span> <span style="color:#f92672">&amp;</span> ^uintptr(<span style="color:#a6e22e">syscall</span>.<span style="color:#a6e22e">Getpagesize</span>()<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>))))[:<span style="color:#a6e22e">syscall</span>.<span style="color:#a6e22e">Getpagesize</span>()]
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">rawMemoryAccess</span>(<span style="color:#a6e22e">b</span> <span style="color:#66d9ef">uintptr</span>) []<span style="color:#66d9ef">byte</span> {
+	<span style="color:#66d9ef">return</span> (<span style="color:#f92672">*</span>(<span style="color:#f92672">*</span>[<span style="color:#ae81ff">0xFF</span>]<span style="color:#66d9ef">byte</span>)(<span style="color:#a6e22e">unsafe</span>.<span style="color:#a6e22e">Pointer</span>(<span style="color:#a6e22e">b</span>)))[:]
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">assembleJump</span>(<span style="color:#a6e22e">f</span> <span style="color:#66d9ef">func</span>() <span style="color:#66d9ef">int</span>) []<span style="color:#66d9ef">byte</span> {
+	<span style="color:#a6e22e">funcVal</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">*</span>(<span style="color:#f92672">*</span><span style="color:#66d9ef">uintptr</span>)(<span style="color:#a6e22e">unsafe</span>.<span style="color:#a6e22e">Pointer</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">f</span>))
+	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;target address: %#x\n&#34;</span>, <span style="color:#a6e22e">funcVal</span>)
+	<span style="color:#66d9ef">return</span> []<span style="color:#66d9ef">byte</span>{
+		<span style="color:#ae81ff">0x48</span>, <span style="color:#ae81ff">0xC7</span>, <span style="color:#ae81ff">0xC2</span>,
+		byte(<span style="color:#a6e22e">funcVal</span> <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">0</span>),
+		byte(<span style="color:#a6e22e">funcVal</span> <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">8</span>),
+		byte(<span style="color:#a6e22e">funcVal</span> <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">16</span>),
+		byte(<span style="color:#a6e22e">funcVal</span> <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">24</span>), <span style="color:#75715e">// MOV rdx, funcVal
+</span><span style="color:#75715e"></span>		<span style="color:#ae81ff">0xFF</span>, <span style="color:#ae81ff">0x22</span>,          <span style="color:#75715e">// JMP rdx
+</span><span style="color:#75715e"></span>	}
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">replace</span>(<span style="color:#a6e22e">orig</span>, <span style="color:#a6e22e">replacement</span> <span style="color:#66d9ef">func</span>() <span style="color:#66d9ef">int</span>) {
+	<span style="color:#a6e22e">bytes</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">assembleJump</span>(<span style="color:#a6e22e">replacement</span>)
+	<span style="color:#a6e22e">functionLocation</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">**</span>(<span style="color:#f92672">**</span><span style="color:#66d9ef">uintptr</span>)(<span style="color:#a6e22e">unsafe</span>.<span style="color:#a6e22e">Pointer</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">orig</span>))
+	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;orig address: %#x\n&#34;</span>, <span style="color:#a6e22e">functionLocation</span>)
+
+	<span style="color:#a6e22e">window</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">rawMemoryAccess</span>(<span style="color:#a6e22e">functionLocation</span>)
+
+	<span style="color:#a6e22e">page</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">getPage</span>(<span style="color:#a6e22e">functionLocation</span>)
+	<span style="color:#a6e22e">syscall</span>.<span style="color:#a6e22e">Mprotect</span>(<span style="color:#a6e22e">page</span>, <span style="color:#a6e22e">syscall</span>.<span style="color:#a6e22e">PROT_READ</span>|<span style="color:#a6e22e">syscall</span>.<span style="color:#a6e22e">PROT_WRITE</span>|<span style="color:#a6e22e">syscall</span>.<span style="color:#a6e22e">PROT_EXEC</span>)
+
+	copy(<span style="color:#a6e22e">window</span>, <span style="color:#a6e22e">bytes</span>)
+	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;bytes: %v\n&#34;</span>, <span style="color:#a6e22e">bytes</span>)
+	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;wind: %v\n&#34;</span>, <span style="color:#a6e22e">window</span>[<span style="color:#ae81ff">0</span>:len(<span style="color:#a6e22e">bytes</span>)])
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+
+	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;a address: %p\n&#34;</span>, <span style="color:#a6e22e">a</span>)
+	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;b address: %p\n&#34;</span>, <span style="color:#a6e22e">b</span>)
+
+	<span style="color:#a6e22e">replace</span>(<span style="color:#a6e22e">a</span>, <span style="color:#a6e22e">b</span>)
+	print(<span style="color:#a6e22e">a</span>())
+}
+</code></pre></div><p>运行测试下：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ go run -gcflags<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;all=-N -l&#34;</span> jump.gomonkey
+<span style="color:#ae81ff">2</span>
+</code></pre></div><p>gomonkey写mock测试，对函数的处理大致就是这个这么实现的，这里就不继续说gomonkey的具体实现细节了。</p>
+<h1 id="总结">总结</h1>
+<p>本文所提内容并非原创，在了解gomonkey的过程中看到了《monkey-patching-in-go》这篇文章，结合自己的一些理解重新解释下背后的原理。</p>
+<p>其实本没有必要解释这么多，我可以一句话总结完，”go funcval + 指令patch“。但是呢，”纸上得来终觉浅”，没有经过实践检验的“懂”也只是自己骗自己罢了。</p>
+<p>大篇幅介绍了radare2调试器的一些使用，应该有读者会对调试器工作原理、底层实现比较感兴趣，这也是大篇幅介绍的一点小小的私心。</p>
+<p>从2018年开始陆续整理调试原理的一些知识，将这些整理的内容放在了github上<a href="https://github.com/hitzhangjie/golang-debugger-book">golang-debugger-book</a>。原理的部分大致已经介绍完了，现在还需要结合一个实现来辅助使内容更加详实一点，这里也会涉及到对go实现细节的一些知识点补充，感兴趣的可以一起来。</p>
+<p>时间精力实在有限，拖得久了，很没有成就感。</p>
+<h1 id="参考文章">参考文章</h1>
+<p>1.monkey-patching-in-go, <a href="https://bou.ke/blog/monkey-patching-in-go/">https://bou.ke/blog/monkey-patching-in-go/</a>
+2.a-journey-into-radare2, <a href="https://www.megabeets.net/a-journey-into-radare-2-part-1/">https://www.megabeets.net/a-journey-into-radare-2-part-1/</a>
+3.monkey patching, <a href="https://en.wikipedia.org/wiki/Monkey_patch">https://en.wikipedia.org/wiki/Monkey_patch</a>
+4.radare2 book, <a href="https://radare.gitbooks.io/radare2book/content/tools/rasm2/assemble.html">https://radare.gitbooks.io/radare2book/content/tools/rasm2/assemble.html</a></p>
+
+        </div>
+        
+
+        
+        <hr>
+        <div style="float:right;">
+        
+
+
+<div style="display:flex;">
+    <div>分享：</div>
+    <div>
+        <div class="sharethis-inline-share-buttons"></div>
+    </div>
+</div>
+
+
+        </div>
+
+        <br>
+        <br>
+
+    </div>
+
+    
+    
+    <br>
+    <br>
+    <div style="height:auto;align:center;text-align:center;"> 
+        <div>
+            <img src="/common/xiaoqi.png" style="height:238px;margin-top:10px;margin-right:5px;"/>
+            <img src="/common/qrcode.jpg" style="height:238px;margin-top:10px;"/>
+            <img src="/common/yuanbao.png" style="height:238px;margin-top:10px;margin-left:5px;"/>
+        </div>
+
+        <div>
+            <p>
+                感谢打赏，小七🐶、元宝🐱可以改善伙食咯 😘
+            </p>
+        </div>
+
+
+    </div>
+    
+
+    
+
+
+                
+                <div class="container">
+    <hr>
+</div>
+<div class="container has-text-centered top-pad">
+    <a href="#top">
+        <i class="fa fa-arrow-up"></i>
+    </a>
+</div>
+
+<div class="container">
+    <hr>
+</div>
+
+                <div class="section" id="footer">
+    <div class="container has-text-centered">
+    
+        <span class="footer-text">
+            <a href="https://github.com/victoriadrake/hugo-theme-introduction/"><strong>Introduction</strong></a> 主题为 <a href="http://gohugo.io/">Hugo</a> 而设。由开源社群贡献者以 <a href="https://victoria.dev"><i class="fa fa-heart"></i> 和 <i class="fa fa-coffee"></i></a> 创造。
+        </span>
+    
+    </div>
+</div>
+
+                
+            </div>
+        </section>
+        
+        
+
+
+
+
+
+<script src="https://hitzhangjie.github.io/js/bundle.23f18222425179f754965a36c9b211bd8cff5e5ab61ee23b52f026cef6699139.js" integrity="sha256-I/GCIkJRefdUllo2ybIRvYz/Xlq2HuI7UvAmzvZpkTk="></script>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-168027530-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+        
+        
+        
+        
+    </body>
+</html>

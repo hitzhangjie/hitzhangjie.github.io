@@ -60,7 +60,7 @@
   
   <url>
     <loc>https://hitzhangjie.github.io/blog/</loc>
-    <lastmod>2020-08-23T15:41:28+08:00</lastmod>
+    <lastmod>2020-08-25T12:21:14+08:00</lastmod>
     <xhtml:link
                 rel="alternate"
                 hreflang="en"
@@ -74,8 +74,63 @@
   </url>
   
   <url>
+    <loc>https://hitzhangjie.github.io/tags/debugger/</loc>
+    <lastmod>2020-08-25T12:21:14+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/delve/</loc>
+    <lastmod>2020-08-25T12:21:14+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/blog/2020-08-25-delve%E8%B0%83%E8%AF%95%E5%99%A8%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</loc>
+    <lastmod>2020-08-25T12:21:14+08:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://hitzhangjie.github.io/tags/go/</loc>
-    <lastmod>2020-08-23T15:41:28+08:00</lastmod>
+    <lastmod>2020-08-25T12:21:14+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/json-rpc/</loc>
+    <lastmod>2020-08-25T12:21:14+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/starlark/</loc>
+    <lastmod>2020-08-25T12:21:14+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/</loc>
+    <lastmod>2020-08-25T12:21:14+08:00</lastmod>
+    <xhtml:link
+                rel="alternate"
+                hreflang="en"
+                href="https://hitzhangjie.github.io/en/tags/"
+                />
+    <xhtml:link
+                rel="alternate"
+                hreflang="zh-cn"
+                href="https://hitzhangjie.github.io/tags/"
+                />
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/</loc>
+    <lastmod>2020-08-25T12:21:14+08:00</lastmod>
+    <xhtml:link
+                rel="alternate"
+                hreflang="en"
+                href="https://hitzhangjie.github.io/en/"
+                />
+    <xhtml:link
+                rel="alternate"
+                hreflang="zh-cn"
+                href="https://hitzhangjie.github.io/"
+                />
   </url>
   
   <url>
@@ -91,36 +146,6 @@
   <url>
     <loc>https://hitzhangjie.github.io/tags/monkey-patching/</loc>
     <lastmod>2020-08-23T15:41:28+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/tags/</loc>
-    <lastmod>2020-08-23T15:41:28+08:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/tags/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh-cn"
-                href="https://hitzhangjie.github.io/tags/"
-                />
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/</loc>
-    <lastmod>2020-08-23T15:41:28+08:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh-cn"
-                href="https://hitzhangjie.github.io/"
-                />
   </url>
   
   <url>
@@ -310,16 +335,6 @@
   
   <url>
     <loc>https://hitzhangjie.github.io/blog/2020-06-09-a-golang-debugger-book/</loc>
-    <lastmod>2020-06-09T20:25:07+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/tags/debugger/</loc>
-    <lastmod>2020-06-09T20:25:07+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/tags/delve/</loc>
     <lastmod>2020-06-09T20:25:07+08:00</lastmod>
   </url>
   

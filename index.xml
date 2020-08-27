@@ -6,7 +6,7 @@
     <description>Recent content on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Tue, 25 Aug 2020 12:21:14 +0800</lastBuildDate>
+    <lastBuildDate>Fri, 28 Aug 2020 03:36:59 +0800</lastBuildDate>
     
 	<atom:link href="https://hitzhangjie.github.io/index.xml" rel="self" type="application/rss+xml" />
     
@@ -39,6 +39,15 @@
     </item>
     
     <item>
+      <title>go程序如何实现热重启</title>
+      <link>https://hitzhangjie.github.io/blog/2020-08-28-go%E7%A8%8B%E5%BA%8F%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%83%AD%E9%87%8D%E5%90%AF/</link>
+      <pubDate>Fri, 28 Aug 2020 03:36:59 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-08-28-go%E7%A8%8B%E5%BA%8F%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%83%AD%E9%87%8D%E5%90%AF/</guid>
+      <description>最近在修改公司框架源码时，发现了其中一个热重启相关的bug，几番修改、测试之后确认已经修复了，嗯，不错不错。这里也针对这方面的内容做一个简单的梳理。 1.什么是热重启？ 热重启（Hot Restart），是一项保证服务可用性的手段，它允许服务重启期间，不中断已经建立的连接，原来的服务进程不再接受新的连接请求（也可以将连接套接字设置为读端关闭，不再接受新的请求），新的连接请求将在新的服务进程中受理。通过这种方式，可以保证已经建立的连接不中断，连接上的事务（请求、处理、响应）可以正常完成，老的服务进程等所有连接上的请</description>
+    </item>
+    
+    <item>
       <title>delve调试器设计实现</title>
       <link>https://hitzhangjie.github.io/blog/2020-08-25-delve%E8%B0%83%E8%AF%95%E5%99%A8%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</link>
       <pubDate>Tue, 25 Aug 2020 12:21:14 +0800</pubDate>
@@ -63,15 +72,6 @@
       
       <guid>https://hitzhangjie.github.io/blog/2020-08-20-x64%E6%B1%87%E7%BC%96%E5%BC%80%E5%8F%91%E4%BB%8B%E7%BB%8D/</guid>
       <description>最近在工作和学习中发现，其实汇编是非常重要的，即便现在高级语言已经非常方便了，但是了解汇编对于深入理解计算机系统，以及一些高深的知识点是不可或缺的。举几个例子，比如说Linux操作系统有一个系统调用函数叫Fork我们都知道Fork的返回值在子进程中是0，在父进程中是非0，那这个是如何实现的呢？对于不了解汇编的人也很难有能力去阅读Linux操作系统源码，只能道听途说了解到个大概原因。再比如接下来要讲的gomonkey测试框架实现的一些指令patching操作，这些都是与汇编操作分不开的。甚至你想了解下上下文切</description>
-    </item>
-    
-    <item>
-      <title>go程序如何实现热重启</title>
-      <link>https://hitzhangjie.github.io/blog/2020-08-17-go%E7%A8%8B%E5%BA%8F%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%83%AD%E9%87%8D%E5%90%AF/</link>
-      <pubDate>Mon, 17 Aug 2020 23:28:38 +0800</pubDate>
-      
-      <guid>https://hitzhangjie.github.io/blog/2020-08-17-go%E7%A8%8B%E5%BA%8F%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%83%AD%E9%87%8D%E5%90%AF/</guid>
-      <description>最近在修改公司框架源码时，发现了其中一个热重启相关的bug，几番修改、测试之后确认已经修复了，嗯，不错不错。这里也针对这方面的内容做一个简单的梳理。 1.什么是热重启？ 热重启（Hot Restart），是一项保证服务可用性的手段，它允许服务重启期间，不中断已经建立的连接，原来的服务进程不再接受新的连接请求（也可以将连接套接字设置为读端关闭，不再接受新的请求），新的连接请求将在新的服务进程中受理。通过这种方式，可以保证已经建立的连接不中断，连接上的事务（请求、处理、响应）可以正常完成，老的服务进程等所有连接上的请</description>
     </item>
     
     <item>

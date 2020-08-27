@@ -60,7 +60,7 @@
   
   <url>
     <loc>https://hitzhangjie.github.io/blog/</loc>
-    <lastmod>2020-08-25T12:21:14+08:00</lastmod>
+    <lastmod>2020-08-28T03:36:59+08:00</lastmod>
     <xhtml:link
                 rel="alternate"
                 hreflang="en"
@@ -71,6 +71,71 @@
                 hreflang="zh-cn"
                 href="https://hitzhangjie.github.io/blog/"
                 />
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/backlog/</loc>
+    <lastmod>2020-08-28T03:36:59+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/fd/</loc>
+    <lastmod>2020-08-28T03:36:59+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/go/</loc>
+    <lastmod>2020-08-28T03:36:59+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/blog/2020-08-28-go%E7%A8%8B%E5%BA%8F%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%83%AD%E9%87%8D%E5%90%AF/</loc>
+    <lastmod>2020-08-28T03:36:59+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/</loc>
+    <lastmod>2020-08-28T03:36:59+08:00</lastmod>
+    <xhtml:link
+                rel="alternate"
+                hreflang="en"
+                href="https://hitzhangjie.github.io/en/tags/"
+                />
+    <xhtml:link
+                rel="alternate"
+                hreflang="zh-cn"
+                href="https://hitzhangjie.github.io/tags/"
+                />
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/unix%E5%A5%97%E6%8E%A5%E5%AD%97/</loc>
+    <lastmod>2020-08-28T03:36:59+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/</loc>
+    <lastmod>2020-08-28T03:36:59+08:00</lastmod>
+    <xhtml:link
+                rel="alternate"
+                hreflang="en"
+                href="https://hitzhangjie.github.io/en/"
+                />
+    <xhtml:link
+                rel="alternate"
+                hreflang="zh-cn"
+                href="https://hitzhangjie.github.io/"
+                />
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/%E7%83%AD%E9%87%8D%E5%90%AF/</loc>
+    <lastmod>2020-08-28T03:36:59+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/%E7%AB%AF%E5%8F%A3%E9%87%8D%E7%94%A8/</loc>
+    <lastmod>2020-08-28T03:36:59+08:00</lastmod>
   </url>
   
   <url>
@@ -89,11 +154,6 @@
   </url>
   
   <url>
-    <loc>https://hitzhangjie.github.io/tags/go/</loc>
-    <lastmod>2020-08-25T12:21:14+08:00</lastmod>
-  </url>
-  
-  <url>
     <loc>https://hitzhangjie.github.io/tags/json-rpc/</loc>
     <lastmod>2020-08-25T12:21:14+08:00</lastmod>
   </url>
@@ -101,36 +161,6 @@
   <url>
     <loc>https://hitzhangjie.github.io/tags/starlark/</loc>
     <lastmod>2020-08-25T12:21:14+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/tags/</loc>
-    <lastmod>2020-08-25T12:21:14+08:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/tags/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh-cn"
-                href="https://hitzhangjie.github.io/tags/"
-                />
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/</loc>
-    <lastmod>2020-08-25T12:21:14+08:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh-cn"
-                href="https://hitzhangjie.github.io/"
-                />
   </url>
   
   <url>
@@ -166,36 +196,6 @@
   <url>
     <loc>https://hitzhangjie.github.io/blog/2020-08-20-x64%E6%B1%87%E7%BC%96%E5%BC%80%E5%8F%91%E4%BB%8B%E7%BB%8D/</loc>
     <lastmod>2020-08-20T20:27:19+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/tags/backlog/</loc>
-    <lastmod>2020-08-17T23:28:38+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/tags/fd/</loc>
-    <lastmod>2020-08-17T23:28:38+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/blog/2020-08-17-go%E7%A8%8B%E5%BA%8F%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%83%AD%E9%87%8D%E5%90%AF/</loc>
-    <lastmod>2020-08-17T23:28:38+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/tags/unix%E5%A5%97%E6%8E%A5%E5%AD%97/</loc>
-    <lastmod>2020-08-17T23:28:38+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/tags/%E7%83%AD%E9%87%8D%E5%90%AF/</loc>
-    <lastmod>2020-08-17T23:28:38+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/tags/%E7%AB%AF%E5%8F%A3%E9%87%8D%E7%94%A8/</loc>
-    <lastmod>2020-08-17T23:28:38+08:00</lastmod>
   </url>
   
   <url>

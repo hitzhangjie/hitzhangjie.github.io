@@ -214,7 +214,7 @@ div#st-2 .st-btn > img {
         </h2>
         <div class="post-data">
             发表时间：2020-08-28 <br> 
-            阅读时长：7 分钟 (3309字)
+            阅读时长：15 分钟 (7404字)
         </div>
 
         
@@ -287,16 +287,20 @@ div#st-2 .st-btn > img {
         <li><a href="#4单进程多线程模型">4.单进程多线程模型</a></li>
         <li><a href="#5-其他线程模型">5. 其他线程模型</a></li>
         <li><a href="#6-go实现热重启触发时机">6. go实现热重启：触发时机</a></li>
-        <li><a href="#7-go实现热重启-传递listenfd">7. go实现热重启: 传递listenfd</a>
+        <li><a href="#7-如何判断热重启">7. 如何判断热重启</a></li>
+        <li><a href="#8-forkexec">8. ForkExec</a></li>
+        <li><a href="#9-go实现热重启-传递listenfd">9. go实现热重启: 传递listenfd</a>
           <ul>
-            <li><a href="#71-forkexecprocattrfiles-uintptr">7.1 ForkExec+ProcAttr{Files: []uintptr{}}</a></li>
-            <li><a href="#72-unix-domain-socket--cmsg">7.2 unix domain socket + cmsg</a></li>
+            <li><a href="#91-forkexecprocattrfiles-uintptr">9.1 ForkExec+ProcAttr{Files: []uintptr{}}</a></li>
+            <li><a href="#92-unix-domain-socket--cmsg">9.2 unix domain socket + cmsg</a></li>
           </ul>
         </li>
-        <li><a href="#8-go实现热重启父进程平滑退出">8. go实现热重启：父进程平滑退出</a>
+        <li><a href="#10-go实现热重启-子进程如何通过listenfd重建listener">10. go实现热重启: 子进程如何通过listenfd重建listener</a></li>
+        <li><a href="#11-go实现热重启父进程平滑退出">11. go实现热重启：父进程平滑退出</a>
           <ul>
-            <li><a href="#81-处理已建立连接上请求">8.1. 处理已建立连接上请求</a></li>
-            <li><a href="#82-自定义atexit清理任务">8.2. 自定义AtExit清理任务</a></li>
+            <li><a href="#111-处理已建立连接上请求">11.1. 处理已建立连接上请求</a></li>
+            <li><a href="#112-消息服务">11.2. 消息服务</a></li>
+            <li><a href="#112-自定义atexit清理任务">11.2. 自定义AtExit清理任务</a></li>
           </ul>
         </li>
         <li><a href="#参考文章">参考文章</a></li>
@@ -394,18 +398,329 @@ div#st-2 .st-btn > img {
 <h2 id="5-其他线程模型">5. 其他线程模型</h2>
 <p>其他线程都基本上避不开上述3、4的实现或者组合，对应问题相仿，不再赘述。</p>
 <h2 id="6-go实现热重启触发时机">6. go实现热重启：触发时机</h2>
-<h2 id="7-go实现热重启-传递listenfd">7. go实现热重启: 传递listenfd</h2>
-<h3 id="71-forkexecprocattrfiles-uintptr">7.1 ForkExec+ProcAttr{Files: []uintptr{}}</h3>
-<h3 id="72-unix-domain-socket--cmsg">7.2 unix domain socket + cmsg</h3>
-<h2 id="8-go实现热重启父进程平滑退出">8. go实现热重启：父进程平滑退出</h2>
-<h3 id="81-处理已建立连接上请求">8.1. 处理已建立连接上请求</h3>
-<h3 id="82-自定义atexit清理任务">8.2. 自定义AtExit清理任务</h3>
+<p>需要选择一个时机来触发热重启，什么时候触发呢？操作系统提供了信号机制，允许进程做出一些自定义的响应。</p>
+<p>杀死一个进程，一般会通过<code>kill -9</code>发送SIGKILL信号给进程，这个信号不允许捕获，SIGABORT也不允许捕获，这样可以允许进程所有者或者高权限用户控制进程生死，达到更好的管理效果。</p>
+<p>kill也可以用来发送其他信号给进程，如发送SIGUSR1、SIGUSR2、SIGINT等等，进程中可以接收这些信号，并针对性的做出处理。这里可以选择SIGUSR1或者SIGUSR2来通知进程热重启。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() {
+    <span style="color:#a6e22e">ch</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">chan</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Signal</span>, <span style="color:#ae81ff">1</span>)
+    <span style="color:#a6e22e">signal</span>.<span style="color:#a6e22e">Notify</span>(<span style="color:#a6e22e">ch</span>, <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">SIGUSR2</span>)
+    <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">ch</span>
+
+    <span style="color:#75715e">//接下来就可以做热重启相关的逻辑了
+</span><span style="color:#75715e"></span>    <span style="color:#f92672">...</span>
+}()
+</code></pre></div><h2 id="7-如何判断热重启">7. 如何判断热重启</h2>
+<p>那一个go程序重新启动之后，所有运行时状态信息都是新的，那我如何区分自己是否是子进程呢？或者说我是否要执行热重启逻辑呢？父进程可以通过设置子进程初始化时的环境变量，比如加个HOT_RESTART=1。</p>
+<p>这就要求代码中在合适的地方要先检测环境变量HOT_RESTART是否为1，如果成立，那就执行热重启逻辑，否则就执行全新的启动逻辑。</p>
+<h2 id="8-forkexec">8. ForkExec</h2>
+<p>假如当前进程收到SIGUSR2信号之后，希望执行热重启逻辑，那么好，需要先执行syscall.ForkExec(&hellip;)来创建一个子进程，注意go不同于cc++，它本身就是依赖多线程来调度协程的，天然就是多线程程序，只不过是他没有使用NPTL线程库来创建，而是通过clone系统调用来创建。</p>
+<p>前面提过了，如果单纯fork的话，只能复制调用fork函数的线程，对于进程中的其他线程无能为力，所以对于go这种天然的多线程程序，必须从头来一遍，再exec一下。所以go标准库提供的函数是syscall.ForkExec而不是syscall.Fork。</p>
+<h2 id="9-go实现热重启-传递listenfd">9. go实现热重启: 传递listenfd</h2>
+<p>go里面传递fd的方式，有这么几种，父进程fork子进程的时候传递fd，或者后面通过unix domain socket传递。需要注意的是，我们传递的实际上是file description，而非file descriptor。</p>
+<p>附上一张类unix系统下file descriptor、file description、inode三者之间的关系图：
+<img src="/blog/assets/restart/filedescriptor.png" alt="file descriptor"></p>
+<p>fd分配都是从小到大分配的，父进程中的fd为10，传递到子进程中之后有可能就不是10。那么传递到子进程的fd是否是可以预测的呢？可以预测，但是不建议预测，所以我提供了两种实现方式。</p>
+<h3 id="91-forkexecprocattrfiles-uintptr">9.1 ForkExec+ProcAttr{Files: []uintptr{}}</h3>
+<p>要传递一个listenfd很简单，假如是类型net.Listener，那就通过<code>tcpln := ln.(*net.TCPListener); file, _ := tcpln.File(); fd := file.FD()</code> 来拿到listener底层file description对应的fd。</p>
+<p>需要注意的是，这里的fd并非真实的file对应的初始fd，而是被dup2复制出来的一个fd，这样底层file description引用计数就会+1。如果你后面想通过ln.Close()关闭监听套接字的话，sorry，你关不掉。这里需要显示的执行 file.Close() 将原来的fd关掉，使原来的file description引用计数-1，保证Close的时候引用计数为0，才可以正常关闭。</p>
+<p>试想下，我们想实现热重启，是一定要等连接上接收的请求处理完才可以退出进程的，但是这期间父进程不能再接收新的连接请求，如果这里不能正常关闭listener，那我们这个目标就无法实现。</p>
+<p>OK，接下来说下syscall.ProcAttr{Files: []uintptr{}}，这里就是要传递的父进程中的fd，比如要传递stdin、stdout、stderr给子进程，就需要将这几个对应的fd塞进去os.Stdin.FD(), os.Stdout.FD(), os.Stderr.FD()，如果要想传递刚才的listenfd，就需要将上面的<code>file.FD()</code>返回的fd塞进去。</p>
+<p>子进程中接收到这些fd之后，在类unix系统下一般会按照从0、1、2、3这样递增的顺序来分配fd，那么传递过去的fd是可以预测的，假如除了stdin, stdout, stderr再传两个listenfd，那么可以预测这两个的fd应该是3，4。在类unix系统下一般都是这么处理的，子进程中就可以根据传递fd的数量（比如通过环境变量传递给子进程FD_NUM=2），来从3开始计算，哦，这两个fd应该是3，4。</p>
+<p>父子进程可以通过一个约定的顺序，来组织传递的listenfd的顺序，以方便子进程中按相同的约定进行处理，当然也可以通过fd重建listener之后来判断对应的监听network+address，以区分该listener对应的是哪一个逻辑service。都是可以的！</p>
+<p>需要注意的是，file.FD()返回的fd是非阻塞的，在重建listener先将其设为nonblock, syscall.SetNonBlock(fd)，然后<code>file, _ := os.NewFile(fd); tcplistener := net.FileListener(file)</code>，或者是 <code>udpconn := net.PacketConn(file)</code>，然后可以获取tcplistener、udpconn的监听地址，来关联其对应的逻辑service。</p>
+<p>有些微服务框架是支持对服务进行逻辑service分组的，google pb规范中也支持多service定义，这个在腾讯的goneat、trpc框架中也是有支持的。</p>
+<p>当然了，这里我不会写一个完整的包含上述所有描述的demo给大家，这有点占篇幅，这里只贴一个精简版的实例，其他的读者感兴趣可以自己编码测试。须知纸上得来终觉浅，该你自己掌握的我不能效劳。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+
+<span style="color:#f92672">import</span> (
+	<span style="color:#e6db74">&#34;fmt&#34;</span>
+	<span style="color:#e6db74">&#34;io/ioutil&#34;</span>
+	<span style="color:#e6db74">&#34;log&#34;</span>
+	<span style="color:#e6db74">&#34;net&#34;</span>
+	<span style="color:#e6db74">&#34;os&#34;</span>
+	<span style="color:#e6db74">&#34;strconv&#34;</span>
+	<span style="color:#e6db74">&#34;sync&#34;</span>
+	<span style="color:#e6db74">&#34;syscall&#34;</span>
+	<span style="color:#e6db74">&#34;time&#34;</span>
+)
+
+<span style="color:#66d9ef">const</span> <span style="color:#a6e22e">envRestart</span> = <span style="color:#e6db74">&#34;RESTART&#34;</span>
+<span style="color:#66d9ef">const</span> <span style="color:#a6e22e">envListenFD</span> = <span style="color:#e6db74">&#34;LISTENFD&#34;</span>
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+
+	<span style="color:#a6e22e">v</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Getenv</span>(<span style="color:#a6e22e">envRestart</span>)
+
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">v</span> <span style="color:#f92672">!=</span> <span style="color:#e6db74">&#34;1&#34;</span> {
+
+		<span style="color:#a6e22e">ln</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Listen</span>(<span style="color:#e6db74">&#34;tcp&#34;</span>, <span style="color:#e6db74">&#34;localhost:8888&#34;</span>)
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			panic(<span style="color:#a6e22e">err</span>)
+		}
+
+		<span style="color:#a6e22e">wg</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">sync</span>.<span style="color:#a6e22e">WaitGroup</span>{}
+		<span style="color:#a6e22e">wg</span>.<span style="color:#a6e22e">Add</span>(<span style="color:#ae81ff">1</span>)
+		<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() {
+			<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">wg</span>.<span style="color:#a6e22e">Done</span>()
+			<span style="color:#66d9ef">for</span> {
+				<span style="color:#a6e22e">ln</span>.<span style="color:#a6e22e">Accept</span>()
+			}
+		}()
+
+		<span style="color:#a6e22e">tcpln</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">ln</span>.(<span style="color:#f92672">*</span><span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">TCPListener</span>)
+		<span style="color:#a6e22e">f</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tcpln</span>.<span style="color:#a6e22e">File</span>()
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			panic(<span style="color:#a6e22e">err</span>)
+		}
+
+		<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Setenv</span>(<span style="color:#a6e22e">envRestart</span>, <span style="color:#e6db74">&#34;1&#34;</span>)
+		<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Setenv</span>(<span style="color:#a6e22e">envListenFD</span>, <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Sprintf</span>(<span style="color:#e6db74">&#34;%d&#34;</span>, <span style="color:#a6e22e">f</span>.<span style="color:#a6e22e">Fd</span>()))
+
+		<span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">syscall</span>.<span style="color:#a6e22e">ForkExec</span>(<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Args</span>[<span style="color:#ae81ff">0</span>], <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Args</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">syscall</span>.<span style="color:#a6e22e">ProcAttr</span>{
+			<span style="color:#a6e22e">Env</span>:   <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Environ</span>(),
+			<span style="color:#a6e22e">Files</span>: []<span style="color:#66d9ef">uintptr</span>{<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stdin</span>.<span style="color:#a6e22e">Fd</span>(), <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stdout</span>.<span style="color:#a6e22e">Fd</span>(), <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stderr</span>.<span style="color:#a6e22e">Fd</span>(), <span style="color:#a6e22e">f</span>.<span style="color:#a6e22e">Fd</span>()},
+			<span style="color:#a6e22e">Sys</span>:   <span style="color:#66d9ef">nil</span>,
+		})
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			panic(<span style="color:#a6e22e">err</span>)
+		}
+		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Print</span>(<span style="color:#e6db74">&#34;parent pid:&#34;</span>, <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Getpid</span>(), <span style="color:#e6db74">&#34;, pass fd:&#34;</span>, <span style="color:#a6e22e">f</span>.<span style="color:#a6e22e">Fd</span>())
+		<span style="color:#a6e22e">f</span>.<span style="color:#a6e22e">Close</span>()
+		<span style="color:#a6e22e">wg</span>.<span style="color:#a6e22e">Wait</span>()
+
+	} <span style="color:#66d9ef">else</span> {
+
+		<span style="color:#a6e22e">v</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Getenv</span>(<span style="color:#a6e22e">envListenFD</span>)
+		<span style="color:#a6e22e">fd</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">strconv</span>.<span style="color:#a6e22e">ParseInt</span>(<span style="color:#a6e22e">v</span>, <span style="color:#ae81ff">10</span>, <span style="color:#ae81ff">64</span>)
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			panic(<span style="color:#a6e22e">err</span>)
+		}
+		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Print</span>(<span style="color:#e6db74">&#34;child pid:&#34;</span>, <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Getpid</span>(), <span style="color:#e6db74">&#34;, recv fd:&#34;</span>, <span style="color:#a6e22e">fd</span>)
+
+		<span style="color:#75715e">// test1
+</span><span style="color:#75715e"></span>
+        <span style="color:#75715e">// NOTE: 理解上面提及的file descriptor、file description的关系
+</span><span style="color:#75715e"></span>        <span style="color:#75715e">//
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">// 通过环境变量肯定是不行的，fd根本不对应子进程中的fd
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//ff := os.NewFile(uintptr(fd), &#34;&#34;)
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//if ff != nil {
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//	_, err := ff.Stat()
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//	if err != nil {
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//		log.Println(err)
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//	}
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//}
+</span><span style="color:#75715e"></span>
+		<span style="color:#75715e">// test2
+</span><span style="color:#75715e"></span>
+		<span style="color:#75715e">// 假定我们知道fd是多少，比如fd=3
+</span><span style="color:#75715e"></span>		<span style="color:#a6e22e">ff</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">NewFile</span>(uintptr(<span style="color:#ae81ff">3</span>), <span style="color:#e6db74">&#34;&#34;</span>)
+		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;fd:&#34;</span>, <span style="color:#a6e22e">ff</span>.<span style="color:#a6e22e">Fd</span>())
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">ff</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			<span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">ff</span>.<span style="color:#a6e22e">Stat</span>()
+			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+				panic(<span style="color:#a6e22e">err</span>)
+			}
+
+			<span style="color:#75715e">// pause, lsof -P -p $pid，检查下有没有listenfd传过来，除了0，1，2，应该有看到3
+</span><span style="color:#75715e"></span>            <span style="color:#75715e">// ctrl+d to continue
+</span><span style="color:#75715e"></span>			<span style="color:#a6e22e">ioutil</span>.<span style="color:#a6e22e">ReadAll</span>(<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stdin</span>)
+
+			<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;....&#34;</span>)
+			<span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">FileListener</span>(<span style="color:#a6e22e">ff</span>)
+			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+				panic(<span style="color:#a6e22e">err</span>)
+			}
+
+			<span style="color:#75715e">// pause, lsof -P -p $pid, 会发现有两个listenfd, 
+</span><span style="color:#75715e"></span>            <span style="color:#75715e">// 因为前面调用了ff.FD() dup2了一个，如果这里不显示关闭，listener将无法关闭
+</span><span style="color:#75715e"></span>			<span style="color:#a6e22e">ff</span>.<span style="color:#a6e22e">Close</span>()
+
+			<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Sleep</span>(<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Minute</span>)
+		}
+
+		<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Sleep</span>(<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Minute</span>)
+	}
+}
+</code></pre></div><p>这里用最简单的代码，大致解释了如何用ProcAttr来传递listenfd。这里有个缺点，加入后续父进程中将传递的fd修改了呢，比如我不传stdin, stdout, stderr的fd了，咋治？服务端是不是要开始预测应该从0开始编号了？其实这里的预测有点挫，在类unix平台下虽然可以比较可靠的预测出来fd，但毕竟也算是个hack逻辑。</p>
+<p>私以为这种实现有点丑，不推荐。</p>
+<h3 id="92-unix-domain-socket--cmsg">9.2 unix domain socket + cmsg</h3>
+<p>另一种，思路就是通过unix domain socket + cmsg来传递，父进程启动的时候依然是通过ForkExec来创建子进程，但是并不通过ProcAttr来传递listenfd。</p>
+<p>父进程在创建子进程之前，创建一个unix domain socket并监听，等子进程启动之后，建立到这个unix domain socket的连接，父进程此时开始将listenfd通过cmsg发送给子进程，获取fd的方式与9.1相同，该注意的fd关闭问题也是一样的处理。</p>
+<p>子进程连接上unix domain socket，开始接收cmsg，内核帮子进程收消息的时候，发现里面有一个父进程的fd，内核找到对应的file description，并为子进程分配一个fd，将两者建立起映射关系。然后回到子进程中的时候，子进程拿到的就是对应该file description的fd了。通过os.NewFile(fd)就可以拿到file，然后再通过net.FileListener或者net.PacketConn就可以拿到tcplistener或者udpconn。</p>
+<p>剩下的获取监听地址，关联逻辑service的动作，就与9.1小结描述的一致了。</p>
+<p>这里我也提供一个可运行的精简版的demo，供大家了解、测试用。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+
+<span style="color:#f92672">import</span> (
+	<span style="color:#e6db74">&#34;fmt&#34;</span>
+	<span style="color:#e6db74">&#34;io/ioutil&#34;</span>
+	<span style="color:#e6db74">&#34;log&#34;</span>
+	<span style="color:#e6db74">&#34;net&#34;</span>
+	<span style="color:#e6db74">&#34;os&#34;</span>
+	<span style="color:#e6db74">&#34;strconv&#34;</span>
+	<span style="color:#e6db74">&#34;sync&#34;</span>
+	<span style="color:#e6db74">&#34;syscall&#34;</span>
+	<span style="color:#e6db74">&#34;time&#34;</span>
+
+	<span style="color:#a6e22e">passfd</span> <span style="color:#e6db74">&#34;github.com/ftrvxmtrx/fd&#34;</span>
+)
+
+<span style="color:#66d9ef">const</span> <span style="color:#a6e22e">envRestart</span> = <span style="color:#e6db74">&#34;RESTART&#34;</span>
+<span style="color:#66d9ef">const</span> <span style="color:#a6e22e">envListenFD</span> = <span style="color:#e6db74">&#34;LISTENFD&#34;</span>
+<span style="color:#66d9ef">const</span> <span style="color:#a6e22e">unixsockname</span> = <span style="color:#e6db74">&#34;/tmp/xxxxxxxxxxxxxxxxx.sock&#34;</span>
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+
+	<span style="color:#a6e22e">v</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Getenv</span>(<span style="color:#a6e22e">envRestart</span>)
+
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">v</span> <span style="color:#f92672">!=</span> <span style="color:#e6db74">&#34;1&#34;</span> {
+
+		<span style="color:#a6e22e">ln</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Listen</span>(<span style="color:#e6db74">&#34;tcp&#34;</span>, <span style="color:#e6db74">&#34;localhost:8888&#34;</span>)
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			panic(<span style="color:#a6e22e">err</span>)
+		}
+
+		<span style="color:#a6e22e">wg</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">sync</span>.<span style="color:#a6e22e">WaitGroup</span>{}
+		<span style="color:#a6e22e">wg</span>.<span style="color:#a6e22e">Add</span>(<span style="color:#ae81ff">1</span>)
+		<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() {
+			<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">wg</span>.<span style="color:#a6e22e">Done</span>()
+			<span style="color:#66d9ef">for</span> {
+				<span style="color:#a6e22e">ln</span>.<span style="color:#a6e22e">Accept</span>()
+			}
+		}()
+
+		<span style="color:#a6e22e">tcpln</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">ln</span>.(<span style="color:#f92672">*</span><span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">TCPListener</span>)
+		<span style="color:#a6e22e">f</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tcpln</span>.<span style="color:#a6e22e">File</span>()
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			panic(<span style="color:#a6e22e">err</span>)
+		}
+
+		<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Setenv</span>(<span style="color:#a6e22e">envRestart</span>, <span style="color:#e6db74">&#34;1&#34;</span>)
+		<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Setenv</span>(<span style="color:#a6e22e">envListenFD</span>, <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Sprintf</span>(<span style="color:#e6db74">&#34;%d&#34;</span>, <span style="color:#a6e22e">f</span>.<span style="color:#a6e22e">Fd</span>()))
+
+		<span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">syscall</span>.<span style="color:#a6e22e">ForkExec</span>(<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Args</span>[<span style="color:#ae81ff">0</span>], <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Args</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">syscall</span>.<span style="color:#a6e22e">ProcAttr</span>{
+			<span style="color:#a6e22e">Env</span>:   <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Environ</span>(),
+			<span style="color:#a6e22e">Files</span>: []<span style="color:#66d9ef">uintptr</span>{<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stdin</span>.<span style="color:#a6e22e">Fd</span>(), <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stdout</span>.<span style="color:#a6e22e">Fd</span>(), <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stderr</span>.<span style="color:#a6e22e">Fd</span>(), <span style="color:#75715e">/*f.Fd()*/</span>}, <span style="color:#75715e">// comment this when test unixsock
+</span><span style="color:#75715e"></span>			<span style="color:#a6e22e">Sys</span>:   <span style="color:#66d9ef">nil</span>,
+		})
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			panic(<span style="color:#a6e22e">err</span>)
+		}
+		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Print</span>(<span style="color:#e6db74">&#34;parent pid:&#34;</span>, <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Getpid</span>(), <span style="color:#e6db74">&#34;, pass fd:&#34;</span>, <span style="color:#a6e22e">f</span>.<span style="color:#a6e22e">Fd</span>())
+
+		<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Remove</span>(<span style="color:#a6e22e">unixsockname</span>)
+		<span style="color:#a6e22e">unix</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Listen</span>(<span style="color:#e6db74">&#34;unix&#34;</span>, <span style="color:#a6e22e">unixsockname</span>)
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			panic(<span style="color:#a6e22e">err</span>)
+		}
+		<span style="color:#a6e22e">unixconn</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">Accept</span>()
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			panic(<span style="color:#a6e22e">err</span>)
+		}
+		<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">passfd</span>.<span style="color:#a6e22e">Put</span>(<span style="color:#a6e22e">unixconn</span>.(<span style="color:#f92672">*</span><span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">UnixConn</span>), <span style="color:#a6e22e">f</span>)
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			panic(<span style="color:#a6e22e">err</span>)
+		}
+
+		<span style="color:#a6e22e">f</span>.<span style="color:#a6e22e">Close</span>()
+		<span style="color:#a6e22e">wg</span>.<span style="color:#a6e22e">Wait</span>()
+
+	} <span style="color:#66d9ef">else</span> {
+
+		<span style="color:#a6e22e">v</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Getenv</span>(<span style="color:#a6e22e">envListenFD</span>)
+		<span style="color:#a6e22e">fd</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">strconv</span>.<span style="color:#a6e22e">ParseInt</span>(<span style="color:#a6e22e">v</span>, <span style="color:#ae81ff">10</span>, <span style="color:#ae81ff">64</span>)
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			panic(<span style="color:#a6e22e">err</span>)
+		}
+		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Print</span>(<span style="color:#e6db74">&#34;child pid:&#34;</span>, <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Getpid</span>(), <span style="color:#e6db74">&#34;, recv fd:&#34;</span>, <span style="color:#a6e22e">fd</span>)
+
+		<span style="color:#75715e">// test1
+</span><span style="color:#75715e"></span>
+		<span style="color:#75715e">// 通过环境变量肯定是不行的，fd根本不对应子进程中的fd
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//ff := os.NewFile(uintptr(fd), &#34;&#34;)
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//if ff != nil {
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//	_, err := ff.Stat()
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//	if err != nil {
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//		log.Println(err)
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//	}
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//}
+</span><span style="color:#75715e"></span>
+		<span style="color:#75715e">// test2
+</span><span style="color:#75715e"></span>
+		<span style="color:#75715e">// 假定我们知道fd是多少，比如fd=3
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//ff := os.NewFile(uintptr(3), &#34;&#34;)
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//if ff != nil {
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//	_, err := ff.Stat()
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//	if err != nil {
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//		panic(err)
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//	}
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//	// pause, ctrl+d to continue
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//	ioutil.ReadAll(os.Stdin)
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//	fmt.Println(&#34;....&#34;)
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//	_, err = net.FileListener(ff) //会dup一个fd出来，有多个listener
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//	if err != nil {
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//		panic(err)
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//	}
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//	// lsof -P -p $pid, 会发现有两个listenfd
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//	time.Sleep(time.Minute)
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">//}
+</span><span style="color:#75715e"></span>
+		<span style="color:#75715e">// test 3
+</span><span style="color:#75715e"></span>
+		<span style="color:#a6e22e">ioutil</span>.<span style="color:#a6e22e">ReadAll</span>(<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stdin</span>)
+		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;.....&#34;</span>) <span style="color:#75715e">// lsof -P -p $pid，检查下
+</span><span style="color:#75715e"></span>
+		<span style="color:#a6e22e">unixconn</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Dial</span>(<span style="color:#e6db74">&#34;unix&#34;</span>, <span style="color:#a6e22e">unixsockname</span>)
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			panic(<span style="color:#a6e22e">err</span>)
+		}
+
+		<span style="color:#a6e22e">files</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">passfd</span>.<span style="color:#a6e22e">Get</span>(<span style="color:#a6e22e">unixconn</span>.(<span style="color:#f92672">*</span><span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">UnixConn</span>), <span style="color:#ae81ff">1</span>, <span style="color:#66d9ef">nil</span>)
+		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+			panic(<span style="color:#a6e22e">err</span>)
+		}
+
+		<span style="color:#75715e">// lsof -P -p $pid再检查下
+</span><span style="color:#75715e"></span>
+		<span style="color:#a6e22e">f</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">files</span>[<span style="color:#ae81ff">0</span>]
+		<span style="color:#a6e22e">f</span>.<span style="color:#a6e22e">Stat</span>()
+
+		<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Sleep</span>(<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Minute</span>)
+	}
+}
+</code></pre></div><h2 id="10-go实现热重启-子进程如何通过listenfd重建listener">10. go实现热重启: 子进程如何通过listenfd重建listener</h2>
+<p>前面已经提过了，当你已经拿到fd之后，你还不知道他对应的是tcp的listener，还是udpconn，那怎么办？都试下呗。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">file</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">NewFile</span>(<span style="color:#a6e22e">fd</span>)
+<span style="color:#75715e">// check error
+</span><span style="color:#75715e"></span>
+<span style="color:#a6e22e">tcpln</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">FileListener</span>(<span style="color:#a6e22e">file</span>)
+<span style="color:#75715e">// check error
+</span><span style="color:#75715e"></span>
+<span style="color:#a6e22e">udpconn</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">PacketConn</span>(<span style="color:#a6e22e">file</span>)
+<span style="color:#75715e">// check error
+</span></code></pre></div><h2 id="11-go实现热重启父进程平滑退出">11. go实现热重启：父进程平滑退出</h2>
+<p>父进程如何平滑退出呢，这个要看父进程中都有哪些逻辑要平滑停止了。</p>
+<h3 id="111-处理已建立连接上请求">11.1. 处理已建立连接上请求</h3>
+<p>可以从这两个方面入手：</p>
+<ul>
+<li>shutdown read，不再接受新的请求，对端继续写数据的时候回感知到失败</li>
+<li>继续处理请求，处理完成后，回包，close连接</li>
+</ul>
+<p>也可以考虑连接空闲一段时间后close，但是尽最大速度关闭更好一点。</p>
+<h3 id="112-消息服务">11.2. 消息服务</h3>
+<ul>
+<li>确认下自己服务的消息消费、确认机制是否合理</li>
+<li>不再收新消息</li>
+<li>处理完已收到的消息后，再退出</li>
+</ul>
+<h3 id="112-自定义atexit清理任务">11.2. 自定义AtExit清理任务</h3>
+<p>有些任务会有些自定义任务，希望进程在退出之前，能够执行到，这种最好提供一各类似AtExit的注册函数，让进程退出之前能够执行业务自定义的逻辑。</p>
+<p>不管是平滑重启，还是其他正常退出，&hellip;</p>
 <h2 id="参考文章">参考文章</h2>
 <ol>
-<li>
-<p>Unix高级编程、进程间通信, Steven Richards</p>
-</li>
-<li></li>
+<li>Unix高级编程、进程间通信, Steven Richards</li>
+<li>&hellip;</li>
 </ol>
 
         </div>

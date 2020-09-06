@@ -6,19 +6,10 @@
     <description>Recent content in debugger on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Tue, 25 Aug 2020 12:21:14 +0800</lastBuildDate>
+    <lastBuildDate>Tue, 09 Jun 2020 20:25:07 +0800</lastBuildDate>
     
 	<atom:link href="https://hitzhangjie.github.io/tags/debugger/index.xml" rel="self" type="application/rss+xml" />
     
-    
-    <item>
-      <title>delve调试器设计实现</title>
-      <link>https://hitzhangjie.github.io/blog/2020-08-25-delve%E8%B0%83%E8%AF%95%E5%99%A8%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</link>
-      <pubDate>Tue, 25 Aug 2020 12:21:14 +0800</pubDate>
-      
-      <guid>https://hitzhangjie.github.io/blog/2020-08-25-delve%E8%B0%83%E8%AF%95%E5%99%A8%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</guid>
-      <description>研究调试器设计实现有段时间了，前几天在调试一个程序时，发现go调试器go-delve/delve竟然不支持类似gdb的x/FMT格式，于是在之前工作上又优化了一下。CR期间，也学习到一些之前理解不深的地方，也顺便了解了下delve的整体架构设计、大致实现，今天就来说道说道。 delve简介 go-delve/delve是Derekparker发起的一个调试器项目，面向go语言的。为什么针对go语言要创建一个新的调试器呢？为什么不使用GDB呢？这里涉及到go的一些特性。 作为符号级调试器，要能正常实现源码级调试，有</description>
-    </item>
     
     <item>
       <title>A Golang Debugger Book</title>

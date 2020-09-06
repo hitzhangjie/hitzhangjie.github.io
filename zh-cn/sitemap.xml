@@ -124,7 +124,7 @@
   </url>
   
   <url>
-    <loc>https://hitzhangjie.github.io/tags/fd/</loc>
+    <loc>https://hitzhangjie.github.io/tags/forkexec/</loc>
     <lastmod>2020-08-28T03:36:59+08:00</lastmod>
   </url>
   
@@ -134,12 +134,7 @@
   </url>
   
   <url>
-    <loc>https://hitzhangjie.github.io/tags/reuseport/</loc>
-    <lastmod>2020-08-28T03:36:59+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/tags/unix%E5%A5%97%E6%8E%A5%E5%AD%97/</loc>
+    <loc>https://hitzhangjie.github.io/tags/unixsock/</loc>
     <lastmod>2020-08-28T03:36:59+08:00</lastmod>
   </url>
   
@@ -149,7 +144,7 @@
   </url>
   
   <url>
-    <loc>https://hitzhangjie.github.io/tags/debugger/</loc>
+    <loc>https://hitzhangjie.github.io/tags/debug/</loc>
     <lastmod>2020-08-25T12:21:14+08:00</lastmod>
   </url>
   
@@ -164,7 +159,7 @@
   </url>
   
   <url>
-    <loc>https://hitzhangjie.github.io/tags/json-rpc/</loc>
+    <loc>https://hitzhangjie.github.io/tags/jsonrpc/</loc>
     <lastmod>2020-08-25T12:21:14+08:00</lastmod>
   </url>
   
@@ -345,6 +340,11 @@
   
   <url>
     <loc>https://hitzhangjie.github.io/blog/2020-06-09-a-golang-debugger-book/</loc>
+    <lastmod>2020-06-09T20:25:07+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/debugger/</loc>
     <lastmod>2020-06-09T20:25:07+08:00</lastmod>
   </url>
   

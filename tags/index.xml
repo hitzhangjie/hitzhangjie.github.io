@@ -39,29 +39,20 @@
     </item>
     
     <item>
-      <title>fd</title>
-      <link>https://hitzhangjie.github.io/tags/fd/</link>
+      <title>forkexec</title>
+      <link>https://hitzhangjie.github.io/tags/forkexec/</link>
       <pubDate>Fri, 28 Aug 2020 03:36:59 +0800</pubDate>
       
-      <guid>https://hitzhangjie.github.io/tags/fd/</guid>
+      <guid>https://hitzhangjie.github.io/tags/forkexec/</guid>
       <description></description>
     </item>
     
     <item>
-      <title>reuseport</title>
-      <link>https://hitzhangjie.github.io/tags/reuseport/</link>
+      <title>unixsock</title>
+      <link>https://hitzhangjie.github.io/tags/unixsock/</link>
       <pubDate>Fri, 28 Aug 2020 03:36:59 +0800</pubDate>
       
-      <guid>https://hitzhangjie.github.io/tags/reuseport/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>unix套接字</title>
-      <link>https://hitzhangjie.github.io/tags/unix%E5%A5%97%E6%8E%A5%E5%AD%97/</link>
-      <pubDate>Fri, 28 Aug 2020 03:36:59 +0800</pubDate>
-      
-      <guid>https://hitzhangjie.github.io/tags/unix%E5%A5%97%E6%8E%A5%E5%AD%97/</guid>
+      <guid>https://hitzhangjie.github.io/tags/unixsock/</guid>
       <description></description>
     </item>
     
@@ -75,11 +66,11 @@
     </item>
     
     <item>
-      <title>debugger</title>
-      <link>https://hitzhangjie.github.io/tags/debugger/</link>
+      <title>debug</title>
+      <link>https://hitzhangjie.github.io/tags/debug/</link>
       <pubDate>Tue, 25 Aug 2020 12:21:14 +0800</pubDate>
       
-      <guid>https://hitzhangjie.github.io/tags/debugger/</guid>
+      <guid>https://hitzhangjie.github.io/tags/debug/</guid>
       <description></description>
     </item>
     
@@ -93,11 +84,11 @@
     </item>
     
     <item>
-      <title>JSON-RPC</title>
-      <link>https://hitzhangjie.github.io/tags/json-rpc/</link>
+      <title>jsonrpc</title>
+      <link>https://hitzhangjie.github.io/tags/jsonrpc/</link>
       <pubDate>Tue, 25 Aug 2020 12:21:14 +0800</pubDate>
       
-      <guid>https://hitzhangjie.github.io/tags/json-rpc/</guid>
+      <guid>https://hitzhangjie.github.io/tags/jsonrpc/</guid>
       <description></description>
     </item>
     
@@ -323,6 +314,15 @@
       <pubDate>Sun, 21 Jun 2020 13:04:45 +0800</pubDate>
       
       <guid>https://hitzhangjie.github.io/tags/%E7%88%B6%E4%BA%B2/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>debugger</title>
+      <link>https://hitzhangjie.github.io/tags/debugger/</link>
+      <pubDate>Tue, 09 Jun 2020 20:25:07 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/tags/debugger/</guid>
       <description></description>
     </item>
     

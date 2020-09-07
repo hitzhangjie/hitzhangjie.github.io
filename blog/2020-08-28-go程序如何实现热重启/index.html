@@ -214,7 +214,7 @@ div#st-2 .st-btn > img {
         </h2>
         <div class="post-data">
             发表时间：2020-08-28 <br> 
-            阅读时长：15 分钟 (7441字)
+            阅读时长：16 分钟 (7677字)
         </div>
 
         
@@ -299,6 +299,7 @@ div#st-2 .st-btn > img {
             <li><a href="#112-自定义atexit清理任务">11.2. 自定义AtExit清理任务</a></li>
           </ul>
         </li>
+        <li><a href="#12-其他">12. 其他</a></li>
         <li><a href="#参考文章">参考文章</a></li>
       </ul>
     </li>
@@ -326,10 +327,9 @@ div#st-2 .st-btn > img {
 <li>然后，子进程就绪之后，通知父进程；</li>
 <li>再然后，父进程处理完已建立连接上的请求后，慢慢退出。</li>
 </ul>
-<p>听上去是挺简单的，但是真的这么三言两语就说完了吗？No！</p>
-<p>这里，和具体采用的什么编程模型也有关系，下文如无特殊提及，所列出的操作均指在Linux平台上的操作。</p>
+<p>听上去是挺简单的&hellip;</p>
 <h3 id="21认识fork">2.1.认识fork</h3>
-<p><code>fork()</code> 系统调用大家都知道，父进程调用fork会创建一个进程副本，代码中还可以通过fork返回值是否为0来区分是子进程还是父进程。</p>
+<p>大家都知道<code>fork()</code> 系统调用，父进程调用fork会创建一个进程副本，代码中还可以通过fork返回值是否为0来区分是子进程还是父进程。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">char</span> <span style="color:#f92672">**</span>argv, <span style="color:#66d9ef">int</span> argc) {
     pid_t pid <span style="color:#f92672">=</span> fork();
     <span style="color:#66d9ef">if</span> (pid <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) {
@@ -340,21 +340,19 @@ div#st-2 .st-btn > img {
 }
 </code></pre></div><p>很多开发人员不知道fork的实现原理，或者不知道fork返回值为什么在父子进程中不同，或者不知道如何做到父子进程中返回值不同……了解这些还是要有点知识积累的。</p>
 <h3 id="22返回值">2.2.返回值</h3>
-<p>简单说吧，ABI往往定义了进行函数调用的一些规范，如何传递参数，如何返回值等等，以x86为例，返回值往往都是通过rax寄存器返回的，比如返回值类型是一些rax寄存器可以容纳的整数，这种好理解。</p>
-<p>还有一种是寄存器位宽无法容纳的数据类型，那返回值如何存储呢？其实也简单，编译器会安插些指令来完成这些神秘的操作，具体是什么指令，就跟编译器实现相关了。</p>
+<p>简单概括下，ABI定义了进行函数调用时的一些规范，如何传递参数，如何返回值等等，以x86为例，如果返回值是rax寄存器能够容的一般都是通过rax寄存器返回的。如果rax寄存器位宽无法容纳的下返回值呢？也简单，编译器会安插些指令来完成这些神秘的操作，具体是什么指令，就跟编译器实现相关了。</p>
 <ul>
 <li>可能会将返回值的地址，传递到rdi或其他寄存器，被调函数内部呢，通过多条指令将返回值写入rdi代指的内存区；</li>
 <li>也可能在被调函数内部，用多个寄存器rax,rdx&hellip;一起暂存返回结果，函数返回时再将多个寄存器的值赋值到变量中；</li>
 </ul>
-<p>附录1中提供了一个简单的实例。</p>
 <h3 id="23fork返回值">2.3.fork返回值</h3>
 <p>fork系统调用的返回值，有点特殊，在父进程和子进程中，这个函数返回的值是不同的，如何做到的呢？</p>
-<p>其实，你想啊，父进程调用fork的时候，操作系统内核需要干些什么呢？分配进程控制块、分配pid、分配内存空间……肯定有很多东西啦，这里注意下进程的硬件上下文信息，这些是非常重要的，在进程被调度算法选中进行调度时，是需要还原硬件上下文信息的。</p>
+<p>联想下父进程调用fork的时候，操作系统内核需要干些什么呢？分配进程控制块、分配pid、分配内存空间……肯定有很多东西啦，这里注意下进程的硬件上下文信息，这些是非常重要的，在进程被调度算法选中进行调度时，是需要还原硬件上下文信息的。</p>
 <p>哎，对了，就是这玩意，Linux fork的时候，会对子进程的硬件上下文进行一定的篡改，我就是让你fork之后拿到的pid是0，怎么办呢？前面2.2节提过了，对于那些小整数，rax寄存器存下绰绰有余，fork返回时就是将操作系统分配的pid放到rax寄存器的。</p>
 <p>那，对于子进程而言，我只要在fork的时候将它的硬件上下文rax寄存器清0，然后等其他设置全ok后，再将其状态从不可中断等待状态修改为可运行状态，等其被调度器调度时，会先还原其硬件上下文信息，包括PC、rax等等，这样fork返回后，rax中值为0，最终赋值给pid的值就是0。</p>
 <p>因此，也就可以通过这种判断 “pid是否等于0” 的方式来区分当前进程是父进程还是子进程了。</p>
 <h3 id="24局限性">2.4.局限性</h3>
-<p>很多人只知道fork可以创建一个进程的副本并继续往下执行，可以根据fork返回值来执行不同的分支逻辑。你再问他，如果一个进程是多线程程序，在一个线程中调用fork会复制整个进程吗？他很可能就答不上来了。</p>
+<p>很多人清楚fork可以创建一个进程的副本并继续往下执行，可以根据fork返回值来执行不同的分支逻辑。如果进程是多线程的，在一个线程中调用fork会复制整个进程吗？</p>
 <p>fork只能创建调用该函数的线程的副本，进程中其他运行的线程，fork不予处理。这就意味着，对于多线程程序而言，寄希望于通过fork来创建一个完整进程副本是不可行的。</p>
 <p>前面我们也提到了，fork是实现热重启的重要一环，fork这里的这个局限性，就制约着不同服务编程模型下的热重启实现方式。所以我们说具体问题具体分析，不同编程模型下实际上可以采用不同的实现方式。</p>
 <h2 id="3单进程单线程模型">3.单进程单线程模型</h2>
@@ -414,7 +412,7 @@ div#st-2 .st-btn > img {
 <h2 id="9-go实现热重启-传递listenfd">9. go实现热重启: 传递listenfd</h2>
 <p>go里面传递fd的方式，有这么几种，父进程fork子进程的时候传递fd，或者后面通过unix domain socket传递。需要注意的是，我们传递的实际上是file description，而非file descriptor。</p>
 <p>附上一张类unix系统下file descriptor、file description、inode三者之间的关系图：
-<img src="/blog/assets/restart/filedescriptor.png" alt="file descriptor"></p>
+<img src="http://km.oa.com/files/photos/pictures/202008/1598592622_18_w2034_h1650.png" alt="enter image description here"></p>
 <p>fd分配都是从小到大分配的，父进程中的fd为10，传递到子进程中之后有可能就不是10。那么传递到子进程的fd是否是可以预测的呢？可以预测，但是不建议预测，所以我提供了两种实现方式。</p>
 <h3 id="91-forkexecprocattrfiles-uintptr">9.1 ForkExec+ProcAttr{Files: []uintptr{}}</h3>
 <p>要传递一个listenfd很简单，假如是类型net.Listener，那就通过<code>tcpln := ln.(*net.TCPListener); file, _ := tcpln.File(); fd := file.FD()</code> 来拿到listener底层file description对应的fd。</p>
@@ -425,7 +423,7 @@ div#st-2 .st-btn > img {
 <p>父子进程可以通过一个约定的顺序，来组织传递的listenfd的顺序，以方便子进程中按相同的约定进行处理，当然也可以通过fd重建listener之后来判断对应的监听network+address，以区分该listener对应的是哪一个逻辑service。都是可以的！</p>
 <p>需要注意的是，file.FD()返回的fd是非阻塞的，在重建listener先将其设为nonblock, syscall.SetNonBlock(fd)，然后<code>file, _ := os.NewFile(fd); tcplistener := net.FileListener(file)</code>，或者是 <code>udpconn := net.PacketConn(file)</code>，然后可以获取tcplistener、udpconn的监听地址，来关联其对应的逻辑service。</p>
 <p>有些微服务框架是支持对服务进行逻辑service分组的，google pb规范中也支持多service定义，这个在腾讯的goneat、trpc框架中也是有支持的。</p>
-<p>当然了，这里我不会写一个完整的包含上述所有描述的demo给大家，这有点占篇幅，这里只贴一个精简版的实例，其他的读者感兴趣可以自己编码测试。须知纸上得来终觉浅，该你自己掌握的我不能效劳。</p>
+<p>当然了，这里我不会写一个完整的包含上述所有描述的demo给大家，这有点占篇幅，这里只贴一个精简版的实例，其他的读者感兴趣可以自己编码测试。须知纸上得来终觉浅，还是要多实践。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
 
 <span style="color:#f92672">import</span> (
@@ -493,12 +491,10 @@ div#st-2 .st-btn > img {
 		}
 		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Print</span>(<span style="color:#e6db74">&#34;child pid:&#34;</span>, <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Getpid</span>(), <span style="color:#e6db74">&#34;, recv fd:&#34;</span>, <span style="color:#a6e22e">fd</span>)
 
-		<span style="color:#75715e">// test1
+		<span style="color:#75715e">// case1: 理解上面提及的file descriptor、file description的关系
+</span><span style="color:#75715e"></span>		<span style="color:#75715e">// 这里子进程集成了父进程中传递过来的一些fd，但是fd数值与父进程中是不同的
 </span><span style="color:#75715e"></span>
-        <span style="color:#75715e">// NOTE: 理解上面提及的file descriptor、file description的关系
-</span><span style="color:#75715e"></span>        <span style="color:#75715e">//
-</span><span style="color:#75715e"></span>		<span style="color:#75715e">// 通过环境变量肯定是不行的，fd根本不对应子进程中的fd
-</span><span style="color:#75715e"></span>		<span style="color:#75715e">//ff := os.NewFile(uintptr(fd), &#34;&#34;)
+		<span style="color:#75715e">//ff := os.NewFile(uintptr(fd), &#34;&#34;)
 </span><span style="color:#75715e"></span>		<span style="color:#75715e">//if ff != nil {
 </span><span style="color:#75715e"></span>		<span style="color:#75715e">//	_, err := ff.Stat()
 </span><span style="color:#75715e"></span>		<span style="color:#75715e">//	if err != nil {
@@ -506,9 +502,7 @@ div#st-2 .st-btn > img {
 </span><span style="color:#75715e"></span>		<span style="color:#75715e">//	}
 </span><span style="color:#75715e"></span>		<span style="color:#75715e">//}
 </span><span style="color:#75715e"></span>
-		<span style="color:#75715e">// test2
-</span><span style="color:#75715e"></span>
-		<span style="color:#75715e">// 假定我们知道fd是多少，比如fd=3
+		<span style="color:#75715e">// case2: 假定父进程中共享了fd 0\1\2\listenfd给子进程，那再子进程中可以预测到listenfd=3
 </span><span style="color:#75715e"></span>		<span style="color:#a6e22e">ff</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">NewFile</span>(uintptr(<span style="color:#ae81ff">3</span>), <span style="color:#e6db74">&#34;&#34;</span>)
 		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;fd:&#34;</span>, <span style="color:#a6e22e">ff</span>.<span style="color:#a6e22e">Fd</span>())
 		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">ff</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
@@ -517,7 +511,7 @@ div#st-2 .st-btn > img {
 				panic(<span style="color:#a6e22e">err</span>)
 			}
 
-			<span style="color:#75715e">// pause, lsof -P -p $pid，检查下有没有listenfd传过来，除了0，1，2，应该有看到3
+			<span style="color:#75715e">// 这里pause, 运行命令lsof -P -p $pid，检查下有没有listenfd传过来，除了0，1，2，应该有看到3
 </span><span style="color:#75715e"></span>            <span style="color:#75715e">// ctrl+d to continue
 </span><span style="color:#75715e"></span>			<span style="color:#a6e22e">ioutil</span>.<span style="color:#a6e22e">ReadAll</span>(<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stdin</span>)
 
@@ -527,7 +521,7 @@ div#st-2 .st-btn > img {
 				panic(<span style="color:#a6e22e">err</span>)
 			}
 
-			<span style="color:#75715e">// pause, lsof -P -p $pid, 会发现有两个listenfd, 
+			<span style="color:#75715e">// 这里pause, 运行命令lsof -P -p $pid, 会发现有两个listenfd,
 </span><span style="color:#75715e"></span>            <span style="color:#75715e">// 因为前面调用了ff.FD() dup2了一个，如果这里不显示关闭，listener将无法关闭
 </span><span style="color:#75715e"></span>			<span style="color:#a6e22e">ff</span>.<span style="color:#a6e22e">Close</span>()
 
@@ -537,8 +531,9 @@ div#st-2 .st-btn > img {
 		<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Sleep</span>(<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Minute</span>)
 	}
 }
-</code></pre></div><p>这里用最简单的代码，大致解释了如何用ProcAttr来传递listenfd。这里有个缺点，加入后续父进程中将传递的fd修改了呢，比如我不传stdin, stdout, stderr的fd了，咋治？服务端是不是要开始预测应该从0开始编号了？其实这里的预测有点挫，在类unix平台下虽然可以比较可靠的预测出来fd，但毕竟也算是个hack逻辑。</p>
-<p>私以为这种实现有点丑，不推荐。</p>
+</code></pre></div><p>这里用最简单的代码，大致解释了如何用ProcAttr来传递listenfd。这里有个问题，假如后续父进程中传递的fd修改了呢，比如不传stdin, stdout, stderr的fd了，怎么办？服务端是不是要开始预测应该从0开始编号了？我们可以通过环境变量通知子进程，比如传递的fd从哪个编号开始是listenfd，一共有几个listenfd，这样也是可以实现的。</p>
+<p>这种实现方式可以跨平台。</p>
+<p>感兴趣的话，可以看下facebook提供的这个实现<a href="https://github.com/facebookarchive/grace">grace</a>，也感谢 @polli 同学的补充。</p>
 <h3 id="92-unix-domain-socket--cmsg">9.2 unix domain socket + cmsg</h3>
 <p>另一种，思路就是通过unix domain socket + cmsg来传递，父进程启动的时候依然是通过ForkExec来创建子进程，但是并不通过ProcAttr来传递listenfd。</p>
 <p>父进程在创建子进程之前，创建一个unix domain socket并监听，等子进程启动之后，建立到这个unix domain socket的连接，父进程此时开始将listenfd通过cmsg发送给子进程，获取fd的方式与9.1相同，该注意的fd关闭问题也是一样的处理。</p>
@@ -630,9 +625,7 @@ div#st-2 .st-btn > img {
 		}
 		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Print</span>(<span style="color:#e6db74">&#34;child pid:&#34;</span>, <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Getpid</span>(), <span style="color:#e6db74">&#34;, recv fd:&#34;</span>, <span style="color:#a6e22e">fd</span>)
 
-		<span style="color:#75715e">// test1
-</span><span style="color:#75715e"></span>
-		<span style="color:#75715e">// 通过环境变量肯定是不行的，fd根本不对应子进程中的fd
+		<span style="color:#75715e">// case1: 有些同学觉得可以通过环境变量传fd，通过环境变量肯定是不行的，fd根本不对应子进程中的fd
 </span><span style="color:#75715e"></span>		<span style="color:#75715e">//ff := os.NewFile(uintptr(fd), &#34;&#34;)
 </span><span style="color:#75715e"></span>		<span style="color:#75715e">//if ff != nil {
 </span><span style="color:#75715e"></span>		<span style="color:#75715e">//	_, err := ff.Stat()
@@ -641,10 +634,9 @@ div#st-2 .st-btn > img {
 </span><span style="color:#75715e"></span>		<span style="color:#75715e">//	}
 </span><span style="color:#75715e"></span>		<span style="color:#75715e">//}
 </span><span style="color:#75715e"></span>
-		<span style="color:#75715e">// test2
+		<span style="color:#75715e">// case2: 有些同学觉得如果只有一个listenfd的情况下，那如果fork子进程时保证只传0\1\2\listenfd，那子进程中listenfd一定是3
 </span><span style="color:#75715e"></span>
-		<span style="color:#75715e">// 假定我们知道fd是多少，比如fd=3
-</span><span style="color:#75715e"></span>		<span style="color:#75715e">//ff := os.NewFile(uintptr(3), &#34;&#34;)
+		<span style="color:#75715e">//ff := os.NewFile(uintptr(3), &#34;&#34;)
 </span><span style="color:#75715e"></span>		<span style="color:#75715e">//if ff != nil {
 </span><span style="color:#75715e"></span>		<span style="color:#75715e">//	_, err := ff.Stat()
 </span><span style="color:#75715e"></span>		<span style="color:#75715e">//	if err != nil {
@@ -662,11 +654,12 @@ div#st-2 .st-btn > img {
 </span><span style="color:#75715e"></span>		<span style="color:#75715e">//	time.Sleep(time.Minute)
 </span><span style="color:#75715e"></span>		<span style="color:#75715e">//}
 </span><span style="color:#75715e"></span>
-		<span style="color:#75715e">// test 3
+		<span style="color:#75715e">// 这里我们暂停下，方便运行系统命令来查看进程当前的一些状态
+</span><span style="color:#75715e"></span>        <span style="color:#75715e">// run: lsof -P -p $pid，检查下listenfd情况
 </span><span style="color:#75715e"></span>
 		<span style="color:#a6e22e">ioutil</span>.<span style="color:#a6e22e">ReadAll</span>(<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stdin</span>)
-		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;.....&#34;</span>) <span style="color:#75715e">// lsof -P -p $pid，检查下
-</span><span style="color:#75715e"></span>
+		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;.....&#34;</span>)
+
 		<span style="color:#a6e22e">unixconn</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Dial</span>(<span style="color:#e6db74">&#34;unix&#34;</span>, <span style="color:#a6e22e">unixsockname</span>)
 		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
 			panic(<span style="color:#a6e22e">err</span>)
@@ -677,7 +670,7 @@ div#st-2 .st-btn > img {
 			panic(<span style="color:#a6e22e">err</span>)
 		}
 
-		<span style="color:#75715e">// lsof -P -p $pid再检查下
+		<span style="color:#75715e">// 这里再运行命令：lsof -P -p $pid再检查下listenfd情况
 </span><span style="color:#75715e"></span>
 		<span style="color:#a6e22e">f</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">files</span>[<span style="color:#ae81ff">0</span>]
 		<span style="color:#a6e22e">f</span>.<span style="color:#a6e22e">Stat</span>()
@@ -685,7 +678,8 @@ div#st-2 .st-btn > img {
 		<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Sleep</span>(<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Minute</span>)
 	}
 }
-</code></pre></div><h2 id="10-go实现热重启-子进程如何通过listenfd重建listener">10. go实现热重启: 子进程如何通过listenfd重建listener</h2>
+</code></pre></div><p>这种实现方式，仅限类unix系统。</p>
+<h2 id="10-go实现热重启-子进程如何通过listenfd重建listener">10. go实现热重启: 子进程如何通过listenfd重建listener</h2>
 <p>前面已经提过了，当你已经拿到fd之后，你还不知道他对应的是tcp的listener，还是udpconn，那怎么办？都试下呗。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">file</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">NewFile</span>(<span style="color:#a6e22e">fd</span>)
 <span style="color:#75715e">// check error
@@ -713,10 +707,11 @@ div#st-2 .st-btn > img {
 <h3 id="112-自定义atexit清理任务">11.2. 自定义AtExit清理任务</h3>
 <p>有些任务会有些自定义任务，希望进程在退出之前，能够执行到，这种最好提供一各类似AtExit的注册函数，让进程退出之前能够执行业务自定义的逻辑。</p>
 <p>不管是平滑重启，还是其他正常退出，&hellip;</p>
+<h2 id="12-其他">12. 其他</h2>
+<p>有些场景下也希望传递connfd，传递的时候可能conn上还在收数据，比如连接复用的时候，这个时候需要关注的点更多，处理起来更复杂，mosn在传递connfd的时候还会将buffer数据也传递给子进程。</p>
 <h2 id="参考文章">参考文章</h2>
 <ol>
 <li>Unix高级编程、进程间通信, Steven Richards</li>
-<li>&hellip;</li>
 </ol>
 
         </div>

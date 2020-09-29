@@ -6,7 +6,7 @@
     <description>Recent content on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Sun, 20 Sep 2020 23:49:52 +0800</lastBuildDate>
+    <lastBuildDate>Mon, 28 Sep 2020 22:18:43 +0800</lastBuildDate>
     
 	<atom:link href="https://hitzhangjie.github.io/index.xml" rel="self" type="application/rss+xml" />
     
@@ -36,6 +36,15 @@
       
       <guid>https://hitzhangjie.github.io/projects/design/</guid>
       <description>生活中从来不缺乏创意，缺乏的是创意可靠落地的计划。 Go on, explore your ideas! 💪 Go on, stick to your dream! 👍</description>
+    </item>
+    
+    <item>
+      <title>go源码剖析 - go命令</title>
+      <link>https://hitzhangjie.github.io/blog/2020-09-28-go%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-go%E5%91%BD%E4%BB%A4/</link>
+      <pubDate>Mon, 28 Sep 2020 22:18:43 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-09-28-go%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-go%E5%91%BD%E4%BB%A4/</guid>
+      <description>1. 本文简介 首先我们看下go命令行有哪些功能，运行go help可以查看go命令的详细帮助信息，go命令有很多子命令，每个子命令有特定的功能。go命令功能之丰富涵盖了源文件编译、汇编、连接、反汇编、逃逸分析、代码生成、模块解析等等非常系统性的功能，了解go命令的实现将有助于系统性掌握整个go编译工具链。本文介绍下go命令的详细功能及大致实现，供后续参考。 2. go子命令列表 go支持的子命令列表如下，下面我们逐一来简单说下。 bug, start a bug report build, compile packages and dependencies clean, remove object files and cached files doc, show documentation for package or symbol env, print Go environment information fix, update packages to use new APIs fmt, gofmt (reformat) package sources generate, generate Go files by processing</description>
     </item>
     
     <item>

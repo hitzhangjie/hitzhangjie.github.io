@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+    <head>
+        
+        <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Web站点描述">
+<title>
+go源码剖析 - go命令 - 介绍
+</title>
+
+
+
+
+<script type="text/javascript" src="https://platform-api.sharethis.com/js/sharethis.js#property=5f24f50fc2418c0012d52ac3&product=inline-share-buttons" async="async">
+</script>
+
+<style>
+ 
+[alt~=sharing] {
+    border: 0px;
+    box-shadow: none;
+}
+div#st-1 {
+    text-align: unset;
+}
+
+ 
+div#st-1 .st-btn {
+    height: 24px;
+    padding: 0 4px;
+}
+
+div#st-1 .st-btn > img {
+    top: 4.2px;
+}
+
+div#st-2 .st-btn {
+    height: 24px;
+    padding: 0 4px;
+}
+
+div#st-2 .st-btn > img {
+    top: 4.2px;
+}
+</style>
+
+
+
+
+
+
+
+        <meta property="og:title" content="go源码剖析 - go命令 - 介绍" />
+<meta property="og:type" content="website" />
+<meta property="og:description" content="Web站点描述"/>
+<meta property="og:url" content="https://hitzhangjie.github.io/blog/2020-09-28-go%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-go%E5%91%BD%E4%BB%A4/"/>
+<meta property="og:site_name" content="介绍"/>
+
+
+
+
+<meta property="og:image" content="https://hitzhangjie.github.io/home/me.jpg"/>
+
+<meta property="og:image" content="https://hitzhangjie.github.io/home/profile.jpg"/>
+
+
+
+
+        
+<link rel="shortcut icon" href="/img/fav.ico">
+
+
+        
+
+
+
+
+
+<link rel="stylesheet" href="/css/main.min.daa833377fb1636f8cbfa65c601050bb5475623deb7aa6e6fdde94a064a6185d.css" integrity="sha256-2qgzN3&#43;xY2&#43;Mv6ZcYBBQu1R1Yj3reqbm/d6UoGSmGF0=" crossorigin="anonymous" media="screen">
+
+
+
+
+    <link rel="stylesheet" href="/custom.css" integrity="" crossorigin="anonymous" media="screen">
+
+        
+        
+        
+        
+    </head>
+    <body>
+        <section id="top" class="section">
+            
+            <div class="container hero  fade-in one ">
+                
+
+    <h1 class="bold-title is-1">博客</h1>
+
+
+            </div>
+            
+            <div class="section  fade-in two ">
+                
+<div class="container">
+    <hr>
+    <nav class="navbar" role="navigation" aria-label="main navigation">
+        
+        <a role="button" class="navbar-burger" data-target="navMenu" aria-label="menu" aria-expanded="false" >
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </a>
+        <div class="navbar-menu " id="navMenu">
+            
+            
+            
+            
+            <a class="navbar-item" href="/">主页</a>
+            
+
+            
+            
+
+            
+                
+            
+
+            
+                
+            
+
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://hitzhangjie.github.io/projects/">
+                  
+                  项目
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://hitzhangjie.github.io/blog/">
+                  
+                  返回 博客
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#about">关于</a>
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#thanks">致谢</a>
+            
+            
+            
+            
+
+            
+            
+            <a class="navbar-item" href="/#contact">联系方式</a>
+            
+            
+
+            
+            
+            
+            
+            <a class="navbar-item" href="https://hitzhangjie.github.io/en/">English</a>
+            
+            
+
+            
+            
+        </div>
+    </nav>
+    <hr>
+</div>
+
+
+
+                
+    <div class="container">
+
+        <h2 class="title is-1 top-pad strong-post-title">
+            <a href="https://hitzhangjie.github.io/blog/2020-09-28-go%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-go%E5%91%BD%E4%BB%A4/">go源码剖析 - go命令</a>
+        </h2>
+        <div class="post-data">
+            发表时间：2020-09-28 <br> 
+            阅读时长：4 分钟 (1963字)
+        </div>
+
+        
+        <div>
+            <div>
+            
+            
+            <p>
+                标签：
+                
+                <a href="/tags/go">go</a>,
+                
+                <a href="/tags/toolchain">toolchain</a>
+                
+            </p>
+            
+            </div>
+
+            <div>
+            <br>
+            
+
+
+<div style="display:flex;">
+    <div>分享：</div>
+    <div>
+        <div class="sharethis-inline-share-buttons"></div>
+    </div>
+</div>
+
+
+            </div>
+
+        </div>
+
+        
+        
+
+        
+        <div> 
+            
+
+        </div>
+   
+        
+        <div class="container markdown top-pad">
+            <h2 id="1-本文简介">1. 本文简介</h2>
+<p>首先我们看下go命令行有哪些功能，运行<code>go help</code>可以查看go命令的详细帮助信息，go命令有很多子命令，每个子命令有特定的功能。go命令功能之丰富涵盖了源文件编译、汇编、连接、反汇编、逃逸分析、代码生成、模块解析等等非常系统性的功能，了解go命令的实现将有助于系统性掌握整个go编译工具链。本文介绍下go命令的详细功能及大致实现，供后续参考。</p>
+<h2 id="2-go子命令列表">2. go子命令列表</h2>
+<p>go支持的子命令列表如下，下面我们逐一来简单说下。</p>
+<ul>
+<li>bug, start a bug report</li>
+<li>build, compile packages and dependencies</li>
+<li>clean, remove object files and cached files</li>
+<li>doc, show documentation for package or symbol</li>
+<li>env, print Go environment information</li>
+<li>fix, update packages to use new APIs</li>
+<li>fmt, gofmt (reformat) package sources</li>
+<li>generate, generate Go files by processing source</li>
+<li>get, add dependencies to current module and install them</li>
+<li>install, compile and install packages and dependencies</li>
+<li>list, list packages or modules</li>
+<li>mod, module maintenance</li>
+<li>run, compile and run Go program</li>
+<li>test, test packages</li>
+<li>tool, run specified go tool</li>
+<li>version, print Go version</li>
+<li>vet, report likely mistakes in packages</li>
+</ul>
+<h2 id="3-go-subcmds">3. go subcmds</h2>
+<h3 id="go-bug">go bug</h3>
+<p><code>go bug</code>，用于快速创建bug report。</p>
+<p>作为开源项目的维护人员，非常希望开发人员“会”提问题！为什么这么说呢，就是因为如果不会提问题、问问题，沟通成本就会非常高，这对于开源项目维护人员来说，时间上是个极大的浪费。</p>
+<p>在腾讯我也参与维护了好几个比较大型的开源项目，经常受到一些同学的问题，很多时候我真的感谢求学阶段长时间泡stackoverflow的经历，stackoverflow上教会了我怎么提问题，这个在我后面学习、沟通、检索、开源协同中起到了很重要的作用。</p>
+<p>为了降低沟通成本，go bug内部定义了一个issue模板（其实github也支持定义模板），包括了几个部分：问题简述、go版本、go env信息、执行的操作、期望的结果、实际的结果。这里呢，为了保护go issuer的体验，go bug会自动获取go环境信息，填充到issue模板中，这里的内容将作为issue的body部分。</p>
+<p>接下来会判断go issuer当前系统信息，并决定如何打开web浏览器，浏览器打开一个issue创建页面，通过GET参数填充issue的body，一个简单的issue基本信息就填充完成了。go issuer只需要填充下标题、问题简述、执行操作、期望结果、实际结果就创建完成了。</p>
+<h3 id="go-build">go build</h3>
+<h3 id="go-clean">go clean</h3>
+<p>我们在编译构建的过程中，一般都会生成一些临时文件，比如.o文件，如果是使用Makefile管理工程构建的时候一般会定义个PHONY Target clean，通过make clean来清理临时文件、目标文件、程序等，MVN构建也会定义clean这样的target，go也不例外。</p>
+<p><code>go build</code>，编译输出可执行程序，<code>go install</code>还会将可执行程序安装到GOBIN或者GOPATH/bin，那现在要清理的话，<code>go clean</code>会清理当前module下的编译产物，<code>go clean -i</code>还会把安装到GOBIN或者GOPATH/bin下安装的程序给清理掉，另外go modules之间也有依赖关系，<code>go clean -r</code>还可以递归地清理依赖产物。</p>
+<p>举个例子，假如现在有个工程目录叫hello，那么在该工程目录下执行go clean，将清理目录下的下述文件：hello, hello.exe, hello.test, hello.test.exe, main, main.exe, main.test, main.test.exe。那假如hello目录下go.mod定义的module是a.b.c呢？会清理a.b.c, a.b.c.exe, a.b.c.test, a.b.c.test.exe吗？不会！但是go clean -i会从GOBIN或GOPATH/bin下清理这些文件。为啥？目前go clean就是这么实现的。</p>
+<p>hitzhangjie/go@orz分支，我稍微修改了下，实现了清理${module}, ${module}.exe的功能。</p>
+<h3 id="go-doc">go doc</h3>
+<h3 id="go-env">go env</h3>
+<h3 id="go-fix">go fix</h3>
+<p>一门快速演进中的编程语言也会面临一些调整的时候，如果发生了变化，比如将golang.org/x/tools/net/context内容转移到标准库context中，可能已经存在一些存量代码了，或者说开发者已经习惯了使用老的import的包路径了，那怎么办呢？想让开发者付出最小的迁移成本而转到使用最新的标准库context上来。go fix就是干这个事情的。</p>
+<p>fix命令执行的时候会检查当前支持那些修复操作，每一个修复操作都指定了要搜索的代码，以及要替换成的代码，比如上面提及的context包导入路径的问题。fix命令会首先解析源文件得到抽象语法树AST，然后基于对AST的操作，搜索出可以修复的问题代码，然后将其替换成对应的新代码，然后再将AST转换成代码输出到源文件中。</p>
+<p>这大概就是go fix (go tool fix) 的一个执行过程，${GOROOT}/pkg/tool/darwin_amd64/下保存了go tool对应的一些工具，如fix，vet等，运行go vet, go fix就会最终转换成执行上述路径下的vet、fix命令。<code>go fix</code>的入口在${GOROOT}/src/cmd/go/fix/fix.go，实际调用的是<code>go tool fix</code>，其入口在`${GOROOT}/src/cmd/fix/main.go。</p>
+<h3 id="go-fmt">go fmt</h3>
+<h3 id="go-generate">go generate</h3>
+<h3 id="go-get">go get</h3>
+<h3 id="go-install">go install</h3>
+<h3 id="go-list">go list</h3>
+<h3 id="go-mod">go mod</h3>
+<h3 id="go-run">go run</h3>
+<h3 id="go-test">go test</h3>
+<h3 id="go-tool">go tool</h3>
+<h3 id="go-version">go version</h3>
+<h3 id="go-vet">go vet</h3>
+<h2 id="4-总结">4. 总结</h2>
+
+        </div>
+        
+
+        
+        <hr>
+        <div style="float:right;">
+        
+
+
+<div style="display:flex;">
+    <div>分享：</div>
+    <div>
+        <div class="sharethis-inline-share-buttons"></div>
+    </div>
+</div>
+
+
+        </div>
+
+        <br>
+        <br>
+
+    </div>
+
+    
+    
+    <br>
+    <br>
+    <div style="height:auto;align:center;text-align:center;"> 
+        <div>
+            <img src="/common/xiaoqi.png" style="height:238px;margin-top:10px;margin-right:5px;"/>
+            <img src="/common/qrcode.jpg" style="height:238px;margin-top:10px;"/>
+            <img src="/common/yuanbao.png" style="height:238px;margin-top:10px;margin-left:5px;"/>
+        </div>
+
+        <div>
+            <p>
+                感谢打赏，小七🐶、元宝🐱可以改善伙食咯 😘
+            </p>
+        </div>
+
+
+    </div>
+    
+
+    
+
+
+                
+                <div class="container">
+    <hr>
+</div>
+<div class="container has-text-centered top-pad">
+    <a href="#top">
+        <i class="fa fa-arrow-up"></i>
+    </a>
+</div>
+
+<div class="container">
+    <hr>
+</div>
+
+                <div class="section" id="footer">
+    <div class="container has-text-centered">
+    
+        <span class="footer-text">
+            <a href="https://github.com/victoriadrake/hugo-theme-introduction/"><strong>Introduction</strong></a> 主题为 <a href="http://gohugo.io/">Hugo</a> 而设。由开源社群贡献者以 <a href="https://victoria.dev"><i class="fa fa-heart"></i> 和 <i class="fa fa-coffee"></i></a> 创造。
+        </span>
+    
+    </div>
+</div>
+
+                
+            </div>
+        </section>
+        
+        
+
+
+
+
+
+<script src="https://hitzhangjie.github.io/js/bundle.23f18222425179f754965a36c9b211bd8cff5e5ab61ee23b52f026cef6699139.js" integrity="sha256-I/GCIkJRefdUllo2ybIRvYz/Xlq2HuI7UvAmzvZpkTk="></script>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-168027530-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+        
+        
+        
+        
+    </body>
+</html>

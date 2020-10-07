@@ -6,7 +6,7 @@
     <description>Recent content in Tags on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Mon, 28 Sep 2020 22:18:43 +0800</lastBuildDate>
+    <lastBuildDate>Tue, 06 Oct 2020 23:13:52 +0800</lastBuildDate>
     
 	<atom:link href="https://hitzhangjie.github.io/tags/index.xml" rel="self" type="application/rss+xml" />
     
@@ -14,9 +14,36 @@
     <item>
       <title>go</title>
       <link>https://hitzhangjie.github.io/tags/go/</link>
-      <pubDate>Mon, 28 Sep 2020 22:18:43 +0800</pubDate>
+      <pubDate>Tue, 06 Oct 2020 23:13:52 +0800</pubDate>
       
       <guid>https://hitzhangjie.github.io/tags/go/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>sequence diagram</title>
+      <link>https://hitzhangjie.github.io/tags/sequence-diagram/</link>
+      <pubDate>Tue, 06 Oct 2020 23:13:52 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/tags/sequence-diagram/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>uml</title>
+      <link>https://hitzhangjie.github.io/tags/uml/</link>
+      <pubDate>Tue, 06 Oct 2020 23:13:52 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/tags/uml/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>visualize</title>
+      <link>https://hitzhangjie.github.io/tags/visualize/</link>
+      <pubDate>Tue, 06 Oct 2020 23:13:52 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/tags/visualize/</guid>
       <description></description>
     </item>
     
@@ -683,6 +710,15 @@
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
       <guid>https://hitzhangjie.github.io/tags/desktop/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>go/ast</title>
+      <link>https://hitzhangjie.github.io/tags/go/ast/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/tags/go/ast/</guid>
       <description></description>
     </item>
     

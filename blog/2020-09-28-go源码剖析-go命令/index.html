@@ -214,7 +214,7 @@ div#st-2 .st-btn > img {
         </h2>
         <div class="post-data">
             发表时间：2020-09-28 <br> 
-            阅读时长：4 分钟 (1963字)
+            阅读时长：5 分钟 (2041字)
         </div>
 
         
@@ -303,6 +303,7 @@ div#st-2 .st-btn > img {
 <p>一门快速演进中的编程语言也会面临一些调整的时候，如果发生了变化，比如将golang.org/x/tools/net/context内容转移到标准库context中，可能已经存在一些存量代码了，或者说开发者已经习惯了使用老的import的包路径了，那怎么办呢？想让开发者付出最小的迁移成本而转到使用最新的标准库context上来。go fix就是干这个事情的。</p>
 <p>fix命令执行的时候会检查当前支持那些修复操作，每一个修复操作都指定了要搜索的代码，以及要替换成的代码，比如上面提及的context包导入路径的问题。fix命令会首先解析源文件得到抽象语法树AST，然后基于对AST的操作，搜索出可以修复的问题代码，然后将其替换成对应的新代码，然后再将AST转换成代码输出到源文件中。</p>
 <p>这大概就是go fix (go tool fix) 的一个执行过程，${GOROOT}/pkg/tool/darwin_amd64/下保存了go tool对应的一些工具，如fix，vet等，运行go vet, go fix就会最终转换成执行上述路径下的vet、fix命令。<code>go fix</code>的入口在${GOROOT}/src/cmd/go/fix/fix.go，实际调用的是<code>go tool fix</code>，其入口在`${GOROOT}/src/cmd/fix/main.go。</p>
+<p>ps: <code>go fix</code>的内部实现，是基于go/ast实现，通过对源码进行语法分析构建ast，通过对ast进行查找、修改，完成对代码的调整，最后再将ast转换为源码输出。</p>
 <h3 id="go-fmt">go fmt</h3>
 <h3 id="go-generate">go generate</h3>
 <h3 id="go-get">go get</h3>

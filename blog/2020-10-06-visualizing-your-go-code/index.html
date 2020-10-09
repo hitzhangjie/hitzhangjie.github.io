@@ -214,7 +214,7 @@ div#st-2 .st-btn > img {
         </h2>
         <div class="post-data">
             发表时间：2020-10-06 <br> 
-            阅读时长：9 分钟 (4435字)
+            阅读时长：9 分钟 (4484字)
         </div>
 
         
@@ -386,6 +386,7 @@ goast-viewer: <a href="https://yuroyoro.github.io/goast-viewer/index.html">https
 <li>go标准库有频率不高的package迁移、方法签名变化、其他情况，<code>go fix</code>实现了旧代码像新代码的快速迁移，其实就是通过对AST操作实现的；</li>
 <li>代码中检测error处理、是否有合理注释等，也可以基于AST进行分析，开发可能一不小心忽略对error处理、goroutine panic处理，有些三方库就可以基于AST分析有没有上述情况，以对源码中的问题进行自动修复；</li>
 <li>提取关键操作信息进行可视化，如<a href="https://infinityworks.com/insights/sequence-diagrams/">apitest.dev</a>将HTTP操作、DB操作作为重点关注对象对代码中的相关交互进行提取、可视化展示，<a href="https://ballerina.io/">Ballerina</a>框架中也有类似实现。</li>
+<li>提取关键的网络调用操作，自动化opentracing埋点，<a href="https://developers.mattermost.com/blog/instrumenting-go-code-via-ast/">Instrumenting Go code via AST</a>。</li>
 <li>其他；</li>
 </ul>
 <p>可见了解 go/ast，将有助于我们更好地理解代码，并作出一些更有创意的工具。</p>

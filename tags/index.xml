@@ -6,10 +6,37 @@
     <description>Recent content in Tags on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Tue, 06 Oct 2020 23:13:52 +0800</lastBuildDate>
+    <lastBuildDate>Fri, 16 Oct 2020 21:07:45 +0800</lastBuildDate>
     
 	<atom:link href="https://hitzhangjie.github.io/tags/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>代码规范</title>
+      <link>https://hitzhangjie.github.io/tags/%E4%BB%A3%E7%A0%81%E8%A7%84%E8%8C%83/</link>
+      <pubDate>Fri, 16 Oct 2020 21:07:45 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/tags/%E4%BB%A3%E7%A0%81%E8%A7%84%E8%8C%83/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>代码质量</title>
+      <link>https://hitzhangjie.github.io/tags/%E4%BB%A3%E7%A0%81%E8%B4%A8%E9%87%8F/</link>
+      <pubDate>Fri, 16 Oct 2020 21:07:45 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/tags/%E4%BB%A3%E7%A0%81%E8%B4%A8%E9%87%8F/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>可读性</title>
+      <link>https://hitzhangjie.github.io/tags/%E5%8F%AF%E8%AF%BB%E6%80%A7/</link>
+      <pubDate>Fri, 16 Oct 2020 21:07:45 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/tags/%E5%8F%AF%E8%AF%BB%E6%80%A7/</guid>
+      <description></description>
+    </item>
     
     <item>
       <title>go</title>
@@ -467,15 +494,6 @@
       <pubDate>Tue, 10 Sep 2019 17:26:01 +0800</pubDate>
       
       <guid>https://hitzhangjie.github.io/tags/google/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>代码质量</title>
-      <link>https://hitzhangjie.github.io/tags/%E4%BB%A3%E7%A0%81%E8%B4%A8%E9%87%8F/</link>
-      <pubDate>Tue, 10 Sep 2019 17:26:01 +0800</pubDate>
-      
-      <guid>https://hitzhangjie.github.io/tags/%E4%BB%A3%E7%A0%81%E8%B4%A8%E9%87%8F/</guid>
       <description></description>
     </item>
     

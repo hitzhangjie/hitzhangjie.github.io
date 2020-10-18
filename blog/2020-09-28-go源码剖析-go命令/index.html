@@ -214,7 +214,7 @@ div#st-2 .st-btn > img {
         </h2>
         <div class="post-data">
             发表时间：2020-09-28 <br> 
-            阅读时长：11 分钟 (5130字)
+            阅读时长：12 分钟 (5515字)
         </div>
 
         
@@ -344,6 +344,8 @@ var Interrupt Signal = syscall.SIGINT ...
 <p><code>go mod</code>主要是用来对依赖进行管理，常用操作包括<code>go mod init</code>, <code>go mod tidy</code>，<code>go mod vendor</code>等等吧。</p>
 <p>这个有时间再看，当前不是很感兴趣，先跳过了。</p>
 <h3 id="go-run">go run</h3>
+<p><code>go run</code>一般用来快速执行一个go文件，这个go文件必须是package main下的，并且包含一个方法<code>func main(){}</code>。<code>go run</code>现在也支持指定一个package main的路径名，要求是一样的，就是这个目录下的go源文件必须是package main，并且有一个源文件中包含<code>func main(){}</code>的定义。</p>
+<p><code>go run</code>其实也需要进行编译、链接过程，只不过这个过程都在一个临时目录中完成，结果产物没有输出到源码目录或者命令执行时的工作目录下。并且<code>go run</code>执行完会后，会自动清理掉这些临时目录。执行完成前是怎么清理的呢？它这里模拟了c里面的函数<code>atexit()</code>来注册退出时要执行的函数，<code>go run</code>进程最终在调用<code>os.Exit()</code>之前会先将之前注册过的处理函数执行一遍，跟c库函数atexit的逻辑类似。这里注册的处理函数就包括清理<code>go run</code>触发编译、链接时生成的临时目录。</p>
 <h3 id="go-test">go test</h3>
 <p><code>go test</code>主要是用来执行单元测试用的，它还比较牛，不仅仅可以用来支持_test.go文件的单元测试，还支持像cmd/go/testdata/scripts/build_output.txt这样的脚本定义的复杂的流程测试。这里还是有点创新点的。</p>
 <p>这里先说下_test.go文件的单元测试是如何实现的吧。实际上是这样执行的，它会为当前package下的_test.go文件，生成一个新的go文件，这个go文件的内容是根据预先定义好的go测试模板文件生成的，内部会通过-test.run选项来选择我们自定义的TestXXX(t)来执行。</p>

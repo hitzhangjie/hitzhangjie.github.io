@@ -214,7 +214,7 @@ div#st-2 .st-btn > img {
         </h2>
         <div class="post-data">
             发表时间：2020-09-28 <br> 
-            阅读时长：11 分钟 (5479字)
+            阅读时长：11 分钟 (5130字)
         </div>
 
         
@@ -300,18 +300,18 @@ div#st-2 .st-btn > img {
 <h3 id="go-doc">go doc</h3>
 <p><code>go doc</code> 可以用来显示指定package下的类型、函数、方法及其注释信息，其用法比较多，如<code>go doc</code>、<code>go doc pkg.symbol.fieldOrMethod</code>、<code>go doc pkg.Function</code>等等。</p>
 <p>比如我们运行<code>go doc os.Signal</code>，会显示如下信息：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">os</span> <span style="color:#75715e">// import &#34;os&#34;
-</span><span style="color:#75715e"></span>
-<span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Signal</span> <span style="color:#66d9ef">interface</span> {
-    <span style="color:#a6e22e">String</span>() <span style="color:#66d9ef">string</span>
-    <span style="color:#a6e22e">Signal</span>() <span style="color:#75715e">// to distinguish from other Stringers
-</span><span style="color:#75715e"></span>}
-    <span style="color:#a6e22e">A</span> <span style="color:#a6e22e">Signal</span> <span style="color:#a6e22e">represents</span> <span style="color:#a6e22e">an</span> <span style="color:#a6e22e">operating</span> <span style="color:#a6e22e">system</span> <span style="color:#a6e22e">signal</span>. <span style="color:#a6e22e">The</span> <span style="color:#a6e22e">usual</span> <span style="color:#a6e22e">underlying</span>
-    <span style="color:#a6e22e">implementation</span> <span style="color:#a6e22e">is</span> <span style="color:#a6e22e">operating</span> <span style="color:#a6e22e">system</span><span style="color:#f92672">-</span><span style="color:#a6e22e">dependent</span>: <span style="color:#a6e22e">on</span> <span style="color:#a6e22e">Unix</span> <span style="color:#a6e22e">it</span> <span style="color:#a6e22e">is</span> <span style="color:#a6e22e">syscall</span>.<span style="color:#a6e22e">Signal</span>.
+<pre><code>package os // import &quot;os&quot;
 
-<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">Interrupt</span> <span style="color:#a6e22e">Signal</span> = <span style="color:#a6e22e">syscall</span>.<span style="color:#a6e22e">SIGINT</span> <span style="color:#f92672">...</span>
-</code></pre></div><p>从这里我们可以看到整个接口的定义，及其godoc注释信息，那么不禁要问，<code>go doc</code> 是如何准确找到这个符号os.Signal定义的呢？</p>
-<p>如果之前有了解过<code>go/ast</code>的用法、用途之后，应该就不难理解了。我还写过一篇讲<a href="https://hitzhangjie.github.io/blog/2020-10-06-visualizing-your-go-code/">微服务代码逻辑可视化的文章</a>，也是使用了go/ast。</p>
+type Signal interface {
+	String() string
+	Signal() // to distinguish from other Stringers
+}
+    A Signal represents an operating system signal. The usual underlying
+    implementation is operating system-dependent: on Unix it is syscall.Signal.
+
+var Interrupt Signal = syscall.SIGINT ...
+</code></pre><p>从这里我们可以看到整个接口的定义，及其godoc注释信息，那么不禁要问，<code>go doc</code> 是如何准确找到这个符号os.Signal定义的呢？</p>
+<p>如果之前有了解过<code>go/ast</code>的用法、用途之后，应该就不难理解了。我还写过一篇讲微服务代码逻辑可视化的文章，也是使用了go/ast：https://hitzhangjie.github.io/blog/2020-10-06-visualizing-your-go-code/。</p>
 <p><code>go doc</code>的逻辑其实很简单，它首先会将os.Signal split一下，发现是os这个package，然后是Signal这个符号，然后它就会根据build package提供的信息来定位到os对应的目录，然后通过<code>parser.ParseDir(...)</code>来对目录下go文件进行语法分析。分析完之后就将得到AST，然后再基于AST去查找符号Symbol的定义，比如这里是个类型定义，找到AST中对应的节点之后，再提取出注释信息。最后将这些信息格式化输出到stdout。</p>
 <p><code>go doc</code>大致就是这样实现的。</p>
 <h3 id="go-env">go env</h3>
@@ -344,11 +344,9 @@ div#st-2 .st-btn > img {
 <p><code>go mod</code>主要是用来对依赖进行管理，常用操作包括<code>go mod init</code>, <code>go mod tidy</code>，<code>go mod vendor</code>等等吧。</p>
 <p>这个有时间再看，当前不是很感兴趣，先跳过了。</p>
 <h3 id="go-run">go run</h3>
-<p><code>go run</code>一般用来快速执行一个go文件，这个go文件必须是package main下的，并且包含一个方法<code>func main(){}</code>。<code>go run</code>现在也支持指定一个package main的路径名，要求是一样的，就是这个目录下的go源文件必须是package main，并且有一个源文件中包含<code>func main(){}</code>的定义。</p>
-<p><code>go run</code>其实也需要进行编译、链接过程，只不过这个过程都在一个临时目录中完成，结果产物没有输出到源码目录或者命令执行时的工作目录下。并且<code>go run</code>执行完会后，会自动清理掉这些临时目录。执行完成前是怎么清理的呢？它这里模拟了c里面的函数<code>atexit()</code>来注册退出时要执行的函数，<code>go run</code>进程最终在调用<code>os.Exit()</code>之前会先将之前注册过的处理函数执行一遍，跟c库函数atexit的逻辑类似。这里注册的处理函数就包括清理<code>go run</code>触发编译、链接时生成的临时目录。</p>
 <h3 id="go-test">go test</h3>
-<p><code>go test</code>主要是用来执行单元测试用的，它还比较牛，不仅仅可以用来支持&quot;test.go&quot;文件的单元测试，还支持像&quot;cmd/go/testdata/scripts/&ldquo;下的通过txt文件+自定义指令来实现的测试。这里还是有点创新点的。</p>
-<p>这里先说下&quot;test.go&quot;文件的单元测试是如何实现的吧。实际上是这样执行的，它会为当前package下的&quot;test.go&quot;文件，生成一个新的go文件，这个go文件的内容是根据预先定义好的go测试模板文件生成的，内部会通过-test.run选项来选择我们自定义的TestXXX(t)来执行。</p>
+<p><code>go test</code>主要是用来执行单元测试用的，它还比较牛，不仅仅可以用来支持_test.go文件的单元测试，还支持像cmd/go/testdata/scripts/build_output.txt这样的脚本定义的复杂的流程测试。这里还是有点创新点的。</p>
+<p>这里先说下_test.go文件的单元测试是如何实现的吧。实际上是这样执行的，它会为当前package下的_test.go文件，生成一个新的go文件，这个go文件的内容是根据预先定义好的go测试模板文件生成的，内部会通过-test.run选项来选择我们自定义的TestXXX(t)来执行。</p>
 <p>当然<code>go test</code>也支持覆盖率测试等等的操作，这个覆盖率测试实际上也简单，其实是把源文件重写了，每一行语句都对应了一个计数器，执行语句之后，紧跟着一条增加计数器的操作，最后测试程序跑完，检查所有语句的计数器就可以统计出覆盖率信息。</p>
 <p>&hellip;</p>
 <p>其他的，当前也不是很关心了。</p>

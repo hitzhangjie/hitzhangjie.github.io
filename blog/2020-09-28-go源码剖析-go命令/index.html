@@ -214,7 +214,7 @@ div#st-2 .st-btn > img {
         </h2>
         <div class="post-data">
             发表时间：2020-09-28 <br> 
-            阅读时长：8 分钟 (3591字)
+            阅读时长：8 分钟 (3881字)
         </div>
 
         
@@ -335,12 +335,16 @@ var Interrupt Signal <span style="color:#f92672">=</span> syscall.SIGINT ...
 <p><code>go generate</code>实现的逻辑比较简单，它就是遍历源文件，然后去逐行读取每个源文件，检查读取行是不是匹配<code>//go:generate ...</code>，是的话则解析出命令来，然后执行对应的命令。</p>
 <h3 id="go-get">go get</h3>
 <h3 id="go-install">go install</h3>
+<p><code>go install</code>，它主要是下载对应模块，并完成程序的构建、安装逻辑。需要注意的是，这里在go1.13前后发生了一点变化。</p>
+<p>在go1.13之前的版本中，是要通过go install来安装的，go1.13及之后的版本go get会自动下载、并构建、安装，go install只能安装本地已经下载下来的模块。</p>
 <h3 id="go-list">go list</h3>
 <h3 id="go-mod">go mod</h3>
 <h3 id="go-run">go run</h3>
 <h3 id="go-test">go test</h3>
 <h3 id="go-tool">go tool</h3>
 <h3 id="go-version">go version</h3>
+<p><code>go version</code>就是打印当前go程序的版本信息，这个信息是在go编译构建期间由工具<code>go tool dist</code>生成的，详见<code>runtime/sys/zversion.go</code>。</p>
+<p>还有一种常见的做法，是设置好一个包级别的变量，然后通过<code>go build -ldflags=&quot;-X 'pkg.Varable=value'&quot;</code>，这也是一种办法。</p>
 <h3 id="go-vet">go vet</h3>
 <h2 id="4-总结">4. 总结</h2>
 
@@ -421,6 +425,26 @@ var Interrupt Signal <span style="color:#f92672">=</span> syscall.SIGINT ...
         </section>
         
         
+
+
+
+
+
+<script src="https://hitzhangjie.github.io/js/bundle.23f18222425179f754965a36c9b211bd8cff5e5ab61ee23b52f026cef6699139.js" integrity="sha256-I/GCIkJRefdUllo2ybIRvYz/Xlq2HuI7UvAmzvZpkTk="></script>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-168027530-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
 
 
         

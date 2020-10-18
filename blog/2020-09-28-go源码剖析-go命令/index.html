@@ -214,7 +214,7 @@ div#st-2 .st-btn > img {
         </h2>
         <div class="post-data">
             发表时间：2020-09-28 <br> 
-            阅读时长：7 分钟 (3267字)
+            阅读时长：8 分钟 (3591字)
         </div>
 
         
@@ -330,6 +330,9 @@ var Interrupt Signal <span style="color:#f92672">=</span> syscall.SIGINT ...
 <p><code>go fmt</code>在使用的时候，有几个地方比较方便，选项<code>-d</code>可以将格式化后的代码打印到标准输出，<code>-w</code>则可以直接将文件写入到文件，<code>-s</code>则支持对代码进行简化。</p>
 <p>这里也没有特别多要强调的，继续看其他子命令的实现逻辑。</p>
 <h3 id="go-generate">go generate</h3>
+<p>go提供了代码生成能力，在go源文件中通过<code>//go:generate ....</code>定义的注释，其实是一种特殊的指令，它告诉go工具可以提取出这些指令来生成代码。当然理论上通过go:generate可以执行任何指令，但是从go工具设计者的初衷来看，它主要是为了用来作为一种包开发者的工具，用来生成或者更新特定源文件的。</p>
+<p>比如一个代码生成工具可以通过代码模板来生成一个完整的服务工程，代码模板里面就可以包含这样的<code>//go:generate mockgen ...</code>指令来生成mock测试相关的桩代码。</p>
+<p><code>go generate</code>实现的逻辑比较简单，它就是遍历源文件，然后去逐行读取每个源文件，检查读取行是不是匹配<code>//go:generate ...</code>，是的话则解析出命令来，然后执行对应的命令。</p>
 <h3 id="go-get">go get</h3>
 <h3 id="go-install">go install</h3>
 <h3 id="go-list">go list</h3>

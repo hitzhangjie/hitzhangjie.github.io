@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>unixsock on 介绍</title>
+    <link>https://hitzhangjie.github.io/tags/unixsock/</link>
+    <description>Recent content in unixsock on 介绍</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Fri, 28 Aug 2020 03:36:59 +0800</lastBuildDate>
+    
+	<atom:link href="https://hitzhangjie.github.io/tags/unixsock/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>go程序如何实现热重启</title>
+      <link>https://hitzhangjie.github.io/blog/2020-08-28-go%E7%A8%8B%E5%BA%8F%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%83%AD%E9%87%8D%E5%90%AF/</link>
+      <pubDate>Fri, 28 Aug 2020 03:36:59 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-08-28-go%E7%A8%8B%E5%BA%8F%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%83%AD%E9%87%8D%E5%90%AF/</guid>
+      <description>最近在优化公司框架trpc时发现了一个热重启相关的问题，优化之余也总结沉淀下，对go如何实现热重启这方面的内容做一个简单的梳理。 [TOC] 1.什么是热重启？ 热重启（Hot Restart），是一项保证服务可用性的手段。它允许服务重启期间，不中断已经建立的连接，老服务进程不再接受新连接请求，新连接请求将在新服务进程中受理。对于原服务进程中已经建立的连接，也可以将其设为读关闭，等待平滑处理完连接上的请求及连接空闲后再行退出。通过这种方式，可以保证已建立的连接不中断，连接上的事务（请求、处理、响应）可以正常完成，新的服务进</description>
+    </item>
+    
+  </channel>
+</rss>

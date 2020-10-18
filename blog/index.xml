@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>博客 on 介绍</title>
+    <link>https://hitzhangjie.github.io/blog/</link>
+    <description>Recent content in 博客 on 介绍</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Fri, 16 Oct 2020 21:07:45 +0800</lastBuildDate>
+    
+	<atom:link href="https://hitzhangjie.github.io/blog/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>如何“偷懒”：从提升代码质量开始</title>
+      <link>https://hitzhangjie.github.io/blog/2020-10-16-%E5%81%B7%E6%87%92%E4%BB%8E%E6%8F%90%E5%8D%87%E4%BB%A3%E7%A0%81%E8%B4%A8%E9%87%8F%E5%BC%80%E5%A7%8B/</link>
+      <pubDate>Fri, 16 Oct 2020 21:07:45 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-10-16-%E5%81%B7%E6%87%92%E4%BB%8E%E6%8F%90%E5%8D%87%E4%BB%A3%E7%A0%81%E8%B4%A8%E9%87%8F%E5%BC%80%E5%A7%8B/</guid>
+      <description>如果一件事情只需要做一次，我们可能怎么方便怎么来，但是如果一件事情要重复千百遍，怎么方便怎么来就会变成灾难。对身体，对时间，对团队。停下来想想过去做的一些事情，都是为了做好事情的同时，能让自己更好地慢下来，让身体可以偷懒。本文先从提升代码质量开始谈起。 Linus Torvards在一次采访中，主持人贴了两个链表操作的实现，让其评价哪一种更好一点，Torvards说更喜欢消除了特殊逻辑的那种，并将这种偏好称为“taste”。每个人的taste不同，也不方便评价好与坏，但是“脑筋急转弯似”的做法一点都不“聪明”。好的思路</description>
+    </item>
+    
+    <item>
+      <title>Visualizing Your Go Code</title>
+      <link>https://hitzhangjie.github.io/blog/2020-10-06-visualizing-your-go-code/</link>
+      <pubDate>Tue, 06 Oct 2020 23:13:52 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-10-06-visualizing-your-go-code/</guid>
+      <description>代码可读性 作为一名开发人员，代码可读性是我们常常挂在嘴边的。代码写出来除了让计算机能够正常执行以外，终究还是要让人能够理解它，后续才能做进一步的维护工作。如果代码写出来，只有它的作者能够看得懂，那只能说明这个作者逻辑表达能力有问题，透过其代码难以看出解决问题的思路。这是软件工程中要尽力避免的。 在软件工程方法论指导下，为了尽可能让代码可读性达标，我们往往会根据一些最佳实践拟定一些大多数人认可的标准，让所有开发人员遵守，然后通过代码评审、代码规范检查、持续集成交付流水线等综合起来，以尽可能逼近这一目标。当绝大多</description>
+    </item>
+    
+    <item>
+      <title>go源码剖析 - go命令</title>
+      <link>https://hitzhangjie.github.io/blog/2020-09-28-go%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-go%E5%91%BD%E4%BB%A4/</link>
+      <pubDate>Mon, 28 Sep 2020 22:18:43 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-09-28-go%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-go%E5%91%BD%E4%BB%A4/</guid>
+      <description>1. 本文简介 首先我们看下go命令行有哪些功能，运行go help可以查看go命令的详细帮助信息，go命令有很多子命令，每个子命令有特定的功能。go命令功能之丰富涵盖了源文件编译、汇编、连接、反汇编、逃逸分析、代码生成、模块解析等等非常系统性的功能，了解go命令的实现将有助于系统性掌握整个go编译工具链。本文介绍下go命令的详细功能及大致实现，供后续参考。 2. go子命令列表 go支持的子命令列表如下，下面我们逐一来简单说下。 bug, start a bug report build, compile packages and dependencies clean, remove object files and cached files doc, show documentation for package or symbol env, print Go environment information fix, update packages to use new APIs fmt, gofmt (reformat) package sources generate, generate Go files by processing</description>
+    </item>
+    
+    <item>
+      <title>家人&amp;生活，比工作重要</title>
+      <link>https://hitzhangjie.github.io/blog/2020-09-20-%E5%AE%B6%E4%BA%BA%E7%94%9F%E6%B4%BB%E6%AF%94%E5%B7%A5%E4%BD%9C%E9%87%8D%E8%A6%81/</link>
+      <pubDate>Sun, 20 Sep 2020 23:49:52 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-09-20-%E5%AE%B6%E4%BA%BA%E7%94%9F%E6%B4%BB%E6%AF%94%E5%B7%A5%E4%BD%9C%E9%87%8D%E8%A6%81/</guid>
+      <description>为什么工作不开心 2020上半年绩效考评出来了，Outerstanding，5星好评，技术通道晋升答辩结果也出来了，T10，算是同事们对自己工作的认可吧，对我自己来说也是个好事，尽管我并没有感觉多么开心。老婆说，虽然你没觉得多么开心，但是如果没过的话一定会觉得不开心……听着很有道理。 这个5星的考核，我也没什么好开心的，因为业务团队这边一开始给的是4星，后面呢，因为在中台中的贡献比较突出，bg层面有绩效的加成，所以从4星提到了5星。leader告诉我这个好消息后，我并没有觉得开心或者不开心。我做的工作就摆在这里</description>
+    </item>
+    
+    <item>
+      <title>剖析go二进制文件</title>
+      <link>https://hitzhangjie.github.io/blog/2020-09-06-%E5%89%96%E6%9E%90go%E4%BA%8C%E8%BF%9B%E5%88%B6%E6%96%87%E4%BB%B6/</link>
+      <pubDate>Sun, 06 Sep 2020 18:55:39 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-09-06-%E5%89%96%E6%9E%90go%E4%BA%8C%E8%BF%9B%E5%88%B6%E6%96%87%E4%BB%B6/</guid>
+      <description>为什么要反汇编？ 这篇文章介绍下反汇编的基本概念，以及如何用go语言写一个简单的反汇编器。本文的目标就是为了尽可能描述下反汇编的的相关概念，以及让读者朋友们了解go二进制程序内部大致是什么样的。 汇编代码不会撒谎，阅读汇编代码能够让我们更细致地了解处理器执行的指令到底做了什么。这也是为什么反汇编很重要的原因之一。如果我们有一个二进制程序，并且怀疑它有一些恶意的行为，通过反汇编来研究它就是一种很好的途径。再或者，如果你分析代码难以发现性能瓶颈，那么反汇编也是一种可以简化分析的途径。 如果你担心能不能阅读x86_64</description>
+    </item>
+    
+    <item>
+      <title>go程序如何实现热重启</title>
+      <link>https://hitzhangjie.github.io/blog/2020-08-28-go%E7%A8%8B%E5%BA%8F%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%83%AD%E9%87%8D%E5%90%AF/</link>
+      <pubDate>Fri, 28 Aug 2020 03:36:59 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-08-28-go%E7%A8%8B%E5%BA%8F%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%83%AD%E9%87%8D%E5%90%AF/</guid>
+      <description>最近在优化公司框架trpc时发现了一个热重启相关的问题，优化之余也总结沉淀下，对go如何实现热重启这方面的内容做一个简单的梳理。 [TOC] 1.什么是热重启？ 热重启（Hot Restart），是一项保证服务可用性的手段。它允许服务重启期间，不中断已经建立的连接，老服务进程不再接受新连接请求，新连接请求将在新服务进程中受理。对于原服务进程中已经建立的连接，也可以将其设为读关闭，等待平滑处理完连接上的请求及连接空闲后再行退出。通过这种方式，可以保证已建立的连接不中断，连接上的事务（请求、处理、响应）可以正常完成，新的服务进</description>
+    </item>
+    
+    <item>
+      <title>delve调试器设计实现</title>
+      <link>https://hitzhangjie.github.io/blog/2020-08-25-delve%E8%B0%83%E8%AF%95%E5%99%A8%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</link>
+      <pubDate>Tue, 25 Aug 2020 12:21:14 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-08-25-delve%E8%B0%83%E8%AF%95%E5%99%A8%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</guid>
+      <description>研究调试器设计实现有段时间了，前几天在调试一个程序时，发现go调试器go-delve/delve竟然不支持类似gdb的x/FMT格式，于是在之前工作上又优化了一下。CR期间，也学习到一些之前理解不深的地方，也顺便了解了下delve的整体架构设计、大致实现，今天就来说道说道。 delve简介 go-delve/delve是Derekparker发起的一个调试器项目，面向go语言的。为什么针对go语言要创建一个新的调试器呢？为什么不使用GDB呢？这里涉及到go的一些特性。 作为符号级调试器，要能正常实现源码级调试，有</description>
+    </item>
+    
+    <item>
+      <title>Monkey Patching in Go</title>
+      <link>https://hitzhangjie.github.io/blog/2020-08-23-monkey_patching_in_go/</link>
+      <pubDate>Sun, 23 Aug 2020 15:41:28 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-08-23-monkey_patching_in_go/</guid>
+      <description>前几天写了篇x64汇编开发介绍的文章，当时有提到接下来会介绍下go中如何实现monkey patching，嗯，今天就来说下这个事情。 Monkey Patching 简介 monkey patching，一说到这个，很多熟悉go的同学可能会联想起gomonkey这个mock测试框架。该术语的定义取决于使用它的社区。在Ruby，Python 和许多其他动态编程语言中，“monkey patching”一词仅指在运行时对类或模块的动态修改，其目的是为了修补现有的第三方代码，以此作为解决方法。错误或功能无法正常运行。根据其不同的意图，在运行时修改类的其他形式也</description>
+    </item>
+    
+    <item>
+      <title>x64汇编开发介绍</title>
+      <link>https://hitzhangjie.github.io/blog/2020-08-20-x64%E6%B1%87%E7%BC%96%E5%BC%80%E5%8F%91%E4%BB%8B%E7%BB%8D/</link>
+      <pubDate>Thu, 20 Aug 2020 20:27:19 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-08-20-x64%E6%B1%87%E7%BC%96%E5%BC%80%E5%8F%91%E4%BB%8B%E7%BB%8D/</guid>
+      <description>最近在工作和学习中发现，其实汇编是非常重要的，即便现在高级语言已经非常方便了，但是了解汇编对于深入理解计算机系统，以及一些高深的知识点是不可或缺的。举几个例子，比如说Linux操作系统有一个系统调用函数叫Fork我们都知道Fork的返回值在子进程中是0，在父进程中是非0，那这个是如何实现的呢？对于不了解汇编的人也很难有能力去阅读Linux操作系统源码，只能道听途说了解到个大概原因。再比如接下来要讲的gomonkey测试框架实现的一些指令patching操作，这些都是与汇编操作分不开的。甚至你想了解下上下文切</description>
+    </item>
+    
+    <item>
+      <title>骑自行车一点都不舒服，但是很爽</title>
+      <link>https://hitzhangjie.github.io/blog/2020-08-13-%E9%AA%91%E8%87%AA%E8%A1%8C%E8%BD%A6%E4%B8%80%E7%82%B9%E9%83%BD%E4%B8%8D%E8%88%92%E6%9C%8D%E4%BD%86%E6%98%AF%E5%BE%88%E7%88%BD/</link>
+      <pubDate>Thu, 13 Aug 2020 16:24:18 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-08-13-%E9%AA%91%E8%87%AA%E8%A1%8C%E8%BD%A6%E4%B8%80%E7%82%B9%E9%83%BD%E4%B8%8D%E8%88%92%E6%9C%8D%E4%BD%86%E6%98%AF%E5%BE%88%E7%88%BD/</guid>
+      <description>19年5月底，时长感觉身体疲倦，想锻炼下身体，我想买辆自行车骑着上班。左看右看，还是想买一辆公路赛自行车，太享受那种“破风”的感觉了。左看右看，看上了Giant OCR 5700，买的时候这两自行车已经几近停产了，但是因为它黑白色的涂装，实在是太招人喜欢了，简单又不失美感。几乎没什么犹豫的，就买了一辆，然后几天之后收到车，自己组装完毕，满心欢喜。 将其立在落地窗边，忍不住这么看那么看，真的是太漂亮了，这里还保留了一张刚开始组装好后的照片。 其实，这并不是我买的第一辆公路赛自行车，本科读书时，就买了一辆，那时候下课没事、</description>
+    </item>
+    
+    <item>
+      <title>使用awgo开发alfred.workflow</title>
+      <link>https://hitzhangjie.github.io/blog/2020-07-31-%E4%BD%BF%E7%94%A8awgo%E5%BC%80%E5%8F%91alfred.workflow/</link>
+      <pubDate>Fri, 31 Jul 2020 14:53:15 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-07-31-%E4%BD%BF%E7%94%A8awgo%E5%BC%80%E5%8F%91alfred.workflow/</guid>
+      <description>本文简介 该workflow主要是为了对 &amp;ldquo;时间戳&amp;rdquo; &amp;amp;&amp;amp; &amp;ldquo;格式化日期+时间字符串&amp;rdquo; 进行快速转换，方便使用。 开发人员，经常会涉及到时间相关的转换操作，有个趁手的工具还是很有必要的。 我平时使用alfred比较多，自然就想通过workflow的方式来实现，当然用hammerspoon、pet等其他工具也可以。 alfred workflow和alfred本身的交互是通过管道方式进行连接的： alfred将用户输入的信息转发给匹配的workflow； workflow对接收到的参数进行处理，</description>
+    </item>
+    
+    <item>
+      <title>如何在go二进制程序中打包静态资源文件</title>
+      <link>https://hitzhangjie.github.io/blog/2020-07-25-%E5%A6%82%E4%BD%95%E5%9C%A8go%E4%BA%8C%E8%BF%9B%E5%88%B6%E7%A8%8B%E5%BA%8F%E4%B8%AD%E6%89%93%E5%8C%85%E9%9D%99%E6%80%81%E8%B5%84%E6%BA%90%E6%96%87%E4%BB%B6/</link>
+      <pubDate>Sat, 25 Jul 2020 17:26:01 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-07-25-%E5%A6%82%E4%BD%95%E5%9C%A8go%E4%BA%8C%E8%BF%9B%E5%88%B6%E7%A8%8B%E5%BA%8F%E4%B8%AD%E6%89%93%E5%8C%85%E9%9D%99%E6%80%81%E8%B5%84%E6%BA%90%E6%96%87%E4%BB%B6/</guid>
+      <description>Why? 有时我们希望在go二进制程序中打包一些静态资源文件，目的可能有多种，比较常见的是为了简化安装。通常我们安装一个go编写的工具，更倾向于使用 go get $repo 的方式来完成，这似乎已经成为了一种共识。当然，也有些项目还依赖一些静态资源文件，这些静态资源文件是不会被自动安装的，就需要借助其他方式来完成静态资源的安装，比如通过install.sh脚本，后者Makefile构建脚本等等。 今天，我想讨论下，如何简单快速地支持静态资源打包到二进制程序中，以及在二进制程序中对这些静态资源加以引用。 How? github上已经有不少开发者在探</description>
+    </item>
+    
+    <item>
+      <title>你不认识的cc&#43;&#43; volatile</title>
+      <link>https://hitzhangjie.github.io/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc&#43;&#43;-volatile/</link>
+      <pubDate>Fri, 24 Jul 2020 19:46:11 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc&#43;&#43;-volatile/</guid>
+      <description>1. 令人困惑的volatile volatile字面意思是“不稳定的、易变的”，不少编程语言中存在volatile关键字，也有共同之处，如“表示程序执行期间数据可能会被外部操作修改”，如被外设修改或者被其他线程修改等。这只是字面上给我们的一般性认识，然而具体到不同的编程语言中volatile的语义可能相差甚远。 很多人以为自己精通CC++，但是被问起volatile的时候却无法清晰、果断地表明态度，那只能说明还是处在“从入门到精通”的路上，如果了解一门语言常见特性的使用、能够写健壮高效的程序就算精通的话，那实在是</description>
+    </item>
+    
+    <item>
+      <title>开发者应掌握的系统性测试方法</title>
+      <link>https://hitzhangjie.github.io/blog/2020-07-01-%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</link>
+      <pubDate>Wed, 01 Jul 2020 20:30:01 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-07-01-%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</guid>
+      <description>如何做好测试，是一门系统性的方法学，而不只是一些零零散散的经验。了解并掌握各种测试的目的、方法是非常有必要的。 最近工作中也在推动测试相关的一些事项，有一点感触，这里先简单总结下常见测试方法的目的，大致包括如下几类。 1. 研发流程中构建环节 冒烟测试 该术语，取自集成电路开发领域，集成电路在测试之前，先要加电检查，如果没有冒烟才能进行后续的测试。冒烟测试并不是测试过程的一个阶段，它是软件构建过程中的一个环节，它包含一些非常基础的测试，如保证编译通过、部分核心用例通过，它随每次构建触发，处于持续集成的一个环节。英文表述</description>
+    </item>
+    
+    <item>
+      <title>中国人要学着勇敢讲真话</title>
+      <link>https://hitzhangjie.github.io/blog/2020-06-27-%E4%B8%AD%E5%9B%BD%E4%BA%BA%E8%A6%81%E5%AD%A6%E7%9D%80%E5%8B%87%E6%95%A2%E8%AE%B2%E7%9C%9F%E8%AF%9D/</link>
+      <pubDate>Sat, 27 Jun 2020 18:23:14 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-06-27-%E4%B8%AD%E5%9B%BD%E4%BA%BA%E8%A6%81%E5%AD%A6%E7%9D%80%E5%8B%87%E6%95%A2%E8%AE%B2%E7%9C%9F%E8%AF%9D/</guid>
+      <description>最近苟晶被冒名顶替上大学的事情，成为社会关注焦点，作为山东老乡，也忍不住回想起求学时的一些经历，一些从内心里颠覆我认知、改变我看法的经历。有时，我会觉得自己是不是过于理想主义，是不是有点愤世嫉俗，不接地气，就算是吧。一个人思想的转变，肯定也是有原因的。 那年我还上初中，当时学校正在搞数学竞赛吧，我对这玩意真的不是很感兴趣，也没有认真去准备，学校组织考试的时候也没有竞争过其他同学，也不出我意外。但是，我数学应该还挺好的吧，也比较聪明吧，但是我对这种无脑地做题竞赛真的不感兴趣。当时，我的数学老师找到我希望我继续参</description>
+    </item>
+    
+    <item>
+      <title>如何高效开发一个命令行工具</title>
+      <link>https://hitzhangjie.github.io/blog/2020-06-26-%E5%A6%82%E4%BD%95%E9%AB%98%E6%95%88%E5%BC%80%E5%8F%91%E4%B8%80%E4%B8%AA%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%B7%A5%E5%85%B7/</link>
+      <pubDate>Fri, 26 Jun 2020 10:38:34 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-06-26-%E5%A6%82%E4%BD%95%E9%AB%98%E6%95%88%E5%BC%80%E5%8F%91%E4%B8%80%E4%B8%AA%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%B7%A5%E5%85%B7/</guid>
+      <description>我经常会开发一些命令行工具来协助处理一些事情，如开发一个代码生成工具快速生成服务代码，或者开发一个工具来方便管理github上的工具，或者开发一个工具rm来替换掉不安全的rm，等等。 命令行工具开发过程中，比较常见的一个问题就是对功能进行分组，开发多个命令不利于使用，在命令中支持子命令是一个更常见、更友好的做法，如go build，go tool，go pprof，等等。我们还希望为不同的子命令添加不同的命令行选项，如go build -gcflags=，go pprof --seconds=，等等。 如何支持子命令字呢？ 假如我们开发一个命</description>
+    </item>
+    
+    <item>
+      <title>父亲节，于我已是种奢侈</title>
+      <link>https://hitzhangjie.github.io/blog/2020-06-21-%E7%88%B6%E4%BA%B2%E8%8A%82%E4%BA%8E%E6%88%91%E5%B7%B2%E6%98%AF%E7%A7%8D%E5%A5%A2%E4%BE%88/</link>
+      <pubDate>Sun, 21 Jun 2020 13:04:45 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-06-21-%E7%88%B6%E4%BA%B2%E8%8A%82%E4%BA%8E%E6%88%91%E5%B7%B2%E6%98%AF%E7%A7%8D%E5%A5%A2%E4%BE%88/</guid>
+      <description>昨天是周六，优化了一下代码生成工具gorpc，解决了几个遗留的问题，总算是做了点有意思的事情，心里有点窃喜。临睡前，掏出手机，惯例地刷了刷推送的消息，原来明天是父亲节了。心里忍不住被扎了一下，父亲节，于我已是种奢侈。30岁的年纪，或好或坏，或小有成绩或满怀迷茫，不管怎样，至少你们还有父亲，我只能在一个人的时候才能去享受下那久违的回忆，那些有父亲的时光。 在我还很小的时候，家里很是拮据，父母很辛苦，为了维持一家人生活，父母付出了很多。父母的辛苦，在我很小的时候就埋进了心底……如今，二三十年过去，那每逢下雨就要滴</description>
+    </item>
+    
+    <item>
+      <title>A Golang Debugger Book</title>
+      <link>https://hitzhangjie.github.io/blog/2020-06-09-a-golang-debugger-book/</link>
+      <pubDate>Tue, 09 Jun 2020 20:25:07 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-06-09-a-golang-debugger-book/</guid>
+      <description>18年开始学习go时，发现了一款调试器delve，陆陆续续地看了些源码、调试标准的东西，发现调试器是一个很好的切入视角来认识计算机系统，就想把这些东西理顺、分享一下。到现在为止，对开发工具链的认识都还有些认识上的不足，关键还是，觉得调试器就好比一个放大镜，放大一倍看清内存变量，放大两倍看清类型系统，放大三倍看清机器物理结构……这是简单的，涉及到运行时、操作系统、硬件等的特性，我是觉得很有意思，尤其是对部分想了解这些知识的人来说，还是有一定的参考意义的。 https://github.com/hitzhangj</description>
+    </item>
+    
+    <item>
+      <title>我在腾讯这几年</title>
+      <link>https://hitzhangjie.github.io/blog/2020-06-05-%E6%88%91%E5%9C%A8%E8%85%BE%E8%AE%AF%E8%BF%99%E5%87%A0%E5%B9%B4/</link>
+      <pubDate>Fri, 05 Jun 2020 20:03:35 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-06-05-%E6%88%91%E5%9C%A8%E8%85%BE%E8%AE%AF%E8%BF%99%E5%87%A0%E5%B9%B4/</guid>
+      <description>写在前面 很长一段时间没有更新个人博客了，回头一看竟然有一年没更新，这一年工作上确实比以前忙了很多。有点时间也拿来体验生活、钻研感兴趣的技术了。感兴趣也可以看下我的github，这一年几乎也在不停地探索、尝试，因为兴趣和那份好奇，还有就是，想做点有深度的东西取悦自己。 自从2016年7月份入职腾讯以来，也算是勤勤恳恳地工作，至少不让自己成为团队的瓶颈吧，事实上做的应该还可以吧。当然和自己的兴趣、领导的指点、工作项的安排，也有密切的关系，绝大部分工作时间，我还是比较开心的。 今天收拾房间，无意中发现了腾讯学院的一个</description>
+    </item>
+    
+    <item>
+      <title>如何实现一个更安全的删除命令rm</title>
+      <link>https://hitzhangjie.github.io/blog/2019-10-18-%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AA%E6%9B%B4%E5%AE%89%E5%85%A8%E7%9A%84%E5%88%A0%E9%99%A4%E5%91%BD%E4%BB%A4rm/</link>
+      <pubDate>Fri, 18 Oct 2019 15:00:01 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2019-10-18-%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AA%E6%9B%B4%E5%AE%89%E5%85%A8%E7%9A%84%E5%88%A0%E9%99%A4%E5%91%BD%E4%BB%A4rm/</guid>
+      <description>背景 大家有没有因为一时大意，错误地执行了rm -rf而导致重要文件被删除的情况？一定有那么一次两次的吧。前几天，我又犯了这一次这样的错误。本来是要删除当前目录下的一个文件，于是执行 rm -rf .，这里还没有输入完，因为我调整了KeyRepeat设置项的原因吧，按键延迟很短，结果命令变成了 rm -rf ..，这个时候..已经指向了HOME目录……额，没关注右手，左手还没有tab候选，右手已经键入了回车，gg，眼睁睁地看着大量文件被删除，ctrl+c已经太晚了 :( 。 多亏macOS默认对Desktop、Document等目录下的文件做</description>
+    </item>
+    
+    <item>
+      <title>Google CR指引, 如何推进代码评审</title>
+      <link>https://hitzhangjie.github.io/blog/2019-09-10-%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E5%9C%B0%E8%BF%9B%E8%A1%8C%E4%BB%A3%E7%A0%81review/</link>
+      <pubDate>Tue, 10 Sep 2019 17:26:01 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2019-09-10-%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E5%9C%B0%E8%BF%9B%E8%A1%8C%E4%BB%A3%E7%A0%81review/</guid>
+      <description>最近学习了Google的CodeReview指引，整理了其中一些比较有价值的点，分享给大家。 Google Code Review Guidelines Google积累了很多最佳实践，涉及不同的开发语言、项目，这些文档，将Google工程师多年来积攒的一些最佳实践经验进行了总结并分享给众开发者。学习下这里的经验，我们在进行项目开发、开源协同的过程中，相信也可以从中受益。 Google目前公开的最佳实践相关文档，目前包括： Google&amp;rsquo;s Code Review Guidelines，Google代码review指引，包含以下两个系列的内容： The Code Reviewer&amp;rsquo;s Guide The Change Author&amp;rsquo;s Guide 这了涉及到Google内部使用的一些术语</description>
+    </item>
+    
+    <item>
+      <title>波音737坠毁事故的背后</title>
+      <link>https://hitzhangjie.github.io/blog/2019-03-17-%E6%B3%A2%E9%9F%B3737%E5%9D%A0%E6%AF%81%E4%BA%8B%E6%95%85%E7%9A%84%E8%83%8C%E5%90%8E/</link>
+      <pubDate>Sun, 17 Mar 2019 17:40:26 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2019-03-17-%E6%B3%A2%E9%9F%B3737%E5%9D%A0%E6%AF%81%E4%BA%8B%E6%95%85%E7%9A%84%E8%83%8C%E5%90%8E/</guid>
+      <description>波音，从诞生到现在，一直都是全球空客市场的强有力竞争者，然而，就是这么一家顶尖的企业，却接连制造了惨不忍睹的杀人事故。波音737 Max，在人们心目中已然成为了一款“杀人”机器，几百个家庭就此陷入无尽的悲伤，即便能获取高额赔偿，又有什么用呢？忍不住内心的怒火，忍不住要追问，究竟是谁导致了这一系列事故的发生！ 波音737 Max机型事故回顾 2019年3月10日，一架载有149名乘客和8位机组人员的波音737 Max，从埃色俄比亚的亚的斯亚贝巴机场起飞后大约6分钟坠毁。飞机起飞后，垂直速度一直不稳定，机长也非常警觉地发</description>
+    </item>
+    
+    <item>
+      <title>golang method receiver-type的梗</title>
+      <link>https://hitzhangjie.github.io/blog/2018-05-21-golang-method-receiver-type%E7%9A%84%E6%A2%97/</link>
+      <pubDate>Mon, 21 May 2018 12:33:23 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2018-05-21-golang-method-receiver-type%E7%9A%84%E6%A2%97/</guid>
+      <description>这里来聊聊method receiver type为什么不能是pointer和interface类型。 1 receiver-type必须满足的条件 golang里面提供了一定的面向对象支持，比如我们可以为类型T或者*T定义成员方法（类型T称为成员方法的receiver-type），但是这里的类型T必须满足如下几个条件： T必须是已经定义过的类型； T与当前方法定义必须在同一个package下面； T不能是指针； T不能是接口类型； 前面两点都比较容易理解，下面两点是什么梗？为什么就不能在指针类型上添加方法？为什么就不能在interface</description>
+    </item>
+    
+    <item>
+      <title>golang function-closure 实现机制</title>
+      <link>https://hitzhangjie.github.io/blog/2018-05-19-golang-function-closure%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/</link>
+      <pubDate>Sat, 19 May 2018 19:55:15 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2018-05-19-golang-function-closure%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/</guid>
+      <description>golang里面函数时first-class citizen，可以作为值进行参数传递，不管是普通函数“func abc()”，还是成员方法“func (x X) xxx()”，还是一个闭包“func () { return func(){&amp;hellip;.}}”……看上去很方便，不禁要问，golang里面funciton和closure是如何实现的呢？扒拉了下源码，这里简单总结下。 1 golang中函数内部表示是什么样子的？ 看下golang cmd/compile/internal/types/type.go中对Func类型的定义： // Func contains Type fields specific</description>
+    </item>
+    
+    <item>
+      <title>golang select-case 实现机制</title>
+      <link>https://hitzhangjie.github.io/blog/2018-05-19-golang-select-case%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/</link>
+      <pubDate>Sat, 19 May 2018 19:21:11 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2018-05-19-golang-select-case%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/</guid>
+      <description>1 chan操作规则 在介绍select-case实现机制之前，最好先了解下chan操作规则，明白goroutine何时阻塞，又在什么时机被唤醒，这对后续理解select-case实现有帮助。所以接下来先介绍chan操作规则，然后再介绍select-case的实现。 1.1 chan操作规则1 当一个goroutine要从一个non-nil &amp;amp; non-closed chan上接收数据时，goroutine首先会去获取chan上的锁，然后执行如下操作直到某个条件被满足： 1）如果chan上的value buffer不空，这也意味着chan上的rec</description>
+    </item>
+    
+    <item>
+      <title>go风格协程库libmill之源码分析</title>
+      <link>https://hitzhangjie.github.io/blog/2017-12-03-go%E9%A3%8E%E6%A0%BC%E5%8D%8F%E7%A8%8B%E5%BA%93libmill%E4%B9%8B%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</link>
+      <pubDate>Sun, 03 Dec 2017 16:49:09 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-12-03-go%E9%A3%8E%E6%A0%BC%E5%8D%8F%E7%A8%8B%E5%BA%93libmill%E4%B9%8B%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</guid>
+      <description>1 Preface libmill, 是Martin Sustrik发起的一个面向unix平台下c语言开发的协程库，实现了一种类似goroutine风格的协程，也支持channel，“通过通信共享数据，而非通过共享数据来完成通信”。 觉得挺有意思的，就抽周末时间看了下。大神的代码干净利索，也看到了不少令自己眼前一亮的tricks，举几个例子吧。 1 通用链表及迭代器实现 offsetof可以计算结构体中的成员的offset，如果我们知道一个struct的类型、其成员名、成员地址，我们就可以计算出struct的地址： #define mill_cont(ptr, type, member) \ (ptr ? ((type*) (((char*) ptr) - offsetof(type, member))) : NULL) 基于</description>
+    </item>
+    
+    <item>
+      <title>Assembly Language</title>
+      <link>https://hitzhangjie.github.io/blog/2017-10-14-assembly-language/</link>
+      <pubDate>Sat, 14 Oct 2017 20:13:35 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-10-14-assembly-language/</guid>
+      <description>处理器是算逻运算、控制操作的执行部件，它只能识别机器指令并执行动作。机器指令是一系列的0、1字符串，本质上对应了总线上的高低电平信号，所以机器语言都是特定于硬件的。 由于0、1字符串很难记忆，用机器语言开发是一个老大难的问题，汇编语言因此被开发出来用于代替机器语言。汇编指令只是机器指令中操作码的助记符，因此汇编语言仍然是机器强相关的，不同的处理器其对应的汇编指令也不同。 学习汇编语言有助于理解： 程序是如何与操作系统、处理器、bios进行交互的； 数据如何在内存中以及外设中表示的； 处理器如何访问、执行指令； 指令如何</description>
+    </item>
+    
+    <item>
+      <title>Protoc及其插件工作原理分析(精华版)</title>
+      <link>https://hitzhangjie.github.io/blog/2017-05-23-protoc%E5%8F%8A%E6%8F%92%E4%BB%B6%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90%E7%B2%BE%E5%8D%8E%E7%89%88/</link>
+      <pubDate>Tue, 23 May 2017 16:29:25 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-05-23-protoc%E5%8F%8A%E6%8F%92%E4%BB%B6%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90%E7%B2%BE%E5%8D%8E%E7%89%88/</guid>
+      <description>在进行protoc插件开发之前，首先要了解protoc的工作原理。protobuf具有诸多优点被广泛使用，由于protoc对proto文件的强大解析能力使我们可以更进一步来开发一些插件，通过插件快速生成特定于proto文件的工具类、配置文件等，从而提高开发效率。 本文首先会介绍一下protoc的整体工作原理，然后详细介绍一下protoc对proto文件的解析过程，最后给出编写protoc插件来扩展protoc功能的一个示例（这里以protoc-gen-go插件为例）。 1. protoc工作原理分析 1.0. protoc源</description>
+    </item>
+    
+    <item>
+      <title>Protoc工作原理分析</title>
+      <link>https://hitzhangjie.github.io/blog/2017-05-16-protoc%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86/</link>
+      <pubDate>Fri, 19 May 2017 14:29:25 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-05-16-protoc%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86/</guid>
+      <description>在进行protoc插件开发之前，首先要了解protoc的工作原理。在protobuf的使用过程中，protoc作为proto文件的编译器，很多开发人员只会用但是不了解其工作原理，更不了解如何扩展其功能。protobuf作为目前常用的数据交换格式在协议开发中被广泛采用，此外，protoc对proto文件的强大解析能力使我们可以开发一些插件，通过插件快速生成特定于proto文件的工具类、配置文件等，从而提高开发效率。 本文首先会介绍一下protoc的整体工作机制，然后解释一下protoc对proto文件的解析过程</description>
+    </item>
+    
+    <item>
+      <title>Linux常见IO模型</title>
+      <link>https://hitzhangjie.github.io/blog/2017-05-02-linux-common-io-model/</link>
+      <pubDate>Tue, 02 May 2017 21:42:13 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-05-02-linux-common-io-model/</guid>
+      <description>目前Linux下可用的IO模型有5种，分别为阻塞IO、非阻塞IO、IO多路复用、信号驱动IO、异步IO，其中较为成熟且高效、稳定的是IO多路复用模型，因此当前众多网络服务程序几乎都是采用这种IO操作策略。 当一个应用程序读写（以读为例）某端口数据时，选择不同IO模型的应用程序，其执行流程也将不同。下面将对选择这5种不同IO模型时的程序的执行情形进行分析，以便了解使用IO复用模型的运行情况和性能优势。 一个完整经典的应用程序的数据读取操作可以看做两步： 等待数据准备好； 将数据从内核复制到应用程序进程； 1. 阻塞IO模型</description>
+    </item>
+    
+    <item>
+      <title>协程的历史、现在和未来!</title>
+      <link>https://hitzhangjie.github.io/blog/2017-09-23-%E5%8D%8F%E7%A8%8B%E7%9A%84%E5%8E%86%E5%8F%B2%E7%8E%B0%E5%9C%A8%E5%92%8C%E6%9C%AA%E6%9D%A5/</link>
+      <pubDate>Thu, 27 Apr 2017 02:25:36 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-09-23-%E5%8D%8F%E7%A8%8B%E7%9A%84%E5%8E%86%E5%8F%B2%E7%8E%B0%E5%9C%A8%E5%92%8C%E6%9C%AA%E6%9D%A5/</guid>
+      <description>计算机科学是一门应用科学，几乎所有概念都是为了理解或解决实际问题而生的。协程 (Coroutine) 的出现也不例外。协程的概念，最早可以追溯到写作 COBOL 语言编译器中的技术难题。 1.从磁带到协程 COBOL 是最早的高级语言之一。编译器则是高级语言必不可少的一部分。现如今，我们对编译器了解，已经到了可以把核心内容浓缩成一本教科书的程度。然而在六十年代，如何写作高效的语言编译器是那个时代绕不过的现实问题。比如，1960 年夏天，D. E. Knuth 就是利用开车横穿美国去加州理工读研究生的时间，对着 Burroughs 205 机器指令集手写 COBOL 编译器。最早提出“协程”概念的 Melvin Conway 的出发点，也</description>
+    </item>
+    
+    <item>
+      <title>Coroutine-Switching</title>
+      <link>https://hitzhangjie.github.io/blog/2017-04-26-coroutine-switching/</link>
+      <pubDate>Wed, 26 Apr 2017 16:23:49 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-04-26-coroutine-switching/</guid>
+      <description>1. 协程Coroutine 1.1. 协程coroutine声明 file: coroutine.h #include &amp;lt;stdint.h&amp;gt; typedef int64_t (*EntryCallback)(void*); //硬件上下文信息 struct stRegister { uint64_t rax; uint64_t rbx; uint64_t rcx; uint64_t rdx; uint64_t rsi; uint64_t rdi; uint64_t r8; uint64_t r9; uint64_t r10; uint64_t r11; uint64_t r12; uint64_t r13; uint64_t r14; uint64_t r15; uint64_t rbp; uint64_t rsp; uint64_t rip; }; //协程上下文 struct stContext { struct stRegister cpu_register; void *arg; uint8_t *stack; }; typedef struct stContext Coroutine; //创建协程 Coroutine* CreateCoroutine(EntryCallback entry, void *arg); //删除协程 void DeleteCoroutine(Coroutine *ptr); //设置协程栈尺寸 void SetStackSize(uint32_t size); //协程切换 void __SwitchCoroutine__(Coroutine *cur, const Coroutine *next); 1.2. 协程Coroutine实现 file: coroutine.c #include &amp;#34;coroutine.h&amp;#34;#include &amp;lt;stdlib.h&amp;gt; #define OFFSET(t, m) (&amp;amp;(((t*)0)-&amp;gt;m)) uint32_t g_stack_size = 100 * 1024; Coroutine* CreateCoroutine(EntryCallback entry, void *arg) { int size = g_stack_size + sizeof(Coroutine); Coroutine *c = (Coroutine *)calloc(size, 1); if (NULL == c) { return NULL; } uint8_t *start = (uint8_t*)c; c-&amp;gt;arg = arg; //函数入口 c-&amp;gt;cpu_register.rip = (uint64_t)entry; //第一个参数 c-&amp;gt;cpu_register.rdi = (uint64_t)arg; //rbp 栈底 c-&amp;gt;cpu_register.rbp = (uint64_t)(start + size); //rsp 当前栈顶 c-&amp;gt;cpu_register.rsp = c-&amp;gt;cpu_register.rbp; return c; } void DeleteCoroutine(Coroutine *ptr) { free(ptr); } void SetStackSize(uint32_t size) {</description>
+    </item>
+    
+    <item>
+      <title>Java NIO Tutorials</title>
+      <link>https://hitzhangjie.github.io/blog/2017-04-20-%E5%AD%A6%E4%B9%A0java-nio/</link>
+      <pubDate>Wed, 05 Apr 2017 14:56:32 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-04-20-%E5%AD%A6%E4%B9%A0java-nio/</guid>
+      <description>1 前言 Java NIO，意为Java New IO，是一种相对于Java标准IO、网络API的替代方案。从JDK 1.4开始NIO就被引入了进来，它提供了另一种IO处理的方式，这使得Java在IO处理方面向前迈进了一大步。 NIO Channel &amp;amp; Buffer 在Java标准IO里面，IO处理的对象是字节流或字符流，在NIO里面我们处理的对象是channel和buffer，数据读总是从channel中读入到buffer，输入写总是从buffer写入到channel。 NIO Non-Blocking IO Java NIO使得我们可以通过非阻塞的方式执行IO处理，例如一个线程请求从channel中读</description>
+    </item>
+    
+    <item>
+      <title>学习Apache Ant</title>
+      <link>https://hitzhangjie.github.io/blog/2017-04-01-%E5%AD%A6%E4%B9%A0apache-ant/</link>
+      <pubDate>Sat, 01 Apr 2017 17:45:40 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-04-01-%E5%AD%A6%E4%B9%A0apache-ant/</guid>
+      <description>Apache Ant是由Apache开发的基于Java的构建工具，本文对tutorialspoint上面的Apache Ant教程进行简要总结。 1 为什么需要这样一个构建工具？ Ant是Another Neat Tool的缩写形式，为什么需要这样一个工具呢？跟它的名字一样，就是希望我们开发人员的工作能够更加neat！ 开发人员有些琐碎的、重复性的工作，包括：编译代码、打包可执行程序、部署程序到测试服务器、测试改变、拷贝代码到不同的地方。Ant可以帮助我们自动化上面列举的这几个步骤，简化我们的工作。 Ant是tomcat的作者开发出来的，最</description>
+    </item>
+    
+    <item>
+      <title>我的兴趣列表</title>
+      <link>https://hitzhangjie.github.io/blog/2017-02-25-%E6%88%91%E7%9A%84%E5%85%B4%E8%B6%A3%E5%88%97%E8%A1%A8/</link>
+      <pubDate>Sat, 25 Feb 2017 21:07:54 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-02-25-%E6%88%91%E7%9A%84%E5%85%B4%E8%B6%A3%E5%88%97%E8%A1%A8/</guid>
+      <description>hitzhangjie&amp;rsquo;s blog 2016-07-04 11:12:22 AM ============================================================================== With the help of github.io,I start my personal blog - hitzhangjie&amp;rsquo;s blog. I will share my ideas, experience, lessons taught during my study and work, which includes but not limited to: 1. Computer Engineering Techniques Programming Languages C C++ Java Shell JavaScript Python Perl Go Unix/Linux System Administration Start to Shutdown internals Important Scripts Systemd vs. Initd Services Control Job Control Process Control Web Server Setup Httpd (Apache Web Server) Nginx Tomcat Database Server Setup MySQL MarialDB Oracle PostgreSQL SQLite etc Distributed Cache Server Memcached etc Email Server Git Server Bugzilla TheBugGennie Linux Kernel Internals C Prerequisitives Virtual Memory Manangement Process Schedule Network Interrupt, Exception and Signal FileSystems etc. Data Structure &amp;amp; Algorithms Linear Array, List, Queue, Stack Non-Linear Tree, Graph Software Architect CDN (Content Delivery Network) Reverse Proxy Server Load Balancer Application Server Farm Database Server Farm File Server Farm Distributed Cache Server Farm Message Queue etc. Design Patterns 2. Computer Science Exploration &amp;amp; Study Condition-based Maintenance for Information Devices State Acquire Manners SNMP, IPMI, WMI, etc. State Assess Manners Rules-based Model BPANN-based Model Failure Prediction Manners BPANN-based Model Naive Bayesian based Model Bayesian Network based Model Fault Diagnose Manners Discriminate Transient/Persistent Faults Root Cause Analysis Fix the Faults etc. I am very proud to be a programmer. I love the programming atmosphere and culture - love to study, communicate and share! Anything posted here can be referenced. If you have some new ideas and want to talk with me, please send email to hit.zhangjie@gmail.com, I will try to</description>
+    </item>
+    
+    <item>
+      <title>Nothing, Just Linux!</title>
+      <link>https://hitzhangjie.github.io/blog/2017-03-13-nothing-just-linux/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-03-13-nothing-just-linux/</guid>
+      <description>1 邂逅Linux 初次接触Linux操作系统是在什么时候？想想～～ 高三毕业后买了第一台电脑，一台清华同方的台式机，随机赠送的光盘里面有一张操作系 统光盘“家电下乡Linux适农版”……那是我第一次接触并运行Linux，但那时的我并没有意识 到，放在我面前的是一个即将深深地吸引我并要在多年的职业生涯中去不断锤炼的存在。 大一、大二这两年，我或多或少地接触到了Linux，但是并没有产生多大兴趣，直到有一 天我激怒了一个同学。当时他正在摆弄Ubuntu，错误地GRUB配置导致系统引导失败，着急 的他在QQ空间发了一条状态，意</description>
+    </item>
+    
+  </channel>
+</rss>

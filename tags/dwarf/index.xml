@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>dwarf on 介绍</title>
+    <link>https://hitzhangjie.github.io/tags/dwarf/</link>
+    <description>Recent content in dwarf on 介绍</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Tue, 09 Jun 2020 20:25:07 +0800</lastBuildDate>
+    
+	<atom:link href="https://hitzhangjie.github.io/tags/dwarf/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>A Golang Debugger Book</title>
+      <link>https://hitzhangjie.github.io/blog/2020-06-09-a-golang-debugger-book/</link>
+      <pubDate>Tue, 09 Jun 2020 20:25:07 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-06-09-a-golang-debugger-book/</guid>
+      <description>18年开始学习go时，发现了一款调试器delve，陆陆续续地看了些源码、调试标准的东西，发现调试器是一个很好的切入视角来认识计算机系统，就想把这些东西理顺、分享一下。到现在为止，对开发工具链的认识都还有些认识上的不足，关键还是，觉得调试器就好比一个放大镜，放大一倍看清内存变量，放大两倍看清类型系统，放大三倍看清机器物理结构……这是简单的，涉及到运行时、操作系统、硬件等的特性，我是觉得很有意思，尤其是对部分想了解这些知识的人来说，还是有一定的参考意义的。 https://github.com/hitzhangj</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,30 @@
+/******************************** override default settings ********************************/
+
+.bold-title {
+    font-size: 4rem;
+}
+
+.right-fbox {
+    float: right;
+    z-index: 100;
+    position: fixed;
+    top: 50%; 
+    bottom: 50%;
+    margin-top: -365px;
+    right: 40px;
+
+    width: 270px;
+    height: 900px;
+}
+
+/******************************** table of contents settings ********************************/
+
+#TableOfContents > ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+#TableOfContents > ul > li ul {
+  list-style-type: none;
+  padding-left: 1em;
+}

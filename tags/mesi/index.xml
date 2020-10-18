@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>mesi on 介绍</title>
+    <link>https://hitzhangjie.github.io/tags/mesi/</link>
+    <description>Recent content in mesi on 介绍</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Fri, 24 Jul 2020 19:46:11 +0800</lastBuildDate>
+    
+	<atom:link href="https://hitzhangjie.github.io/tags/mesi/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>你不认识的cc&#43;&#43; volatile</title>
+      <link>https://hitzhangjie.github.io/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc&#43;&#43;-volatile/</link>
+      <pubDate>Fri, 24 Jul 2020 19:46:11 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc&#43;&#43;-volatile/</guid>
+      <description>1. 令人困惑的volatile volatile字面意思是“不稳定的、易变的”，不少编程语言中存在volatile关键字，也有共同之处，如“表示程序执行期间数据可能会被外部操作修改”，如被外设修改或者被其他线程修改等。这只是字面上给我们的一般性认识，然而具体到不同的编程语言中volatile的语义可能相差甚远。 很多人以为自己精通CC++，但是被问起volatile的时候却无法清晰、果断地表明态度，那只能说明还是处在“从入门到精通”的路上，如果了解一门语言常见特性的使用、能够写健壮高效的程序就算精通的话，那实在是</description>
+    </item>
+    
+  </channel>
+</rss>

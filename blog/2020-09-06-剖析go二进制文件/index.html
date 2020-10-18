@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+    <head>
+        
+        <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Web站点描述">
+<title>
+剖析go二进制文件 - 介绍
+</title>
+
+
+
+
+<script type="text/javascript" src="https://platform-api.sharethis.com/js/sharethis.js#property=5f24f50fc2418c0012d52ac3&product=inline-share-buttons" async="async">
+</script>
+
+<style>
+ 
+[alt~=sharing] {
+    border: 0px;
+    box-shadow: none;
+}
+div#st-1 {
+    text-align: unset;
+}
+
+ 
+div#st-1 .st-btn {
+    height: 24px;
+    padding: 0 4px;
+}
+
+div#st-1 .st-btn > img {
+    top: 4.2px;
+}
+
+div#st-2 .st-btn {
+    height: 24px;
+    padding: 0 4px;
+}
+
+div#st-2 .st-btn > img {
+    top: 4.2px;
+}
+</style>
+
+
+
+
+
+
+
+        <meta property="og:title" content="剖析go二进制文件 - 介绍" />
+<meta property="og:type" content="website" />
+<meta property="og:description" content="Web站点描述"/>
+<meta property="og:url" content="https://hitzhangjie.github.io/blog/2020-09-06-%E5%89%96%E6%9E%90go%E4%BA%8C%E8%BF%9B%E5%88%B6%E6%96%87%E4%BB%B6/"/>
+<meta property="og:site_name" content="介绍"/>
+
+
+
+
+<meta property="og:image" content="https://hitzhangjie.github.io/home/me.jpg"/>
+
+<meta property="og:image" content="https://hitzhangjie.github.io/home/profile.jpg"/>
+
+
+
+
+        
+<link rel="shortcut icon" href="/img/fav.ico">
+
+
+        
+
+
+
+
+
+<link rel="stylesheet" href="/css/main.min.daa833377fb1636f8cbfa65c601050bb5475623deb7aa6e6fdde94a064a6185d.css" integrity="sha256-2qgzN3&#43;xY2&#43;Mv6ZcYBBQu1R1Yj3reqbm/d6UoGSmGF0=" crossorigin="anonymous" media="screen">
+
+
+
+
+    <link rel="stylesheet" href="/custom.css" integrity="" crossorigin="anonymous" media="screen">
+
+        
+        
+        
+        
+    </head>
+    <body>
+        <section id="top" class="section">
+            
+            <div class="container hero  fade-in one ">
+                
+
+    <h1 class="bold-title is-1">博客</h1>
+
+
+            </div>
+            
+            <div class="section  fade-in two ">
+                
+<div class="container">
+    <hr>
+    <nav class="navbar" role="navigation" aria-label="main navigation">
+        
+        <a role="button" class="navbar-burger" data-target="navMenu" aria-label="menu" aria-expanded="false" >
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </a>
+        <div class="navbar-menu " id="navMenu">
+            
+            
+            
+            
+            <a class="navbar-item" href="/">主页</a>
+            
+
+            
+            
+
+            
+                
+            
+
+            
+                
+            
+
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://hitzhangjie.github.io/projects/">
+                  
+                  项目
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://hitzhangjie.github.io/blog/">
+                  
+                  返回 博客
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#about">关于</a>
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#thanks">致谢</a>
+            
+            
+            
+            
+
+            
+            
+            <a class="navbar-item" href="/#contact">联系方式</a>
+            
+            
+
+            
+            
+            
+            
+            <a class="navbar-item" href="https://hitzhangjie.github.io/en/">English</a>
+            
+            
+
+            
+            
+        </div>
+    </nav>
+    <hr>
+</div>
+
+
+
+                
+    <div class="container">
+
+        <h2 class="title is-1 top-pad strong-post-title">
+            <a href="https://hitzhangjie.github.io/blog/2020-09-06-%E5%89%96%E6%9E%90go%E4%BA%8C%E8%BF%9B%E5%88%B6%E6%96%87%E4%BB%B6/">剖析go二进制文件</a>
+        </h2>
+        <div class="post-data">
+            发表时间：2020-09-06 <br> 
+            阅读时长：6 分钟 (2767字)
+        </div>
+
+        
+        <div>
+            <div>
+            
+            
+            <p>
+                标签：
+                
+                <a href="/tags/go">go</a>,
+                
+                <a href="/tags/disassembler">disassembler</a>,
+                
+                <a href="/tags/gapstone">gapstone</a>
+                
+            </p>
+            
+            </div>
+
+            <div>
+            <br>
+            
+
+
+<div style="display:flex;">
+    <div>分享：</div>
+    <div>
+        <div class="sharethis-inline-share-buttons"></div>
+    </div>
+</div>
+
+
+            </div>
+
+        </div>
+
+        
+        
+
+        
+        <div> 
+            
+<aside>
+    <hr/>
+    <header>
+    <b>《剖析go二进制文件》目录：</b>
+    <br/>
+    </header>
+    <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#为什么要反汇编">为什么要反汇编？</a></li>
+        <li><a href="#什么是反汇编">什么是反汇编？</a></li>
+        <li><a href="#从0到1构建反汇编器">从0到1构建反汇编器？</a></li>
+        <li><a href="#参考内容">参考内容</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    <hr/>
+</aside>
+
+
+        </div>
+   
+        
+        <div class="container markdown top-pad">
+            <h2 id="为什么要反汇编">为什么要反汇编？</h2>
+<p>这篇文章介绍下反汇编的基本概念，以及如何用go语言写一个简单的反汇编器。本文的目标就是为了尽可能描述下反汇编的的相关概念，以及让读者朋友们了解go二进制程序内部大致是什么样的。</p>
+<p>汇编代码不会撒谎，阅读汇编代码能够让我们更细致地了解处理器执行的指令到底做了什么。这也是为什么反汇编很重要的原因之一。如果我们有一个二进制程序，并且怀疑它有一些恶意的行为，通过反汇编来研究它就是一种很好的途径。再或者，如果你分析代码难以发现性能瓶颈，那么反汇编也是一种可以简化分析的途径。</p>
+<p>如果你担心能不能阅读x86_64汇编代码的问题，其实不用担心，我们大部分都不能很顺畅地阅读。你也没有必要为了搞懂这篇文章去阅读其他任何的汇编代码，不过如果有汇编基础的话确实会感觉更有意思点。这里有一篇介绍汇编基础的文章 <a href="https://www.nayuki.io/page/a-fundamental-introduction-to-x86-assembly-programming">A fundamental introduction to x86 assembly programming</a>。</p>
+<h2 id="什么是反汇编">什么是反汇编？</h2>
+<p>那么，什么是反汇编呢？</p>
+<p>反汇编，其实是将已经编译好的二进制程序，重新转换为汇编代码的过程。为了解释清楚，我们先考虑下从源代码编译构建的过程：</p>
+<p><img src="https://www.grant.pizza/CompilerDiagram.png" alt="assemble-process"></p>
+<p>汇编代码，其实是一种介于源代码、机器指令之间的中间代码表示，虽然大多数汇编指令是和机器指令对应的，但是也不绝对，比如go汇编就是一种跟机器指令没有明显对应关系的汇编形式。详细地可以参考go assembler设计对应的go blog一文。ok，言归正传。编译器首先将源代码转换为OS/架构特定的汇编代码，然后再通过汇编器将汇编代码转换为机器指令。从字面上就可以看出disassemble是assemble的一个逆向的过程，俗称反汇编。</p>
+<p><img src="https://www.grant.pizza/DisassemblerDiagram.png" alt="disassemble-process"></p>
+<p>庆幸地是，go语言有一个相对标准、完整的工具链，汇编、反汇编都会比较方便。我们可以直接将源码转换成汇编代码来查看，例如通过运行命令 <code>go build -gcflags -S program.go</code>。如果我们已经有了一个编译构建好的二进制程序，这个时候想查看汇编代码的话，就得通过反汇编，可以运行命令 <code>go tool objdump binaryFile</code>。</p>
+<p>如果想了解如何实现汇编、反汇编的话，这篇文章其实已经可以结束了。但是如果来解释下如何从0到1构建一个反汇编器的话，还是有意思的。</p>
+<h2 id="从0到1构建反汇编器">从0到1构建反汇编器？</h2>
+<p>首先，为了构建一个反汇编器，我们需要先知道二进制程序对应的目标机器架构包含的所有的机器指令。为了实现这个，我们可能要参考特定架构的手册来查阅到底有多少机器指令。如果对这个不熟悉，这个过程其实是比较困难的。其实，有很多种微处理器架构、汇编语法、指令集、编码模式，而且一直在变。光掌握这些不同机器架构包含的指令集就是一个很困难的事情，至于如何困难可以参考下这篇文章 <a href="https://www.grant.pizza/DisassemblerDiagram.png">how many x86_64 instructions are there anyway</a>。</p>
+<p>庆幸地是，这些繁重的工作应被解决了，反汇编框架Capstone就是干这个事情的。Capstone其实已经是一个事实上的标准了，在各种反汇编工具中应用广泛。重新实现一个反汇编框架，其实没必要，这个过程只会是一个学习性的、枯燥的、重复的任务，我们不会介绍如何实现一个Capstone反汇编框架，只会介绍如何借助Capstone来实现反汇编的能力。在go语言中使用Capstone也简单，有一个针对go的实现gapstone。</p>
+<p>通过下面的代码我们可以初始化一个gapstone反汇编框架引擎，用它来执行后续的反汇编任务。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">engine</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">gapstone</span>.<span style="color:#a6e22e">New</span>(
+	<span style="color:#a6e22e">gapstone</span>.<span style="color:#a6e22e">CS_ARCH_X86</span>,
+	<span style="color:#a6e22e">gapstone</span>.<span style="color:#a6e22e">CS_MODE_64</span>,
+)
+<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+	<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+}
+</code></pre></div><p>例如，我们可以将下面的原始指令数据传递给Capstone反汇编框架，然后该反汇编框架将会将这些原始指令数据转换为对应的x86_64下的指令。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#ae81ff">0x64</span> <span style="color:#ae81ff">0x48</span> <span style="color:#ae81ff">0x8B</span> <span style="color:#ae81ff">0xC</span> <span style="color:#ae81ff">0x25</span> <span style="color:#ae81ff">0xF8</span> <span style="color:#ae81ff">0xFF</span> <span style="color:#ae81ff">0xFF</span> <span style="color:#ae81ff">0xFF</span>
+
+                     |
+
+<span style="color:#a6e22e">mov</span> <span style="color:#a6e22e">rcx</span>, <span style="color:#a6e22e">qword</span> <span style="color:#a6e22e">ptr</span> <span style="color:#a6e22e">fs</span>:[<span style="color:#ae81ff">0xfffffffffffffff8</span>]
+</code></pre></div><p>把上面的操作放在一起，如下：</p>
+<p><strong>file: main.go</strong></p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">input</span> <span style="color:#f92672">:=</span> []<span style="color:#66d9ef">byte</span>{<span style="color:#ae81ff">0x64</span>, <span style="color:#ae81ff">0x48</span>, <span style="color:#ae81ff">0x8B</span>, <span style="color:#ae81ff">0xC</span>, <span style="color:#ae81ff">0x25</span>, <span style="color:#ae81ff">0xF8</span>, <span style="color:#ae81ff">0xFF</span>, <span style="color:#ae81ff">0xFF</span>, <span style="color:#ae81ff">0xFF</span>}
+
+<span style="color:#a6e22e">instructions</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">engine</span>.<span style="color:#a6e22e">Disasm</span>(<span style="color:#a6e22e">input</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>)
+<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+	<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+}
+
+<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">instruction</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">instructions</span> {
+	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;0x%x:\t%s\t\t%s\n&#34;</span>, <span style="color:#a6e22e">instruction</span>.<span style="color:#a6e22e">Address</span>, <span style="color:#a6e22e">instruction</span>.<span style="color:#a6e22e">Mnemonic</span>, <span style="color:#a6e22e">instruction</span>.<span style="color:#a6e22e">OpStr</span>)
+}
+</code></pre></div><p>测试下：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ go run main.go
+
+0x0:	mov		rcx, qword ptr fs:<span style="color:#f92672">[</span>0xfffffffffffffff8<span style="color:#f92672">]</span>
+</code></pre></div><p>有了这个反汇编框架Capstone之后，要实现一个反汇编器，我们还有一个剩下的工作要做，就是从二进制程序中提取指令对应的原始数据，然后将其传给Capstone翻译引擎就可以了。</p>
+<p>当你在一个笔记本上编译一个go程序、默认输出是64位ELF格式（Executable Linkable Format）。ELF内部其实是被组织成了多个不同的节（section），每一个section都有不同的目的，如存储版本信息、程序元数据信息、可执行代码等等。ELF是被广泛采用的一个二进制程序标准，go语言标准库里面提供了一个 <code>debug/elf</code> package用来进行ELF文件数据的读写。ELF其实有点复杂，但是要实现反汇编的话其实我们只关心两个section就可以了。一个是符号表section（.symtab），一个是指令section （.text）。</p>
+<p><img src="https://www.grant.pizza/ELF_64.png" alt="elf"></p>
+<p>首先，我们先来看下术语symbol的定义，其实它指的是代码中任何有名的东西，如变量、函数、类型、常量等都是symbols。go编译器会编译每一个符号，并存储对符号表中符号的引用信息。go标准库 <code>debug/elf</code> 中提供了对ELF文件的读写能力，每一个符号都通过结构体 <code>Symbol</code> 来表示，它包括了符号的名字、地址、原始数据的多少等等吧。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// A Symbol represents an entry in an ELF symbol table section.
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Symbol</span> <span style="color:#66d9ef">struct</span> {
+	<span style="color:#a6e22e">Name</span>        <span style="color:#66d9ef">string</span>
+	<span style="color:#a6e22e">Info</span>        <span style="color:#66d9ef">byte</span>
+	<span style="color:#a6e22e">Other</span>       <span style="color:#66d9ef">byte</span>
+	<span style="color:#a6e22e">Section</span>     <span style="color:#a6e22e">SectionIndex</span>
+	<span style="color:#a6e22e">Value</span>       <span style="color:#66d9ef">uint64</span>
+	<span style="color:#a6e22e">Size</span>        <span style="color:#66d9ef">uint64</span>
+}
+</code></pre></div><p>现在，如果我们想快速提取ELF文件中的所有符号的话，我们就可以这么实现：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// Open the ELF file
+</span><span style="color:#75715e"></span><span style="color:#a6e22e">elfFile</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">elf</span>.<span style="color:#a6e22e">Open</span>(<span style="color:#a6e22e">path</span>)
+<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+  <span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;error while opening ELF file %s: %+s&#34;</span>, <span style="color:#a6e22e">path</span>, <span style="color:#a6e22e">err</span>.<span style="color:#a6e22e">Error</span>())
+}
+
+<span style="color:#75715e">// Extract the symbol table
+</span><span style="color:#75715e"></span><span style="color:#a6e22e">symbolTable</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">elfFile</span>.<span style="color:#a6e22e">Symbols</span>()
+<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+  <span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;could not extract symbol table: %s&#34;</span>, <span style="color:#a6e22e">err</span>.<span style="color:#a6e22e">Error</span>())
+}
+
+<span style="color:#75715e">// Traverse through each symbol in the symbol table
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">symbol</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">symbolTable</span> {
+	<span style="color:#75715e">/*
+</span><span style="color:#75715e">	symbol.Info lets us tell if this symbol is a function that we want to disassemble
+</span><span style="color:#75715e">	symbol.Value gives us the offset from the start of the .text section
+</span><span style="color:#75715e">	symbol.Size lets us calculate the full address range of this symbol in the .text section
+</span><span style="color:#75715e">	*/</span>
+}
+</code></pre></div><p>从Symbol各个字段的名字命名上看并不是很清晰，符号对应的内存偏移量其实是存储在Value字段中的。通过这个偏移量，可以通过计算与.text section的偏移量的差值，我们可以计算出符号对应的指令数据在.text section中的起始索引。通过进一步的Size我们可以计算出包含的指令数据对应的字节数量。还有一个就是Info字段，这个字段起始是类型的意思，在go里面Info=byte(2)表示的是函数，Info=byte(18)表示的是方法。所以，如果想实现对函数、方法的反汇编的话，我们只处理这两种类型的就可以了。</p>
+<p><img src="https://www.grant.pizza/SymbolTableToTextSection.png" alt="Symbol"></p>
+<p>有了这些之后，我们就可以快速的再完善一下了：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// extract the .text section
+</span><span style="color:#75715e"></span><span style="color:#a6e22e">textSection</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">elfFile</span>.<span style="color:#a6e22e">Section</span>(<span style="color:#e6db74">&#34;.text&#34;</span>)
+<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">textSection</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+	<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#e6db74">&#34;No text section&#34;</span>)
+}
+
+<span style="color:#75715e">// extract the raw bytes from the .text section
+</span><span style="color:#75715e"></span><span style="color:#a6e22e">textSectionData</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">textSection</span>.<span style="color:#a6e22e">Data</span>()
+<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+	<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+}
+
+<span style="color:#75715e">// traverse through the symbol table
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">symbol</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">symbolTable</span> {
+
+	<span style="color:#75715e">// skip over any symbols that aren&#39;t functinons/methods
+</span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">symbol</span>.<span style="color:#a6e22e">Info</span> <span style="color:#f92672">!=</span> byte(<span style="color:#ae81ff">2</span>) <span style="color:#f92672">&amp;&amp;</span> <span style="color:#a6e22e">symbol</span>.<span style="color:#a6e22e">Info</span> <span style="color:#f92672">!=</span> byte(<span style="color:#ae81ff">18</span>) {
+		<span style="color:#66d9ef">continue</span>
+	}
+
+	<span style="color:#75715e">// skip over empty symbols
+</span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">symbol</span>.<span style="color:#a6e22e">Size</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+		<span style="color:#66d9ef">continue</span>
+	}
+
+	<span style="color:#75715e">// calculate starting and ending index of the symbol within the text section
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">symbolStartingIndex</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">symbol</span>.<span style="color:#a6e22e">Value</span> <span style="color:#f92672">-</span> <span style="color:#a6e22e">textSection</span>.<span style="color:#a6e22e">Addr</span>
+	<span style="color:#a6e22e">symbolEndingIndex</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">symbolStartingIndex</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">symbol</span>.<span style="color:#a6e22e">Size</span>
+
+	<span style="color:#75715e">// collect the bytes of the symbol
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">symbolBytes</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">textSectionData</span>[<span style="color:#a6e22e">symbolStartingIndex</span>:<span style="color:#a6e22e">symbolEndingIndex</span>]
+
+	<span style="color:#75715e">// disasemble the symbol
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">instructions</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">engine</span>.<span style="color:#a6e22e">Disasm</span>(<span style="color:#a6e22e">symbolBytes</span>, <span style="color:#a6e22e">symbol</span>.<span style="color:#a6e22e">Value</span>, <span style="color:#ae81ff">0</span>)
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;could not disasemble symbol: %s&#34;</span>, <span style="color:#a6e22e">err</span>)
+	}
+
+	<span style="color:#75715e">// print out each instruction that&#39;s part of this symbol
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;\n\nSYMBOL %s\n&#34;</span>, <span style="color:#a6e22e">symbol</span>.<span style="color:#a6e22e">Name</span>)
+	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">ins</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">instructions</span> {
+		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;0x%x:\t%s\t\t%s\n&#34;</span>, <span style="color:#a6e22e">ins</span>.<span style="color:#a6e22e">Address</span>, <span style="color:#a6e22e">ins</span>.<span style="color:#a6e22e">Mnemonic</span>, <span style="color:#a6e22e">ins</span>.<span style="color:#a6e22e">OpStr</span>)
+	}
+}
+</code></pre></div><p>完整的实例代码，详见 <a href="https://gist.github.com/hitzhangjie/e91b92baed1b5108d5a4fe596ca2ae03">full disassembler</a>。实现一个简单的反汇编器，实际上只用了70~80行代码而已。下面是一个简单的运行实例。</p>
+<p><img src="https://asciinema.org/a/P5SZTG7aXgZFzAI8df2yPaI0a.png" alt="disassembler example"></p>
+<blockquote>
+<p>Note: 在测试的时候，需要注意下capstone的版本、gapstaone的版本，不然测试的时候可能会出错。这里先暂时不详细写了，遇到问题可以去repo下查issue。</p>
+</blockquote>
+<h2 id="参考内容">参考内容</h2>
+<p>1.dissecting go binaries, <a href="https://www.grant.pizza/dissecting-go-binaries">https://www.grant.pizza/dissecting-go-binaries</a></p>
+
+        </div>
+        
+
+        
+        <hr>
+        <div style="float:right;">
+        
+
+
+<div style="display:flex;">
+    <div>分享：</div>
+    <div>
+        <div class="sharethis-inline-share-buttons"></div>
+    </div>
+</div>
+
+
+        </div>
+
+        <br>
+        <br>
+
+    </div>
+
+    
+    
+    <br>
+    <br>
+    <div style="height:auto;align:center;text-align:center;"> 
+        <div>
+            <img src="/common/xiaoqi.png" style="height:238px;margin-top:10px;margin-right:5px;"/>
+            <img src="/common/qrcode.jpg" style="height:238px;margin-top:10px;"/>
+            <img src="/common/yuanbao.png" style="height:238px;margin-top:10px;margin-left:5px;"/>
+        </div>
+
+        <div>
+            <p>
+                感谢打赏，小七🐶、元宝🐱可以改善伙食咯 😘
+            </p>
+        </div>
+
+
+    </div>
+    
+
+    
+
+
+                
+                <div class="container">
+    <hr>
+</div>
+<div class="container has-text-centered top-pad">
+    <a href="#top">
+        <i class="fa fa-arrow-up"></i>
+    </a>
+</div>
+
+<div class="container">
+    <hr>
+</div>
+
+                <div class="section" id="footer">
+    <div class="container has-text-centered">
+    
+        <span class="footer-text">
+            <a href="https://github.com/victoriadrake/hugo-theme-introduction/"><strong>Introduction</strong></a> 主题为 <a href="http://gohugo.io/">Hugo</a> 而设。由开源社群贡献者以 <a href="https://victoria.dev"><i class="fa fa-heart"></i> 和 <i class="fa fa-coffee"></i></a> 创造。
+        </span>
+    
+    </div>
+</div>
+
+                
+            </div>
+        </section>
+        
+        
+
+
+
+
+
+<script src="https://hitzhangjie.github.io/js/bundle.23f18222425179f754965a36c9b211bd8cff5e5ab61ee23b52f026cef6699139.js" integrity="sha256-I/GCIkJRefdUllo2ybIRvYz/Xlq2HuI7UvAmzvZpkTk="></script>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-168027530-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+        
+        
+        
+        
+    </body>
+</html>

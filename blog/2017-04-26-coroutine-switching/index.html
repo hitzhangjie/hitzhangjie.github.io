@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+    <head>
+        
+        <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Web站点描述">
+<title>
+Coroutine-Switching - 介绍
+</title>
+
+
+
+
+<script type="text/javascript" src="https://platform-api.sharethis.com/js/sharethis.js#property=5f24f50fc2418c0012d52ac3&product=inline-share-buttons" async="async">
+</script>
+
+<style>
+ 
+[alt~=sharing] {
+    border: 0px;
+    box-shadow: none;
+}
+div#st-1 {
+    text-align: unset;
+}
+
+ 
+div#st-1 .st-btn {
+    height: 24px;
+    padding: 0 4px;
+}
+
+div#st-1 .st-btn > img {
+    top: 4.2px;
+}
+
+div#st-2 .st-btn {
+    height: 24px;
+    padding: 0 4px;
+}
+
+div#st-2 .st-btn > img {
+    top: 4.2px;
+}
+</style>
+
+
+
+
+
+
+
+        <meta property="og:title" content="Coroutine-Switching - 介绍" />
+<meta property="og:type" content="website" />
+<meta property="og:description" content="Web站点描述"/>
+<meta property="og:url" content="https://hitzhangjie.github.io/blog/2017-04-26-coroutine-switching/"/>
+<meta property="og:site_name" content="介绍"/>
+
+
+
+
+<meta property="og:image" content="https://hitzhangjie.github.io/home/me.jpg"/>
+
+<meta property="og:image" content="https://hitzhangjie.github.io/home/profile.jpg"/>
+
+
+
+
+        
+<link rel="shortcut icon" href="/img/fav.ico">
+
+
+        
+
+
+
+
+
+<link rel="stylesheet" href="/css/main.min.daa833377fb1636f8cbfa65c601050bb5475623deb7aa6e6fdde94a064a6185d.css" integrity="sha256-2qgzN3&#43;xY2&#43;Mv6ZcYBBQu1R1Yj3reqbm/d6UoGSmGF0=" crossorigin="anonymous" media="screen">
+
+
+
+
+    <link rel="stylesheet" href="/custom.css" integrity="" crossorigin="anonymous" media="screen">
+
+        
+        
+        
+        
+    </head>
+    <body>
+        <section id="top" class="section">
+            
+            <div class="container hero  fade-in one ">
+                
+
+    <h1 class="bold-title is-1">博客</h1>
+
+
+            </div>
+            
+            <div class="section  fade-in two ">
+                
+<div class="container">
+    <hr>
+    <nav class="navbar" role="navigation" aria-label="main navigation">
+        
+        <a role="button" class="navbar-burger" data-target="navMenu" aria-label="menu" aria-expanded="false" >
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </a>
+        <div class="navbar-menu " id="navMenu">
+            
+            
+            
+            
+            <a class="navbar-item" href="/">主页</a>
+            
+
+            
+            
+
+            
+                
+            
+
+            
+                
+            
+
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://hitzhangjie.github.io/projects/">
+                  
+                  项目
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://hitzhangjie.github.io/blog/">
+                  
+                  返回 博客
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#about">关于</a>
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#thanks">致谢</a>
+            
+            
+            
+            
+
+            
+            
+            <a class="navbar-item" href="/#contact">联系方式</a>
+            
+            
+
+            
+            
+            
+            
+            <a class="navbar-item" href="https://hitzhangjie.github.io/en/">English</a>
+            
+            
+
+            
+            
+        </div>
+    </nav>
+    <hr>
+</div>
+
+
+
+                
+    <div class="container">
+
+        <h2 class="title is-1 top-pad strong-post-title">
+            <a href="https://hitzhangjie.github.io/blog/2017-04-26-coroutine-switching/">Coroutine-Switching</a>
+        </h2>
+        <div class="post-data">
+            发表时间：2017-04-26 <br> 
+            阅读时长：2 分钟 (780字)
+        </div>
+
+        
+        <div>
+            <div>
+            
+            
+            <p>
+                标签：
+                
+                <a href="/tags/coroutine">coroutine</a>,
+                
+                <a href="/tags/ucontext">ucontext</a>,
+                
+                <a href="/tags/libtask">libtask</a>
+                
+            </p>
+            
+            </div>
+
+            <div>
+            <br>
+            
+
+
+<div style="display:flex;">
+    <div>分享：</div>
+    <div>
+        <div class="sharethis-inline-share-buttons"></div>
+    </div>
+</div>
+
+
+            </div>
+
+        </div>
+
+        
+        
+
+        
+        <div> 
+            
+<aside>
+    <hr/>
+    <header>
+    <b>《Coroutine-Switching》目录：</b>
+    <br/>
+    </header>
+    <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#1-协程coroutine">1. 协程Coroutine</a>
+              <ul>
+                <li><a href="#11-协程coroutine声明">1.1. 协程coroutine声明</a></li>
+                <li><a href="#12-协程coroutine实现">1.2. 协程Coroutine实现</a></li>
+              </ul>
+            </li>
+            <li><a href="#2-协程coroutine上下文切换">2. 协程Coroutine上下文切换</a></li>
+            <li><a href="#3-coroutine使用--测试">3. Coroutine使用 &amp; 测试</a>
+              <ul>
+                <li><a href="#31-测试程序">3.1. 测试程序</a></li>
+                <li><a href="#32-测试程序build">3.2. 测试程序build</a></li>
+                <li><a href="#33-测试结果">3.3. 测试结果</a></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    <hr/>
+</aside>
+
+
+        </div>
+   
+        
+        <div class="container markdown top-pad">
+            <h3 id="1-协程coroutine">1. 协程Coroutine</h3>
+<h4 id="11-协程coroutine声明">1.1. 协程coroutine声明</h4>
+<p>file: coroutine.h</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdint.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span>
+<span style="color:#66d9ef">typedef</span> <span style="color:#a6e22e">int64_t</span> (<span style="color:#f92672">*</span>EntryCallback)(<span style="color:#66d9ef">void</span><span style="color:#f92672">*</span>);
+
+<span style="color:#75715e">//硬件上下文信息
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">struct</span> stRegister
+{
+    uint64_t rax;
+    uint64_t rbx;
+    uint64_t rcx;
+    uint64_t rdx;
+
+    uint64_t rsi;
+    uint64_t rdi;
+
+    uint64_t r8;
+    uint64_t r9;
+    uint64_t r10;
+    uint64_t r11;
+    uint64_t r12;
+    uint64_t r13;
+    uint64_t r14;
+    uint64_t r15;
+
+    uint64_t rbp;
+    uint64_t rsp;
+
+    uint64_t rip;
+};
+
+<span style="color:#75715e">//协程上下文
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">struct</span> stContext
+{
+    <span style="color:#66d9ef">struct</span> stRegister cpu_register;
+    <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>arg;
+    uint8_t <span style="color:#f92672">*</span>stack;
+};
+
+<span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span> stContext Coroutine;
+
+<span style="color:#75715e">//创建协程
+</span><span style="color:#75715e"></span>Coroutine<span style="color:#f92672">*</span> <span style="color:#a6e22e">CreateCoroutine</span>(EntryCallback entry, <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>arg);
+
+<span style="color:#75715e">//删除协程
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">DeleteCoroutine</span>(Coroutine <span style="color:#f92672">*</span>ptr);
+
+<span style="color:#75715e">//设置协程栈尺寸
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">SetStackSize</span>(uint32_t size);
+
+<span style="color:#75715e">//协程切换
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">__SwitchCoroutine__</span>(Coroutine <span style="color:#f92672">*</span>cur, <span style="color:#66d9ef">const</span> Coroutine <span style="color:#f92672">*</span>next);
+</code></pre></div><h4 id="12-协程coroutine实现">1.2. 协程Coroutine实现</h4>
+<p>file: coroutine.c</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#include</span> <span style="color:#75715e">&#34;coroutine.h&#34;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdlib.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">#define OFFSET(t, m) (&amp;(((t*)0)-&gt;m))
+</span><span style="color:#75715e"></span>
+uint32_t g_stack_size <span style="color:#f92672">=</span> <span style="color:#ae81ff">100</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">1024</span>;
+
+Coroutine<span style="color:#f92672">*</span> <span style="color:#a6e22e">CreateCoroutine</span>(EntryCallback entry, <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>arg)
+{
+    <span style="color:#66d9ef">int</span> size <span style="color:#f92672">=</span> g_stack_size <span style="color:#f92672">+</span> <span style="color:#66d9ef">sizeof</span>(Coroutine);
+    Coroutine <span style="color:#f92672">*</span>c <span style="color:#f92672">=</span> (Coroutine <span style="color:#f92672">*</span>)calloc(size, <span style="color:#ae81ff">1</span>);
+    <span style="color:#66d9ef">if</span> (NULL <span style="color:#f92672">==</span> c)
+    {
+        <span style="color:#66d9ef">return</span> NULL;
+    }
+    
+    uint8_t <span style="color:#f92672">*</span>start <span style="color:#f92672">=</span> (uint8_t<span style="color:#f92672">*</span>)c;
+    c<span style="color:#f92672">-&gt;</span>arg <span style="color:#f92672">=</span> arg;
+    <span style="color:#75715e">//函数入口
+</span><span style="color:#75715e"></span>    c<span style="color:#f92672">-&gt;</span>cpu_register.rip <span style="color:#f92672">=</span> (uint64_t)entry;
+    <span style="color:#75715e">//第一个参数
+</span><span style="color:#75715e"></span>    c<span style="color:#f92672">-&gt;</span>cpu_register.rdi <span style="color:#f92672">=</span> (uint64_t)arg;
+    <span style="color:#75715e">//rbp 栈底
+</span><span style="color:#75715e"></span>    c<span style="color:#f92672">-&gt;</span>cpu_register.rbp <span style="color:#f92672">=</span> (uint64_t)(start <span style="color:#f92672">+</span> size);
+    <span style="color:#75715e">//rsp 当前栈顶
+</span><span style="color:#75715e"></span>    c<span style="color:#f92672">-&gt;</span>cpu_register.rsp <span style="color:#f92672">=</span> c<span style="color:#f92672">-&gt;</span>cpu_register.rbp;
+
+    <span style="color:#66d9ef">return</span> c;
+}
+
+<span style="color:#66d9ef">void</span> <span style="color:#a6e22e">DeleteCoroutine</span>(Coroutine <span style="color:#f92672">*</span>ptr)
+{
+    free(ptr);
+}
+
+<span style="color:#66d9ef">void</span> <span style="color:#a6e22e">SetStackSize</span>(uint32_t size) 
+{
+    g_stack_size <span style="color:#f92672">=</span> size;
+}
+</code></pre></div><h3 id="2-协程coroutine上下文切换">2. 协程Coroutine上下文切换</h3>
+<p>file: switch.s</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">//这里协程库是基于有栈协程的设计来实现，协程硬件上下文信息需通过%rsp来计算访问地址
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">//__SwitchCoroutine__(current_coroutine, next_coroutine)
+</span><span style="color:#75715e">//- rdi, current_coroutine
+</span><span style="color:#75715e">//- rsi, next_coroutine 
+</span><span style="color:#75715e"></span>.globl __SwitchCoroutine__
+__SwitchCoroutine__:
+    <span style="color:#75715e">//save rsp of calling function, here %rsp equals to return address
+</span><span style="color:#75715e"></span>    mov <span style="color:#f92672">%</span>rsp, <span style="color:#f92672">%</span>rax
+    <span style="color:#75715e">//set rsp to end of coroutine.stRegister, to push rip, 
+</span><span style="color:#75715e"></span>	<span style="color:#75715e">//when rdi coroutine return, it will return the rip to continue exec
+</span><span style="color:#75715e"></span>    mov <span style="color:#f92672">%</span>rdi, <span style="color:#f92672">%</span>rsp
+    add <span style="color:#960050;background-color:#1e0010">$</span><span style="color:#ae81ff">136</span>, <span style="color:#f92672">%</span>rsp
+	push (<span style="color:#f92672">%</span>rax)
+    <span style="color:#75715e">//+8 to skip return address to get end address of calling function&#39;s %rsp
+</span><span style="color:#75715e"></span>    add <span style="color:#960050;background-color:#1e0010">$</span><span style="color:#ae81ff">8</span>, <span style="color:#f92672">%</span>rax
+	push <span style="color:#f92672">%</span>rax
+    <span style="color:#75715e">//store the current_coroutine&#39;s state(stRegister)
+</span><span style="color:#75715e"></span>    push <span style="color:#f92672">%</span>rbp
+    push <span style="color:#f92672">%</span>r15
+    push <span style="color:#f92672">%</span>r14
+    push <span style="color:#f92672">%</span>r13
+    push <span style="color:#f92672">%</span>r12
+    push <span style="color:#f92672">%</span>r11
+    push <span style="color:#f92672">%</span>r10
+    push <span style="color:#f92672">%</span>r9
+    push <span style="color:#f92672">%</span>r8
+    push <span style="color:#f92672">%</span>rdi
+    push <span style="color:#f92672">%</span>rsi
+    push <span style="color:#f92672">%</span>rdx
+    push <span style="color:#f92672">%</span>rcx
+    push <span style="color:#f92672">%</span>rbx
+    push <span style="color:#f92672">%</span>rax
+    <span style="color:#75715e">//ready switch to next_coroutine
+</span><span style="color:#75715e"></span>    mov <span style="color:#f92672">%</span>rsi, <span style="color:#f92672">%</span>rsp
+    <span style="color:#75715e">//restore the next_coroutine&#39;s stRegister to cpu 
+</span><span style="color:#75715e"></span>    pop <span style="color:#f92672">%</span>rax
+    pop <span style="color:#f92672">%</span>rbx
+    pop <span style="color:#f92672">%</span>rcx
+    pop <span style="color:#f92672">%</span>rdx
+    pop <span style="color:#f92672">%</span>rsi
+    pop <span style="color:#f92672">%</span>rdi
+    pop <span style="color:#f92672">%</span>r8
+    pop <span style="color:#f92672">%</span>r9
+    pop <span style="color:#f92672">%</span>r10
+    pop <span style="color:#f92672">%</span>r11
+    pop <span style="color:#f92672">%</span>r12
+    pop <span style="color:#f92672">%</span>r13
+    pop <span style="color:#f92672">%</span>r14
+    pop <span style="color:#f92672">%</span>r15
+    pop <span style="color:#f92672">%</span>rbp
+    <span style="color:#75715e">//move return address to %rax
+</span><span style="color:#75715e"></span>    mov <span style="color:#ae81ff">8</span>(<span style="color:#f92672">%</span>rsp), <span style="color:#f92672">%</span>rax
+    pop <span style="color:#f92672">%</span>rsp
+    <span style="color:#75715e">//jmp to next_coroutine, ram indirect access to fetch the target address
+</span><span style="color:#75715e"></span>    jmp <span style="color:#f92672">*%</span>rax
+</code></pre></div><h3 id="3-coroutine使用--测试">3. Coroutine使用 &amp; 测试</h3>
+<h4 id="31-测试程序">3.1. 测试程序</h4>
+<p>file: main.c</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;unistd.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdlib.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;string.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&#34;coroutine.h&#34;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span>
+Coroutine <span style="color:#f92672">*</span>coroutines[<span style="color:#ae81ff">3</span>];
+
+int64_t <span style="color:#a6e22e">callback</span>(<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>arg)
+{
+    <span style="color:#66d9ef">while</span>(<span style="color:#ae81ff">1</span>) {
+        <span style="color:#66d9ef">if</span>(strcmp((<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>)arg, <span style="color:#e6db74">&#34;coroutine-a&#34;</span>)<span style="color:#f92672">==</span><span style="color:#ae81ff">0</span>) {
+            printf(<span style="color:#e6db74">&#34;[%s] ready to switch to coroutine-b</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, (<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>)arg);
+            __SwitchCoroutine__(coroutines[<span style="color:#ae81ff">0</span>], coroutines[<span style="color:#ae81ff">1</span>]);
+        }
+        <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span>(strcmp((<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>)arg, <span style="color:#e6db74">&#34;coroutine-b&#34;</span>)<span style="color:#f92672">==</span><span style="color:#ae81ff">0</span>) {
+            printf(<span style="color:#e6db74">&#34;[%s] ready to switch to coroutine-c</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, (<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>)arg);
+            __SwitchCoroutine__(coroutines[<span style="color:#ae81ff">1</span>], coroutines[<span style="color:#ae81ff">2</span>]);
+        }
+        <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span>(strcmp((<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>)arg, <span style="color:#e6db74">&#34;coroutine-c&#34;</span>)<span style="color:#f92672">==</span><span style="color:#ae81ff">0</span>) {
+            printf(<span style="color:#e6db74">&#34;[%s] ready to switch to coroutine-a</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, (<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>)arg);
+            __SwitchCoroutine__(coroutines[<span style="color:#ae81ff">2</span>], coroutines[<span style="color:#ae81ff">0</span>]);
+        }
+        sleep(<span style="color:#ae81ff">1</span>);
+    }
+
+    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+}
+
+<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>()
+{
+    printf(<span style="color:#e6db74">&#34;initialize coroutine&#39;s callback</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+    EntryCallback cb <span style="color:#f92672">=</span> callback;
+
+    printf(<span style="color:#e6db74">&#34;create 3 coroutines</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+    Coroutine <span style="color:#f92672">*</span>coo <span style="color:#f92672">=</span> CreateCoroutine(cb, (<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)<span style="color:#e6db74">&#34;coroutine-o&#34;</span>);
+    Coroutine <span style="color:#f92672">*</span>coa <span style="color:#f92672">=</span> CreateCoroutine(cb, (<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)<span style="color:#e6db74">&#34;coroutine-a&#34;</span>);
+    Coroutine <span style="color:#f92672">*</span>cob <span style="color:#f92672">=</span> CreateCoroutine(cb, (<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)<span style="color:#e6db74">&#34;coroutine-b&#34;</span>);
+    Coroutine <span style="color:#f92672">*</span>coc <span style="color:#f92672">=</span> CreateCoroutine(cb, (<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)<span style="color:#e6db74">&#34;coroutine-c&#34;</span>);
+
+    coroutines[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">=</span> coa;
+    coroutines[<span style="color:#ae81ff">1</span>] <span style="color:#f92672">=</span> cob;
+    coroutines[<span style="color:#ae81ff">2</span>] <span style="color:#f92672">=</span> coc;
+
+    printf(<span style="color:#e6db74">&#34;ready to start coroutine switching</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+    __SwitchCoroutine__(coo, coa);
+
+    printf(<span style="color:#e6db74">&#34;ready to exit</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+
+    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+}
+</code></pre></div><h4 id="32-测试程序build">3.2. 测试程序build</h4>
+<p>file: Makefile</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-makefile" data-lang="makefile"><span style="color:#a6e22e">all</span><span style="color:#f92672">:</span> *.c *.h *.s
+	@echo <span style="color:#e6db74">&#34;==&gt; build the coroutine test module&#34;</span>
+	gcc -g -o main *.c *.h *.s
+	@echo <span style="color:#e6db74">&#34;==&gt; build successful&#34;</span>
+<span style="color:#a6e22e">test</span><span style="color:#f92672">:</span> all
+	@echo <span style="color:#e6db74">&#34;==&gt; run the coroutine test module&#34;</span>
+	./main
+<span style="color:#a6e22e">clean</span><span style="color:#f92672">:</span>
+	@echo <span style="color:#e6db74">&#34;==&gt; delete the build file &#39;main&#39;&#34;</span>
+	rm main
+</code></pre></div><h4 id="33-测试结果">3.3. 测试结果</h4>
+<pre><code>make 
+make test
+
+==&gt; build the coroutine test module
+gcc -g -o main *.c *.h *.s
+==&gt; build successful
+==&gt; run the coroutine test module
+./main
+initialize coroutine's callback
+create 3 coroutines
+ready to start coroutine switching
+[coroutine-a] ready to switch to coroutine-b
+[coroutine-b] ready to switch to coroutine-c
+[coroutine-c] ready to switch to coroutine-a
+[coroutine-a] ready to switch to coroutine-b
+[coroutine-b] ready to switch to coroutine-c
+[coroutine-c] ready to switch to coroutine-a
+[coroutine-a] ready to switch to coroutine-b
+</code></pre>
+        </div>
+        
+
+        
+        <hr>
+        <div style="float:right;">
+        
+
+
+<div style="display:flex;">
+    <div>分享：</div>
+    <div>
+        <div class="sharethis-inline-share-buttons"></div>
+    </div>
+</div>
+
+
+        </div>
+
+        <br>
+        <br>
+
+    </div>
+
+    
+    
+    <br>
+    <br>
+    <div style="height:auto;align:center;text-align:center;"> 
+        <div>
+            <img src="/common/xiaoqi.png" style="height:238px;margin-top:10px;margin-right:5px;"/>
+            <img src="/common/qrcode.jpg" style="height:238px;margin-top:10px;"/>
+            <img src="/common/yuanbao.png" style="height:238px;margin-top:10px;margin-left:5px;"/>
+        </div>
+
+        <div>
+            <p>
+                感谢打赏，小七🐶、元宝🐱可以改善伙食咯 😘
+            </p>
+        </div>
+
+
+    </div>
+    
+
+    
+
+
+                
+                <div class="container">
+    <hr>
+</div>
+<div class="container has-text-centered top-pad">
+    <a href="#top">
+        <i class="fa fa-arrow-up"></i>
+    </a>
+</div>
+
+<div class="container">
+    <hr>
+</div>
+
+                <div class="section" id="footer">
+    <div class="container has-text-centered">
+    
+        <span class="footer-text">
+            <a href="https://github.com/victoriadrake/hugo-theme-introduction/"><strong>Introduction</strong></a> 主题为 <a href="http://gohugo.io/">Hugo</a> 而设。由开源社群贡献者以 <a href="https://victoria.dev"><i class="fa fa-heart"></i> 和 <i class="fa fa-coffee"></i></a> 创造。
+        </span>
+    
+    </div>
+</div>
+
+                
+            </div>
+        </section>
+        
+        
+
+
+
+
+
+<script src="https://hitzhangjie.github.io/js/bundle.23f18222425179f754965a36c9b211bd8cff5e5ab61ee23b52f026cef6699139.js" integrity="sha256-I/GCIkJRefdUllo2ybIRvYz/Xlq2HuI7UvAmzvZpkTk="></script>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-168027530-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+        
+        
+        
+        
+    </body>
+</html>

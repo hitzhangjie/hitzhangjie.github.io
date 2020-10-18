@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+    <head>
+        
+        <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Web站点描述">
+<title>
+Visualizing Your Go Code - 介绍
+</title>
+
+
+
+
+<script type="text/javascript" src="https://platform-api.sharethis.com/js/sharethis.js#property=5f24f50fc2418c0012d52ac3&product=inline-share-buttons" async="async">
+</script>
+
+<style>
+ 
+[alt~=sharing] {
+    border: 0px;
+    box-shadow: none;
+}
+div#st-1 {
+    text-align: unset;
+}
+
+ 
+div#st-1 .st-btn {
+    height: 24px;
+    padding: 0 4px;
+}
+
+div#st-1 .st-btn > img {
+    top: 4.2px;
+}
+
+div#st-2 .st-btn {
+    height: 24px;
+    padding: 0 4px;
+}
+
+div#st-2 .st-btn > img {
+    top: 4.2px;
+}
+</style>
+
+
+
+
+
+
+
+        <meta property="og:title" content="Visualizing Your Go Code - 介绍" />
+<meta property="og:type" content="website" />
+<meta property="og:description" content="Web站点描述"/>
+<meta property="og:url" content="https://hitzhangjie.github.io/blog/2020-10-06-visualizing-your-go-code/"/>
+<meta property="og:site_name" content="介绍"/>
+
+
+
+
+<meta property="og:image" content="https://hitzhangjie.github.io/home/me.jpg"/>
+
+<meta property="og:image" content="https://hitzhangjie.github.io/home/profile.jpg"/>
+
+
+
+
+        
+<link rel="shortcut icon" href="/img/fav.ico">
+
+
+        
+
+
+
+
+
+<link rel="stylesheet" href="/css/main.min.daa833377fb1636f8cbfa65c601050bb5475623deb7aa6e6fdde94a064a6185d.css" integrity="sha256-2qgzN3&#43;xY2&#43;Mv6ZcYBBQu1R1Yj3reqbm/d6UoGSmGF0=" crossorigin="anonymous" media="screen">
+
+
+
+
+    <link rel="stylesheet" href="/custom.css" integrity="" crossorigin="anonymous" media="screen">
+
+        
+        
+        
+        
+    </head>
+    <body>
+        <section id="top" class="section">
+            
+            <div class="container hero  fade-in one ">
+                
+
+    <h1 class="bold-title is-1">博客</h1>
+
+
+            </div>
+            
+            <div class="section  fade-in two ">
+                
+<div class="container">
+    <hr>
+    <nav class="navbar" role="navigation" aria-label="main navigation">
+        
+        <a role="button" class="navbar-burger" data-target="navMenu" aria-label="menu" aria-expanded="false" >
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </a>
+        <div class="navbar-menu " id="navMenu">
+            
+            
+            
+            
+            <a class="navbar-item" href="/">主页</a>
+            
+
+            
+            
+
+            
+                
+            
+
+            
+                
+            
+
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://hitzhangjie.github.io/projects/">
+                  
+                  项目
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://hitzhangjie.github.io/blog/">
+                  
+                  返回 博客
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#about">关于</a>
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#thanks">致谢</a>
+            
+            
+            
+            
+
+            
+            
+            <a class="navbar-item" href="/#contact">联系方式</a>
+            
+            
+
+            
+            
+            
+            
+            <a class="navbar-item" href="https://hitzhangjie.github.io/en/">English</a>
+            
+            
+
+            
+            
+        </div>
+    </nav>
+    <hr>
+</div>
+
+
+
+                
+    <div class="container">
+
+        <h2 class="title is-1 top-pad strong-post-title">
+            <a href="https://hitzhangjie.github.io/blog/2020-10-06-visualizing-your-go-code/">Visualizing Your Go Code</a>
+        </h2>
+        <div class="post-data">
+            发表时间：2020-10-06 <br> 
+            阅读时长：9 分钟 (4482字)
+        </div>
+
+        
+        <div>
+            <div>
+            
+            
+            <p>
+                标签：
+                
+                <a href="/tags/go">go</a>,
+                
+                <a href="/tags/go/ast">go/ast</a>,
+                
+                <a href="/tags/visualize">visualize</a>,
+                
+                <a href="/tags/uml">uml</a>
+                
+            </p>
+            
+            </div>
+
+            <div>
+            <br>
+            
+
+
+<div style="display:flex;">
+    <div>分享：</div>
+    <div>
+        <div class="sharethis-inline-share-buttons"></div>
+    </div>
+</div>
+
+
+            </div>
+
+        </div>
+
+        
+        
+
+        
+        <div> 
+            
+<aside>
+    <hr/>
+    <header>
+    <b>《Visualizing Your Go Code》目录：</b>
+    <br/>
+    </header>
+    <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#代码可读性">代码可读性</a></li>
+            <li><a href="#代码是思维的表达">代码是思维的表达</a></li>
+            <li><a href="#oop思想认识世界">OOP思想认识世界</a></li>
+            <li><a href="#流程控制--组件交互">流程控制 + 组件交互</a></li>
+            <li><a href="#认识-goast">认识 go/ast</a></li>
+            <li><a href="#微服务可视化">微服务可视化</a>
+              <ul>
+                <li><a href="#找到关心的入口点">找到关心的入口点</a></li>
+                <li><a href="#从入口点处开始层层展开">从入口点处开始层层展开</a></li>
+                <li><a href="#增加通信过程的说明信息">增加通信过程的说明信息</a></li>
+                <li><a href="#何时何地以及如何触发">何时何地以及如何触发</a></li>
+                <li><a href="#put-it-together">Put It Together</a></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    <hr/>
+</aside>
+
+
+        </div>
+   
+        
+        <div class="container markdown top-pad">
+            <h3 id="代码可读性">代码可读性</h3>
+<p>作为一名开发人员，代码可读性是我们常常挂在嘴边的。代码写出来除了让计算机能够正常执行以外，终究还是要让人能够理解它，后续才能做进一步的维护工作。如果代码写出来，只有它的作者能够看得懂，那只能说明这个作者逻辑表达能力有问题，透过其代码难以看出解决问题的思路。这是软件工程中要尽力避免的。</p>
+<p>在软件工程方法论指导下，为了尽可能让代码可读性达标，我们往往会根据一些最佳实践拟定一些大多数人认可的标准，让所有开发人员遵守，然后通过代码评审、代码规范检查、持续集成交付流水线等综合起来，以尽可能逼近这一目标。当绝大多数人能够在约定的框架下，保质保量提交代码时，我们已经在代码可读性、可维护性方面前进了一大步。</p>
+<p>然而，这样足够了吗？我认为还不够。</p>
+<h3 id="代码是思维的表达">代码是思维的表达</h3>
+<p>代码，不过是通过一种大家都理解的语言书写出来的篇章。就好比写文章一样，要有中心思想，然后围绕中心思想要展开层层描述。写代码一样，中心思想就是我们要解决的问题，围绕中心思想的层层描述就是我们解决问题的思路。所以，代码没有什么神秘的，它是人类思维的表达。</p>
+<p>我们是如何快速理解一篇文章的呢？</p>
+<ul>
+<li>先看标题，掌握其核心关键词；</li>
+<li>看下第一段落的内容，往往第一段会引出问题；</li>
+<li>看下其余段落的首句、末句，往往会给出该段落的中心思想；</li>
+<li>看下最后一段的内容，一般会给出一个结论；</li>
+<li>通篇串下，了解文章整体含义；</li>
+</ul>
+<p>为什么我们会通过这种方式？因为一篇好的文章一定有承上启下、过渡。这种循序渐进的方式，步步逼近中心思想。</p>
+<p>那代码呢？某种程度上，代码也是类似的。</p>
+<ul>
+<li>以go语言为例，通常对于一个package，我们会提供package注释来表示当前package要解决的问题；</li>
+<li>每个package内部又包含了不同的types、variables、functions，它们结合起来来解决一个问题；</li>
+<li>每一个function内部又分为多个步骤，每一步完成一个小功能，为下一步做好准备；</li>
+<li>每一个小功能、步骤可能是if-else, switch-case, for-loop……之类的语言结构；</li>
+<li>同时，我们还会提供测试用例，来验证上述方案的正确性。</li>
+</ul>
+<p>有没有觉得很相似，或许我们应该采用已有的读书的经验来辅助更好地理解程序？</p>
+<h3 id="oop思想认识世界">OOP思想认识世界</h3>
+<p>代码，和文章不同的是，它虽然有明显的程序构造，但是却没有明显的段落之分。</p>
+<p>那我如何才能借鉴多年来养成的还不错的阅读习惯，来帮助我理解代码呢？当然不能盲目套用，不过俗话说，能工摹形，巧匠窃意，思想很多地方还是可以相通的。</p>
+<p>如何更好地理解这个世界，对各种各样的问题进行抽象呢？比如一辆摩托车，它有离合器、发动机、链条、轮毂、轮胎、减震、油箱、排气等很多部件构成，我听说宝马水鸟电子控制很厉害，可以实现无人驾驶，那可是两轮的400多斤的大机器。那它的电子控制系统怎么做到的？至少要能理解一个摩托车有核心部件，整体运转起来如何理解其状态，如何控制个别部件以影响其他部件进而控制整体状态。那它如何控制部件呢？电子操作或机械操作。</p>
+<p>扯远了，我只是有点喜欢水鸟而已。整个世界可以看做是一个个对象及其之间的联系所构成，代码也不例外。</p>
+<p>道法自然，OOP的思想不过是借鉴了人类认识世界的方式，将其运用到了软件工程领域，以更好地对问题进行抽象，从而构建出设计更合理的软件。那代码里面有哪些语言构造体现了OOP的思想呢。</p>
+<ul>
+<li>类型与对象，生物学里区分物种、种群、个体，那是因为它们既有共性，也有个性；</li>
+<li>通信的方式，自然界个体之间的交互也有多种方式，比如雄狮撒泡尿标记领地也不管入侵者认不认同，或者低吼驱赶入侵者离开，人和人用听得懂的语言沟通；</li>
+<li>隐私与距离，每个人都有自己的隐私，如果你的朋友跟你借100块钱你可能给了，但是他如果问是你老婆给的还是你自己的，你可能就不想借给他了，给你就行了你管那么多干嘛呢，我还不想拿自家的借你呢，说不定借你老婆的给你的呢。每个人在一副外表下总有些不愿意被人触碰、靠近的地方。</li>
+</ul>
+<p>了解一个人，其实你不需要深入他的家庭本身去了解，看看他天天接触什么人，说些什么话，你也就大致清楚了。感兴趣就继续了解，不感兴趣也就拉倒了。我想绝大多数人都不是窥视狂，在拥有一定判断力的基础上，通过一些局部的信息是可以了解大致的整体信息的。</p>
+<p>理解代码有相同之处？</p>
+<h3 id="流程控制--组件交互">流程控制 + 组件交互</h3>
+<p>某种程度上，我认为理解代码也有相似之处。</p>
+<p>如果能够拎出那些比较重要的对象（objects），以及他们之间的通信（function call, chan send/recv），或者他们的私密信息（注释），是不是也能够大致有个了解呢？</p>
+<p>如果想更深入了解下，加上事情的脉络（控制结构，if-else, switch-case, for-loop）呢？</p>
+<p>其他信息? 我相信还有其他有用的有用信息，能够通过一些更加有效率的方式呈现出来。</p>
+<h3 id="认识-goast">认识 go/ast</h3>
+<p>计算机编程语言，有多少种？我认为只有一种，就是人类可以理解的语言。有趣的是，编程语言之多可以覆盖元素周期表，不信来瞧瞧。</p>
+<table>
+<tr>
+<td><img alt="languages" src="https://i.pinimg.com/originals/bb/3a/d0/bb3ad028960fb7345df89057ff071437.jpg" width="480px"></td>
+<td><img alt="goast example" src="https://upload.wikimedia.org/wikipedia/commons/a/ac/Python_add5_parse.png" width="480px"></td>
+</tr>
+</table>
+<ul>
+<li>语言是什么？语言有精确的数学定义，它不是胡编乱造，尤其是编程语言；</li>
+<li>编程语言更精确？那倒未必，人类社会多姿多彩之处，就在于会演绎出更加丰富多彩的内容，包括对语言的破坏性“创造”，人脑纠错能力太强了，我们甚至没有察觉到自己犯了错误，如网上津津乐道的山东人倒装玩法；</li>
+<li>我能发明一门语言吗？当然，只要你能给出严谨的数学定义，没有歧义，找到一群人学会并开始用它交流，姑且可以称为语言了，比如生活大爆炸谢耳朵他老婆；</li>
+<li>语言不是主谓宾之类的吗？主谓宾也可以进一步形式化，数学之美也让我感到惊叹；</li>
+</ul>
+<p>So&hellip;假如我用编程语言写了一段代码，如何知道我有没有犯错误呢？那就是编译器的工作，词法分析、语法分析、语义分析，一切OK之后会进入中间代码生成、代码优化、生成最终代码。通常一般在语法分析会构建语法分析树AST（Abstract Syntax Tree），如果能够正常构建出AST，表示代码是按照语言对应生成规则来写的，就没什么大问题，反之则可能又自我“发挥”犯错了。</p>
+<p>以下面的go程序为例：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+
+<span style="color:#f92672">import</span> (
+    <span style="color:#e6db74">&#34;fmt&#34;</span>
+)
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">add</span>(<span style="color:#a6e22e">a</span>, <span style="color:#a6e22e">b</span> <span style="color:#66d9ef">int</span>) <span style="color:#66d9ef">int</span> {
+    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">a</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">b</span>
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+    <span style="color:#a6e22e">c</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">add</span>(<span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">2</span>)
+    <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;1 + 2 = %d\n&#34;</span>, <span style="color:#a6e22e">c</span>)
+}
+</code></pre></div><p>以下是两个不错的ast可视化工具，可以将上述代码拷贝以下以查看对应的AST。</p>
+<ul>
+<li><a href="https://astexplorer.net">ast-explorer</a></li>
+<li><a href="https://yuroyoro.github.io/goast-viewer/index.html">goast-viewer</a></li>
+</ul>
+<p>ps: 推荐前者，实现了类似chrome inspect element时选中区域查看对应代码的操作，光标移到对应代码区域，即可高亮显示对应的AST部分区域。</p>
+<p>比如现在我们选中了import相关的部分，对应右边展示出了import声明对应的AST中的部分子树，对应的就是一个GenDecl结构。函数声明也有对应的FuncDecl，类型也有对应的&hellip;</p>
+<p><img src="/blog/assets/goast/goast.png" alt="goast example"></p>
+<p>ps: AST展示形式竟然不是一棵树？它确实是一棵树，只不过，AST是非常庞大的，如果通过树的形式来展示，篇幅太大，反而不方便查看。</p>
+<p>go标准库提供了一个package go/ast，用它来对源码进行分析并构建出AST，然后基于AST可以对源码结构进行理解加工，举几个常见的用途：</p>
+<ul>
+<li>go标准库有频率不高的package迁移、方法签名变化、其他情况，<code>go fix</code>实现了旧代码像新代码的快速迁移，其实就是通过对AST操作实现的；</li>
+<li>代码中检测error处理、是否有合理注释等，也可以基于AST进行分析，开发可能一不小心忽略对error处理、goroutine panic处理，有些三方库就可以基于AST分析有没有上述情况，以对源码中的问题进行自动修复；</li>
+<li>提取关键操作信息进行可视化，如<a href="https://infinityworks.com/insights/sequence-diagrams/">apitest.dev</a>将HTTP操作、DB操作作为重点关注对象对代码中的相关交互进行提取、可视化展示，<a href="https://ballerina.io/">Ballerina</a>框架中也有类似实现。</li>
+<li>提取关键的网络调用操作，自动化opentracing埋点，<a href="https://developers.mattermost.com/blog/instrumenting-go-code-via-ast/">Instrumenting Go code via AST</a>。</li>
+<li>其他；</li>
+</ul>
+<p>可见了解 go/ast，将有助于我们更好地理解代码，并作出一些更有创意的工具。</p>
+<h3 id="微服务可视化">微服务可视化</h3>
+<p>我正在调研一些业界流行的微服务框架，吸收一些比较好的创意，在我从事的团队，现在基本都是采用微服务架构设计、开发、部署了，某种程度上，微服务一点都不微，有些逻辑也很复杂，而且业务代码真的没什么好看的。绝大多数时候，我希望1min了解其逻辑，超过10min我还看不懂的，心里已经开始在犯嘀咕了，这写的啥？</p>
+<p>是我“没耐心”？我倒是不这么认为，如果一个操作我每天要人肉重复几十遍，我就得想办法“偷偷懒”提高下效率了。身为工程师，卖肉是耻辱。</p>
+<p>再回想一下哪些语言构造比较重要，rpc、对象之间的通信（方法调用）、包方法调用、goroutine之间通信（chan send/recv），还有控制逻辑if-else、switch-case、for-loop。</p>
+<p>我们可以先从实用又简单点的开始，比如rpc、对象方法调用、包方法调用，其他的后续再完善。OK!</p>
+<h4 id="找到关心的入口点">找到关心的入口点</h4>
+<p>按照一些微服务框架的编码风格，通常main.go里面会注册service接口级实现，这里就可以作为一个入口，我们可以找出AST中main.go中注册的所有service及其实现，并分析service接口中定义的方法，然后再将service实现中的对应方法作为入口点。</p>
+<p>找到这些入口点之后，我们将可以从AST中遍历所有的方法定义，直到匹配到receiver type、method signature匹配的定义。</p>
+<p>file: main.go</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+
+	<span style="color:#a6e22e">s</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">gorpc</span>.<span style="color:#a6e22e">NewServer</span>()
+
+	<span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">RegisterHelloService</span>(<span style="color:#a6e22e">s</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">helloServiceImpl</span>{})
+
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">Serve</span>(); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+	}
+}
+</code></pre></div><h4 id="从入口点处开始层层展开">从入口点处开始层层展开</h4>
+<p>每个函数在AST中都有对应的结构，函数体内包括的每一条语句也是这样，那还有什么不能干的？</p>
+<p>我们可以递归地将一条语句层层展开，抽丝剥茧，直到看到关心的脉络。刚才我们说先只考虑rpc、对象方法调用、包导出函数调用就可以了，这类基本可以形式化成<code>xxx.Func(args...)</code>的形式，就覆盖了上面这几种情况。</p>
+<p>只要碰到这样的语句，我们就记录一下，并将其递归地展开，展开过程中依然记录所有<code>xxx.Func(args...)</code>形式的函数调用……直到没什么可继续展开为止。</p>
+<p>这样，我们就可以大致实现最初的设想：看到对象之间的所有通信过程。</p>
+<h4 id="增加通信过程的说明信息">增加通信过程的说明信息</h4>
+<p>在go代码规范里面，对于导出方法、导出函数、导出类型通常都是需要添加godoc注释的，这些注释本身就具有一定的说明性。那当我们通过对象间的调用关系进行可视化时，是否可以将这些注释信息添加上，以提供更好的说明呢？当然。</p>
+<h4 id="何时何地以及如何触发">何时何地以及如何触发</h4>
+<p>何时何地以及如何触发了特定的函数调用？</p>
+<ul>
+<li>何时何地？filename:lineno:columnno，每一个ast对象都有一个Pos()方法，配合<code>token.Position(astobj.Pos())</code>就可以计算出源码位置；</li>
+<li>如何触发？函数调用时的参数信息，函数调用发生的作用域（function scope）；</li>
+</ul>
+<h4 id="put-it-together">Put It Together</h4>
+<p>当我们将上述提及的操作全部组织在一起，就可以实现大致如下效果，篇幅以及时间原因，这里就不再一步步详细描述代码逻辑了。</p>
+<table>
+<tr>
+<td><img src="https://user-images.githubusercontent.com/3725760/95085402-c2fc6b80-0751-11eb-9db1-a9d201a7dadc.png" width="480px";></td>
+<td><img src="https://user-images.githubusercontent.com/3725760/95085465-d8719580-0751-11eb-8cbc-a6e04a270fdd.png" width="480px";></td>
+</tr>
+</table>
+<p>如果您对这里的实现确实感兴趣，您可以查看这里的代码来进一步了解<a href="https://github.com/hitzhangjie/gorpc-cli/commit/58e8d8fe25e3f0b72592c40f2d623793f46a5115">MR: gorpc support visualize subcmd</a>。</p>
+<p>ps: 我也在做一些gorpc101教程之类的材料准备，包括书籍、框架、工具、插件之类的小玩意，一方面是为了沉淀自己，一方面是为了验证想法，如果能有些许建议或者愿意参与进来，那我先表示欢迎。</p>
+<ul>
+<li><a href="github.com/debugger101">debugger101</a></li>
+<li><a href="github.com/gorpc101">gorpc101</a></li>
+</ul>
+
+        </div>
+        
+
+        
+        <hr>
+        <div style="float:right;">
+        
+
+
+<div style="display:flex;">
+    <div>分享：</div>
+    <div>
+        <div class="sharethis-inline-share-buttons"></div>
+    </div>
+</div>
+
+
+        </div>
+
+        <br>
+        <br>
+
+    </div>
+
+    
+    
+    <br>
+    <br>
+    <div style="height:auto;align:center;text-align:center;"> 
+        <div>
+            <img src="/common/xiaoqi.png" style="height:238px;margin-top:10px;margin-right:5px;"/>
+            <img src="/common/qrcode.jpg" style="height:238px;margin-top:10px;"/>
+            <img src="/common/yuanbao.png" style="height:238px;margin-top:10px;margin-left:5px;"/>
+        </div>
+
+        <div>
+            <p>
+                感谢打赏，小七🐶、元宝🐱可以改善伙食咯 😘
+            </p>
+        </div>
+
+
+    </div>
+    
+
+    
+
+
+                
+                <div class="container">
+    <hr>
+</div>
+<div class="container has-text-centered top-pad">
+    <a href="#top">
+        <i class="fa fa-arrow-up"></i>
+    </a>
+</div>
+
+<div class="container">
+    <hr>
+</div>
+
+                <div class="section" id="footer">
+    <div class="container has-text-centered">
+    
+        <span class="footer-text">
+            <a href="https://github.com/victoriadrake/hugo-theme-introduction/"><strong>Introduction</strong></a> 主题为 <a href="http://gohugo.io/">Hugo</a> 而设。由开源社群贡献者以 <a href="https://victoria.dev"><i class="fa fa-heart"></i> 和 <i class="fa fa-coffee"></i></a> 创造。
+        </span>
+    
+    </div>
+</div>
+
+                
+            </div>
+        </section>
+        
+        
+
+
+
+
+
+<script src="https://hitzhangjie.github.io/js/bundle.23f18222425179f754965a36c9b211bd8cff5e5ab61ee23b52f026cef6699139.js" integrity="sha256-I/GCIkJRefdUllo2ybIRvYz/Xlq2HuI7UvAmzvZpkTk="></script>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-168027530-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+        
+        
+        
+        
+    </body>
+</html>

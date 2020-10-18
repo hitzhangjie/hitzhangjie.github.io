@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>coroutine on 介绍</title>
+    <link>https://hitzhangjie.github.io/tags/coroutine/</link>
+    <description>Recent content in coroutine on 介绍</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Sun, 03 Dec 2017 16:49:09 +0800</lastBuildDate>
+    
+	<atom:link href="https://hitzhangjie.github.io/tags/coroutine/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>go风格协程库libmill之源码分析</title>
+      <link>https://hitzhangjie.github.io/blog/2017-12-03-go%E9%A3%8E%E6%A0%BC%E5%8D%8F%E7%A8%8B%E5%BA%93libmill%E4%B9%8B%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</link>
+      <pubDate>Sun, 03 Dec 2017 16:49:09 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-12-03-go%E9%A3%8E%E6%A0%BC%E5%8D%8F%E7%A8%8B%E5%BA%93libmill%E4%B9%8B%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</guid>
+      <description>1 Preface libmill, 是Martin Sustrik发起的一个面向unix平台下c语言开发的协程库，实现了一种类似goroutine风格的协程，也支持channel，“通过通信共享数据，而非通过共享数据来完成通信”。 觉得挺有意思的，就抽周末时间看了下。大神的代码干净利索，也看到了不少令自己眼前一亮的tricks，举几个例子吧。 1 通用链表及迭代器实现 offsetof可以计算结构体中的成员的offset，如果我们知道一个struct的类型、其成员名、成员地址，我们就可以计算出struct的地址： #define mill_cont(ptr, type, member) \ (ptr ? ((type*) (((char*) ptr) - offsetof(type, member))) : NULL) 基于</description>
+    </item>
+    
+    <item>
+      <title>协程的历史、现在和未来!</title>
+      <link>https://hitzhangjie.github.io/blog/2017-09-23-%E5%8D%8F%E7%A8%8B%E7%9A%84%E5%8E%86%E5%8F%B2%E7%8E%B0%E5%9C%A8%E5%92%8C%E6%9C%AA%E6%9D%A5/</link>
+      <pubDate>Thu, 27 Apr 2017 02:25:36 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-09-23-%E5%8D%8F%E7%A8%8B%E7%9A%84%E5%8E%86%E5%8F%B2%E7%8E%B0%E5%9C%A8%E5%92%8C%E6%9C%AA%E6%9D%A5/</guid>
+      <description>计算机科学是一门应用科学，几乎所有概念都是为了理解或解决实际问题而生的。协程 (Coroutine) 的出现也不例外。协程的概念，最早可以追溯到写作 COBOL 语言编译器中的技术难题。 1.从磁带到协程 COBOL 是最早的高级语言之一。编译器则是高级语言必不可少的一部分。现如今，我们对编译器了解，已经到了可以把核心内容浓缩成一本教科书的程度。然而在六十年代，如何写作高效的语言编译器是那个时代绕不过的现实问题。比如，1960 年夏天，D. E. Knuth 就是利用开车横穿美国去加州理工读研究生的时间，对着 Burroughs 205 机器指令集手写 COBOL 编译器。最早提出“协程”概念的 Melvin Conway 的出发点，也</description>
+    </item>
+    
+    <item>
+      <title>Coroutine-Switching</title>
+      <link>https://hitzhangjie.github.io/blog/2017-04-26-coroutine-switching/</link>
+      <pubDate>Wed, 26 Apr 2017 16:23:49 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2017-04-26-coroutine-switching/</guid>
+      <description>1. 协程Coroutine 1.1. 协程coroutine声明 file: coroutine.h #include &amp;lt;stdint.h&amp;gt; typedef int64_t (*EntryCallback)(void*); //硬件上下文信息 struct stRegister { uint64_t rax; uint64_t rbx; uint64_t rcx; uint64_t rdx; uint64_t rsi; uint64_t rdi; uint64_t r8; uint64_t r9; uint64_t r10; uint64_t r11; uint64_t r12; uint64_t r13; uint64_t r14; uint64_t r15; uint64_t rbp; uint64_t rsp; uint64_t rip; }; //协程上下文 struct stContext { struct stRegister cpu_register; void *arg; uint8_t *stack; }; typedef struct stContext Coroutine; //创建协程 Coroutine* CreateCoroutine(EntryCallback entry, void *arg); //删除协程 void DeleteCoroutine(Coroutine *ptr); //设置协程栈尺寸 void SetStackSize(uint32_t size); //协程切换 void __SwitchCoroutine__(Coroutine *cur, const Coroutine *next); 1.2. 协程Coroutine实现 file: coroutine.c #include &amp;#34;coroutine.h&amp;#34;#include &amp;lt;stdlib.h&amp;gt; #define OFFSET(t, m) (&amp;amp;(((t*)0)-&amp;gt;m)) uint32_t g_stack_size = 100 * 1024; Coroutine* CreateCoroutine(EntryCallback entry, void *arg) { int size = g_stack_size + sizeof(Coroutine); Coroutine *c = (Coroutine *)calloc(size, 1); if (NULL == c) { return NULL; } uint8_t *start = (uint8_t*)c; c-&amp;gt;arg = arg; //函数入口 c-&amp;gt;cpu_register.rip = (uint64_t)entry; //第一个参数 c-&amp;gt;cpu_register.rdi = (uint64_t)arg; //rbp 栈底 c-&amp;gt;cpu_register.rbp = (uint64_t)(start + size); //rsp 当前栈顶 c-&amp;gt;cpu_register.rsp = c-&amp;gt;cpu_register.rbp; return c; } void DeleteCoroutine(Coroutine *ptr) { free(ptr); } void SetStackSize(uint32_t size) {</description>
+    </item>
+    
+  </channel>
+</rss>

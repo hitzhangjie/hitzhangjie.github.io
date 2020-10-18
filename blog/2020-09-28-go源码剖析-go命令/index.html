@@ -214,7 +214,7 @@ div#st-2 .st-btn > img {
         </h2>
         <div class="post-data">
             发表时间：2020-09-28 <br> 
-            阅读时长：7 分钟 (3074字)
+            阅读时长：7 分钟 (3267字)
         </div>
 
         
@@ -296,7 +296,7 @@ div#st-2 .st-btn > img {
 <p>我们在编译构建的过程中，一般都会生成一些临时文件，比如.o文件，如果是使用Makefile管理工程构建的时候一般会定义个PHONY Target clean，通过make clean来清理临时文件、目标文件、程序等，MVN构建也会定义clean这样的target，go也不例外。</p>
 <p><code>go build</code>，编译输出可执行程序，<code>go install</code>还会将可执行程序安装到GOBIN或者GOPATH/bin，那现在要清理的话，<code>go clean</code>会清理当前module下的编译产物，<code>go clean -i</code>还会把安装到GOBIN或者GOPATH/bin下安装的程序给清理掉，另外go modules之间也有依赖关系，<code>go clean -r</code>还可以递归地清理依赖产物。</p>
 <p>举个例子，假如现在有个工程目录叫hello，那么在该工程目录下执行go clean，将清理目录下的下述文件：hello, hello.exe, hello.test, hello.test.exe, main, main.exe, main.test, main.test.exe。那假如hello目录下go.mod定义的module是a.b.c呢？会清理a.b.c, a.b.c.exe, a.b.c.test, a.b.c.test.exe吗？不会！但是go clean -i会从GOBIN或GOPATH/bin下清理这些文件。为啥？目前go clean就是这么实现的。</p>
-<p>hitzhangjie/go@orz分支，我稍微修改了下，实现了清理${module}, ${module}.exe的功能。</p>
+<p><code>go clean</code>之前实现的有bug，我稍微修改了下，实现了清理${module}, ${module}.exe的功能。</p>
 <h3 id="go-doc">go doc</h3>
 <p><code>go doc</code> 可以用来显示指定package下的类型、函数、方法及其注释信息，其用法比较多，如<code>go doc</code>、<code>go doc pkg.symbol.fieldOrMethod</code>、<code>go doc pkg.Function</code>等等。</p>
 <p>比如我们运行 <code>go doc os.Signal</code>，会显示如下信息：</p>
@@ -326,6 +326,9 @@ var Interrupt Signal <span style="color:#f92672">=</span> syscall.SIGINT ...
 <p>这大概就是go fix (go tool fix) 的一个执行过程，${GOROOT}/pkg/tool/darwin_amd64/下保存了go tool对应的一些工具，如fix，vet等，运行go vet, go fix就会最终转换成执行上述路径下的vet、fix命令。<code>go fix</code>的入口在${GOROOT}/src/cmd/go/fix/fix.go，实际调用的是<code>go tool fix</code>，其入口在`${GOROOT}/src/cmd/fix/main.go。</p>
 <p>ps: <code>go fix</code>的内部实现，是基于go/ast实现，通过对源码进行语法分析构建ast，通过对ast进行查找、修改，完成对代码的调整，最后再将ast转换为源码输出。</p>
 <h3 id="go-fmt">go fmt</h3>
+<p><code>go fmt</code>实际上是调用的命令gofmt，它其实也是利用了package go/ast完成对特定源文件或者目录下所有源文件的语法分析，构建出语法树，然后基于对语法树的理解和操作，来最终完成对代码的格式化。</p>
+<p><code>go fmt</code>在使用的时候，有几个地方比较方便，选项<code>-d</code>可以将格式化后的代码打印到标准输出，<code>-w</code>则可以直接将文件写入到文件，<code>-s</code>则支持对代码进行简化。</p>
+<p>这里也没有特别多要强调的，继续看其他子命令的实现逻辑。</p>
 <h3 id="go-generate">go generate</h3>
 <h3 id="go-get">go get</h3>
 <h3 id="go-install">go install</h3>

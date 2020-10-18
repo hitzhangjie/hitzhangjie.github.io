@@ -214,7 +214,7 @@ div#st-2 .st-btn > img {
         </h2>
         <div class="post-data">
             发表时间：2020-09-28 <br> 
-            阅读时长：11 分钟 (5135字)
+            阅读时长：11 分钟 (5130字)
         </div>
 
         
@@ -299,18 +299,18 @@ div#st-2 .st-btn > img {
 <p><code>go clean</code>之前实现的有bug，我稍微修改了下，实现了清理${module}, ${module}.exe的功能。</p>
 <h3 id="go-doc">go doc</h3>
 <p><code>go doc</code> 可以用来显示指定package下的类型、函数、方法及其注释信息，其用法比较多，如<code>go doc</code>、<code>go doc pkg.symbol.fieldOrMethod</code>、<code>go doc pkg.Function</code>等等。</p>
-<p>比如我们运行 <code>go doc os.Signal</code>，会显示如下信息：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">package os // import <span style="color:#e6db74">&#34;os&#34;</span>
+<p>比如我们运行<code>go doc os.Signal</code>，会显示如下信息：</p>
+<pre><code>package os // import &quot;os&quot;
 
-type Signal interface <span style="color:#f92672">{</span>
-	String<span style="color:#f92672">()</span> string
-	Signal<span style="color:#f92672">()</span> // to distinguish from other Stringers
-<span style="color:#f92672">}</span>
+type Signal interface {
+	String() string
+	Signal() // to distinguish from other Stringers
+}
     A Signal represents an operating system signal. The usual underlying
     implementation is operating system-dependent: on Unix it is syscall.Signal.
 
-var Interrupt Signal <span style="color:#f92672">=</span> syscall.SIGINT ...
-</code></pre></div><p>从这里我们可以看到整个接口的定义，及其godoc注释信息，那么不禁要问，<code>go doc</code> 是如何准确找到这个符号os.Signal定义的呢？</p>
+var Interrupt Signal = syscall.SIGINT ...
+</code></pre><p>从这里我们可以看到整个接口的定义，及其godoc注释信息，那么不禁要问，<code>go doc</code> 是如何准确找到这个符号os.Signal定义的呢？</p>
 <p>如果之前有了解过<code>go/ast</code>的用法、用途之后，应该就不难理解了。我还写过一篇讲微服务代码逻辑可视化的文章，也是使用了go/ast：https://hitzhangjie.github.io/blog/2020-10-06-visualizing-your-go-code/。</p>
 <p><code>go doc</code>的逻辑其实很简单，它首先会将os.Signal split一下，发现是os这个package，然后是Signal这个符号，然后它就会根据build package提供的信息来定位到os对应的目录，然后通过<code>parser.ParseDir(...)</code>来对目录下go文件进行语法分析。分析完之后就将得到AST，然后再基于AST去查找符号Symbol的定义，比如这里是个类型定义，找到AST中对应的节点之后，再提取出注释信息。最后将这些信息格式化输出到stdout。</p>
 <p><code>go doc</code>大致就是这样实现的。</p>
@@ -323,7 +323,7 @@ var Interrupt Signal <span style="color:#f92672">=</span> syscall.SIGINT ...
 <h3 id="go-fix">go fix</h3>
 <p>一门快速演进中的编程语言也会面临一些调整的时候，如果发生了变化，比如将golang.org/x/tools/net/context内容转移到标准库context中，可能已经存在一些存量代码了，或者说开发者已经习惯了使用老的import的包路径了，那怎么办呢？想让开发者付出最小的迁移成本而转到使用最新的标准库context上来。go fix就是干这个事情的。</p>
 <p>fix命令执行的时候会检查当前支持那些修复操作，每一个修复操作都指定了要搜索的代码，以及要替换成的代码，比如上面提及的context包导入路径的问题。fix命令会首先解析源文件得到抽象语法树AST，然后基于对AST的操作，搜索出可以修复的问题代码，然后将其替换成对应的新代码，然后再将AST转换成代码输出到源文件中。</p>
-<p>这大概就是go fix (go tool fix) 的一个执行过程，${GOROOT}/pkg/tool/darwin_amd64/下保存了go tool对应的一些工具，如fix，vet等，运行go vet, go fix就会最终转换成执行上述路径下的vet、fix命令。<code>go fix</code>的入口在${GOROOT}/src/cmd/go/fix/fix.go，实际调用的是<code>go tool fix</code>，其入口在`${GOROOT}/src/cmd/fix/main.go。</p>
+<p>这大概就是go fix (go tool fix) 的一个执行过程，$GOROOT/pkg/tool/$GOOS_$GOARCH/下保存了go tool对应的一些工具，如fix，vet等，运行go vet, go fix就会最终转换成执行上述路径下的vet、fix命令。<code>go fix</code>的入口在$GOROOT/src/cmd/go/fix/fix.go，实际调用的是<code>go tool fix</code>，其入口在<code>$GOROOT/src/cmd/fix/main.go</code>。</p>
 <p>ps: <code>go fix</code>的内部实现，是基于go/ast实现，通过对源码进行语法分析构建ast，通过对ast进行查找、修改，完成对代码的调整，最后再将ast转换为源码输出。</p>
 <h3 id="go-fmt">go fmt</h3>
 <p><code>go fmt</code>实际上是调用的命令gofmt，它其实也是利用了package go/ast完成对特定源文件或者目录下所有源文件的语法分析，构建出语法树，然后基于对语法树的理解和操作，来最终完成对代码的格式化。</p>

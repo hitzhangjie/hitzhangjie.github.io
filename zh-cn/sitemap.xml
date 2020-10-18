@@ -60,7 +60,7 @@
   
   <url>
     <loc>https://hitzhangjie.github.io/blog/</loc>
-    <lastmod>2020-10-16T21:07:45+08:00</lastmod>
+    <lastmod>2020-10-06T23:13:52+08:00</lastmod>
     <xhtml:link
                 rel="alternate"
                 hreflang="en"
@@ -74,8 +74,18 @@
   </url>
   
   <url>
+    <loc>https://hitzhangjie.github.io/tags/go/</loc>
+    <lastmod>2020-10-06T23:13:52+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/sequence-diagram/</loc>
+    <lastmod>2020-10-06T23:13:52+08:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://hitzhangjie.github.io/tags/</loc>
-    <lastmod>2020-10-16T21:07:45+08:00</lastmod>
+    <lastmod>2020-10-06T23:13:52+08:00</lastmod>
     <xhtml:link
                 rel="alternate"
                 hreflang="en"
@@ -86,51 +96,6 @@
                 hreflang="zh-cn"
                 href="https://hitzhangjie.github.io/tags/"
                 />
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/</loc>
-    <lastmod>2020-10-16T21:07:45+08:00</lastmod>
-    <xhtml:link
-                rel="alternate"
-                hreflang="en"
-                href="https://hitzhangjie.github.io/en/"
-                />
-    <xhtml:link
-                rel="alternate"
-                hreflang="zh-cn"
-                href="https://hitzhangjie.github.io/"
-                />
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/tags/%E4%BB%A3%E7%A0%81%E8%A7%84%E8%8C%83/</loc>
-    <lastmod>2020-10-16T21:07:45+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/tags/%E4%BB%A3%E7%A0%81%E8%B4%A8%E9%87%8F/</loc>
-    <lastmod>2020-10-16T21:07:45+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/tags/%E5%8F%AF%E8%AF%BB%E6%80%A7/</loc>
-    <lastmod>2020-10-16T21:07:45+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/blog/2020-10-16-%E5%A7%94%E5%A9%89%E5%9C%B0%E8%A1%A8%E8%BE%BE%E6%8F%90%E5%8D%87%E4%BB%A3%E7%A0%81%E8%B4%A8%E9%87%8F%E7%9A%84%E7%B4%A7%E8%BF%AB%E6%80%A7/</loc>
-    <lastmod>2020-10-16T21:07:45+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/tags/go/</loc>
-    <lastmod>2020-10-06T23:13:52+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://hitzhangjie.github.io/tags/sequence-diagram/</loc>
-    <lastmod>2020-10-06T23:13:52+08:00</lastmod>
   </url>
   
   <url>
@@ -146,6 +111,21 @@
   <url>
     <loc>https://hitzhangjie.github.io/blog/2020-10-06-visualizing-your-go-code/</loc>
     <lastmod>2020-10-06T23:13:52+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/</loc>
+    <lastmod>2020-10-06T23:13:52+08:00</lastmod>
+    <xhtml:link
+                rel="alternate"
+                hreflang="en"
+                href="https://hitzhangjie.github.io/en/"
+                />
+    <xhtml:link
+                rel="alternate"
+                hreflang="zh-cn"
+                href="https://hitzhangjie.github.io/"
+                />
   </url>
   
   <url>
@@ -475,6 +455,11 @@
   
   <url>
     <loc>https://hitzhangjie.github.io/blog/2019-09-10-%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E5%9C%B0%E8%BF%9B%E8%A1%8C%E4%BB%A3%E7%A0%81review/</loc>
+    <lastmod>2019-09-10T17:26:01+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://hitzhangjie.github.io/tags/%E4%BB%A3%E7%A0%81%E8%B4%A8%E9%87%8F/</loc>
     <lastmod>2019-09-10T17:26:01+08:00</lastmod>
   </url>
   

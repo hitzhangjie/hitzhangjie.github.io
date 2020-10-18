@@ -214,7 +214,7 @@ div#st-2 .st-btn > img {
         </h2>
         <div class="post-data">
             发表时间：2020-09-28 <br> 
-            阅读时长：7 分钟 (3074字)
+            阅读时长：5 分钟 (2041字)
         </div>
 
         
@@ -298,28 +298,7 @@ div#st-2 .st-btn > img {
 <p>举个例子，假如现在有个工程目录叫hello，那么在该工程目录下执行go clean，将清理目录下的下述文件：hello, hello.exe, hello.test, hello.test.exe, main, main.exe, main.test, main.test.exe。那假如hello目录下go.mod定义的module是a.b.c呢？会清理a.b.c, a.b.c.exe, a.b.c.test, a.b.c.test.exe吗？不会！但是go clean -i会从GOBIN或GOPATH/bin下清理这些文件。为啥？目前go clean就是这么实现的。</p>
 <p>hitzhangjie/go@orz分支，我稍微修改了下，实现了清理${module}, ${module}.exe的功能。</p>
 <h3 id="go-doc">go doc</h3>
-<p><code>go doc</code> 可以用来显示指定package下的类型、函数、方法及其注释信息，其用法比较多，如<code>go doc</code>、<code>go doc pkg.symbol.fieldOrMethod</code>、<code>go doc pkg.Function</code>等等。</p>
-<p>比如我们运行 <code>go doc os.Signal</code>，会显示如下信息：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">package os // import <span style="color:#e6db74">&#34;os&#34;</span>
-
-type Signal interface <span style="color:#f92672">{</span>
-	String<span style="color:#f92672">()</span> string
-	Signal<span style="color:#f92672">()</span> // to distinguish from other Stringers
-<span style="color:#f92672">}</span>
-    A Signal represents an operating system signal. The usual underlying
-    implementation is operating system-dependent: on Unix it is syscall.Signal.
-
-var Interrupt Signal <span style="color:#f92672">=</span> syscall.SIGINT ...
-</code></pre></div><p>从这里我们可以看到整个接口的定义，及其godoc注释信息，那么不禁要问，<code>go doc</code> 是如何准确找到这个符号os.Signal定义的呢？</p>
-<p>如果之前有了解过<code>go/ast</code>的用法、用途之后，应该就不难理解了。我还写过一篇讲微服务代码逻辑可视化的文章，也是使用了go/ast：https://hitzhangjie.github.io/blog/2020-10-06-visualizing-your-go-code/。</p>
-<p><code>go doc</code>的逻辑其实很简单，它首先会将os.Signal split一下，发现是os这个package，然后是Signal这个符号，然后它就会根据build package提供的信息来定位到os对应的目录，然后通过<code>parser.ParseDir(...)</code>来对目录下go文件进行语法分析。分析完之后就将得到AST，然后再基于AST去查找符号Symbol的定义，比如这里是个类型定义，找到AST中对应的节点之后，再提取出注释信息。最后将这些信息格式化输出到stdout。</p>
-<p><code>go doc</code>大致就是这样实现的。</p>
 <h3 id="go-env">go env</h3>
-<p><code>go env</code> 命令用来查看、设置、取消设置go相关的一些环境变量。</p>
-<p>我们知道<code>go env</code>会显示出一个环境变量列表，这里面这些环境变量名称都是go envCmd里面预定义好的，比如要设置一个不相干的变量名<code>go env -w xxx</code>是会报错的。</p>
-<p><code>go env</code> 列出的环境变量一般都有一个默认值，如<code>GOSUMDB=sum.golang.org</code>，但是我们有时候希望对齐进行调整，那么可以通过<code>go env -w GOSUMDB=off</code>来进行设置，如果要取消设置恢复到原来的默认设置，则可以执行<code>go env -u GOSUMDB</code>。</p>
-<p>那这里不禁要问，用户手动设置的环境变量存储在哪里呢？其实是存储在环境变量<code>GOENV</code>对应的文件中，macOS下为<code>/Users/zhangjie/Library/Application Support/go</code>，linux下为<code>~/.config/go/env</code>，其实就是<code>os.UserConfigDir()+/go/env</code>路径下。当我们设置、取消设置的时候，会更新文件中的数据。</p>
-<p><code>go env</code>大致就是这么工作的。</p>
 <h3 id="go-fix">go fix</h3>
 <p>一门快速演进中的编程语言也会面临一些调整的时候，如果发生了变化，比如将golang.org/x/tools/net/context内容转移到标准库context中，可能已经存在一些存量代码了，或者说开发者已经习惯了使用老的import的包路径了，那怎么办呢？想让开发者付出最小的迁移成本而转到使用最新的标准库context上来。go fix就是干这个事情的。</p>
 <p>fix命令执行的时候会检查当前支持那些修复操作，每一个修复操作都指定了要搜索的代码，以及要替换成的代码，比如上面提及的context包导入路径的问题。fix命令会首先解析源文件得到抽象语法树AST，然后基于对AST的操作，搜索出可以修复的问题代码，然后将其替换成对应的新代码，然后再将AST转换成代码输出到源文件中。</p>

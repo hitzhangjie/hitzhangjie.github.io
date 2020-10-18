@@ -214,7 +214,7 @@ div#st-2 .st-btn > img {
         </h2>
         <div class="post-data">
             发表时间：2020-10-06 <br> 
-            阅读时长：9 分钟 (4435字)
+            阅读时长：9 分钟 (4482字)
         </div>
 
         
@@ -230,8 +230,6 @@ div#st-2 .st-btn > img {
                 <a href="/tags/go/ast">go/ast</a>,
                 
                 <a href="/tags/visualize">visualize</a>,
-                
-                <a href="/tags/sequence-diagram">sequence diagram</a>,
                 
                 <a href="/tags/uml">uml</a>
                 
@@ -328,7 +326,7 @@ div#st-2 .st-btn > img {
 <p>有没有觉得很相似，或许我们应该采用已有的读书的经验来辅助更好地理解程序？</p>
 <h3 id="oop思想认识世界">OOP思想认识世界</h3>
 <p>代码，和文章不同的是，它虽然有明显的程序构造，但是却没有明显的段落之分。</p>
-<p>那我如何才能借鉴多年来养成的还不错的阅读习惯，来帮助我理解代码呢？当然不能盲目套用，不过俗话说，能工模型，巧匠窃意，思想很多地方还是可以相通的。</p>
+<p>那我如何才能借鉴多年来养成的还不错的阅读习惯，来帮助我理解代码呢？当然不能盲目套用，不过俗话说，能工摹形，巧匠窃意，思想很多地方还是可以相通的。</p>
 <p>如何更好地理解这个世界，对各种各样的问题进行抽象呢？比如一辆摩托车，它有离合器、发动机、链条、轮毂、轮胎、减震、油箱、排气等很多部件构成，我听说宝马水鸟电子控制很厉害，可以实现无人驾驶，那可是两轮的400多斤的大机器。那它的电子控制系统怎么做到的？至少要能理解一个摩托车有核心部件，整体运转起来如何理解其状态，如何控制个别部件以影响其他部件进而控制整体状态。那它如何控制部件呢？电子操作或机械操作。</p>
 <p>扯远了，我只是有点喜欢水鸟而已。整个世界可以看做是一个个对象及其之间的联系所构成，代码也不例外。</p>
 <p>道法自然，OOP的思想不过是借鉴了人类认识世界的方式，将其运用到了软件工程领域，以更好地对问题进行抽象，从而构建出设计更合理的软件。那代码里面有哪些语言构造体现了OOP的思想呢。</p>
@@ -374,9 +372,11 @@ div#st-2 .st-btn > img {
     <span style="color:#a6e22e">c</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">add</span>(<span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">2</span>)
     <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;1 + 2 = %d\n&#34;</span>, <span style="color:#a6e22e">c</span>)
 }
-</code></pre></div><p>以下是两个不错的ast可视化工具，可以将上述代码拷贝以下以查看对应的AST。
-ast-explorer: <a href="https://astexplorer.net/">https://astexplorer.net/</a>
-goast-viewer: <a href="https://yuroyoro.github.io/goast-viewer/index.html">https://yuroyoro.github.io/goast-viewer/index.html</a></p>
+</code></pre></div><p>以下是两个不错的ast可视化工具，可以将上述代码拷贝以下以查看对应的AST。</p>
+<ul>
+<li><a href="https://astexplorer.net">ast-explorer</a></li>
+<li><a href="https://yuroyoro.github.io/goast-viewer/index.html">goast-viewer</a></li>
+</ul>
 <p>ps: 推荐前者，实现了类似chrome inspect element时选中区域查看对应代码的操作，光标移到对应代码区域，即可高亮显示对应的AST部分区域。</p>
 <p>比如现在我们选中了import相关的部分，对应右边展示出了import声明对应的AST中的部分子树，对应的就是一个GenDecl结构。函数声明也有对应的FuncDecl，类型也有对应的&hellip;</p>
 <p><img src="/blog/assets/goast/goast.png" alt="goast example"></p>
@@ -386,6 +386,7 @@ goast-viewer: <a href="https://yuroyoro.github.io/goast-viewer/index.html">https
 <li>go标准库有频率不高的package迁移、方法签名变化、其他情况，<code>go fix</code>实现了旧代码像新代码的快速迁移，其实就是通过对AST操作实现的；</li>
 <li>代码中检测error处理、是否有合理注释等，也可以基于AST进行分析，开发可能一不小心忽略对error处理、goroutine panic处理，有些三方库就可以基于AST分析有没有上述情况，以对源码中的问题进行自动修复；</li>
 <li>提取关键操作信息进行可视化，如<a href="https://infinityworks.com/insights/sequence-diagrams/">apitest.dev</a>将HTTP操作、DB操作作为重点关注对象对代码中的相关交互进行提取、可视化展示，<a href="https://ballerina.io/">Ballerina</a>框架中也有类似实现。</li>
+<li>提取关键的网络调用操作，自动化opentracing埋点，<a href="https://developers.mattermost.com/blog/instrumenting-go-code-via-ast/">Instrumenting Go code via AST</a>。</li>
 <li>其他；</li>
 </ul>
 <p>可见了解 go/ast，将有助于我们更好地理解代码，并作出一些更有创意的工具。</p>

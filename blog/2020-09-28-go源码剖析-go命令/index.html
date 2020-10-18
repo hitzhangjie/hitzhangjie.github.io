@@ -214,7 +214,7 @@ div#st-2 .st-btn > img {
         </h2>
         <div class="post-data">
             发表时间：2020-09-28 <br> 
-            阅读时长：8 分钟 (3881字)
+            阅读时长：11 分钟 (5135字)
         </div>
 
         
@@ -334,18 +334,59 @@ var Interrupt Signal <span style="color:#f92672">=</span> syscall.SIGINT ...
 <p>比如一个代码生成工具可以通过代码模板来生成一个完整的服务工程，代码模板里面就可以包含这样的<code>//go:generate mockgen ...</code>指令来生成mock测试相关的桩代码。</p>
 <p><code>go generate</code>实现的逻辑比较简单，它就是遍历源文件，然后去逐行读取每个源文件，检查读取行是不是匹配<code>//go:generate ...</code>，是的话则解析出命令来，然后执行对应的命令。</p>
 <h3 id="go-get">go get</h3>
+<p><code>go get</code>用来下载对应模块并安装，同时将该模块添加到当前模块的依赖文件go.mod中。当然<code>go get</code>也有很多一些常用选项，如<code>-u</code>用来更新模块等。这里可以通过<code>go help get</code>来了解详细的信息。</p>
 <h3 id="go-install">go install</h3>
 <p><code>go install</code>，它主要是下载对应模块，并完成程序的构建、安装逻辑。需要注意的是，这里在go1.13前后发生了一点变化。</p>
 <p>在go1.13之前的版本中，是要通过go install来安装的，go1.13及之后的版本go get会自动下载、并构建、安装，go install只能安装本地已经下载下来的模块。</p>
 <h3 id="go-list">go list</h3>
+<p><code>go list</code>列出packages或依赖，具体如何实现的呢？这个命令怎么实现的不是很感兴趣，先跳过了。</p>
 <h3 id="go-mod">go mod</h3>
+<p><code>go mod</code>主要是用来对依赖进行管理，常用操作包括<code>go mod init</code>, <code>go mod tidy</code>，<code>go mod vendor</code>等等吧。</p>
+<p>这个有时间再看，当前不是很感兴趣，先跳过了。</p>
 <h3 id="go-run">go run</h3>
 <h3 id="go-test">go test</h3>
+<p><code>go test</code>主要是用来执行单元测试用的，它还比较牛，不仅仅可以用来支持_test.go文件的单元测试，还支持像cmd/go/testdata/scripts/build_output.txt这样的脚本定义的复杂的流程测试。这里还是有点创新点的。</p>
+<p>这里先说下_test.go文件的单元测试是如何实现的吧。实际上是这样执行的，它会为当前package下的_test.go文件，生成一个新的go文件，这个go文件的内容是根据预先定义好的go测试模板文件生成的，内部会通过-test.run选项来选择我们自定义的TestXXX(t)来执行。</p>
+<p>当然<code>go test</code>也支持覆盖率测试等等的操作，这个覆盖率测试实际上也简单，其实是把源文件重写了，每一行语句都对应了一个计数器，执行语句之后，紧跟着一条增加计数器的操作，最后测试程序跑完，检查所有语句的计数器就可以统计出覆盖率信息。</p>
+<p>&hellip;</p>
+<p>其他的，当前也不是很关心了。</p>
 <h3 id="go-tool">go tool</h3>
+<p>go这个命令行工具是一个集大成者，它内部其实也是调用了一些其他的工具的，如通过<code>go fmt</code>或<code>go tool fmt</code>来调用命令<code>gofmt</code>，还有一些其他的工具，这些工具可以在如下路径中找到：<code>$GOROOT/pkg/tool/$GOOS_$GOARCH</code>。</p>
+<p>这里的工具有很多，我在后面的文章中会有选择的进行介绍。</p>
 <h3 id="go-version">go version</h3>
 <p><code>go version</code>就是打印当前go程序的版本信息，这个信息是在go编译构建期间由工具<code>go tool dist</code>生成的，详见<code>runtime/sys/zversion.go</code>。</p>
 <p>还有一种常见的做法，是设置好一个包级别的变量，然后通过<code>go build -ldflags=&quot;-X 'pkg.Varable=value'&quot;</code>，这也是一种办法。</p>
 <h3 id="go-vet">go vet</h3>
+<p><code>go vet</code>用来报道packages中可能的错误，之前有了解过并发map读写的问题，可以通过<code>go vet</code>检查出来，它是怎么检查的呢？它还能检查出什么其他的错误呢？</p>
+<p><code>go vet</code>默认使用的vet工具是go自带的vet工具，也可以通过<code>go vet -vettool=$prog</code>替换成自定义的vet工具。OK，现在我们来看一下go自带的vet分析工具都支持分析哪些类型的错误，以及怎么实现的。</p>
+<p>go自带的vet工具，其实现位于：src/cmd/vet/main.go，从源码中不难看出，vet支持对如下类型的错误进行检查：</p>
+<ul>
+<li>asmdecl: reports mismatches between assembly files and Go declarations</li>
+<li>assign: detects useless assignments</li>
+<li>atomic: checks for common mistakes using the sync/atomic package</li>
+<li>bools: detects common mistakes involving boolean operators</li>
+<li>buildtag: check that +build tags are well-formed and correctly located</li>
+<li>cgocall: detect some violations of the cgo pointer passing rules</li>
+<li>composite: check for unkeyed composite literals</li>
+<li>copylock: check for locks erroneously passed by value</li>
+<li>errorsas: report passing non-pointer or non-error values to errors.As</li>
+<li>httpresponse: check for mistakes using HTTP response</li>
+<li>ifaceassert: detect impossible interface-to-interface type assertions</li>
+<li>loopclosure: check references to loop variables from within nested functions</li>
+<li>lostcancel: check cancel func returned by context.WithCancel is called</li>
+<li>nilfunc: check for useless comparisons between functions and nil</li>
+<li>printf: check consistency of Printf format strings and arguments</li>
+<li>shift: check for shifts that equal or exceed the width of the integer</li>
+<li>stdmethods: check signature of methods of well-known interfaces</li>
+<li>stringintconv: check for string(int) conversions</li>
+<li>structtag: check that struct field tags conform to reflect.StructTag.Get</li>
+<li>tests: check for common mistaken usages of tests and examples</li>
+<li>unmarshal: report passing non-pointer or non-interface values to unmarshal</li>
+<li>unreachable: check for unreachable code</li>
+<li>unsafeptr: check for invalid conversions of uintptr to unsafe.Pointer</li>
+<li>unusedresult: check for unused results of calls to some functions</li>
+</ul>
+<p>如何实现的呢，单独查看各个analyzer的实现就可以了，举例copylock是基于go/ast语法分析来检测出来的。</p>
 <h2 id="4-总结">4. 总结</h2>
 
         </div>

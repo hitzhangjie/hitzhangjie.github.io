@@ -6,7 +6,7 @@
     <description>Recent content on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Sat, 17 Oct 2020 19:05:59 +0800</lastBuildDate>
+    <lastBuildDate>Fri, 16 Oct 2020 21:07:45 +0800</lastBuildDate>
     
 	<atom:link href="https://hitzhangjie.github.io/index.xml" rel="self" type="application/rss+xml" />
     
@@ -39,20 +39,11 @@
     </item>
     
     <item>
-      <title>第一次给go贡献代码</title>
-      <link>https://hitzhangjie.github.io/blog/2020-10-18-%E7%AC%AC%E4%B8%80%E6%AC%A1%E7%BB%99go%E8%B4%A1%E7%8C%AE%E4%BB%A3%E7%A0%81/</link>
-      <pubDate>Sat, 17 Oct 2020 19:05:59 +0800</pubDate>
-      
-      <guid>https://hitzhangjie.github.io/blog/2020-10-18-%E7%AC%AC%E4%B8%80%E6%AC%A1%E7%BB%99go%E8%B4%A1%E7%8C%AE%E4%BB%A3%E7%A0%81/</guid>
-      <description>text goes here xxxxxxxxxxxxxxxxxxxx yyyyyyyyyyyyyyyyyyy zzzzzzzzzzzzzzzzzzzz ddddddddddddddddddddddd</description>
-    </item>
-    
-    <item>
       <title>如何“偷懒”：从提升代码质量开始</title>
-      <link>https://hitzhangjie.github.io/blog/2020-10-16-%E5%81%B7%E6%87%92%E4%BB%8E%E6%8F%90%E5%8D%87%E4%BB%A3%E7%A0%81%E8%B4%A8%E9%87%8F%E5%BC%80%E5%A7%8B/</link>
+      <link>https://hitzhangjie.github.io/blog/2020-10-16-%E5%A7%94%E5%A9%89%E5%9C%B0%E8%A1%A8%E8%BE%BE%E6%8F%90%E5%8D%87%E4%BB%A3%E7%A0%81%E8%B4%A8%E9%87%8F%E7%9A%84%E7%B4%A7%E8%BF%AB%E6%80%A7/</link>
       <pubDate>Fri, 16 Oct 2020 21:07:45 +0800</pubDate>
       
-      <guid>https://hitzhangjie.github.io/blog/2020-10-16-%E5%81%B7%E6%87%92%E4%BB%8E%E6%8F%90%E5%8D%87%E4%BB%A3%E7%A0%81%E8%B4%A8%E9%87%8F%E5%BC%80%E5%A7%8B/</guid>
+      <guid>https://hitzhangjie.github.io/blog/2020-10-16-%E5%A7%94%E5%A9%89%E5%9C%B0%E8%A1%A8%E8%BE%BE%E6%8F%90%E5%8D%87%E4%BB%A3%E7%A0%81%E8%B4%A8%E9%87%8F%E7%9A%84%E7%B4%A7%E8%BF%AB%E6%80%A7/</guid>
       <description>如果一件事情只需要做一次，我们可能怎么方便怎么来，但是如果一件事情要重复千百遍，怎么方便怎么来就会变成灾难。对身体，对时间，对团队。停下来想想过去做的一些事情，都是为了做好事情的同时，能让自己更好地慢下来，让身体可以偷懒。本文先从提升代码质量开始谈起。 Linus Torvards在一次采访中，主持人贴了两个链表操作的实现，让其评价哪一种更好一点，Torvards说更喜欢消除了特殊逻辑的那种，并将这种偏好称为“taste”。每个人的taste不同，也不方便评价好与坏，但是“脑筋急转弯似”的做法一点都不“聪明”。好的思路</description>
     </item>
     

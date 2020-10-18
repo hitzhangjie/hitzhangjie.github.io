@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>go clean on 介绍</title>
+    <link>https://hitzhangjie.github.io/tags/go-clean/</link>
+    <description>Recent content in go clean on 介绍</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Sat, 17 Oct 2020 19:05:59 +0800</lastBuildDate>
+    
+	<atom:link href="https://hitzhangjie.github.io/tags/go-clean/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>第一次给go贡献代码</title>
+      <link>https://hitzhangjie.github.io/blog/2020-10-18-%E7%AC%AC%E4%B8%80%E6%AC%A1%E7%BB%99go%E8%B4%A1%E7%8C%AE%E4%BB%A3%E7%A0%81/</link>
+      <pubDate>Sat, 17 Oct 2020 19:05:59 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-10-18-%E7%AC%AC%E4%B8%80%E6%AC%A1%E7%BB%99go%E8%B4%A1%E7%8C%AE%E4%BB%A3%E7%A0%81/</guid>
+      <description>text goes here</description>
+    </item>
+    
+  </channel>
+</rss>

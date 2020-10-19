@@ -214,7 +214,7 @@ div#st-2 .st-btn > img {
         </h2>
         <div class="post-data">
             发表时间：2020-09-28 <br> 
-            阅读时长：11 分钟 (5479字)
+            阅读时长：14 分钟 (6896字)
         </div>
 
         
@@ -292,6 +292,66 @@ div#st-2 .st-btn > img {
 <p>为了降低沟通成本，go bug内部定义了一个issue模板（其实github也支持定义模板），包括了几个部分：问题简述、go版本、go env信息、执行的操作、期望的结果、实际的结果。这里呢，为了保护go issuer的体验，go bug会自动获取go环境信息，填充到issue模板中，这里的内容将作为issue的body部分。</p>
 <p>接下来会判断go issuer当前系统信息，并决定如何打开web浏览器，浏览器打开一个issue创建页面，通过GET参数填充issue的body，一个简单的issue基本信息就填充完成了。go issuer只需要填充下标题、问题简述、执行操作、期望结果、实际结果就创建完成了。</p>
 <h3 id="go-build">go build</h3>
+<p><code>go build</code>可以细分为如下几个操作：</p>
+<ul>
+<li>compile, src/cmd/compile/main.go</li>
+<li>asm, &hellip;</li>
+<li>link, src/cmd/link/main.go</li>
+<li>ld, &hellip;</li>
+</ul>
+<p><code>go build</code>过程分析，假定待编译的工程开启了go module：</p>
+<ul>
+<li>
+<p>初始化操作</p>
+<ul>
+<li><code>modload.Init()</code>, 进行go module相关的初始化，如检查环境变量GO111MODULE决定是否启用go module、定位go.mod所在的目录、设置git等；</li>
+<li><code>instrumentInit()</code>，代码织入初始化，什么是代码织入呢，比如<code>go build -race</code>对代码中的竞态条件进行检查，需要在原程序中加入一些特殊代码来统计对某些数据结构的并发读写操作，这就称之为代码织入，熟悉Java字节码织入的话应该很容易看懂这里的概念，比如Kilim、Quasa等字节码织入。<code>go build -msan</code>应该是启用与内存清理相关的操作。这里也就是检查一下flag的正确性（如-race、-msan不能同时指定），检查一下平台是否支持race检查、msan检查；</li>
+<li><code>buildModeInit()</code>，构建模式初始化，包括决定是构建一个共享库，还是一个可执行程序，还是其他等，也会检查平台是否支持、是否开启go module等；</li>
+</ul>
+</li>
+<li>
+<p>builder初始化: builder保存着一次构建过程中的全局状态，不保存package的全局状态，不同package的编译是并发进行的，builder是单例共享的</p>
+<ul>
+<li>初始化打印函数</li>
+<li>初始化action cache</li>
+<li>初始化mkdir cache</li>
+<li>初始化tool id cache</li>
+<li>初始化build id cache</li>
+<li>初始化临时构建目录</li>
+<li>检查GOOS、GOARCH是否合法</li>
+<li>检查指定的tag列表</li>
+</ul>
+</li>
+<li>
+<p>加载要构建的路径对应的package信息</p>
+<ul>
+<li>加载路径对应的pacakge</li>
+<li>移除纯测试用的package</li>
+</ul>
+</li>
+<li>
+<p>创建要执行的actions：一个action表示action图中的一个单独的动作</p>
+<ul>
+<li>创建一个go build的action（根节点），我猜这个action是一个表示全局构建完成的action；</li>
+<li>针对各个要构建的package创建一个auto action，都是前一步go build这个action的前置依赖；</li>
+<li>这里的actions构成了一个dag，也称之为action graph；</li>
+</ul>
+</li>
+<li>
+<p>b.Do()开始执行构建</p>
+<ul>
+<li>从根节点执行扫描，按照深度优先搜索、后序遍历的方式进行遍历，正好符合前置（子节点）执行完成后，后置才可以执行的问题；</li>
+<li>根据查看选项是否指定，决定是否输出action graph；</li>
+<li>action dag执行的时候，相当于先执行最底层的叶子节点，执行完再执行上一层的父节点&hellip;以此类推，直到到达根节点；</li>
+<li>根据action.Deps构建反向的触发关系，如a.Deps=b，那么b.Triggers=a，方便b执行完后驱动a执行；</li>
+<li>action.pending表示当前该action剩下的等待执行完成的前置依赖的数量，如果pending为0，表示无依赖或者依赖都已执行完成，当前action变为就绪状态，转移到b.ready这中，b.readySema信号量也ok了；</li>
+<li>启动多个goroutine执行并发的构建任务，当b.readySema就绪后，从b.ready栈中取出要处理的action去执行，记录构建的时间之类的，应该是为了方便统计编译耗时信息；</li>
+<li>这里要注意action.Func，默认是挺过(*Builder).build来构建的，层层展开，其实看得就是gc.go的gc方法，这个方法最终调用的其实是<code>go tool compile</code>来完成编译过程；</li>
+<li><code>go tool compile</code>的代码位于<code>src/cmd/compile/main.go</code>下；</li>
+</ul>
+</li>
+</ul>
+<p><code>go tool compile</code>逻辑实现：</p>
 <h3 id="go-clean">go clean</h3>
 <p>我们在编译构建的过程中，一般都会生成一些临时文件，比如.o文件，如果是使用Makefile管理工程构建的时候一般会定义个PHONY Target clean，通过make clean来清理临时文件、目标文件、程序等，MVN构建也会定义clean这样的target，go也不例外。</p>
 <p><code>go build</code>，编译输出可执行程序，<code>go install</code>还会将可执行程序安装到GOBIN或者GOPATH/bin，那现在要清理的话，<code>go clean</code>会清理当前module下的编译产物，<code>go clean -i</code>还会把安装到GOBIN或者GOPATH/bin下安装的程序给清理掉，另外go modules之间也有依赖关系，<code>go clean -r</code>还可以递归地清理依赖产物。</p>

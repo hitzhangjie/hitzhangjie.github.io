@@ -210,6 +210,15 @@
     </item>
     
     <item>
+      <title>go源码剖析-gotest实现</title>
+      <link>https://hitzhangjie.github.io/blog/2020-02-23-go%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-gotest%E5%AE%9E%E7%8E%B0/</link>
+      <pubDate>Sun, 23 Feb 2020 16:54:07 +0800</pubDate>
+      
+      <guid>https://hitzhangjie.github.io/blog/2020-02-23-go%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-gotest%E5%AE%9E%E7%8E%B0/</guid>
+      <description>问题背景 在go1.13出来后不久，有不少同学遇到了go test报错的问题 “flag -test.timeout provided but not defined”。这个问题是如何引起的呢？ 公司微服务代码，通常是借助代码生成工具统一生成的，包括针对接口的测试用例； 在生成单元测试文件时，如helloworld_test.go中，在该文件中定义了一些测试选项如-timeout、-service、-method、-target、-req、-rsp等； 上述定义的选项，在helloworld_test.go中的func init()中执行flag.Parse()操作完成选项解</description>
+    </item>
+    
+    <item>
       <title>如何实现一个更安全的删除命令rm</title>
       <link>https://hitzhangjie.github.io/blog/2019-10-18-%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AA%E6%9B%B4%E5%AE%89%E5%85%A8%E7%9A%84%E5%88%A0%E9%99%A4%E5%91%BD%E4%BB%A4rm/</link>
       <pubDate>Fri, 18 Oct 2019 15:00:01 +0800</pubDate>

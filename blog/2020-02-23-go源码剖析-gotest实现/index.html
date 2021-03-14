@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+    <head>
+        
+        <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Web站点描述">
+<title>
+go源码剖析-gotest实现 - 介绍
+</title>
+
+
+
+
+<script type="text/javascript" src="https://platform-api.sharethis.com/js/sharethis.js#property=5f24f50fc2418c0012d52ac3&product=inline-share-buttons" async="async">
+</script>
+
+<style>
+ 
+[alt~=sharing] {
+    border: 0px;
+    box-shadow: none;
+}
+div#st-1 {
+    text-align: unset;
+}
+
+ 
+div#st-1 .st-btn {
+    height: 24px;
+    padding: 0 4px;
+}
+
+div#st-1 .st-btn > img {
+    top: 4.2px;
+}
+
+div#st-2 .st-btn {
+    height: 24px;
+    padding: 0 4px;
+}
+
+div#st-2 .st-btn > img {
+    top: 4.2px;
+}
+</style>
+
+
+
+
+
+
+
+        <meta property="og:title" content="go源码剖析-gotest实现 - 介绍" />
+<meta property="og:type" content="website" />
+<meta property="og:description" content="Web站点描述"/>
+<meta property="og:url" content="https://hitzhangjie.pro/blog/2020-02-23-go%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-gotest%E5%AE%9E%E7%8E%B0/"/>
+<meta property="og:site_name" content="介绍"/>
+
+
+
+
+<meta property="og:image" content="https://hitzhangjie.pro/home/me.jpg"/>
+
+<meta property="og:image" content="https://hitzhangjie.pro/home/profile.jpg"/>
+
+
+
+
+        
+<link rel="shortcut icon" href="/img/fav.ico">
+
+
+        
+
+
+
+
+
+<link rel="stylesheet" href="/css/main.min.daa833377fb1636f8cbfa65c601050bb5475623deb7aa6e6fdde94a064a6185d.css" integrity="sha256-2qgzN3&#43;xY2&#43;Mv6ZcYBBQu1R1Yj3reqbm/d6UoGSmGF0=" crossorigin="anonymous" media="screen">
+
+
+
+
+    <link rel="stylesheet" href="/custom.css" integrity="" crossorigin="anonymous" media="screen">
+
+        
+        
+        
+        
+    </head>
+    <body>
+        <section id="top" class="section">
+            
+            <div class="container hero  fade-in one ">
+                
+
+    <h1 class="bold-title is-1">博客</h1>
+
+
+            </div>
+            
+            <div class="section  fade-in two ">
+                
+<div class="container">
+    <hr>
+    <nav class="navbar" role="navigation" aria-label="main navigation">
+        
+        <a role="button" class="navbar-burger" data-target="navMenu" aria-label="menu" aria-expanded="false" >
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </a>
+        <div class="navbar-menu " id="navMenu">
+            
+            
+            
+            
+            <a class="navbar-item" href="/">主页</a>
+            
+
+            
+            
+
+            
+                
+            
+
+            
+                
+            
+
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://hitzhangjie.pro/projects/">
+                  
+                  项目
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://hitzhangjie.pro/blog/">
+                  
+                  返回 博客
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#about">关于</a>
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#thanks">致谢</a>
+            
+            
+            
+            
+
+            
+            
+            <a class="navbar-item" href="/#contact">联系方式</a>
+            
+            
+
+            
+            
+            
+            
+            <a class="navbar-item" href="https://hitzhangjie.pro/en/">English</a>
+            
+            
+
+            
+            
+        </div>
+    </nav>
+    <hr>
+</div>
+
+
+
+                
+    <div class="container">
+
+        <h2 class="title is-1 top-pad strong-post-title">
+            <a href="https://hitzhangjie.pro/blog/2020-02-23-go%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-gotest%E5%AE%9E%E7%8E%B0/">go源码剖析-gotest实现</a>
+        </h2>
+        <div class="post-data">
+            发表时间：2020-02-23 <br> 
+            阅读时长：7 分钟 (3054字)
+        </div>
+
+        
+        <div>
+            <div>
+            
+            
+            <p>
+                标签：
+                
+                <a href="/tags/go">go</a>,
+                
+                <a href="/tags/test">test</a>
+                
+            </p>
+            
+            </div>
+
+            <div>
+            <br>
+            
+
+
+<div style="display:flex;">
+    <div>分享：</div>
+    <div>
+        <div class="sharethis-inline-share-buttons"></div>
+    </div>
+</div>
+
+
+            </div>
+
+        </div>
+
+        
+        
+
+        
+        <div> 
+            
+
+        </div>
+   
+        
+        <div class="container markdown top-pad">
+            <h2 id="问题背景">问题背景</h2>
+<p>在go1.13出来后不久，有不少同学遇到了go test报错的问题 “flag -test.timeout provided but not defined”。这个问题是如何引起的呢？</p>
+<ul>
+<li>公司微服务代码，通常是借助代码生成工具统一生成的，包括针对接口的测试用例；</li>
+<li>在生成单元测试文件时，如helloworld_test.go中，在该文件中定义了一些测试选项如-timeout、-service、-method、-target、-req、-rsp等；
+上述定义的选项，在helloworld_test.go中的func init()中执行flag.Parse()操作完成选项解析。</li>
+</ul>
+<p>这是被测试代码的一点背景信息，上述测试代码在go1.12中是没有问题的，但是当升级到go1.13后，就出现了上述“flag &hellip; provided but not defined”的错误。</p>
+<h2 id="实现细节">实现细节</h2>
+<p>go test实现细节，需要跟踪一下命令go test的执行过程，具体对应这个源文件：src/cmd/go/internal/test/test.go。</p>
+<p>假如现在，我们创建一个package名为xxxx的go文件，然后创建一个package名为xxxx_test的_test文件，如：</p>
+<p>file: helloworld_test.go</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">xxxx_test</span>
+
+<span style="color:#f92672">import</span> <span style="color:#e6db74">&#34;testing&#34;</span>
+<span style="color:#f92672">import</span> <span style="color:#e6db74">&#34;xxxx&#34;</span>
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">TestHelloWorld</span>(<span style="color:#a6e22e">t</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">testing</span>.<span style="color:#a6e22e">T</span>) {
+	<span style="color:#a6e22e">xxxx</span>.<span style="color:#a6e22e">Hello</span>()
+}
+
+<span style="color:#75715e">/*
+</span><span style="color:#75715e">func init() {
+</span><span style="color:#75715e">    flag.Parse()
+</span><span style="color:#75715e">}
+</span><span style="color:#75715e">*/</span>
+
+<span style="color:#75715e">/*
+</span><span style="color:#75715e">func TestMain(m *testing.M) {
+</span><span style="color:#75715e">    os.Exit(m.Run())
+</span><span style="color:#75715e">}
+</span><span style="color:#75715e">*/</span>
+</code></pre></div><p>file: helloworld.go</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">xxxx</span>
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">Hello</span>() {
+}
+</code></pre></div><p>这里的实例代码，做了适当的简化，方便大家查看。为了更好地跟踪go test过程，我们可以以调试模式运行go test，如<code>GOTMPDIR=$(pwd)/xxx dlv exec $(which go) -- test -c</code>：</p>
+<ul>
+<li>首先指定了临时目录GOTMPDIR为当前目录下的xxx，在执行编译构建过程中的临时文件将生成到该目录下；</li>
+<li>dlv执行的时候，在<code>--</code>后面添加传递给被调试程序的命令行参数，如这里传递给go的参数是<code>test -c</code>；</li>
+</ul>
+<p>此外，我们可以执行<code>fswatch $(pwd)/xxx</code>来跟踪文件系统的变化，从而帮助我们分析go test到底干了什么，这样比较直观，直接看源码，代码量有点多，容易抓不住头绪。</p>
+<p>接下来只需要执行next、next、next步进的形式执行go test的代码逻辑就可以了。过程中，我们看到fswatch输出了如下信息：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">zhangjie@knight test $ fswatch .
+
+/Users/zhangjie/test/test/xxx/go-build3964143485
+/Users/zhangjie/test/test/xxx/go-build3964143485/b001
+/Users/zhangjie/test/test/xxx/go-build3964143485/b001/_testmain.go
+</code></pre></div><p>此时查看下_testmain.go的文件内容：</p>
+<p>file: _testmain.go</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">
+<span style="color:#75715e">// Code generated by &#39;go test&#39;. DO NOT EDIT.
+</span><span style="color:#75715e"></span>
+<span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+
+<span style="color:#f92672">import</span> (
+	<span style="color:#e6db74">&#34;os&#34;</span>
+
+	<span style="color:#e6db74">&#34;testing&#34;</span>
+	<span style="color:#e6db74">&#34;testing/internal/testdeps&#34;</span>
+
+	<span style="color:#a6e22e">_</span> <span style="color:#e6db74">&#34;xxxx&#34;</span>
+
+	<span style="color:#a6e22e">_xtest</span> <span style="color:#e6db74">&#34;xxxx_test&#34;</span>
+)
+
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">tests</span> = []<span style="color:#a6e22e">testing</span>.<span style="color:#a6e22e">InternalTest</span>{
+	{<span style="color:#e6db74">&#34;TestHelloWorld&#34;</span>, <span style="color:#a6e22e">_xtest</span>.<span style="color:#a6e22e">TestHelloWorld</span>},
+}
+
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">benchmarks</span> = []<span style="color:#a6e22e">testing</span>.<span style="color:#a6e22e">InternalBenchmark</span>{
+}
+
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">examples</span> = []<span style="color:#a6e22e">testing</span>.<span style="color:#a6e22e">InternalExample</span>{
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">init</span>() {
+	<span style="color:#a6e22e">testdeps</span>.<span style="color:#a6e22e">ImportPath</span> = <span style="color:#e6db74">&#34;xxxx&#34;</span>
+}
+
+
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+
+	<span style="color:#a6e22e">m</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">testing</span>.<span style="color:#a6e22e">MainStart</span>(<span style="color:#a6e22e">testdeps</span>.<span style="color:#a6e22e">TestDeps</span>{}, <span style="color:#a6e22e">tests</span>, <span style="color:#a6e22e">benchmarks</span>, <span style="color:#a6e22e">examples</span>)
+
+	<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Exit</span>(<span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">Run</span>())
+}
+</code></pre></div><p>上述文件中包含了一个main函数，是go test -c生成的测试程序的入口函数。</p>
+<ul>
+<li>
+<p>上述文件中，import了我们自己编写的两个package，如<code>import _ &quot;xxxx&quot;</code>，以及<code>import _xtest &quot;xxxx_test&quot;</code>，这两个package的代码就是我们上面给出的，一个Hello函数定义，一个对Hello函数的单元测试，没有什么复杂的。在helloworld_test.go中我们注释掉了两段代码，一个是func init()逻辑，一个是func TestMain()逻辑。我们稍后再说这个。</p>
+</li>
+<li>
+<p>func init()中也没有什么需要关注的。</p>
+</li>
+<li>
+<p>func main中，先执行了一个testing.MainStart(&hellip;)初始化逻辑，这里面赶了什么呢？它执行了一个testing.Init()函数，来初始化go testing这个package中自定义的一些flags，如-test.timeout之类的。主意这些flags的注册逻辑是在所有package的func init()执行之后才发起的。</p>
+</li>
+<li>
+<p>func main中，接着执行了一个os.Exit(m.Run())来执行测试，展开m.Run()能够看到根据-test.run选择性运行测试用例，或执行所有测试用例的逻辑。注意，当我们在测试文件中定义了TestMain方法之后，这里生成的代码就不是os.Exit(m.Run())了，而是_xtest.TestMain(m),这将允许先执行我们自己的测试代码设置逻辑。如在TestMain中执行一些准备测试数据、工作目录、注册命令选项 逻辑。</p>
+</li>
+</ul>
+<h2 id="该问题产生原因">该问题产生原因</h2>
+<p>好，事情至此，我们先来解答本文开头遇到的问题？</p>
+<ul>
+<li>go1.13中对testing package的初始化逻辑做了一点调整，它将flags的初始化逻辑放在了main程序中，所有的其他package的func init()执行之后；</li>
+<li>go官方其实不建议在func init()中定义一些flags的，除非是main package。但是我们很多开发并不了解这个背景，经常在func init()中定义一些flags并Parse，甚至是在_test.go文件中;</li>
+<li>go1.13做了上述调整之后，在func init()中执行flag.Parse()时，如果go test传递了一些还没有来得及注册的选项，如-test.timeout是在func main()执行后注册，就会报错&quot;flag -test.timeout provided but not defined&rdquo;。</li>
+</ul>
+<p>到这，我们解释了问题产生的原因了。</p>
+<h2 id="如何规避该问题">如何规避该问题</h2>
+<p>现在，我们再来看下如何规避上述问题，有些情况下，确实有需要在_test.go中定义一些flags进行精细化控制的情况。</p>
+<p>我们了解到，如果我们自定义了TestMain函数，go test就会生成这样的代码:</p>
+<p>file: _testmain.go</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+    <span style="color:#a6e22e">m</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">testing</span>.<span style="color:#a6e22e">MainStart</span>(<span style="color:#a6e22e">testdeps</span>.<span style="color:#a6e22e">TestDeps</span>(), <span style="color:#a6e22e">tests</span>, <span style="color:#a6e22e">benchmarks</span>, <span style="color:#a6e22e">examples</span>)
+
+    <span style="color:#a6e22e">_xtest</span>.<span style="color:#a6e22e">TestMain</span>(<span style="color:#a6e22e">m</span>)
+}
+</code></pre></div><p>在testing.MainStart中执行testing框架的选项注册逻辑，如-test.run、-test.timeout等等，我们可以在_xtest这个导入别名对应package中定义好flags，可以在package级别定义，也可以在func init()中定义，也可以在func TestMain()中定义，只要保证，执行flag.Parse()的时候是在TestMain或者更之后的单元测试函数中就可以。</p>
+<p>这个时候，所有的package的选项都正常注册了，包括testing package的，在TestMain中执行flag.Parse()就不会再出现“flag &hellip; provided but not defined&quot;的奇葩情况。</p>
+<h2 id="区分testing-flags以及自定义flags">区分testing flags以及自定义flags</h2>
+<p>另外，关于自定义flag与testing package定义的重名的问题，其实go test是有考虑到的，用参数&ndash;args分开就可以了，前面的是给testing解析的，后面是给自定义的解析的，testing自己的flag名带“test.”前缀，其实是可以省略掉的。</p>
+<h2 id="再看go-test代码生成">再看go test代码生成</h2>
+<p>下面是问题的回归，及定位过程中的源码分析！</p>
+<p>_testmain.go的生成，是通过go模板来生成的，模板路径详见：src/cmd/go/internal/load/test.go，搜索变量’testmainTmpl’：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// Code generated by &#39;go test&#39;. DO NOT EDIT.
+</span><span style="color:#75715e"></span>
+<span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+
+<span style="color:#f92672">import</span> (
+	<span style="color:#e6db74">&#34;os&#34;</span>
+{{<span style="color:#66d9ef">if</span> .<span style="color:#a6e22e">TestMain</span>}}
+	<span style="color:#e6db74">&#34;reflect&#34;</span>
+{{<span style="color:#a6e22e">end</span>}}
+	<span style="color:#e6db74">&#34;testing&#34;</span>
+	<span style="color:#e6db74">&#34;testing/internal/testdeps&#34;</span>
+
+{{<span style="color:#66d9ef">if</span> .<span style="color:#a6e22e">ImportTest</span>}}
+	{{<span style="color:#66d9ef">if</span> .<span style="color:#a6e22e">NeedTest</span>}}<span style="color:#a6e22e">_test</span>{{<span style="color:#66d9ef">else</span>}}<span style="color:#a6e22e">_</span>{{<span style="color:#a6e22e">end</span>}} {{.<span style="color:#a6e22e">Package</span>.<span style="color:#a6e22e">ImportPath</span> | <span style="color:#a6e22e">printf</span> <span style="color:#e6db74">&#34;%q&#34;</span>}}
+{{<span style="color:#a6e22e">end</span>}}
+{{<span style="color:#66d9ef">if</span> .<span style="color:#a6e22e">ImportXtest</span>}}
+	{{<span style="color:#66d9ef">if</span> .<span style="color:#a6e22e">NeedXtest</span>}}<span style="color:#a6e22e">_xtest</span>{{<span style="color:#66d9ef">else</span>}}<span style="color:#a6e22e">_</span>{{<span style="color:#a6e22e">end</span>}} {{.<span style="color:#a6e22e">Package</span>.<span style="color:#a6e22e">ImportPath</span> | <span style="color:#a6e22e">printf</span> <span style="color:#e6db74">&#34;%s_test&#34;</span> | <span style="color:#a6e22e">printf</span> <span style="color:#e6db74">&#34;%q&#34;</span>}}
+{{<span style="color:#a6e22e">end</span>}}
+<span style="color:#f92672">...</span>
+)
+
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">tests</span> = []<span style="color:#a6e22e">testing</span>.<span style="color:#a6e22e">InternalTest</span>{
+{{<span style="color:#66d9ef">range</span> .<span style="color:#a6e22e">Tests</span>}}
+	{<span style="color:#e6db74">&#34;{{.Name}}&#34;</span>, {{.<span style="color:#a6e22e">Package</span>}}.{{.<span style="color:#a6e22e">Name</span>}}},
+{{<span style="color:#a6e22e">end</span>}}
+}
+
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">benchmarks</span> = []<span style="color:#a6e22e">testing</span>.<span style="color:#a6e22e">InternalBenchmark</span>{
+{{<span style="color:#66d9ef">range</span> .<span style="color:#a6e22e">Benchmarks</span>}}
+	{<span style="color:#e6db74">&#34;{{.Name}}&#34;</span>, {{.<span style="color:#a6e22e">Package</span>}}.{{.<span style="color:#a6e22e">Name</span>}}},
+{{<span style="color:#a6e22e">end</span>}}
+}
+
+<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">examples</span> = []<span style="color:#a6e22e">testing</span>.<span style="color:#a6e22e">InternalExample</span>{
+{{<span style="color:#66d9ef">range</span> .<span style="color:#a6e22e">Examples</span>}}
+	{<span style="color:#e6db74">&#34;{{.Name}}&#34;</span>, {{.<span style="color:#a6e22e">Package</span>}}.{{.<span style="color:#a6e22e">Name</span>}}, {{.<span style="color:#a6e22e">Output</span> | <span style="color:#a6e22e">printf</span> <span style="color:#e6db74">&#34;%q&#34;</span>}}, {{.<span style="color:#a6e22e">Unordered</span>}}},
+{{<span style="color:#a6e22e">end</span>}}
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">init</span>() {
+	<span style="color:#a6e22e">testdeps</span>.<span style="color:#a6e22e">ImportPath</span> = {{.<span style="color:#a6e22e">ImportPath</span> | <span style="color:#a6e22e">printf</span> <span style="color:#e6db74">&#34;%q&#34;</span>}}
+}
+
+<span style="color:#f92672">...</span>
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+    <span style="color:#f92672">...</span>
+
+	<span style="color:#a6e22e">m</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">testing</span>.<span style="color:#a6e22e">MainStart</span>(<span style="color:#a6e22e">testdeps</span>.<span style="color:#a6e22e">TestDeps</span>{}, <span style="color:#a6e22e">tests</span>, <span style="color:#a6e22e">benchmarks</span>, <span style="color:#a6e22e">examples</span>)
+{{<span style="color:#a6e22e">with</span> .<span style="color:#a6e22e">TestMain</span>}}
+	{{.<span style="color:#a6e22e">Package</span>}}.{{.<span style="color:#a6e22e">Name</span>}}(<span style="color:#a6e22e">m</span>)
+	<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Exit</span>(int(<span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">ValueOf</span>(<span style="color:#a6e22e">m</span>).<span style="color:#a6e22e">Elem</span>().<span style="color:#a6e22e">FieldByName</span>(<span style="color:#e6db74">&#34;exitCode&#34;</span>).<span style="color:#a6e22e">Int</span>()))
+{{<span style="color:#66d9ef">else</span>}}
+	<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Exit</span>(<span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">Run</span>())
+{{<span style="color:#a6e22e">end</span>}}
+}
+</code></pre></div><p>结合前面给出的测试用例helloworld.go、helloworld_test.go，以及go test生成的_testmain.go，只要对go模板稍有认识，就很容易建立起模板和代码生成的联系，是很容易理解的。</p>
+<h2 id="总结">总结</h2>
+<p>go1.13 testing package初始化flags顺序发生改变，引起了一些go test时&quot;flag &hellip; provided but not defined&quot;的错误，暴露了我们一些开发者对go test不熟悉、对go flags官方推荐用法不熟悉。本文解释了go test的大致处理逻辑、问题产生原因以及规避该问题的建议。</p>
+
+        </div>
+        
+
+        
+        <hr>
+        <div style="float:right;">
+        
+
+
+<div style="display:flex;">
+    <div>分享：</div>
+    <div>
+        <div class="sharethis-inline-share-buttons"></div>
+    </div>
+</div>
+
+
+        </div>
+
+        <br>
+        <br>
+
+    </div>
+
+    
+    
+    <br>
+    <br>
+    <div style="height:auto;align:center;text-align:center;"> 
+        <div>
+            <img src="/common/xiaoqi.png" style="height:238px;margin-top:10px;margin-right:5px;"/>
+            <img src="/common/qrcode.jpg" style="height:238px;margin-top:10px;"/>
+            <img src="/common/yuanbao.png" style="height:238px;margin-top:10px;margin-left:5px;"/>
+        </div>
+
+        <div>
+            <p>
+                感谢打赏，小七🐶、元宝🐱可以改善伙食咯 😘
+            </p>
+        </div>
+
+
+    </div>
+    
+
+    
+
+
+                
+                <div class="container">
+    <hr>
+</div>
+<div class="container has-text-centered top-pad">
+    <a href="#top">
+        <i class="fa fa-arrow-up"></i>
+    </a>
+</div>
+
+<div class="container">
+    <hr>
+</div>
+
+                <div class="section" id="footer">
+    <div class="container has-text-centered">
+    
+        <span class="footer-text">
+            <a href="https://github.com/victoriadrake/hugo-theme-introduction/"><strong>Introduction</strong></a> 主题为 <a href="http://gohugo.io/">Hugo</a> 而设。由开源社群贡献者以 <a href="https://victoria.dev"><i class="fa fa-heart"></i> 和 <i class="fa fa-coffee"></i></a> 创造。
+        </span>
+    
+    </div>
+</div>
+
+                
+            </div>
+        </section>
+        
+        
+
+
+
+
+
+<script src="https://hitzhangjie.pro/js/bundle.23f18222425179f754965a36c9b211bd8cff5e5ab61ee23b52f026cef6699139.js" integrity="sha256-I/GCIkJRefdUllo2ybIRvYz/Xlq2HuI7UvAmzvZpkTk="></script>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-168027530-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+        
+        
+        
+        
+    </body>
+</html>

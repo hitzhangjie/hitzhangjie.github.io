@@ -2,20 +2,20 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>desktop on 介绍</title>
-    <link>https://hitzhangjie.github.io/tags/desktop/</link>
+    <link>https://hitzhangjie.pro/tags/desktop/</link>
     <description>Recent content in desktop on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
     
-	<atom:link href="https://hitzhangjie.github.io/tags/desktop/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://hitzhangjie.pro/tags/desktop/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>Nothing, Just Linux!</title>
-      <link>https://hitzhangjie.github.io/blog/2017-03-13-nothing-just-linux/</link>
+      <link>https://hitzhangjie.pro/blog/2017-03-13-nothing-just-linux/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://hitzhangjie.github.io/blog/2017-03-13-nothing-just-linux/</guid>
+      <guid>https://hitzhangjie.pro/blog/2017-03-13-nothing-just-linux/</guid>
       <description>1 邂逅Linux 初次接触Linux操作系统是在什么时候？想想～～ 高三毕业后买了第一台电脑，一台清华同方的台式机，随机赠送的光盘里面有一张操作系 统光盘“家电下乡Linux适农版”……那是我第一次接触并运行Linux，但那时的我并没有意识 到，放在我面前的是一个即将深深地吸引我并要在多年的职业生涯中去不断锤炼的存在。 大一、大二这两年，我或多或少地接触到了Linux，但是并没有产生多大兴趣，直到有一 天我激怒了一个同学。当时他正在摆弄Ubuntu，错误地GRUB配置导致系统引导失败，着急 的他在QQ空间发了一条状态，意</description>
     </item>
     

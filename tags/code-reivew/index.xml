@@ -2,21 +2,21 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>code reivew on 介绍</title>
-    <link>https://hitzhangjie.pro/tags/code-reivew/</link>
+    <link>https://www.hitzhangjie.pro/tags/code-reivew/</link>
     <description>Recent content in code reivew on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
     <lastBuildDate>Tue, 10 Sep 2019 17:26:01 +0800</lastBuildDate>
     
-	<atom:link href="https://hitzhangjie.pro/tags/code-reivew/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://www.hitzhangjie.pro/tags/code-reivew/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>Google CR指引, 如何推进代码评审</title>
-      <link>https://hitzhangjie.pro/blog/2019-09-10-%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E5%9C%B0%E8%BF%9B%E8%A1%8C%E4%BB%A3%E7%A0%81review/</link>
+      <link>https://www.hitzhangjie.pro/blog/2019-09-10-%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E5%9C%B0%E8%BF%9B%E8%A1%8C%E4%BB%A3%E7%A0%81review/</link>
       <pubDate>Tue, 10 Sep 2019 17:26:01 +0800</pubDate>
       
-      <guid>https://hitzhangjie.pro/blog/2019-09-10-%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E5%9C%B0%E8%BF%9B%E8%A1%8C%E4%BB%A3%E7%A0%81review/</guid>
+      <guid>https://www.hitzhangjie.pro/blog/2019-09-10-%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E5%9C%B0%E8%BF%9B%E8%A1%8C%E4%BB%A3%E7%A0%81review/</guid>
       <description>最近学习了Google的CodeReview指引，整理了其中一些比较有价值的点，分享给大家。 Google Code Review Guidelines Google积累了很多最佳实践，涉及不同的开发语言、项目，这些文档，将Google工程师多年来积攒的一些最佳实践经验进行了总结并分享给众开发者。学习下这里的经验，我们在进行项目开发、开源协同的过程中，相信也可以从中受益。 Google目前公开的最佳实践相关文档，目前包括： Google&amp;rsquo;s Code Review Guidelines，Google代码review指引，包含以下两个系列的内容： The Code Reviewer&amp;rsquo;s Guide The Change Author&amp;rsquo;s Guide 这了涉及到Google内部使用的一些术语</description>
     </item>
     

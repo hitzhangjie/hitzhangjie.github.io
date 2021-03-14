@@ -2,21 +2,21 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>goroutine on 介绍</title>
-    <link>https://hitzhangjie.pro/tags/goroutine/</link>
+    <link>https://www.hitzhangjie.pro/tags/goroutine/</link>
     <description>Recent content in goroutine on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
     <lastBuildDate>Sun, 03 Dec 2017 16:49:09 +0800</lastBuildDate>
     
-	<atom:link href="https://hitzhangjie.pro/tags/goroutine/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://www.hitzhangjie.pro/tags/goroutine/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>go风格协程库libmill之源码分析</title>
-      <link>https://hitzhangjie.pro/blog/2017-12-03-go%E9%A3%8E%E6%A0%BC%E5%8D%8F%E7%A8%8B%E5%BA%93libmill%E4%B9%8B%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</link>
+      <link>https://www.hitzhangjie.pro/blog/2017-12-03-go%E9%A3%8E%E6%A0%BC%E5%8D%8F%E7%A8%8B%E5%BA%93libmill%E4%B9%8B%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</link>
       <pubDate>Sun, 03 Dec 2017 16:49:09 +0800</pubDate>
       
-      <guid>https://hitzhangjie.pro/blog/2017-12-03-go%E9%A3%8E%E6%A0%BC%E5%8D%8F%E7%A8%8B%E5%BA%93libmill%E4%B9%8B%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</guid>
+      <guid>https://www.hitzhangjie.pro/blog/2017-12-03-go%E9%A3%8E%E6%A0%BC%E5%8D%8F%E7%A8%8B%E5%BA%93libmill%E4%B9%8B%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/</guid>
       <description>1 Preface libmill, 是Martin Sustrik发起的一个面向unix平台下c语言开发的协程库，实现了一种类似goroutine风格的协程，也支持channel，“通过通信共享数据，而非通过共享数据来完成通信”。 觉得挺有意思的，就抽周末时间看了下。大神的代码干净利索，也看到了不少令自己眼前一亮的tricks，举几个例子吧。 1 通用链表及迭代器实现 offsetof可以计算结构体中的成员的offset，如果我们知道一个struct的类型、其成员名、成员地址，我们就可以计算出struct的地址： #define mill_cont(ptr, type, member) \ (ptr ? ((type*) (((char*) ptr) - offsetof(type, member))) : NULL) 基于</description>
     </item>
     

@@ -2,21 +2,21 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>nio on 介绍</title>
-    <link>https://hitzhangjie.pro/tags/nio/</link>
+    <link>https://www.hitzhangjie.pro/tags/nio/</link>
     <description>Recent content in nio on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
     <lastBuildDate>Wed, 05 Apr 2017 14:56:32 +0800</lastBuildDate>
     
-	<atom:link href="https://hitzhangjie.pro/tags/nio/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://www.hitzhangjie.pro/tags/nio/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>Java NIO Tutorials</title>
-      <link>https://hitzhangjie.pro/blog/2017-04-20-%E5%AD%A6%E4%B9%A0java-nio/</link>
+      <link>https://www.hitzhangjie.pro/blog/2017-04-20-%E5%AD%A6%E4%B9%A0java-nio/</link>
       <pubDate>Wed, 05 Apr 2017 14:56:32 +0800</pubDate>
       
-      <guid>https://hitzhangjie.pro/blog/2017-04-20-%E5%AD%A6%E4%B9%A0java-nio/</guid>
+      <guid>https://www.hitzhangjie.pro/blog/2017-04-20-%E5%AD%A6%E4%B9%A0java-nio/</guid>
       <description>1 前言 Java NIO，意为Java New IO，是一种相对于Java标准IO、网络API的替代方案。从JDK 1.4开始NIO就被引入了进来，它提供了另一种IO处理的方式，这使得Java在IO处理方面向前迈进了一大步。 NIO Channel &amp;amp; Buffer 在Java标准IO里面，IO处理的对象是字节流或字符流，在NIO里面我们处理的对象是channel和buffer，数据读总是从channel中读入到buffer，输入写总是从buffer写入到channel。 NIO Non-Blocking IO Java NIO使得我们可以通过非阻塞的方式执行IO处理，例如一个线程请求从channel中读</description>
     </item>
     

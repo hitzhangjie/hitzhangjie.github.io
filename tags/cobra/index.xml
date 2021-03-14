@@ -2,21 +2,21 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>cobra on 介绍</title>
-    <link>https://hitzhangjie.pro/tags/cobra/</link>
+    <link>https://www.hitzhangjie.pro/tags/cobra/</link>
     <description>Recent content in cobra on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
     <lastBuildDate>Fri, 26 Jun 2020 10:38:34 +0800</lastBuildDate>
     
-	<atom:link href="https://hitzhangjie.pro/tags/cobra/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://www.hitzhangjie.pro/tags/cobra/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>如何高效开发一个命令行工具</title>
-      <link>https://hitzhangjie.pro/blog/2020-06-26-%E5%A6%82%E4%BD%95%E9%AB%98%E6%95%88%E5%BC%80%E5%8F%91%E4%B8%80%E4%B8%AA%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%B7%A5%E5%85%B7/</link>
+      <link>https://www.hitzhangjie.pro/blog/2020-06-26-%E5%A6%82%E4%BD%95%E9%AB%98%E6%95%88%E5%BC%80%E5%8F%91%E4%B8%80%E4%B8%AA%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%B7%A5%E5%85%B7/</link>
       <pubDate>Fri, 26 Jun 2020 10:38:34 +0800</pubDate>
       
-      <guid>https://hitzhangjie.pro/blog/2020-06-26-%E5%A6%82%E4%BD%95%E9%AB%98%E6%95%88%E5%BC%80%E5%8F%91%E4%B8%80%E4%B8%AA%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%B7%A5%E5%85%B7/</guid>
+      <guid>https://www.hitzhangjie.pro/blog/2020-06-26-%E5%A6%82%E4%BD%95%E9%AB%98%E6%95%88%E5%BC%80%E5%8F%91%E4%B8%80%E4%B8%AA%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%B7%A5%E5%85%B7/</guid>
       <description>我经常会开发一些命令行工具来协助处理一些事情，如开发一个代码生成工具快速生成服务代码，或者开发一个工具来方便管理github上的工具，或者开发一个工具rm来替换掉不安全的rm，等等。 命令行工具开发过程中，比较常见的一个问题就是对功能进行分组，开发多个命令不利于使用，在命令中支持子命令是一个更常见、更友好的做法，如go build，go tool，go pprof，等等。我们还希望为不同的子命令添加不同的命令行选项，如go build -gcflags=，go pprof --seconds=，等等。 如何支持子命令字呢？ 假如我们开发一个命</description>
     </item>
     

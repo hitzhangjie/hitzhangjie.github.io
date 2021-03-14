@@ -2,21 +2,21 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>ucontext on 介绍</title>
-    <link>https://hitzhangjie.pro/tags/ucontext/</link>
+    <link>https://www.hitzhangjie.pro/tags/ucontext/</link>
     <description>Recent content in ucontext on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
     <lastBuildDate>Wed, 26 Apr 2017 16:23:49 +0800</lastBuildDate>
     
-	<atom:link href="https://hitzhangjie.pro/tags/ucontext/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://www.hitzhangjie.pro/tags/ucontext/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>Coroutine-Switching</title>
-      <link>https://hitzhangjie.pro/blog/2017-04-26-coroutine-switching/</link>
+      <link>https://www.hitzhangjie.pro/blog/2017-04-26-coroutine-switching/</link>
       <pubDate>Wed, 26 Apr 2017 16:23:49 +0800</pubDate>
       
-      <guid>https://hitzhangjie.pro/blog/2017-04-26-coroutine-switching/</guid>
+      <guid>https://www.hitzhangjie.pro/blog/2017-04-26-coroutine-switching/</guid>
       <description>1. 协程Coroutine 1.1. 协程coroutine声明 file: coroutine.h #include &amp;lt;stdint.h&amp;gt; typedef int64_t (*EntryCallback)(void*); //硬件上下文信息 struct stRegister { uint64_t rax; uint64_t rbx; uint64_t rcx; uint64_t rdx; uint64_t rsi; uint64_t rdi; uint64_t r8; uint64_t r9; uint64_t r10; uint64_t r11; uint64_t r12; uint64_t r13; uint64_t r14; uint64_t r15; uint64_t rbp; uint64_t rsp; uint64_t rip; }; //协程上下文 struct stContext { struct stRegister cpu_register; void *arg; uint8_t *stack; }; typedef struct stContext Coroutine; //创建协程 Coroutine* CreateCoroutine(EntryCallback entry, void *arg); //删除协程 void DeleteCoroutine(Coroutine *ptr); //设置协程栈尺寸 void SetStackSize(uint32_t size); //协程切换 void __SwitchCoroutine__(Coroutine *cur, const Coroutine *next); 1.2. 协程Coroutine实现 file: coroutine.c #include &amp;#34;coroutine.h&amp;#34;#include &amp;lt;stdlib.h&amp;gt; #define OFFSET(t, m) (&amp;amp;(((t*)0)-&amp;gt;m)) uint32_t g_stack_size = 100 * 1024; Coroutine* CreateCoroutine(EntryCallback entry, void *arg) { int size = g_stack_size + sizeof(Coroutine); Coroutine *c = (Coroutine *)calloc(size, 1); if (NULL == c) { return NULL; } uint8_t *start = (uint8_t*)c; c-&amp;gt;arg = arg; //函数入口 c-&amp;gt;cpu_register.rip = (uint64_t)entry; //第一个参数 c-&amp;gt;cpu_register.rdi = (uint64_t)arg; //rbp 栈底 c-&amp;gt;cpu_register.rbp = (uint64_t)(start + size); //rsp 当前栈顶 c-&amp;gt;cpu_register.rsp = c-&amp;gt;cpu_register.rbp; return c; } void DeleteCoroutine(Coroutine *ptr) { free(ptr); } void SetStackSize(uint32_t size) {</description>
     </item>
     

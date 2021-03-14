@@ -2,21 +2,21 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>language on 介绍</title>
-    <link>https://hitzhangjie.pro/tags/language/</link>
+    <link>https://www.hitzhangjie.pro/tags/language/</link>
     <description>Recent content in language on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
     <lastBuildDate>Sat, 25 Feb 2017 21:07:54 +0800</lastBuildDate>
     
-	<atom:link href="https://hitzhangjie.pro/tags/language/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://www.hitzhangjie.pro/tags/language/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>我的兴趣列表</title>
-      <link>https://hitzhangjie.pro/blog/2017-02-25-%E6%88%91%E7%9A%84%E5%85%B4%E8%B6%A3%E5%88%97%E8%A1%A8/</link>
+      <link>https://www.hitzhangjie.pro/blog/2017-02-25-%E6%88%91%E7%9A%84%E5%85%B4%E8%B6%A3%E5%88%97%E8%A1%A8/</link>
       <pubDate>Sat, 25 Feb 2017 21:07:54 +0800</pubDate>
       
-      <guid>https://hitzhangjie.pro/blog/2017-02-25-%E6%88%91%E7%9A%84%E5%85%B4%E8%B6%A3%E5%88%97%E8%A1%A8/</guid>
+      <guid>https://www.hitzhangjie.pro/blog/2017-02-25-%E6%88%91%E7%9A%84%E5%85%B4%E8%B6%A3%E5%88%97%E8%A1%A8/</guid>
       <description>hitzhangjie&amp;rsquo;s blog 2016-07-04 11:12:22 AM ============================================================================== With the help of github.io,I start my personal blog - hitzhangjie&amp;rsquo;s blog. I will share my ideas, experience, lessons taught during my study and work, which includes but not limited to: 1. Computer Engineering Techniques Programming Languages C C++ Java Shell JavaScript Python Perl Go Unix/Linux System Administration Start to Shutdown internals Important Scripts Systemd vs. Initd Services Control Job Control Process Control Web Server Setup Httpd (Apache Web Server) Nginx Tomcat Database Server Setup MySQL MarialDB Oracle PostgreSQL SQLite etc Distributed Cache Server Memcached etc Email Server Git Server Bugzilla TheBugGennie Linux Kernel Internals C Prerequisitives Virtual Memory Manangement Process Schedule Network Interrupt, Exception and Signal FileSystems etc. Data Structure &amp;amp; Algorithms Linear Array, List, Queue, Stack Non-Linear Tree, Graph Software Architect CDN (Content Delivery Network) Reverse Proxy Server Load Balancer Application Server Farm Database Server Farm File Server Farm Distributed Cache Server Farm Message Queue etc. Design Patterns 2. Computer Science Exploration &amp;amp; Study Condition-based Maintenance for Information Devices State Acquire Manners SNMP, IPMI, WMI, etc. State Assess Manners Rules-based Model BPANN-based Model Failure Prediction Manners BPANN-based Model Naive Bayesian based Model Bayesian Network based Model Fault Diagnose Manners Discriminate Transient/Persistent Faults Root Cause Analysis Fix the Faults etc. I am very proud to be a programmer. I love the programming atmosphere and culture - love to study, communicate and share! Anything posted here can be referenced. If you have some new ideas and want to talk with me, please send email to hit.zhangjie@gmail.com, I will try to</description>
     </item>
     

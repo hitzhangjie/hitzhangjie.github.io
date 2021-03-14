@@ -2,21 +2,21 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>maven on 介绍</title>
-    <link>https://hitzhangjie.pro/tags/maven/</link>
+    <link>https://www.hitzhangjie.pro/tags/maven/</link>
     <description>Recent content in maven on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
     <lastBuildDate>Sat, 01 Apr 2017 17:45:40 +0800</lastBuildDate>
     
-	<atom:link href="https://hitzhangjie.pro/tags/maven/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://www.hitzhangjie.pro/tags/maven/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>学习Apache Ant</title>
-      <link>https://hitzhangjie.pro/blog/2017-04-01-%E5%AD%A6%E4%B9%A0apache-ant/</link>
+      <link>https://www.hitzhangjie.pro/blog/2017-04-01-%E5%AD%A6%E4%B9%A0apache-ant/</link>
       <pubDate>Sat, 01 Apr 2017 17:45:40 +0800</pubDate>
       
-      <guid>https://hitzhangjie.pro/blog/2017-04-01-%E5%AD%A6%E4%B9%A0apache-ant/</guid>
+      <guid>https://www.hitzhangjie.pro/blog/2017-04-01-%E5%AD%A6%E4%B9%A0apache-ant/</guid>
       <description>Apache Ant是由Apache开发的基于Java的构建工具，本文对tutorialspoint上面的Apache Ant教程进行简要总结。 1 为什么需要这样一个构建工具？ Ant是Another Neat Tool的缩写形式，为什么需要这样一个工具呢？跟它的名字一样，就是希望我们开发人员的工作能够更加neat！ 开发人员有些琐碎的、重复性的工作，包括：编译代码、打包可执行程序、部署程序到测试服务器、测试改变、拷贝代码到不同的地方。Ant可以帮助我们自动化上面列举的这几个步骤，简化我们的工作。 Ant是tomcat的作者开发出来的，最</description>
     </item>
     

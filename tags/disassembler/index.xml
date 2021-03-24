@@ -2,21 +2,21 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>disassembler on 介绍</title>
-    <link>https://www.hitzhangjie.pro/tags/disassembler/</link>
+    <link>https://hitzhangjie.github.io/tags/disassembler/</link>
     <description>Recent content in disassembler on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
     <lastBuildDate>Sun, 06 Sep 2020 18:55:39 +0800</lastBuildDate>
     
-	<atom:link href="https://www.hitzhangjie.pro/tags/disassembler/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://hitzhangjie.github.io/tags/disassembler/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>剖析go二进制文件</title>
-      <link>https://www.hitzhangjie.pro/blog/2020-09-06-%E5%89%96%E6%9E%90go%E4%BA%8C%E8%BF%9B%E5%88%B6%E6%96%87%E4%BB%B6/</link>
+      <link>https://hitzhangjie.github.io/blog/2020-09-06-%E5%89%96%E6%9E%90go%E4%BA%8C%E8%BF%9B%E5%88%B6%E6%96%87%E4%BB%B6/</link>
       <pubDate>Sun, 06 Sep 2020 18:55:39 +0800</pubDate>
       
-      <guid>https://www.hitzhangjie.pro/blog/2020-09-06-%E5%89%96%E6%9E%90go%E4%BA%8C%E8%BF%9B%E5%88%B6%E6%96%87%E4%BB%B6/</guid>
+      <guid>https://hitzhangjie.github.io/blog/2020-09-06-%E5%89%96%E6%9E%90go%E4%BA%8C%E8%BF%9B%E5%88%B6%E6%96%87%E4%BB%B6/</guid>
       <description>为什么要反汇编？ 这篇文章介绍下反汇编的基本概念，以及如何用go语言写一个简单的反汇编器。本文的目标就是为了尽可能描述下反汇编的的相关概念，以及让读者朋友们了解go二进制程序内部大致是什么样的。 汇编代码不会撒谎，阅读汇编代码能够让我们更细致地了解处理器执行的指令到底做了什么。这也是为什么反汇编很重要的原因之一。如果我们有一个二进制程序，并且怀疑它有一些恶意的行为，通过反汇编来研究它就是一种很好的途径。再或者，如果你分析代码难以发现性能瓶颈，那么反汇编也是一种可以简化分析的途径。 如果你担心能不能阅读x86_64</description>
     </item>
     

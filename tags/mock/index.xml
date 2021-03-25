@@ -2,30 +2,30 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>mock on 介绍</title>
-    <link>https://hitzhangjie.github.io/tags/mock/</link>
+    <link>https://www.hitzhangjie.pro/tags/mock/</link>
     <description>Recent content in mock on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
     <lastBuildDate>Sun, 23 Aug 2020 15:41:28 +0800</lastBuildDate>
     
-	<atom:link href="https://hitzhangjie.github.io/tags/mock/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://www.hitzhangjie.pro/tags/mock/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>Monkey Patching in Go</title>
-      <link>https://hitzhangjie.github.io/blog/2020-08-23-monkey_patching_in_go/</link>
+      <link>https://www.hitzhangjie.pro/blog/2020-08-23-monkey_patching_in_go/</link>
       <pubDate>Sun, 23 Aug 2020 15:41:28 +0800</pubDate>
       
-      <guid>https://hitzhangjie.github.io/blog/2020-08-23-monkey_patching_in_go/</guid>
+      <guid>https://www.hitzhangjie.pro/blog/2020-08-23-monkey_patching_in_go/</guid>
       <description>前几天写了篇x64汇编开发介绍的文章，当时有提到接下来会介绍下go中如何实现monkey patching，嗯，今天就来说下这个事情。 Monkey Patching 简介 monkey patching，一说到这个，很多熟悉go的同学可能会联想起gomonkey这个mock测试框架。该术语的定义取决于使用它的社区。在Ruby，Python 和许多其他动态编程语言中，“monkey patching”一词仅指在运行时对类或模块的动态修改，其目的是为了修补现有的第三方代码，以此作为解决方法。错误或功能无法正常运行。根据其不同的意图，在运行时修改类的其他形式也</description>
     </item>
     
     <item>
       <title>开发者应掌握的系统性测试方法</title>
-      <link>https://hitzhangjie.github.io/blog/2020-07-01-%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</link>
+      <link>https://www.hitzhangjie.pro/blog/2020-07-01-%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</link>
       <pubDate>Wed, 01 Jul 2020 20:30:01 +0800</pubDate>
       
-      <guid>https://hitzhangjie.github.io/blog/2020-07-01-%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</guid>
+      <guid>https://www.hitzhangjie.pro/blog/2020-07-01-%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</guid>
       <description>如何做好测试，是一门系统性的方法学，而不只是一些零零散散的经验。了解并掌握各种测试的目的、方法是非常有必要的。 最近工作中也在推动测试相关的一些事项，有一点感触，这里先简单总结下常见测试方法的目的，大致包括如下几类。 1. 研发流程中构建环节 冒烟测试 该术语，取自集成电路开发领域，集成电路在测试之前，先要加电检查，如果没有冒烟才能进行后续的测试。冒烟测试并不是测试过程的一个阶段，它是软件构建过程中的一个环节，它包含一些非常基础的测试，如保证编译通过、部分核心用例通过，它随每次构建触发，处于持续集成的一个环节。英文表述</description>
     </item>
     

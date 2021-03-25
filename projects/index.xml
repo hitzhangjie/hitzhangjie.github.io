@@ -2,38 +2,38 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>项目 on 介绍</title>
-    <link>https://hitzhangjie.github.io/projects/</link>
+    <link>https://www.hitzhangjie.pro/projects/</link>
     <description>Recent content in 项目 on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
     
-	<atom:link href="https://hitzhangjie.github.io/projects/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://www.hitzhangjie.pro/projects/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>写我的书</title>
-      <link>https://hitzhangjie.github.io/projects/writing/</link>
+      <link>https://www.hitzhangjie.pro/projects/writing/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://hitzhangjie.github.io/projects/writing/</guid>
+      <guid>https://www.hitzhangjie.pro/projects/writing/</guid>
       <description>文字是一种表达的载体，驾驭文字来抒发情感也是一种惬意，或者通过文字来沉淀一个生命对这个世界的认识，也算是一种成长。当然了，在这里，更多的还是分享一些工作学习上的总结，比如写几本书，写几个教程，写几个产品雏形。 当前，我确实在写几本书，也和大家分享一下： 《go风格协程库:libmill》 libmill是zeromq之父Martin Sustrik发起的一个项目，是基于c语言开发的go风格的协程库实现。libmill是一个不错的加深对计算机系统认识，理解协程、通信串行处理等的非常不错的一个学习材料。其改进版libd</description>
     </item>
     
     <item>
       <title>生活胶片</title>
-      <link>https://hitzhangjie.github.io/projects/photography/</link>
+      <link>https://www.hitzhangjie.pro/projects/photography/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://hitzhangjie.github.io/projects/photography/</guid>
+      <guid>https://www.hitzhangjie.pro/projects/photography/</guid>
       <description>有时我也摄影，记录生活点滴 这里有我的一些照片，有时是闺女小七的，有时是儿子元宝的&amp;hellip;</description>
     </item>
     
     <item>
       <title>设计创意</title>
-      <link>https://hitzhangjie.github.io/projects/design/</link>
+      <link>https://www.hitzhangjie.pro/projects/design/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
-      <guid>https://hitzhangjie.github.io/projects/design/</guid>
+      <guid>https://www.hitzhangjie.pro/projects/design/</guid>
       <description>生活中从来不缺乏创意，缺乏的是创意可靠落地的计划。 Go on, explore your ideas! 💪 Go on, stick to your dream! 👍</description>
     </item>
     

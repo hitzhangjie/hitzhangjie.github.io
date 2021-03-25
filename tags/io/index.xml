@@ -2,21 +2,21 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>io on 介绍</title>
-    <link>https://hitzhangjie.github.io/tags/io/</link>
+    <link>https://www.hitzhangjie.pro/tags/io/</link>
     <description>Recent content in io on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
     <lastBuildDate>Tue, 02 May 2017 21:42:13 +0800</lastBuildDate>
     
-	<atom:link href="https://hitzhangjie.github.io/tags/io/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://www.hitzhangjie.pro/tags/io/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>Linux常见IO模型</title>
-      <link>https://hitzhangjie.github.io/blog/2017-05-02-linux-common-io-model/</link>
+      <link>https://www.hitzhangjie.pro/blog/2017-05-02-linux-common-io-model/</link>
       <pubDate>Tue, 02 May 2017 21:42:13 +0800</pubDate>
       
-      <guid>https://hitzhangjie.github.io/blog/2017-05-02-linux-common-io-model/</guid>
+      <guid>https://www.hitzhangjie.pro/blog/2017-05-02-linux-common-io-model/</guid>
       <description>目前Linux下可用的IO模型有5种，分别为阻塞IO、非阻塞IO、IO多路复用、信号驱动IO、异步IO，其中较为成熟且高效、稳定的是IO多路复用模型，因此当前众多网络服务程序几乎都是采用这种IO操作策略。 当一个应用程序读写（以读为例）某端口数据时，选择不同IO模型的应用程序，其执行流程也将不同。下面将对选择这5种不同IO模型时的程序的执行情形进行分析，以便了解使用IO复用模型的运行情况和性能优势。 一个完整经典的应用程序的数据读取操作可以看做两步： 等待数据准备好； 将数据从内核复制到应用程序进程； 1. 阻塞IO模型</description>
     </item>
     

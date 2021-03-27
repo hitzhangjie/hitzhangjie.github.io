@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>闰秒 on 介绍</title>
+    <link>https://www.hitzhangjie.pro/tags/%E9%97%B0%E7%A7%92/</link>
+    <description>Recent content in 闰秒 on 介绍</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Tue, 09 Mar 2021 23:59:59 +0800</lastBuildDate>
+    
+	<atom:link href="https://www.hitzhangjie.pro/tags/%E9%97%B0%E7%A7%92/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>聊聊计算机系统中的时间</title>
+      <link>https://www.hitzhangjie.pro/blog/2020-03-09-%E8%81%8A%E8%81%8A%E8%AE%A1%E7%AE%97%E6%9C%BA%E4%B8%AD%E7%9A%84%E6%97%B6%E9%97%B4/</link>
+      <pubDate>Tue, 09 Mar 2021 23:59:59 +0800</pubDate>
+      
+      <guid>https://www.hitzhangjie.pro/blog/2020-03-09-%E8%81%8A%E8%81%8A%E8%AE%A1%E7%AE%97%E6%9C%BA%E4%B8%AD%E7%9A%84%E6%97%B6%E9%97%B4/</guid>
+      <description>我相信很多人都是时间管理大师，几乎所有人都知道生活中如何运用时间，但是我相信很多人并不知道这个世界的时间是如何工作的。 你了解时间吗 如果不相信，那我问几个问题，看读者知道不？ 你听说过石英晶体吗？ 你听说过晶振振荡周期吗？ 你听说过时钟中断吗？ 你听说过计时电路吗？ 你听说过时钟漂移吗？ 你听说过铯原子钟吗？ 你听说过BIH这个机构吗？ 你听说过闰秒吗？ 你听说过NTP协议吗？ etc. 如果，你不能一一回答上述问题，那这个地球上的时间是如何工作的，你可能并不太清楚 :)。 我们日出而出、日落而息，我们规划工作事项，我们协调重要工作，我们安</description>
+    </item>
+    
+  </channel>
+</rss>

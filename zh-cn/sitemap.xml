@@ -139,6 +139,36 @@
   </url>
   
   <url>
+    <loc>https://www.hitzhangjie.pro/tags/invalidate-queue/</loc>
+    <lastmod>2020-12-15T01:36:36+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://www.hitzhangjie.pro/tags/memory-barrier/</loc>
+    <lastmod>2020-12-15T01:36:36+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://www.hitzhangjie.pro/tags/mesi/</loc>
+    <lastmod>2020-12-15T01:36:36+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://www.hitzhangjie.pro/tags/mesif/</loc>
+    <lastmod>2020-12-15T01:36:36+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://www.hitzhangjie.pro/tags/store-buffer/</loc>
+    <lastmod>2020-12-15T01:36:36+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://www.hitzhangjie.pro/blog/2020-12-15-%E7%A1%AC%E4%BB%B6%E8%A7%86%E8%A7%92%E5%89%96%E6%9E%90%E5%86%85%E5%AD%98%E5%B1%8F%E9%9A%9C%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86/</loc>
+    <lastmod>2020-12-15T01:36:36+08:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://www.hitzhangjie.pro/tags/%E4%BB%A3%E7%A0%81%E8%A7%84%E8%8C%83/</loc>
     <lastmod>2020-10-16T21:07:45+08:00</lastmod>
   </url>
@@ -354,11 +384,6 @@
   </url>
   
   <url>
-    <loc>https://www.hitzhangjie.pro/tags/mesi/</loc>
-    <lastmod>2020-07-24T19:46:11+08:00</lastmod>
-  </url>
-  
-  <url>
     <loc>https://www.hitzhangjie.pro/tags/volatile/</loc>
     <lastmod>2020-07-24T19:46:11+08:00</lastmod>
   </url>
@@ -471,6 +496,26 @@
   <url>
     <loc>https://www.hitzhangjie.pro/blog/2020-06-05-%E6%88%91%E5%9C%A8%E8%85%BE%E8%AE%AF%E8%BF%99%E5%87%A0%E5%B9%B4/</loc>
     <lastmod>2020-06-05T20:03:35+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://www.hitzhangjie.pro/tags/cpi/</loc>
+    <lastmod>2020-03-17T02:20:12+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://www.hitzhangjie.pro/tags/ips/</loc>
+    <lastmod>2020-03-17T02:20:12+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://www.hitzhangjie.pro/tags/%E6%97%B6%E9%92%9F%E5%91%A8%E6%9C%9F/</loc>
+    <lastmod>2020-03-17T02:20:12+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://www.hitzhangjie.pro/blog/2020-12-16-%E8%81%8A%E8%81%8Acpu%E5%A4%84%E7%90%86%E5%99%A8%E6%98%AF%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%E7%9A%84/</loc>
+    <lastmod>2020-03-17T02:20:12+08:00</lastmod>
   </url>
   
   <url>

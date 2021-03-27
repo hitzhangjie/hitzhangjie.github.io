@@ -10,10 +10,10 @@
 <meta name="referrer" content="no-referrer">
 <meta name="description" content="Web站点描述">
 <title>
-mesi - 介绍
+硬件视角剖析内存屏障实现原理 - 介绍
 </title>
 
-<link href="/tags/mesi/index.xml" rel="alternate" type="application/rss+xml" title="介绍" />
+
 
 
 <script type="text/javascript" src="https://platform-api.sharethis.com/js/sharethis.js#property=5f24f50fc2418c0012d52ac3&product=inline-share-buttons" async="async">
@@ -55,10 +55,10 @@ div#st-2 .st-btn > img {
 
 
 
-        <meta property="og:title" content="mesi - 介绍" />
+        <meta property="og:title" content="硬件视角剖析内存屏障实现原理 - 介绍" />
 <meta property="og:type" content="website" />
 <meta property="og:description" content="Web站点描述"/>
-<meta property="og:url" content="https://www.hitzhangjie.pro/tags/mesi/"/>
+<meta property="og:url" content="https://www.hitzhangjie.pro/blog/2020-12-15-%E7%A1%AC%E4%BB%B6%E8%A7%86%E8%A7%92%E5%89%96%E6%9E%90%E5%86%85%E5%AD%98%E5%B1%8F%E9%9A%9C%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86/"/>
 <meta property="og:site_name" content="介绍"/>
 
 
@@ -98,7 +98,9 @@ div#st-2 .st-btn > img {
             
             <div class="container hero  fade-in one ">
                 
-    <h1 class="bold-title is-1">Tag: mesi</h1>
+
+    <h1 class="bold-title is-1">博客</h1>
+
 
             </div>
             
@@ -159,7 +161,7 @@ div#st-2 .st-btn > img {
                 
                   <a class="navbar-item" href="https://www.hitzhangjie.pro/blog/">
                   
-                  博客
+                  返回 博客
                   
                   </a>
                 
@@ -206,22 +208,117 @@ div#st-2 .st-btn > img {
 
                 
     <div class="container">
-        <ul>
+
+        <h2 class="title is-1 top-pad strong-post-title">
+            <a href="https://www.hitzhangjie.pro/blog/2020-12-15-%E7%A1%AC%E4%BB%B6%E8%A7%86%E8%A7%92%E5%89%96%E6%9E%90%E5%86%85%E5%AD%98%E5%B1%8F%E9%9A%9C%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86/">硬件视角剖析内存屏障实现原理</a>
+        </h2>
+        <div class="post-data">
+            发表时间：2020-12-15 <br> 
+            阅读时长：1 分钟 (29字)
+        </div>
+
+        
+        <div>
+            <div>
             
             
-            <li>
-                <a href="https://www.hitzhangjie.pro/blog/2020-12-15-%E7%A1%AC%E4%BB%B6%E8%A7%86%E8%A7%92%E5%89%96%E6%9E%90%E5%86%85%E5%AD%98%E5%B1%8F%E9%9A%9C%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86/">2020-12-15 | 硬件视角剖析内存屏障实现原理</a>
-            </li>
+            <p>
+                标签：
+                
+                <a href="/tags/memory-barrier">memory barrier</a>,
+                
+                <a href="/tags/store-buffer">store buffer</a>,
+                
+                <a href="/tags/invalidate-queue">invalidate queue</a>,
+                
+                <a href="/tags/mesi">MESI</a>,
+                
+                <a href="/tags/mesif">MESIF</a>
+                
+            </p>
             
+            </div>
+
+            <div>
+            <br>
             
-            
-            <li>
-                <a href="https://www.hitzhangjie.pro/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc&#43;&#43;-volatile/">2020-07-24 | 你不认识的cc++ volatile</a>
-            </li>
-            
-            
-        </ul>
+
+
+<div style="display:flex;">
+    <div>分享：</div>
+    <div>
+        <div class="sharethis-inline-share-buttons"></div>
     </div>
+</div>
+
+
+            </div>
+
+        </div>
+
+        
+        
+
+        
+        <div> 
+            
+
+        </div>
+   
+        
+        <div class="container markdown top-pad">
+            <h3 id="内存屏障类型">内存屏障类型</h3>
+<h3 id="软件开发中创建屏障">软件开发中创建屏障</h3>
+<h3 id="硬件视角看屏障实现">硬件视角看屏障实现</h3>
+<h3 id="总结">总结</h3>
+<p>text goes here</p>
+
+        </div>
+        
+
+        
+        <hr>
+        <div style="float:right;">
+        
+
+
+<div style="display:flex;">
+    <div>分享：</div>
+    <div>
+        <div class="sharethis-inline-share-buttons"></div>
+    </div>
+</div>
+
+
+        </div>
+
+        <br>
+        <br>
+
+    </div>
+
+    
+    
+    <br>
+    <br>
+    <div style="height:auto;align:center;text-align:center;"> 
+        <div>
+            <img src="/common/xiaoqi.png" style="height:238px;margin-top:10px;margin-right:5px;"/>
+            <img src="/common/qrcode.jpg" style="height:238px;margin-top:10px;"/>
+            <img src="/common/yuanbao.png" style="height:238px;margin-top:10px;margin-left:5px;"/>
+        </div>
+
+        <div>
+            <p>
+                感谢打赏，小七🐶、元宝🐱可以改善伙食咯 😘
+            </p>
+        </div>
+
+
+    </div>
+    
+
+    
 
 
                 

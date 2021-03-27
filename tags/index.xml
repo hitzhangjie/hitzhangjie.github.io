@@ -66,6 +66,51 @@
     </item>
     
     <item>
+      <title>invalidate queue</title>
+      <link>https://www.hitzhangjie.pro/tags/invalidate-queue/</link>
+      <pubDate>Tue, 15 Dec 2020 01:36:36 +0800</pubDate>
+      
+      <guid>https://www.hitzhangjie.pro/tags/invalidate-queue/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>memory barrier</title>
+      <link>https://www.hitzhangjie.pro/tags/memory-barrier/</link>
+      <pubDate>Tue, 15 Dec 2020 01:36:36 +0800</pubDate>
+      
+      <guid>https://www.hitzhangjie.pro/tags/memory-barrier/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>mesi</title>
+      <link>https://www.hitzhangjie.pro/tags/mesi/</link>
+      <pubDate>Tue, 15 Dec 2020 01:36:36 +0800</pubDate>
+      
+      <guid>https://www.hitzhangjie.pro/tags/mesi/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>MESIF</title>
+      <link>https://www.hitzhangjie.pro/tags/mesif/</link>
+      <pubDate>Tue, 15 Dec 2020 01:36:36 +0800</pubDate>
+      
+      <guid>https://www.hitzhangjie.pro/tags/mesif/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>store buffer</title>
+      <link>https://www.hitzhangjie.pro/tags/store-buffer/</link>
+      <pubDate>Tue, 15 Dec 2020 01:36:36 +0800</pubDate>
+      
+      <guid>https://www.hitzhangjie.pro/tags/store-buffer/</guid>
+      <description></description>
+    </item>
+    
+    <item>
       <title>代码规范</title>
       <link>https://www.hitzhangjie.pro/tags/%E4%BB%A3%E7%A0%81%E8%A7%84%E8%8C%83/</link>
       <pubDate>Fri, 16 Oct 2020 21:07:45 +0800</pubDate>
@@ -345,15 +390,6 @@
     </item>
     
     <item>
-      <title>mesi</title>
-      <link>https://www.hitzhangjie.pro/tags/mesi/</link>
-      <pubDate>Fri, 24 Jul 2020 19:46:11 +0800</pubDate>
-      
-      <guid>https://www.hitzhangjie.pro/tags/mesi/</guid>
-      <description></description>
-    </item>
-    
-    <item>
       <title>volatile</title>
       <link>https://www.hitzhangjie.pro/tags/volatile/</link>
       <pubDate>Fri, 24 Jul 2020 19:46:11 +0800</pubDate>
@@ -494,6 +530,33 @@
       <pubDate>Fri, 05 Jun 2020 20:03:35 +0800</pubDate>
       
       <guid>https://www.hitzhangjie.pro/tags/work/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>CPI</title>
+      <link>https://www.hitzhangjie.pro/tags/cpi/</link>
+      <pubDate>Tue, 17 Mar 2020 02:20:12 +0800</pubDate>
+      
+      <guid>https://www.hitzhangjie.pro/tags/cpi/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>IPS</title>
+      <link>https://www.hitzhangjie.pro/tags/ips/</link>
+      <pubDate>Tue, 17 Mar 2020 02:20:12 +0800</pubDate>
+      
+      <guid>https://www.hitzhangjie.pro/tags/ips/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>时钟周期</title>
+      <link>https://www.hitzhangjie.pro/tags/%E6%97%B6%E9%92%9F%E5%91%A8%E6%9C%9F/</link>
+      <pubDate>Tue, 17 Mar 2020 02:20:12 +0800</pubDate>
+      
+      <guid>https://www.hitzhangjie.pro/tags/%E6%97%B6%E9%92%9F%E5%91%A8%E6%9C%9F/</guid>
       <description></description>
     </item>
     

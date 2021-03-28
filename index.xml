@@ -6,7 +6,7 @@
     <description>Recent content on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Tue, 09 Mar 2021 23:59:59 +0800</lastBuildDate>
+    <lastBuildDate>Wed, 17 Mar 2021 02:20:12 +0800</lastBuildDate>
     
 	<atom:link href="https://www.hitzhangjie.pro/index.xml" rel="self" type="application/rss+xml" />
     
@@ -36,6 +36,15 @@
       
       <guid>https://www.hitzhangjie.pro/projects/design/</guid>
       <description>生活中从来不缺乏创意，缺乏的是创意可靠落地的计划。 Go on, explore your ideas! 💪 Go on, stick to your dream! 👍</description>
+    </item>
+    
+    <item>
+      <title>聊聊处理器是如何工作的</title>
+      <link>https://www.hitzhangjie.pro/blog/2021-03-17-%E8%81%8A%E8%81%8Acpu%E5%A4%84%E7%90%86%E5%99%A8%E6%98%AF%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%E7%9A%84/</link>
+      <pubDate>Wed, 17 Mar 2021 02:20:12 +0800</pubDate>
+      
+      <guid>https://www.hitzhangjie.pro/blog/2021-03-17-%E8%81%8A%E8%81%8Acpu%E5%A4%84%E7%90%86%E5%99%A8%E6%98%AF%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%E7%9A%84/</guid>
+      <description>指令执行相关概念 首先，需要理解一下几个时间相关的概念：振荡周期、时钟周期、机器周期、指令周期、CPI、IPS。如果读者之前有了解过计算机内部计时电路的工作原理，应该对振荡周期、时钟周期不会感到太陌生。我还是试着从头解释下这几个周期的概念。 ps：如果读者对计算机内部时钟工作原理感兴趣的话，可以参考我之前写的一篇博客：聊聊计算机系统中的时间。 振荡周期 振荡周期，实际上指的就是晶振周期。振荡周期是单片机的基本时间单位。如果，晶振频率为12MHz，则振荡周期为(1/12)us。 时钟周期 时钟周期，定义为时钟脉冲的倒数，</description>
     </item>
     
     <item>
@@ -225,15 +234,6 @@
       
       <guid>https://www.hitzhangjie.pro/blog/2020-06-05-%E6%88%91%E5%9C%A8%E8%85%BE%E8%AE%AF%E8%BF%99%E5%87%A0%E5%B9%B4/</guid>
       <description>写在前面 很长一段时间没有更新个人博客了，回头一看竟然有一年没更新，这一年工作上确实比以前忙了很多。有点时间也拿来体验生活、钻研感兴趣的技术了。感兴趣也可以看下我的github，这一年几乎也在不停地探索、尝试，因为兴趣和那份好奇，还有就是，想做点有深度的东西取悦自己。 自从2016年7月份入职腾讯以来，也算是勤勤恳恳地工作，至少不让自己成为团队的瓶颈吧，事实上做的应该还可以吧。当然和自己的兴趣、领导的指点、工作项的安排，也有密切的关系，绝大部分工作时间，我还是比较开心的。 今天收拾房间，无意中发现了腾讯学院的一个</description>
-    </item>
-    
-    <item>
-      <title>聊聊处理器是如何工作的</title>
-      <link>https://www.hitzhangjie.pro/blog/2020-12-16-%E8%81%8A%E8%81%8Acpu%E5%A4%84%E7%90%86%E5%99%A8%E6%98%AF%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%E7%9A%84/</link>
-      <pubDate>Tue, 17 Mar 2020 02:20:12 +0800</pubDate>
-      
-      <guid>https://www.hitzhangjie.pro/blog/2020-12-16-%E8%81%8A%E8%81%8Acpu%E5%A4%84%E7%90%86%E5%99%A8%E6%98%AF%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%E7%9A%84/</guid>
-      <description>指令执行相关概念 首先，需要理解一下几个时间相关的概念：振荡周期、时钟周期、机器周期、指令周期、CPI、IPS。如果读者之前有了解过计算机内部计时电路的工作原理，应该对振荡周期、时钟周期不会感到太陌生。我还是试着从头解释下这几个周期的概念。 ps：如果读者对计算机内部时钟工作原理感兴趣的话，可以参考我之前写的一篇博客：聊聊计算机系统中的时间。 振荡周期 振荡周期，实际上指的就是晶振周期。振荡周期是单片机的基本时间单位。如果，晶振频率为12MHz，则振荡周期为(1/12)us。 时钟周期 时钟周期，定义为时钟脉冲的倒数，</description>
     </item>
     
     <item>

@@ -55,6 +55,7 @@ div#st-2 .st-btn > img {
 
 
 
+        
         <meta property="og:title" content="你不认识的cc&#43;&#43; volatile - 介绍" />
 <meta property="og:type" content="website" />
 <meta property="og:description" content="Web站点描述"/>
@@ -81,7 +82,7 @@ div#st-2 .st-btn > img {
 
 
 
-<link rel="stylesheet" href="/css/main.min.daa833377fb1636f8cbfa65c601050bb5475623deb7aa6e6fdde94a064a6185d.css" integrity="sha256-2qgzN3&#43;xY2&#43;Mv6ZcYBBQu1R1Yj3reqbm/d6UoGSmGF0=" crossorigin="anonymous" media="screen">
+<link rel="stylesheet" href="/css/main.min.24b21e0909abaf0ad62af509780fea401864367fe10c0d7ffcd89778c9dac466.css" integrity="sha256-JLIeCQmrrwrWKvUJeA/qQBhkNn/hDA1//NiXeMnaxGY=" crossorigin="anonymous" media="screen">
 
 
 
@@ -145,7 +146,9 @@ div#st-2 .st-btn > img {
                 
                   <a class="navbar-item" href="https://www.hitzhangjie.pro/projects/">
                   
+                  
                   项目
+                  
                   
                   </a>
                 
@@ -295,12 +298,14 @@ div#st-2 .st-btn > img {
    
         
         <div class="container markdown top-pad">
-            <h2 id="1-令人困惑的volatile">1. 令人困惑的volatile</h2>
+            
+<h2 id="1-令人困惑的volatile" class="anchor-link"><a href="#1-%e4%bb%a4%e4%ba%ba%e5%9b%b0%e6%83%91%e7%9a%84volatile">1. 令人困惑的volatile</a></h2>
 <p>volatile字面意思是“<strong>不稳定的、易变的</strong>”，不少编程语言中存在volatile关键字，也有共同之处，如“<strong>表示程序执行期间数据可能会被外部操作修改</strong>”，如被外设修改或者被其他线程修改等。这只是字面上给我们的一般性认识，然而具体到不同的编程语言中volatile的语义可能相差甚远。</p>
 <p>很多人以为自己精通CC++，但是被问起volatile的时候却无法清晰、果断地表明态度，那只能说明还是处在“从入门到精通”的路上，如果了解一门语言常见特性的使用、能够写健壮高效的程序就算精通的话，那实在是太藐视“大师”的存在了。从一个volatile关键字折射出了对CC++标准、编译器、操作系统、处理器、MMU各个方面的掌握程度。</p>
 <p>几十年的发展，很多开发者因为自己的偏见、误解，或者对某些语言特性（如Java中的volatile语义）的根深蒂固的认识，赋予了CC++ volatile本不属于它的能力，自己却浑然不知自己犯了多大的一个错误。</p>
 <p>我曾经以为CC++中volatile可以保证线程可见性，因为Java中是这样的，直到后来阅读Linux内核看到Linus Torvards的一篇文档，他强调了volatile可能带来的坏处“任何使用volatile的地方，都可能潜藏了一个bug”，我为他的“危言耸听”感到吃惊，所以我当时搜索了不少资料来求证CC++ volatile的能力，事后我认为CC++ volatile不能保证线程可见性。但是后来部门内一次分享，分享中提到了volatile来保证线程可见性，我当时心存疑虑，事后验证时犯了一个错误导致我错误地认为volatile可以保证线程可见性。直到我最近翻阅以前的笔记，翻到了几年前对volatile的疑虑……我决定深入研究下这个问题，以便能顺利入眠。</p>
-<h2 id="2-从规范认识volatile">2. 从规范认识volatile</h2>
+
+<h2 id="2-从规范认识volatile" class="anchor-link"><a href="#2-%e4%bb%8e%e8%a7%84%e8%8c%83%e8%ae%a4%e8%af%86volatile">2. 从规范认识volatile</a></h2>
 <p>以常见的编程语言C、C++、Java为例，它们都有一个关键字volatile，但是对volatile的定义却并非完全相同。</p>
 <ul>
 <li>
@@ -323,7 +328,8 @@ div#st-2 .st-btn > img {
 <p>C99清晰吗？上述解释看上去很清晰，但是要想彻底理解volatile的语义，绝非上述一句话就可以讲得清的，C99中定义了abstract machine以及sequence points，与volatile相关的描述有多处，篇幅原因这里就不一一列举了，其中与volatile相关的abstract machine行为描述共同确定了volatile的语义。</p>
 </li>
 </ul>
-<h2 id="3-对volatile持何观点">3. 对volatile持何观点</h2>
+
+<h2 id="3-对volatile持何观点" class="anchor-link"><a href="#3-%e5%af%b9volatile%e6%8c%81%e4%bd%95%e8%a7%82%e7%82%b9">3. 对volatile持何观点</a></h2>
 <p>为了引起大家对CC++ volatile的重视并及时表明观点，先贴一个页面“<a href="https://isocpp.org/blog/2018/06/is-volatile-useful-with-threads-isvolatileusefulwiththreads.com">Is-Volatile-Useful-with-Threads</a>”，网站中简明扼要的告知大家，“Friends don’t let friends use volatile for inter-thread communication in C and C++”。But why？</p>
 <img src="/blog/assets/volatile/is-volatile-useful-with-threads.png" style="width:660px;"/>
 <p>isocpp专门挂了这么个页面来强调volatile在不同编程语言中的差异，可见它是一个多么难缠的问题。即便是有这么个页面，要彻底搞清楚volatile，也不是说读完上面列出的几个技术博客就能解决，那也太轻描淡写了，所以我搜索、整理、讨论，希望能将学到的内容总结下来供其他开发者参考，我也不想再因为这个问题而困扰。</p>
@@ -335,7 +341,8 @@ div#st-2 .st-btn > img {
 </ul>
 <p>CC++规范没有显示要求volatile支持线程可见性，gcc也没有在标准允许的空间内做什么“发挥”去安插什么保证线程可见性的处理器指令（Java中volatile会使用lock指令使其他处理器cache失效强制读内存保证线程可见性）。而关于CPU cache一致性协议，x86原先采用MESI协议，后改用效率更高的MESIF，都是强一致性协议，在x86这等支持强一致的CPU上，CC++中结合volatile是可以“获得”线程可见性的，在非强一致CPU上则不然。</p>
 <p>但是CC++ volatile确实是有价值的，很多地方都要使用它，而且不少场景下似乎没有比它更简单的替代方法，下面首先列举CC++ volatile的<strong>通用适用场景</strong>，方便大家认识volatile，然后我们再研究为什么<strong>CC++ volatile不能保证线程可见性</strong>。CC++标准中确实没有说volatile要支持线程可见性，大家可以选择就此打住，但是我怀疑的是gcc在标准允许的空间内是怎么做的？操作系统、MMU、处理器是怎么做的？“标准中没有显示列出”，这样的理由还不足以让我停下探索的脚步。</p>
-<h2 id="4-cc-need-volatile">4. CC++ need volatile</h2>
+
+<h2 id="4-cc-need-volatile" class="anchor-link"><a href="#4-cc-need-volatile">4. CC++ need volatile</a></h2>
 <p>CC++ volatile语义“不可优化型”、“顺序性”、“易变性”，如何直观感受它的价值呢？看C99中给出的适用场景吧。</p>
 <ul>
 <li>
@@ -377,15 +384,19 @@ b <span style="color:#f92672">=</span> <span style="color:#f92672">*</span>p;
 </li>
 </ul>
 <p>相信读到这里大家对CC++ volatile的适用场景有所了解了，它确实是有用的。那接下来我们针对开发者误解很严重的一个问题“volatile能否支持线程可见性”再探索一番，不能！不能！不能！</p>
-<h2 id="5-cc-thread-visibility">5. CC++ thread visibility</h2>
-<h3 id="51-线程可见性问题">5.1. 线程可见性问题</h3>
+
+<h2 id="5-cc-thread-visibility" class="anchor-link"><a href="#5-cc-thread-visibility">5. CC++ thread visibility</a></h2>
+
+<h3 id="51-线程可见性问题" class="anchor-link"><a href="#51-%e7%ba%bf%e7%a8%8b%e5%8f%af%e8%a7%81%e6%80%a7%e9%97%ae%e9%a2%98">5.1. 线程可见性问题</a></h3>
 <p>多线程编程中经常会通过修改共享变量的方式来通知另一个线程发生了某种状态的变化，希望线程能及时感知到这种变化，因此我们关心“<strong>线程可见性问题</strong>”。</p>
 <p>在对称多处理器架构中（SMP），多处理器、核心通过总线共享相同的内存，但是各个处理器核心有自己的cache，线程执行过程中，一般会将内存数据加载到cache中，也可能会加载到寄存器中，以便实现访问效率的提升，但这也带来了问题，比如我们提到的线程可见性问题。某个线程对共享变量做了修改，线程可能只是修改了寄存器中的值或者cpu cache中的值，修改并不会立即同步回内存。即便同步回内存，运行在其他处理器核心上的线程，访问该共享数据时也不会立即去内存中读取最新的数据，无法感知到共享数据的变化。</p>
-<h3 id="52-diff-volatile-in-javacc">5.2. diff volatile in java、cc++</h3>
+
+<h3 id="52-diff-volatile-in-javacc" class="anchor-link"><a href="#52-diff-volatile-in-javacc">5.2. diff volatile in java、cc++</a></h3>
 <p>有些编程语言中定义了关键字volatile，如Java、C、C++等，对比下Java volatile和CC++ volatile，差异简直是太大了，我们只讨论线程可见性相关的部分。</p>
 <p>Java中语言规范明确指出volatile保证内存可见性，JMM存在“<strong>本地内存</strong>”的概念，线程对“<strong>主存</strong>”变量的访问都是先加载到本地内存，后续写操作再同步回主存。volatile可以保证一个线程的写操作对其他线程立即可见，首先是保证volatile变量写操作必须要更新到主存，然后还要保证其他线程volatile变量读取必须从主存中读取。处理器中提供了MFENCE指令来创建一个屏障，可以保证MFENCE之前的操作对后续操作可见，用MFENCE可以实现volatile，但是考虑到AMD处理器中耗时问题以及Intel处理器中流水线问题，JVM从MFENCE修改成了LOCK: ADD 0。</p>
 <p>但是在C、C++规范里面没有要求volatile具备线程可见性语义，只要求其保证“<strong>不可优化性、顺序性、易变性</strong>”。</p>
-<h3 id="53-how-gcc-handle-volatile">5.3. how gcc handle volatile</h3>
+
+<h3 id="53-how-gcc-handle-volatile" class="anchor-link"><a href="#53-how-gcc-handle-volatile">5.3. how gcc handle volatile</a></h3>
 <p>这里做个简单的测试：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>() {
@@ -404,7 +415,8 @@ b <span style="color:#f92672">=</span> <span style="color:#f92672">*</span>p;
 <p><strong>2）加volatile：<code>gcc -g -O2 -o main main.c</code></strong></p>
 <p><img src="/blog/assets/volatile/with-volatile.jpg" alt="-w534"></p>
 <p>这里变量a的值首先被设置到了0xc(%rsp)中，nopl空操作，然后a++时是将内存中的值移动到了寄存器%eax中，然后执行%eax+1再写回内存0xc(%rsp)中，while循环中每次循环执行都是先从内存里面取值，更新后再写回内存。但是这样就可以保证线程可见性了吗？No！</p>
-<h3 id="54-how-cpu-cache-works">5.4. how cpu cache works</h3>
+
+<h3 id="54-how-cpu-cache-works" class="anchor-link"><a href="#54-how-cpu-cache-works">5.4. how cpu cache works</a></h3>
 <p>是否有这样的疑问？CC++中对volatile变量读写，发出的内存读写指令不会被CPU转换成读写CPU cache吗？这个属于硬件层面内容，对上层透明，编译器生成的汇编指令也无法反映实际执行情况！因此，只看上述反汇编示例是不能确定CC++ volatile支持线程可见性的，当然也不能排除这种可能性？</p>
 <p>Stack Overflow上Dietmar Kühl提到，‘volatile’阻止了对变量的优化，例如对于频繁访问的变量，会阻止编译器对其进行编译时优化，避免将其放入寄存器中（注意是寄存器而不是cpu的cache）。编译器优化内存访问时，会生成将内存数据缓存到寄存器、后续访问内存操作转换为访问寄存器，这称为“software cacheing”；而CPU实际执行时硬件层面将内存数据缓存到CPU cache中，这称为“hardware cacheing”，是对上层完全透明的。现在已经确定CC++ volatile不会再作出“将内存数据缓存到CPU寄存器”这样的优化，那上述CPU hardware caching技术就成了我们下一个怀疑的对象。</p>
 <p>保证CPU cache一致性的方法，主要包括write-through（写直达）或者write-back（写回），write-back并不是当cache中数据更新时立即写回，而是在稍后的某个时机再写回。写直达会严重降低cpu吞吐量，所以现如今的主流处理器中通常采用写回法，而写回法又包括了write-invalidate和write-update两种方式，可先跳过。</p>
@@ -444,7 +456,8 @@ b <span style="color:#f92672">=</span> <span style="color:#f92672">*</span>p;
 <p>最后看了标准委员会对volatile的讨论：<a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2016.html">http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2016.html</a>
 简而言之，就是CC++中当然也想提供java中volatile一样的线程可见性、阻止指令重排序，但是考虑到现有代码已经那么多了，突然改变volatile的语义，可能会导致现有代码的诸多问题，所以必须要再权衡一下，到底值不值得为volatile增加上述语义，当前C++标准委员会建议不改变volatile语义，而是通过新的std::atmoic等来支持上述语义。</p>
 <p>结合自己的实际操作、他人的回答以及CC++相关标准的描述，我认为CC++ volatile确实不能保证线程可见性。但是由于历史的原因、其他语言的影响、开发者自己的误解，这些共同导致开发者赋予了CC++ volatile很多本不属于它的能力，甚至大错特错，就连Linus Torvards也在内核文档中描述volatile时说，建议尽量用memory barrier替换掉volatile，他认为几乎所有可能出现volatile的地方都可能会潜藏着一个bug，并提醒开发者一定小心谨慎。</p>
-<h2 id="6-实践中如何操作">6. 实践中如何操作</h2>
+
+<h2 id="6-实践中如何操作" class="anchor-link"><a href="#6-%e5%ae%9e%e8%b7%b5%e4%b8%ad%e5%a6%82%e4%bd%95%e6%93%8d%e4%bd%9c">6. 实践中如何操作</a></h2>
 <ul>
 <li>开发者应该尽量编写可移植的代码，像x86这种强一致CPU，虽然结合volatile也可以保证线程可见性，但是既然提供了类似memory barrier()、std::atomic等更加靠谱的用法，为什么要编写这种兼顾volatile、x86特性的代码呢？</li>
 <li>开发者应该编写可维护的代码，对于这种容易引起开发者误会的代码、特性，应该尽量少用，这虽然不能说成是语言设计上的缺陷，但是确实也不能算是一个优势。</li>
@@ -499,7 +512,32 @@ b <span style="color:#f92672">=</span> <span style="color:#f92672">*</span>p;
     </div>
     
 
+    </br>
+    </br>
     
+    <div class="container disqus">
+        <div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "https-www-hitzhangjie-pro" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+    </div>
+
 
 
                 
@@ -533,7 +571,7 @@ b <span style="color:#f92672">=</span> <span style="color:#f92672">*</span>p;
         
 
 
-<script src="https://www.hitzhangjie.pro/js/bundle.23f18222425179f754965a36c9b211bd8cff5e5ab61ee23b52f026cef6699139.js" integrity="sha256-I/GCIkJRefdUllo2ybIRvYz/Xlq2HuI7UvAmzvZpkTk="></script>
+<script src="https://www.hitzhangjie.pro/js/bundle.2ee571453a8980175e10bda96bda797cc9c4e2e745e488df68d50cef5deb57ff.js" integrity="sha256-LuVxRTqJgBdeEL2pa9p5fMnE4udF5IjfaNUM713rV/8="></script>
 
 
 
@@ -549,6 +587,10 @@ if (!doNotTrack) {
 }
 </script>
 <script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
 
 
 

@@ -55,6 +55,7 @@ div#st-2 .st-btn > img {
 
 
 
+        
         <meta property="og:title" content="Nothing, Just Linux! - 介绍" />
 <meta property="og:type" content="website" />
 <meta property="og:description" content="Web站点描述"/>
@@ -81,7 +82,7 @@ div#st-2 .st-btn > img {
 
 
 
-<link rel="stylesheet" href="/css/main.min.daa833377fb1636f8cbfa65c601050bb5475623deb7aa6e6fdde94a064a6185d.css" integrity="sha256-2qgzN3&#43;xY2&#43;Mv6ZcYBBQu1R1Yj3reqbm/d6UoGSmGF0=" crossorigin="anonymous" media="screen">
+<link rel="stylesheet" href="/css/main.min.24b21e0909abaf0ad62af509780fea401864367fe10c0d7ffcd89778c9dac466.css" integrity="sha256-JLIeCQmrrwrWKvUJeA/qQBhkNn/hDA1//NiXeMnaxGY=" crossorigin="anonymous" media="screen">
 
 
 
@@ -145,7 +146,9 @@ div#st-2 .st-btn > img {
                 
                   <a class="navbar-item" href="https://www.hitzhangjie.pro/projects/">
                   
+                  
                   项目
+                  
                   
                   </a>
                 
@@ -294,7 +297,8 @@ div#st-2 .st-btn > img {
    
         
         <div class="container markdown top-pad">
-            <h1 id="1-邂逅linux">1 邂逅Linux</h1>
+            
+<h1 id="1-邂逅linux" class="anchor-link"><a href="#1-%e9%82%82%e9%80%85linux">1 邂逅Linux</a></h1>
 <p>初次接触Linux操作系统是在什么时候？想想～～</p>
 <p>高三毕业后买了第一台电脑，一台清华同方的台式机，随机赠送的光盘里面有一张操作系
 统光盘“家电下乡Linux适农版”……那是我第一次接触并运行Linux，但那时的我并没有意识
@@ -323,31 +327,43 @@ Linux，没想到这竟是一条不归路……</p>
 <p>我这个博客所要描述的东西可能就比较杂了，这里面我会穿插着记录很多东西～与其说是
 博客，不如说是我自己的一个学习笔记了，但是我这个人比较喜欢分享，但有不想那么刻
 意，所以我就把它丢在这，谁看见了找到点自己感兴趣的东西，也算是种缘分。</p>
-<h1 id="2-livecd--remastersys--dump--restore">2 LiveCD &amp; RemasterSys &amp; dump &amp; restore</h1>
-<h2 id="21-livecd">2.1 LiveCD</h2>
+
+<h1 id="2-livecd--remastersys--dump--restore" class="anchor-link"><a href="#2-livecd--remastersys--dump--restore">2 LiveCD &amp; RemasterSys &amp; dump &amp; restore</a></h1>
+
+<h2 id="21-livecd" class="anchor-link"><a href="#21-livecd">2.1 LiveCD</a></h2>
 <p>在学习Linux过程中，会有体验不同Linux发行版这样的需求的，这个时候你有不想频繁地安装系统来解决。LiveCD就是发行版厂商针对用户的这种需求推出的一个玩意，用户可以插入光盘到光驱、BIOS引导从光驱启动来体验。</p>
 <p>可能吧，时间让你明白，Linux最吸引人的地方，并不是有很多的发行版供你换来换去，而是内在的自由。最后，你还是会深度使用某一个发行版并安定下来，而那些各种各样的桌面环境也会有点选择困难。Ubuntu-&gt;Debian-&gt;Fedora-&gt;OpenSuSE-&gt;RHEL-&gt;CentOS-&gt;&hellip;Fedora! Unity-&gt;GNOME3-&gt;GNOME2-&gt;KDE-&gt;&hellip;-&gt;KDE! 我已经坚守在Fedora/CentOS+KDE很多年了，适合自己的就是最好的！</p>
 <p>LiveCD不仅可以帮助我们预先体验Linux发行版，也可以用来安装Linux发行版、修复系统问题。带着一张LiveCD或者Bootable USB Installer，就好像随身携带了一个移动版的操作系统。还是很方便、很酷的一件事情。</p>
 <p>UNetBootin等类似的将USB变身成可引导的Bootable Linux Installer的工具，也是必不可少的工具。</p>
-<h2 id="22-remastersys">2.2 RemasterSys</h2>
+
+<h2 id="22-remastersys" class="anchor-link"><a href="#22-remastersys">2.2 RemasterSys</a></h2>
 <p>当你深度使用了一段时间之后，会发现不管是配置文件，还是GUI，还是软件列表&hellip;都已经被自己深度定制化过了，这个时候就很自然会去想系统备份的事情，以免准备多台设备办公时能遍历地迁移备份，或者在设备系统出现问题时能够便捷地还原的问题。</p>
 <p>当你了解了Linux定制化意味着什么的时候，你就应该能体会到定制化背后意味着的工作量、投入的时间，你不会愿意再从安装开始重新定制化了，
 没有规划的人才将这种重复性劳动当做是习惯。我为什么不能将现在的完整的系统做成一个初始的可安装的系统呢？</p>
 <p>虽然这要花费的时间、存储可能会大一点，但是适当精简下软件列表、用户文件，完全可以控制在一个合理的范围内，按市面上常见的DVD存储容量来看，完全是hold得住的。而且DVD是真的便宜，存放时间也更长久。</p>
 <p>RemasterSys就是为了满足这样的需求而设计出来的，它就可以把我们当前运行的系统重新做成一个可安装的系统，安装完成后就是现在的样子。但是原作者可能很久没有再更新了吧，在我了解到这款系统工具时，它已经接近失修的边缘了。Sad</p>
-<h2 id="23-dump--restore">2.3 dump &amp; restore</h2>
+
+<h2 id="23-dump--restore" class="anchor-link"><a href="#23-dump--restore">2.3 dump &amp; restore</a></h2>
 <p>慢慢地意识到，所谓的定制都是私人潜意识里面的思想固化，总有不适合他人应用场景的时候，除非你有能力自己给自己定制。最简单的东西，就是最好用的、最靠谱的。一段时间下来，我发现dump &amp; restore就是逼近完美的选择。它专注于转储、恢复操作，非常原始。</p>
 <p>dd最原始直接读写存储设备原始数据，甚至都不理解你的文件系统，但是它缺少一点灵活性。</p>
 <p>dump允许我们在文件系统之上做一些选择，如选择备份哪些目录、文件等等，dump备份的时候会同时备份文件的属性信息，整个打包成一个文件，后续备份恢复的时候你也可以通过restore选择恢复哪些文件到文件系统。</p>
 <p>刚开始的时候，可能觉得全是命令行操作，好复杂？万一出错了怎么办？Linux强大的地方就是命令行操作，习惯了之后就真的爱上了。dump &amp; restore是目前我觉得比较好用的，虽然看上去不像macOS timemachine那样方便，但是它真的算得上最灵活的。</p>
-<h1 id="3-grub-2--customize-boot-menu-to-bootstrap-multiple-os">3 GRUB 2 &amp; Customize Boot Menu to bootstrap Multiple OS</h1>
-<h1 id="4-plymouth">4 Plymouth</h1>
-<h1 id="5-tweak-kdegnomeunity-appearance-colors--themes">5 Tweak KDE/GNOME/Unity Appearance (Colors &amp; Themes)</h1>
-<h1 id="6-linux-commandline-techs--administration">6 Linux Commandline Techs &amp; Administration</h1>
-<h1 id="7-unixlinux-programming">7 Unix/Linux Programming</h1>
-<h1 id="8-linux-kernel-011">8 Linux Kernel 0.11</h1>
-<h1 id="9-linux-kernel-24">9 Linux Kernel 2.4</h1>
-<h1 id="10-keep-going-along-the-roadmap-to-linux-world">10 Keep going along the roadmap to Linux World!</h1>
+
+<h1 id="3-grub-2--customize-boot-menu-to-bootstrap-multiple-os" class="anchor-link"><a href="#3-grub-2--customize-boot-menu-to-bootstrap-multiple-os">3 GRUB 2 &amp; Customize Boot Menu to bootstrap Multiple OS</a></h1>
+
+<h1 id="4-plymouth" class="anchor-link"><a href="#4-plymouth">4 Plymouth</a></h1>
+
+<h1 id="5-tweak-kdegnomeunity-appearance-colors--themes" class="anchor-link"><a href="#5-tweak-kdegnomeunity-appearance-colors--themes">5 Tweak KDE/GNOME/Unity Appearance (Colors &amp; Themes)</a></h1>
+
+<h1 id="6-linux-commandline-techs--administration" class="anchor-link"><a href="#6-linux-commandline-techs--administration">6 Linux Commandline Techs &amp; Administration</a></h1>
+
+<h1 id="7-unixlinux-programming" class="anchor-link"><a href="#7-unixlinux-programming">7 Unix/Linux Programming</a></h1>
+
+<h1 id="8-linux-kernel-011" class="anchor-link"><a href="#8-linux-kernel-011">8 Linux Kernel 0.11</a></h1>
+
+<h1 id="9-linux-kernel-24" class="anchor-link"><a href="#9-linux-kernel-24">9 Linux Kernel 2.4</a></h1>
+
+<h1 id="10-keep-going-along-the-roadmap-to-linux-world" class="anchor-link"><a href="#10-keep-going-along-the-roadmap-to-linux-world">10 Keep going along the roadmap to Linux World!</a></h1>
 
         </div>
         
@@ -394,7 +410,32 @@ Linux，没想到这竟是一条不归路……</p>
     </div>
     
 
+    </br>
+    </br>
     
+    <div class="container disqus">
+        <div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "https-www-hitzhangjie-pro" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+    </div>
+
 
 
                 
@@ -428,7 +469,7 @@ Linux，没想到这竟是一条不归路……</p>
         
 
 
-<script src="https://www.hitzhangjie.pro/js/bundle.23f18222425179f754965a36c9b211bd8cff5e5ab61ee23b52f026cef6699139.js" integrity="sha256-I/GCIkJRefdUllo2ybIRvYz/Xlq2HuI7UvAmzvZpkTk="></script>
+<script src="https://www.hitzhangjie.pro/js/bundle.2ee571453a8980175e10bda96bda797cc9c4e2e745e488df68d50cef5deb57ff.js" integrity="sha256-LuVxRTqJgBdeEL2pa9p5fMnE4udF5IjfaNUM713rV/8="></script>
 
 
 
@@ -444,6 +485,10 @@ if (!doNotTrack) {
 }
 </script>
 <script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
 
 
 

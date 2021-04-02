@@ -55,6 +55,7 @@ div#st-2 .st-btn > img {
 
 
 
+        
         <meta property="og:title" content="x64汇编开发介绍 - 介绍" />
 <meta property="og:type" content="website" />
 <meta property="og:description" content="Web站点描述"/>
@@ -81,7 +82,7 @@ div#st-2 .st-btn > img {
 
 
 
-<link rel="stylesheet" href="/css/main.min.daa833377fb1636f8cbfa65c601050bb5475623deb7aa6e6fdde94a064a6185d.css" integrity="sha256-2qgzN3&#43;xY2&#43;Mv6ZcYBBQu1R1Yj3reqbm/d6UoGSmGF0=" crossorigin="anonymous" media="screen">
+<link rel="stylesheet" href="/css/main.min.24b21e0909abaf0ad62af509780fea401864367fe10c0d7ffcd89778c9dac466.css" integrity="sha256-JLIeCQmrrwrWKvUJeA/qQBhkNn/hDA1//NiXeMnaxGY=" crossorigin="anonymous" media="screen">
 
 
 
@@ -145,7 +146,9 @@ div#st-2 .st-btn > img {
                 
                   <a class="navbar-item" href="https://www.hitzhangjie.pro/projects/">
                   
+                  
                   项目
+                  
                   
                   </a>
                 
@@ -310,14 +313,17 @@ div#st-2 .st-btn > img {
             <p>最近在工作和学习中发现，其实汇编是非常重要的，即便现在高级语言已经非常方便了，但是了解汇编对于深入理解计算机系统，以及一些高深的知识点是不可或缺的。举几个例子，比如说Linux操作系统有一个系统调用函数叫Fork我们都知道Fork的返回值在子进程中是0，在父进程中是非0，那这个是如何实现的呢？对于不了解汇编的人也很难有能力去阅读Linux操作系统源码，只能道听途说了解到个大概原因。再比如接下来要讲的gomonkey测试框架实现的一些指令patching操作，这些都是与汇编操作分不开的。甚至你想了解下上下文切换开销，你都需要深入了解下指令执行周期等等的问题。</p>
 <p>不懂汇编，不妨碍你开发上层应用，但是对你的深度就是一道坎，你很难跨国这个鸿沟去窥探更底层的一些原理。</p>
 <p>有感而发，今天就回顾下intel官方开发发布的x64汇编知识，做一个简单的回顾，也为后面研究gomonkey指令patching等等做一些准备和铺垫。</p>
-<h2 id="介绍">介绍</h2>
+
+<h2 id="介绍" class="anchor-link"><a href="#%e4%bb%8b%e7%bb%8d">介绍</a></h2>
 <p>大家使用x86汇编来写一些对性能比较敏感的程序嗯，这个情况已经持续很多年了嗯，但是现在32位机器应逐渐被64位机器取代了，对应的汇编代码也发生了变化。这篇文章主要就是介绍x64汇编的，如果不了解x86汇编也没什么大碍，当然了解的话理解起来会更简单一点。</p>
 <p>x64是一个通用的名字，它表示的是对Intel以及AMD 32位指令集架构的一个64位扩展。AMD首先引入了x64指令集，最初叫x86-64，后面又改成了AMD64。Intel呢，将其支持64位指令集的架构称之为IA-32e，后面又改成了EMT64。这两个版本之间有一点细微的不兼容的地方，但是大部分指令在两个版本上都可以很好的工作，相关的细节可以参考Intel开发手册<a href="http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html">Intel 64 And IA-32 Architectures Software Developer&rsquo;s Manuals</a>，以及AMD64架构的技术文档。我们将这两个版本的交集部分称之为x64。不要将x64与64位Intel Itanium架构（称之为IA-64）混为一谈。</p>
 <p>这篇文章没有涉及硬件相关的细节，如caches、分支预测，以及其他高级话题。文章最后会给出一些这些领域的参考手册供了解更多。</p>
 <p>汇编语言，往往会用来编写对性能要求比较苛刻的程序或其中的一部分。但是对大部分普通程序员来说，与其让其写汇编，还不如写cc++然后配上一个好的编译器来的实在，后者编译器优化的性能可能比其写出的汇编代码质量更高。汇编语言对于调试代码也是有用的，有时一个编译器可能生成了一些不正确的汇编指令，通过调试器在程序中单步调试可以帮助定位到问题的原因。代码优化器，有时也会犯错。汇编的另外一个用途，你可以用它来研究没有源码的程序。反汇编让你能够改变、修复现有的可执行程序（推荐下几个工具hopper or cutter）。如果你想了解或者调查为什么某种编程语言比较慢，其他的比较快之类的问题，汇编也是你的好帮手。最后吧，掌握汇编知识，对于诊断一些恶意软件，也是必不可少的技能。</p>
-<h2 id="架构">架构</h2>
+
+<h2 id="架构" class="anchor-link"><a href="#%e6%9e%b6%e6%9e%84">架构</a></h2>
 <p>当要去学习特定平台的汇编时，首先应该学习的是，该平台的寄存器集合。</p>
-<h3 id="通用架构">通用架构</h3>
+
+<h3 id="通用架构" class="anchor-link"><a href="#%e9%80%9a%e7%94%a8%e6%9e%b6%e6%9e%84">通用架构</a></h3>
 <p>64位寄存器允许容纳更大的尺寸的数据，或者是地址，所以我们定义的更多的类型，将1个字节byte定义成8bits，将1个字word定义成16bits，将一个双字double word定义成32bits，将一个四字quadword定义成64位，将一个八字double quadword定义成128bits。关于字节序的问题，Intel是小端字节序，意味着低有效位存储在内存的低地址中。</p>
 <p><img src="https://software.intel.com/content/dam/develop/external/us/en/images/29529-figure-1-181178.jpg" alt="通用架构"></p>
 <p>上图显示了16个64bits的通用目的寄存器，前8个被命名成rax、rbx、rcx、rdx、rbp、rsi、rdi、rsp，这个命名和历史原因有关系，后面8个被命名成了r8~r15。如果前8个自己存器名，将字符r换成e，就变成了对应的地位的32位寄存器，比如rax的低32位是eax。类似地，如果想访问低16位，就直接把前缀去掉，如AX就是访问的rax的低16位，如果低8位呢，那就是AL了，AH就是次低8位（8~15位）。新加的8个寄存器r8~r15可以用类似的方式来访问低位数据，如r8（qword），r8d（lower dword），r8w（lowest word）、r8b（lowest byte MASM风格，intel风格是r8l）。注意没有r8h这种表示法。</p>
@@ -433,7 +439,8 @@ div#st-2 .st-btn > img {
 <p>这16个128bits的XMM寄存器（比x86多了8个）后面会有更详细介绍。</p>
 <p>还有就是，段寄存器（在x64下大多数没有用）、控制寄存器、内存管理寄存器、调试寄存器、虚拟化寄存器、性能寄存器（跟踪记录各种类型的内部参数，如cache命中、miss，分支预测命中、miss，微码执行，定时等等）。最突出的性能相关的操作码就是RDTSC，它是用来技术处理器时钟周期的，经常通过它来测量一小段代码的执行耗时。通常c库里面提供的函数gettimeofday是比较耗时间的，所以在高频使用的时候会有性能问题，一般在网络框架里面做定时器、时间测量相关的任务，是会通过RDTSC来推送系统时间进而推算耗时的（在我的文章libmill定时器中也有提及，hitzhangjie.gitbook.io/libmill）。</p>
 <p>更多其他细节信息，可以参考全5卷 &ldquo;Intel 64 And IA-32 Architectures Software Developer&rsquo;s Manuals&rdquo;，可以从这里免费下载，http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html。</p>
-<h3 id="simd架构">SIMD架构</h3>
+
+<h3 id="simd架构" class="anchor-link"><a href="#simd%e6%9e%b6%e6%9e%84">SIMD架构</a></h3>
 <p>单指令多数据（SIMD）指令对多条数据并行执行一条命令，这是汇编例程的常用用法。 MMX和SSE命令（分别使用MMX和XMM寄存器）支持SIMD操作，该操作可并行处理多达八段数据。例如，可以使用MMX在一条指令中将八个字节与另外八个字节相加。</p>
 <p>八个64位MMX寄存器MMX0-MMX7是FPR0-7的别名，这意味着任何将FPR和MMX混合起来操作的代码都必须小心，不要覆盖所需的值。 MMX指令对整数类型进行操作，允许对MMX寄存器中的值并行执行字节，字和双字操作。大多数MMX指令以“P”开头表示“packed”。算术，移位/旋转，比较，例如：PCMPGTB表示“比较packed的的有符号1字节整数是否大于”。</p>
 <p>16个128位XMM寄存器允许每条指令对四个单精度或两个双精度值进行并行运算。一些指令还适用于压缩字节，字，双字和四字整数。这些称为流式SIMD扩展（SSE）的指令具有多种形式：SSE，SSE2，SSE3，SSSE3，SSE4，以及在本文印制之时可能还会更多。英特尔已经宣布了这些扩展，称为英特尔®高级矢量扩展（Intel®AVX），具有新的256位宽数据路径。 SSE指令包含对浮点和整数类型的移动，算术，比较，重排和拆包以及按位运算。指令名称包括诸如PMULHUW和RSQRTPS之类的。最后，SSE引入了一些有关内存预取（出于性能）和内存屏障（出于多线程安全）的指令。</p>
@@ -487,11 +494,14 @@ div#st-2 .st-btn > img {
 </tr>
 </tbody>
 </table>
-<h2 id="工具">工具</h2>
-<h3 id="assemblers">assemblers</h3>
+
+<h2 id="工具" class="anchor-link"><a href="#%e5%b7%a5%e5%85%b7">工具</a></h2>
+
+<h3 id="assemblers" class="anchor-link"><a href="#assemblers">assemblers</a></h3>
 <p>互联网搜索显示了具有x64功能的汇编程序，例如Netwide汇编程序NASM，在NASM基础上重写的YASM，快速的Flat Assembler FASM和传统的Microsoft MASM。甚至还有一个免费的用于x86和x64程序集的IDE，称为WinASM。每个汇编程序对其他汇编程序的宏和语法都有不同的支持，并不是完全兼容的。</p>
 <p>对于以下示例，我使用平台SDK中免费提供的MASM的64位版本ML64.EXE。对于以下示例，请注意，MASM语法的格式为：“指令 目标操作数或地址，源操作数或地址”，有些汇编器中的语法中的源操作、目的操作的顺序是反着的。请参考对应汇编器的语法说明。</p>
-<h3 id="cc-compilers">c/c++ compilers</h3>
+
+<h3 id="cc-compilers" class="anchor-link"><a href="#cc-compilers">c/c++ compilers</a></h3>
 <p>C/C++编译器通常允许使用内联汇编将汇编嵌入代码中，但是Microsoft Visual Studio C/C++为x64代码删除了该汇编，这可能简化了代码优化器的工作。剩下两个选择：使用单独的汇编文件和外部汇编器，或使用头文件“ intrn.h”中的内在函数（请参见Birtolo和MSDN）。其他编译器具有类似的选项。</p>
 <p>使用启发式的理由：</p>
 <ul>
@@ -501,8 +511,10 @@ div#st-2 .st-btn > img {
 <li>配合启发式操作，优化器工作的更好；</li>
 </ul>
 <p>例如，Microsoft Visual Studio 2008就有启发式操作，<code>unsigned short _rotr16(unsigned short_rot16 b, unsigned char c)</code>，这个操作将一个16位操作数b中向右rotate c位，并返回结果。使用c来实现的话，可以这么写<code>unsigned short a1 = (b&gt;&gt;c)|(b&lt;&lt;(16-c))</code>，这个汇编完成后大约是15条指令（debug模式下，如果是release模式下的话也差不太多），但是如果使用启发式操作<code>unsigned short a1 = _rotr16(b,c)</code>的话呢，汇编完成后只有4条指令，你说哪个更牛逼呢？！</p>
-<h2 id="指令基础">指令基础</h2>
-<h3 id="寻址模式">寻址模式</h3>
+
+<h2 id="指令基础" class="anchor-link"><a href="#%e6%8c%87%e4%bb%a4%e5%9f%ba%e7%a1%80">指令基础</a></h2>
+
+<h3 id="寻址模式" class="anchor-link"><a href="#%e5%af%bb%e5%9d%80%e6%a8%a1%e5%bc%8f">寻址模式</a></h3>
 <p>在学习之前，得先了解下寻址模式，寻址模式指明了指令访问寄存器或者内存的方式 ，以下是常见的几种寻址模式：</p>
 <ul>
 <li>
@@ -527,7 +539,8 @@ MOV     ECX, dword ptr <span style="color:#f92672">[</span>table+RBX+RDI<span st
 <p>其他比较特殊的寻址：有些操作码使用寄存器的方式比较不一样，例如，有符号整数除操作IDIV，128位操作数RDX:RAX除以一个64位的操作数，会将商存储到RAX中，将余数存储到RDX中。</p>
 </li>
 </ul>
-<h3 id="指令集">指令集</h3>
+
+<h3 id="指令集" class="anchor-link"><a href="#%e6%8c%87%e4%bb%a4%e9%9b%86">指令集</a></h3>
 <p>下表列出了一些比较常见的指令，其中*表示改指令有多个操作码，*表示后缀的意思：</p>
 <table>
 <thead>
@@ -620,12 +633,14 @@ MOV     ECX, dword ptr <span style="color:#f92672">[</span>table+RBX+RDI<span st
 </span><span style="color:#75715e"></span>   <span style="color:#66d9ef">INX</span> 	<span style="color:#66d9ef">EAX</span>   	<span style="color:#75715e">; increment eax
 </span><span style="color:#75715e"></span>   <span style="color:#66d9ef">LOOP</span> 	<span style="color:#66d9ef">Label</span>		<span style="color:#75715e">; decrement ECX, loop if not 0
 </span></code></pre></div><p>不太常见的操作码可实现字符串操作，重复指令前缀，端口I / O指令，标志设置/清除/测试，浮点操作（通常以F开头，并支持move from一个整数、move to一个整数，算术，比较，先验，代数移入/移出）以及控制功能），用于多线程和性能问题的缓存和内存操作码等。英特尔®64和IA-32体系结构软件开发人员手册第2卷分为两部分，详细介绍了每个操作码。</p>
-<h2 id="操作系统">操作系统</h2>
+
+<h2 id="操作系统" class="anchor-link"><a href="#%e6%93%8d%e4%bd%9c%e7%b3%bb%e7%bb%9f">操作系统</a></h2>
 <p>从理论上讲，64位系统允许寻址2^64字节的数据，但是当前没有芯片允许访问所有16 EB字节（18,446,744,073,709,551,616字节）。例如，AMD体系结构仅使用地址的低48位，并且48至63位必须是47位的副本，否则处理器会引发异常。因此，地址为0到00007FFFFFFFFFFF，从FFFF800000000000到FFFFFFFFFFFFFFFF，总共有256 TB（281,474,976,710,656字节）的可用虚拟地址空间。另一个缺点是，要寻址所有64位内存，需要更多的页表供OS存储，需要使用宝贵的内存。请注意，这些是虚拟地址，而不是物理地址。</p>
 <p>结果，许多操作系统使用此空间的上半部分，从顶部开始，然后向下扩展；而用户程序则使用下半部分，从底部开始，然后向上扩展。当前的Windows *版本使用44位寻址（16 TB = 17,592,186,044,416字节）。结果地址如下图所示。由于地址是由OS分配的，因此结果地址对用户程序而言不太重要，但是用户地址和内核地址之间的区别对于调试很有用。</p>
 <p><img src="https://software.intel.com/content/dam/develop/external/us/en/images/29530-figure-2-181178.jpg" alt="内存寻址"></p>
 <p>最后一个与OS相关的问题与多线程编程有关，但是此主题太大，无法在此处讨论。唯一要提到的是，有内存屏障操作码可帮助保护共享资源不受破坏。</p>
-<h2 id="调用约定">调用约定</h2>
+
+<h2 id="调用约定" class="anchor-link"><a href="#%e8%b0%83%e7%94%a8%e7%ba%a6%e5%ae%9a">调用约定</a></h2>
 <p>每种架构都有自己的例程（函数）调用的一些约束，操作系统与对应架构的CPU打交道都必须要考虑如何传递对应的参数、如何获取返回值的问题，这里的具体到某个平台的约束，就称为调用约定。</p>
 <p>常见的x64调用约定是用于C样式函数调用的Microsoft 64调用约定（请参阅MSDN，Chen和Pietrek）。在Linux下，也将其称为应用程序二进制接口（ABI）。</p>
 <p>请注意，此处涉及的调用约定与x64 Linux系统上使用的约定不同：对于Microsoft x64调用约定，附加的寄存器空间使fastcall成为唯一的调用约定（在x86下有很多：stdcall，thiscall，fastcall，cdecl等）。与C / C ++样式函数接口的规则：</p>
@@ -676,7 +691,8 @@ End
 </code></pre><p>将上述汇编程序保存为hello.asm，然后使用ML64进行编译，在Microsoft Windows x64 SDK中有这个程序的，这么编译：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"> ml64 hello.asm /link /subsystem:windows /defaultlib:kernel32.lib /defaultlib:user32.lib /entry:Start
 </code></pre></div><p>执行完成后会构建出一个可执行程序（已经链接好库函数、启动代码了），运行这个程序hello.exe，就会看到弹出一个消息窗口。</p>
-<h3 id="heading"></h3>
+
+<h3 id="heading" class="anchor-link"><a href="#heading"></a></h3>
 <p>第二个示例，是在Visual Studio 2008这个IDE中，在C/C++文件中引用一个x64汇编文件中的代码，还记得Visual Studio后续删除了对支持内联汇编的支持吧。好。</p>
 <ul>
 <li>Create a new empty C++ console project. Create a function you&rsquo;d like to port to assembly, and call it from main.</li>
@@ -726,9 +742,11 @@ CombineA PROC
 CombineA ENDP
 End
 </code></pre><p>编译并运行上述程序，会发现输出了两次1.97368，第一次是CombineC的运算结果，第二次就是汇编实现的CombineA的运算结果</p>
-<h2 id="总结">总结</h2>
+
+<h2 id="总结" class="anchor-link"><a href="#%e6%80%bb%e7%bb%93">总结</a></h2>
 <p>这是对x64汇编编程的必要的简要介绍。下一步是浏览《英特尔®64和IA-32架构软件开发人员手册》。第1卷包含体系结构的详细信息，如果您知道汇编的话，这是一个很好的开始。其他地方是汇编书籍或在线汇编教程。为了了解代码的执行方式，指导您在调试器中逐步执行代码，查看反汇编，直到您可以阅读汇编代码以及您喜欢的语言为止，这对您很有帮助。对于C / C ++编译器，调试版本比发行版本更容易阅读，因此请确保从此处开始。最后，阅读masm32.com上的论坛以获取大量材料。</p>
-<h2 id="参考内容">参考内容</h2>
+
+<h2 id="参考内容" class="anchor-link"><a href="#%e5%8f%82%e8%80%83%e5%86%85%e5%ae%b9">参考内容</a></h2>
 <ul>
 <li>原文地址: <a href="https://software.intel.com/content/www/us/en/develop/articles/introduction-to-x64-assembly.html">https://software.intel.com/content/www/us/en/develop/articles/introduction-to-x64-assembly.html</a></li>
 <li>NASM: <a href="http://www.nasm.us/">http://www.nasm.us/</a></li>
@@ -785,7 +803,32 @@ End
     </div>
     
 
+    </br>
+    </br>
     
+    <div class="container disqus">
+        <div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "https-www-hitzhangjie-pro" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+    </div>
+
 
 
                 
@@ -819,7 +862,7 @@ End
         
 
 
-<script src="https://www.hitzhangjie.pro/js/bundle.23f18222425179f754965a36c9b211bd8cff5e5ab61ee23b52f026cef6699139.js" integrity="sha256-I/GCIkJRefdUllo2ybIRvYz/Xlq2HuI7UvAmzvZpkTk="></script>
+<script src="https://www.hitzhangjie.pro/js/bundle.2ee571453a8980175e10bda96bda797cc9c4e2e745e488df68d50cef5deb57ff.js" integrity="sha256-LuVxRTqJgBdeEL2pa9p5fMnE4udF5IjfaNUM713rV/8="></script>
 
 
 
@@ -835,6 +878,10 @@ if (!doNotTrack) {
 }
 </script>
 <script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
 
 
 

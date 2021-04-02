@@ -55,6 +55,7 @@ div#st-2 .st-btn > img {
 
 
 
+        
         <meta property="og:title" content="Protoc工作原理分析 - 介绍" />
 <meta property="og:type" content="website" />
 <meta property="og:description" content="Web站点描述"/>
@@ -81,7 +82,7 @@ div#st-2 .st-btn > img {
 
 
 
-<link rel="stylesheet" href="/css/main.min.daa833377fb1636f8cbfa65c601050bb5475623deb7aa6e6fdde94a064a6185d.css" integrity="sha256-2qgzN3&#43;xY2&#43;Mv6ZcYBBQu1R1Yj3reqbm/d6UoGSmGF0=" crossorigin="anonymous" media="screen">
+<link rel="stylesheet" href="/css/main.min.24b21e0909abaf0ad62af509780fea401864367fe10c0d7ffcd89778c9dac466.css" integrity="sha256-JLIeCQmrrwrWKvUJeA/qQBhkNn/hDA1//NiXeMnaxGY=" crossorigin="anonymous" media="screen">
 
 
 
@@ -145,7 +146,9 @@ div#st-2 .st-btn > img {
                 
                   <a class="navbar-item" href="https://www.hitzhangjie.pro/projects/">
                   
+                  
                   项目
+                  
                   
                   </a>
                 
@@ -306,7 +309,8 @@ div#st-2 .st-btn > img {
         <div class="container markdown top-pad">
             <p>在进行protoc插件开发之前，首先要了解protoc的工作原理。在protobuf的使用过程中，protoc作为proto文件的编译器，很多开发人员只会用但是不了解其工作原理，更不了解如何扩展其功能。protobuf作为目前常用的数据交换格式在协议开发中被广泛采用，此外，protoc对proto文件的强大解析能力使我们可以开发一些插件，通过插件快速生成特定于proto文件的工具类、配置文件等，从而提高开发效率。</p>
 <p>本文首先会介绍一下protoc的整体工作机制，然后解释一下protoc对proto文件的解析过程，最后给出编写protoc插件扩展protoc功能的一个示例教程。</p>
-<h2 id="1-protoc源代码准备">1. protoc源代码准备</h2>
+
+<h2 id="1-protoc源代码准备" class="anchor-link"><a href="#1-protoc%e6%ba%90%e4%bb%a3%e7%a0%81%e5%87%86%e5%a4%87">1. protoc源代码准备</a></h2>
 <p>要想了解protoc的工作机制，查看其源代码了解其核心流程是最靠谱的方法。</p>
 <p>获取程序源代码的方式如下：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">git co https:<span style="color:#75715e">//github.com/google/protobuf
@@ -316,9 +320,11 @@ div#st-2 .st-btn > img {
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">git branch <span style="color:#960050;background-color:#1e0010">$</span>{new<span style="color:#f92672">-</span>branch<span style="color:#f92672">-</span>name}
 git ck <span style="color:#960050;background-color:#1e0010">$</span>{new<span style="color:#f92672">-</span>branch<span style="color:#f92672">-</span>name}
 </code></pre></div><p>现在源代码准备好了，我比较喜欢使用vim、ctags、cscope来阅读源码，根据个人习惯吧，下面可以阅读protoc的源码梳理以下工作机制。</p>
-<h2 id="2-protoc源码分析">2. protoc源码分析</h2>
+
+<h2 id="2-protoc源码分析" class="anchor-link"><a href="#2-protoc%e6%ba%90%e7%a0%81%e5%88%86%e6%9e%90">2. protoc源码分析</a></h2>
 <p>上述git检出后的protobuf路径，记为${protobuf}，后面如果出现${protobuf}请知晓其含义。如果在描述源代码时没有提及起始路径${protobuf}，那么起始路径均为${protobuf}。</p>
-<h3 id="21-protoc程序入口">2.1. protoc程序入口</h3>
+
+<h3 id="21-protoc程序入口" class="anchor-link"><a href="#21-protoc%e7%a8%8b%e5%ba%8f%e5%85%a5%e5%8f%a3">2.1. protoc程序入口</a></h3>
 <p>src/google/protobuf/compiler/main.cc中的main函数，为protoc的入口函数。</p>
 <p>file: src/google/protobuf/compiler/main.cc</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">// Author: kenton@google.com (Kenton Varda)
@@ -358,7 +364,8 @@ git ck <span style="color:#960050;background-color:#1e0010">$</span>{new<span st
   <span style="color:#75715e">// 解析proto、生成源代码(借助内置的generator或者plugins)、创建源代码文件
 </span><span style="color:#75715e"></span>  <span style="color:#66d9ef">return</span> cli.Run(argc, argv);
 }
-</code></pre></div><h3 id="22-protoc命令行接口定义">2.2. protoc命令行接口定义</h3>
+</code></pre></div>
+<h3 id="22-protoc命令行接口定义" class="anchor-link"><a href="#22-protoc%e5%91%bd%e4%bb%a4%e8%a1%8c%e6%8e%a5%e5%8f%a3%e5%ae%9a%e4%b9%89">2.2. protoc命令行接口定义</a></h3>
 <p>下面看一下protoc的命令行接口定义，以了解其对命令行flags、options的解释过程以及对后续程序执行逻辑的影响。</p>
 <p>file: src/google/protobuf/compiler/command_line_interface.h</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">// Author: kenton@google.com (Kenton Varda)
@@ -672,9 +679,11 @@ class CodeGenerator;        <span style="color:#75715e">// code_generator.h
 </span><span style="color:#75715e"></span>
 }  <span style="color:#75715e">// namespace google
 </span><span style="color:#75715e"></span><span style="color:#75715e">#endif  </span><span style="color:#75715e">// GOOGLE_PROTOBUF_COMPILER_COMMAND_LINE_INTERFACE_H__
-</span></code></pre></div><h3 id="23-protoc执行流程说明">2.3. protoc执行流程说明</h3>
+</span></code></pre></div>
+<h3 id="23-protoc执行流程说明" class="anchor-link"><a href="#23-protoc%e6%89%a7%e8%a1%8c%e6%b5%81%e7%a8%8b%e8%af%b4%e6%98%8e">2.3. protoc执行流程说明</a></h3>
 <p>protoc执行流程的相关源码，主要包括如下两个部分。</p>
-<h4 id="231-protoc完成基本的初始化工作后调用clirunargcargv开始生成代码">2.3.1. protoc完成基本的初始化工作后调用cli.Run(argc,argv)开始生成代码</h4>
+
+<h4 id="231-protoc完成基本的初始化工作后调用clirunargcargv开始生成代码" class="anchor-link"><a href="#231-protoc%e5%ae%8c%e6%88%90%e5%9f%ba%e6%9c%ac%e7%9a%84%e5%88%9d%e5%a7%8b%e5%8c%96%e5%b7%a5%e4%bd%9c%e5%90%8e%e8%b0%83%e7%94%a8clirunargcargv%e5%bc%80%e5%a7%8b%e7%94%9f%e6%88%90%e4%bb%a3%e7%a0%81">2.3.1. protoc完成基本的初始化工作后调用cli.Run(argc,argv)开始生成代码</a></h4>
 <p>这部分内容在前面已经有过较为详细的解释，这里不再详细展开，只给出相应的代码、注释。</p>
 <p>file: src/google/protobuf/compiler/main.cc</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">// Author: kenton@google.com (Kenton Varda)
@@ -713,7 +722,8 @@ class CodeGenerator;        <span style="color:#75715e">// code_generator.h
 
   <span style="color:#66d9ef">return</span> cli.Run(argc, argv);
 }
-</code></pre></div><h4 id="232-protoc命令接口clirunargcargv详细处理流程">2.3.2. protoc命令接口cli.Run(argc,argv)详细处理流程</h4>
+</code></pre></div>
+<h4 id="232-protoc命令接口clirunargcargv详细处理流程" class="anchor-link"><a href="#232-protoc%e5%91%bd%e4%bb%a4%e6%8e%a5%e5%8f%a3clirunargcargv%e8%af%a6%e7%bb%86%e5%a4%84%e7%90%86%e6%b5%81%e7%a8%8b">2.3.2. protoc命令接口cli.Run(argc,argv)详细处理流程</a></h4>
 <p>这部分代码是protoc对proto文件进行读取、解析、通过注册的代码生成器或者protoc插件生成源代码、保存源代码到源文件的执行流程。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">int</span> CommandLineInterface<span style="color:#f92672">::</span>Run(<span style="color:#66d9ef">int</span> argc, <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span><span style="color:#f92672">*</span> <span style="color:#66d9ef">const</span> argv[]) {
   Clear();
@@ -836,7 +846,8 @@ class CodeGenerator;        <span style="color:#75715e">// code_generator.h
 
   <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
 }
-</code></pre></div><h4 id="233-protoc执行逻辑总结">2.3.3. protoc执行逻辑总结</h4>
+</code></pre></div>
+<h4 id="233-protoc执行逻辑总结" class="anchor-link"><a href="#233-protoc%e6%89%a7%e8%a1%8c%e9%80%bb%e8%be%91%e6%80%bb%e7%bb%93">2.3.3. protoc执行逻辑总结</a></h4>
 <p>通过查看上面两部分代码及其他关键代码，可以对protoc的执行流程进行一个简单的总结了：</p>
 <ol>
 <li>
@@ -917,7 +928,8 @@ class CodeGenerator;        <span style="color:#75715e">// code_generator.h
 </li>
 </ol>
 <p>了解从proto到源代码生成的关键之处就是这里的GenerateOutput是怎么实现的，接着看。</p>
-<h5 id="2331-protoc-commandlineinterfacegenerateoutput实现">2.3.3.1 protoc CommandLineInterface::GenerateOutput(&hellip;)实现</h5>
+
+<h5 id="2331-protoc-commandlineinterfacegenerateoutput实现" class="anchor-link"><a href="#2331-protoc-commandlineinterfacegenerateoutput%e5%ae%9e%e7%8e%b0">2.3.3.1 protoc CommandLineInterface::GenerateOutput(&hellip;)实现</a></h5>
 <p>下面看下GenerateOutput方法到底执行了哪些操作。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">// 根据输出指示, 为解析成功的proto文件调用代码生成器生成对应的代码并存储到generator_context
 </span><span style="color:#75715e">//@param parsed_files 所有解析成功的proto文件，每个解析成功的proto文件都用一个FileDescriptor来表示
@@ -971,7 +983,8 @@ class CodeGenerator;        <span style="color:#75715e">// code_generator.h
 
   <span style="color:#66d9ef">return</span> true;
 }
-</code></pre></div><h5 id="2332-protoc调用插件生成代码的执行逻辑">2.3.3.2. protoc调用插件生成代码的执行逻辑</h5>
+</code></pre></div>
+<h5 id="2332-protoc调用插件生成代码的执行逻辑" class="anchor-link"><a href="#2332-protoc%e8%b0%83%e7%94%a8%e6%8f%92%e4%bb%b6%e7%94%9f%e6%88%90%e4%bb%a3%e7%a0%81%e7%9a%84%e6%89%a7%e8%a1%8c%e9%80%bb%e8%be%91">2.3.3.2. protoc调用插件生成代码的执行逻辑</a></h5>
 <p>下面再来看一下GeneratePluginOutput是如何工作的。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">// 调用protoc插件为解析成功的proto文件生成代码
 </span><span style="color:#75715e">//
@@ -1079,7 +1092,8 @@ class CodeGenerator;        <span style="color:#75715e">// code_generator.h
   <span style="color:#66d9ef">return</span> true;
 }
 
-</code></pre></div><h5 id="2333-protoc--protoc插件数据交互的执行逻辑">2.3.3.3. protoc &amp; protoc插件数据交互的执行逻辑</h5>
+</code></pre></div>
+<h5 id="2333-protoc--protoc插件数据交互的执行逻辑" class="anchor-link"><a href="#2333-protoc--protoc%e6%8f%92%e4%bb%b6%e6%95%b0%e6%8d%ae%e4%ba%a4%e4%ba%92%e7%9a%84%e6%89%a7%e8%a1%8c%e9%80%bb%e8%be%91">2.3.3.3. protoc &amp; protoc插件数据交互的执行逻辑</a></h5>
 <p>整体执行逻辑差不多理清楚了，然后这里我们需要看一下父进程给子进程发送的代码生成请求是什么，收到的代码生成的响应又是什么，以及父子进程通信的细节、子进程对请求的处理过程等。</p>
 <p>先来看下plugin.proto的定义，protoc内置的支持语言里面并不包含go，我们后面需要用go来编写我们自己的插件，所以必须使用protoc的go插件来生成go对应的plugin.go代码，然后我们自己写一些业务类插件（非语言插件）的时候才能用上plugin.go。扯这么多是为了让大家明白这里为什么需要看下plugin.proto，而不是误解为只是在堆砌内容。看了这里的plugin.proto之后才能理解到protoc中的插件机制的边界时什么，我们就可以明白利用protoc的插件机制，我们可以做到什么程度，哪些功能能实现，哪些实现不了，这个是很重要的。</p>
 <p>file: src/google/protobuf/compiler/plugin.proto</p>
@@ -1426,8 +1440,10 @@ import <span style="color:#e6db74">&#34;google/protobuf/descriptor.proto&#34;</s
 </code></pre></div><p>到这里为止protoc进程的具体执行逻辑我们已经很清楚了，看到这里想必读者也看清楚了吧？下面再看下插件的执行逻辑。</p>
 <p>插件的执行逻辑一定也是非常简单的，插件就只是从stdin读取串行化之后的CodeGeneratorRequest请求，然后执行反串行化得到一个完整的CodeGeneratorRequest对象，然后根据请求进行必要的代码生成逻辑，确定要生成的源代码信息，并将其设置到CodeGeneratorResponse中并串行化后写入到stdout，插件的执行逻辑就这么简单。</p>
 <p>下面我们将进入插件的编写过程了。</p>
-<h3 id="24-protoc插件开发">2.4. protoc插件开发</h3>
-<h4 id="241-protoc中的descriptor定义">2.4.1. protoc中的descriptor定义</h4>
+
+<h3 id="24-protoc插件开发" class="anchor-link"><a href="#24-protoc%e6%8f%92%e4%bb%b6%e5%bc%80%e5%8f%91">2.4. protoc插件开发</a></h3>
+
+<h4 id="241-protoc中的descriptor定义" class="anchor-link"><a href="#241-protoc%e4%b8%ad%e7%9a%84descriptor%e5%ae%9a%e4%b9%89">2.4.1. protoc中的descriptor定义</a></h4>
 <p>proto文件中的数据类型都是在descriptor.proto中定义好的，为了更好地帮助我们对proto文件中的数据类型进行解析，为了在插件开发过程中更加方便快速地获得与数据类型、变量、rpc等相关的这种内容、那种内容，我们都需要深入地理解descriptor.proto中的相关定义以及从它延伸出来的一些概念、算法等。</p>
 <p>这部分的内容还不少，在不影响理解的大前提下，我还是稍微删减写些代码，避免对大家理解造成不必要的干扰。</p>
 <p>file: src/google/protobuf/descriptor.proto</p>
@@ -1863,7 +1879,8 @@ message MethodOptions {
 </span><span style="color:#75715e"></span>    optional string trailing_comments <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;
   }
 }
-</code></pre></div><h4 id="242-可以提取proto文件中的哪些信息--如何提取">2.4.2. 可以提取proto文件中的哪些信息 &amp; 如何提取</h4>
+</code></pre></div>
+<h4 id="242-可以提取proto文件中的哪些信息--如何提取" class="anchor-link"><a href="#242-%e5%8f%af%e4%bb%a5%e6%8f%90%e5%8f%96proto%e6%96%87%e4%bb%b6%e4%b8%ad%e7%9a%84%e5%93%aa%e4%ba%9b%e4%bf%a1%e6%81%af--%e5%a6%82%e4%bd%95%e6%8f%90%e5%8f%96">2.4.2. 可以提取proto文件中的哪些信息 &amp; 如何提取</a></h4>
 <p>前一节2.4.1中对descriptor.proto进行了详细地描述，可以说在proto文件中写的每一行内容都可以通过解析FileDescriptorProto来访问到。proto文件只是一种自描述的消息格式，基于这种格式生成面向特定编程语言的源代码文件时，我们想获取的信息不外乎如下几个：</p>
 <ol>
 <li>待生成的源文件的包名；</li>
@@ -1875,11 +1892,13 @@ message MethodOptions {
 <li>proto中可以添加注解吗？注解可以提取出来吗？</li>
 </ol>
 <p>如何提取上述信息呢？可以肯定地是，只要能拿到当前proto文件对应的FileDescriptorProto，上述内容几乎都可以获取到。但是如何获取到对应的proto文件对应的这个FileDescriptorProto对象呢？下面我们先来看一个protoc插件的示例代码吧，看完之后，大家也就了解了如何获取proto对应的FileDescriptorProto以及如何从中提取想要的1~7上述信息，生成源代码文件也就简单了。</p>
-<h4 id="243-protoc-go语言插件protoc-gen-go">2.4.3. protoc go语言插件protoc-gen-go</h4>
+
+<h4 id="243-protoc-go语言插件protoc-gen-go" class="anchor-link"><a href="#243-protoc-go%e8%af%ad%e8%a8%80%e6%8f%92%e4%bb%b6protoc-gen-go">2.4.3. protoc go语言插件protoc-gen-go</a></h4>
 <p>protoc-gen-go的源代码可以通过通过如下方式获取：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">git co https:<span style="color:#75715e">//github.com/golang/protobuf
 </span><span style="color:#75715e"></span>git branch <span style="color:#f92672">-</span>b <span style="color:#960050;background-color:#1e0010">$</span>{new<span style="color:#f92672">-</span>branch}
-</code></pre></div><h4 id="2431-protoc-gen-go入口函数分析">2.4.3.1. protoc-gen-go入口函数分析</h4>
+</code></pre></div>
+<h4 id="2431-protoc-gen-go入口函数分析" class="anchor-link"><a href="#2431-protoc-gen-go%e5%85%a5%e5%8f%a3%e5%87%bd%e6%95%b0%e5%88%86%e6%9e%90">2.4.3.1. protoc-gen-go入口函数分析</a></h4>
 <p>file: protobuf/protoc-gen-go/main.go</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
 
@@ -1940,7 +1959,8 @@ message MethodOptions {
         <span style="color:#a6e22e">g</span>.<span style="color:#a6e22e">Error</span>(<span style="color:#a6e22e">err</span>, <span style="color:#e6db74">&#34;failed to write output proto&#34;</span>)
     }
 }
-</code></pre></div><h4 id="2432-回顾一下codegeneratorrequest--codegeneratorresponse的定义">2.4.3.2. 回顾一下CodeGeneratorRequest &amp; CodeGeneratorResponse的定义</h4>
+</code></pre></div>
+<h4 id="2432-回顾一下codegeneratorrequest--codegeneratorresponse的定义" class="anchor-link"><a href="#2432-%e5%9b%9e%e9%a1%be%e4%b8%80%e4%b8%8bcodegeneratorrequest--codegeneratorresponse%e7%9a%84%e5%ae%9a%e4%b9%89">2.4.3.2. 回顾一下CodeGeneratorRequest &amp; CodeGeneratorResponse的定义</a></h4>
 <p>下面看下CodeGeneratorRequest和CodeGeneratorResponse的定义。</p>
 <p>file: ${protobuf}/src/google/protobuf/compiler/plugin.go</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// 串行化后的CodeGeneratorRequest信息会被写入到插件程序的stdin
@@ -1987,10 +2007,12 @@ message MethodOptions {
   <span style="color:#75715e">// 所有的待生成的源代码文件列表
 </span><span style="color:#75715e"></span>  <span style="color:#a6e22e">repeated</span> <span style="color:#a6e22e">File</span> <span style="color:#a6e22e">file</span> = <span style="color:#ae81ff">15</span>;
 }
-</code></pre></div><h4 id="2433-generator实现分析">2.4.3.3. generator实现分析</h4>
+</code></pre></div>
+<h4 id="2433-generator实现分析" class="anchor-link"><a href="#2433-generator%e5%ae%9e%e7%8e%b0%e5%88%86%e6%9e%90">2.4.3.3. generator实现分析</a></h4>
 <p>main.go中调用了generator的几个关键方法，我们先来看下这几个方法都做了些什么，然
 后再跟进一步看看generator的详细实现过程。</p>
-<h5 id="24331-generatornew">2.4.3.3.1. generator.New()</h5>
+
+<h5 id="24331-generatornew" class="anchor-link"><a href="#24331-generatornew">2.4.3.3.1. generator.New()</a></h5>
 <p>file: ${golang-protobuf}/protoc-gen-go/generator/generator.go</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// Generator类型的方法能够输出源代码，这些输出的源代码信息存储在Response成员中
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Generator</span> <span style="color:#66d9ef">struct</span> {
@@ -2026,7 +2048,8 @@ message MethodOptions {
     <span style="color:#a6e22e">g</span>.<span style="color:#a6e22e">Response</span> = new(<span style="color:#a6e22e">plugin</span>.<span style="color:#a6e22e">CodeGeneratorResponse</span>)
     <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">g</span>
 }
-</code></pre></div><h5 id="24332-generatorcommandlineparameters">2.4.3.3.2. generator.CommandLineParameters(&hellip;)</h5>
+</code></pre></div>
+<h5 id="24332-generatorcommandlineparameters" class="anchor-link"><a href="#24332-generatorcommandlineparameters">2.4.3.3.2. generator.CommandLineParameters(&hellip;)</a></h5>
 <p>这个函数是负责解析protoc传递过来的命令行参数信息的。</p>
 <p>file: ${golang-protobuf}/protoc-gen-go/generator/generator.go</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// 将都好分隔的key=value列表解析成&lt;key,value&gt; map
@@ -2090,7 +2113,8 @@ message MethodOptions {
         <span style="color:#a6e22e">plugins</span> = <span style="color:#a6e22e">nplugins</span>
     }
 }
-</code></pre></div><h5 id="24333-generatorwraptypes">2.4.3.3.3. generator.WrapTypes()</h5>
+</code></pre></div>
+<h5 id="24333-generatorwraptypes" class="anchor-link"><a href="#24333-generatorwraptypes">2.4.3.3.3. generator.WrapTypes()</a></h5>
 <p>file: ${golang-protobuf}/protoc-gen-go/generator/generator.go</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// WrapTypes walks the incoming data, wrapping DescriptorProtos, EnumDescriptorProtos
 </span><span style="color:#75715e">// and FileDescriptorProtos into file-referenced objects within the Generator.
@@ -2132,7 +2156,8 @@ message MethodOptions {
     }
 }
 
-</code></pre></div><h5 id="24334-generatorgenerateallfiles">2.4.3.3.4. generator.GenerateAllFiles()</h5>
+</code></pre></div>
+<h5 id="24334-generatorgenerateallfiles" class="anchor-link"><a href="#24334-generatorgenerateallfiles">2.4.3.3.4. generator.GenerateAllFiles()</a></h5>
 <p>调用generator针对所有解析成功的proto文件生成所有的go源代码</p>
 <p>file: ${golang-protobuf}/protoc-gen-go/generator/generator.go</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// 生成所有.proto文件对应的go源代码，这里只是将源代码内容存储到g.Response中，
@@ -2498,7 +2523,32 @@ message MethodOptions {
     </div>
     
 
+    </br>
+    </br>
     
+    <div class="container disqus">
+        <div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "https-www-hitzhangjie-pro" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+    </div>
+
 
 
                 
@@ -2532,7 +2582,7 @@ message MethodOptions {
         
 
 
-<script src="https://www.hitzhangjie.pro/js/bundle.23f18222425179f754965a36c9b211bd8cff5e5ab61ee23b52f026cef6699139.js" integrity="sha256-I/GCIkJRefdUllo2ybIRvYz/Xlq2HuI7UvAmzvZpkTk="></script>
+<script src="https://www.hitzhangjie.pro/js/bundle.2ee571453a8980175e10bda96bda797cc9c4e2e745e488df68d50cef5deb57ff.js" integrity="sha256-LuVxRTqJgBdeEL2pa9p5fMnE4udF5IjfaNUM713rV/8="></script>
 
 
 
@@ -2548,6 +2598,10 @@ if (!doNotTrack) {
 }
 </script>
 <script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
 
 
 

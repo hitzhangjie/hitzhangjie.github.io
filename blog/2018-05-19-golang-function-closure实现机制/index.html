@@ -55,6 +55,7 @@ div#st-2 .st-btn > img {
 
 
 
+        
         <meta property="og:title" content="golang function-closure 实现机制 - 介绍" />
 <meta property="og:type" content="website" />
 <meta property="og:description" content="Web站点描述"/>
@@ -81,7 +82,7 @@ div#st-2 .st-btn > img {
 
 
 
-<link rel="stylesheet" href="/css/main.min.daa833377fb1636f8cbfa65c601050bb5475623deb7aa6e6fdde94a064a6185d.css" integrity="sha256-2qgzN3&#43;xY2&#43;Mv6ZcYBBQu1R1Yj3reqbm/d6UoGSmGF0=" crossorigin="anonymous" media="screen">
+<link rel="stylesheet" href="/css/main.min.24b21e0909abaf0ad62af509780fea401864367fe10c0d7ffcd89778c9dac466.css" integrity="sha256-JLIeCQmrrwrWKvUJeA/qQBhkNn/hDA1//NiXeMnaxGY=" crossorigin="anonymous" media="screen">
 
 
 
@@ -145,7 +146,9 @@ div#st-2 .st-btn > img {
                 
                   <a class="navbar-item" href="https://www.hitzhangjie.pro/projects/">
                   
+                  
                   项目
+                  
                   
                   </a>
                 
@@ -281,7 +284,8 @@ div#st-2 .st-btn > img {
         
         <div class="container markdown top-pad">
             <p>golang里面函数时first-class citizen，可以作为值进行参数传递，不管是普通函数“func abc()”，还是成员方法“func (x X) xxx()”，还是一个闭包“func () { return func(){&hellip;.}}”……看上去很方便，不禁要问，golang里面funciton和closure是如何实现的呢？扒拉了下源码，这里简单总结下。</p>
-<h1 id="1-golang中函数内部表示是什么样子的">1 golang中函数内部表示是什么样子的？</h1>
+
+<h1 id="1-golang中函数内部表示是什么样子的" class="anchor-link"><a href="#1-golang%e4%b8%ad%e5%87%bd%e6%95%b0%e5%86%85%e9%83%a8%e8%a1%a8%e7%a4%ba%e6%98%af%e4%bb%80%e4%b9%88%e6%a0%b7%e5%ad%90%e7%9a%84">1 golang中函数内部表示是什么样子的？</a></h1>
 <p>看下golang cmd/compile/internal/types/type.go中对Func类型的定义：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-golang" data-lang="golang"><span style="color:#75715e">// Func contains Type fields specific to func types.
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Func</span> <span style="color:#66d9ef">struct</span> {
@@ -296,7 +300,8 @@ div#st-2 .st-btn > img {
    <span style="color:#a6e22e">Outnamed</span> <span style="color:#66d9ef">bool</span> <span style="color:#75715e">// 是否是可导出的？
 </span><span style="color:#75715e"></span>}
 </code></pre></div><p>通过这个Func定义来看，其可以覆盖golang里面所有的函数类型声明了，不管是普通函数，还是成员方法等等。</p>
-<h1 id="2-golang中闭包是怎么实现的">2 golang中闭包是怎么实现的？</h1>
+
+<h1 id="2-golang中闭包是怎么实现的" class="anchor-link"><a href="#2-golang%e4%b8%ad%e9%97%ad%e5%8c%85%e6%98%af%e6%80%8e%e4%b9%88%e5%ae%9e%e7%8e%b0%e7%9a%84">2 golang中闭包是怎么实现的？</a></h1>
 <p>前端时间组内分享闭包使用的时候，觉得这玩意虽然轻巧但是太容易出错了，究其原因是因为不了解闭包的实现原理。那么闭包是如何实现的呢，抽时间扒拉了一下golang中实现闭包的代码，看完后瞬间觉得闭包很简单。</p>
 <p>来简单总结一下，<strong>闭包就是函数+环境</strong>，问题是<strong>这里的环境是如何与函数进行绑定的呢</strong>？</p>
 <blockquote>
@@ -327,9 +332,11 @@ div#st-2 .st-btn > img {
 </ul>
 <p>这部分的代码详见：cmd/compile/gc/closure.go中的方法transformclosure(&hellip;)。
 闭包就是函数体+环境，环境就是像这样绑定的。</p>
-<h1 id="3-总结">3 总结</h1>
+
+<h1 id="3-总结" class="anchor-link"><a href="#3-%e6%80%bb%e7%bb%93">3 总结</a></h1>
 <p>本文简要描述了golang中对函数的内部定义，以及闭包的大致实现思路，加深了理解。</p>
-<h1 id="附golang闭包处理关键代码">附：golang闭包处理关键代码</h1>
+
+<h1 id="附golang闭包处理关键代码" class="anchor-link"><a href="#%e9%99%84golang%e9%97%ad%e5%8c%85%e5%a4%84%e7%90%86%e5%85%b3%e9%94%ae%e4%bb%a3%e7%a0%81">附：golang闭包处理关键代码</a></h1>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-golang" data-lang="golang"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">transformclosure</span>(<span style="color:#a6e22e">xfunc</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Node</span>) {
 	<span style="color:#a6e22e">lno</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">lineno</span>
 	<span style="color:#a6e22e">lineno</span> = <span style="color:#a6e22e">xfunc</span>.<span style="color:#a6e22e">Pos</span>
@@ -492,7 +499,32 @@ div#st-2 .st-btn > img {
     </div>
     
 
+    </br>
+    </br>
     
+    <div class="container disqus">
+        <div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "https-www-hitzhangjie-pro" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+    </div>
+
 
 
                 
@@ -526,7 +558,7 @@ div#st-2 .st-btn > img {
         
 
 
-<script src="https://www.hitzhangjie.pro/js/bundle.23f18222425179f754965a36c9b211bd8cff5e5ab61ee23b52f026cef6699139.js" integrity="sha256-I/GCIkJRefdUllo2ybIRvYz/Xlq2HuI7UvAmzvZpkTk="></script>
+<script src="https://www.hitzhangjie.pro/js/bundle.2ee571453a8980175e10bda96bda797cc9c4e2e745e488df68d50cef5deb57ff.js" integrity="sha256-LuVxRTqJgBdeEL2pa9p5fMnE4udF5IjfaNUM713rV/8="></script>
 
 
 
@@ -542,6 +574,10 @@ if (!doNotTrack) {
 }
 </script>
 <script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
 
 
 

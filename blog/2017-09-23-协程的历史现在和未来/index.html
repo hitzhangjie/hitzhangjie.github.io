@@ -55,6 +55,7 @@ div#st-2 .st-btn > img {
 
 
 
+        
         <meta property="og:title" content="协程的历史、现在和未来! - 介绍" />
 <meta property="og:type" content="website" />
 <meta property="og:description" content="Web站点描述"/>
@@ -81,7 +82,7 @@ div#st-2 .st-btn > img {
 
 
 
-<link rel="stylesheet" href="/css/main.min.daa833377fb1636f8cbfa65c601050bb5475623deb7aa6e6fdde94a064a6185d.css" integrity="sha256-2qgzN3&#43;xY2&#43;Mv6ZcYBBQu1R1Yj3reqbm/d6UoGSmGF0=" crossorigin="anonymous" media="screen">
+<link rel="stylesheet" href="/css/main.min.24b21e0909abaf0ad62af509780fea401864367fe10c0d7ffcd89778c9dac466.css" integrity="sha256-JLIeCQmrrwrWKvUJeA/qQBhkNn/hDA1//NiXeMnaxGY=" crossorigin="anonymous" media="screen">
 
 
 
@@ -145,7 +146,9 @@ div#st-2 .st-btn > img {
                 
                   <a class="navbar-item" href="https://www.hitzhangjie.pro/projects/">
                   
+                  
                   项目
+                  
                   
                   </a>
                 
@@ -283,21 +286,25 @@ div#st-2 .st-btn > img {
         
         <div class="container markdown top-pad">
             <p>计算机科学是一门应用科学，几乎所有概念都是为了理解或解决实际问题而生的。协程 (Coroutine) 的出现也不例外。协程的概念，最早可以追溯到写作 COBOL 语言编译器中的技术难题。</p>
-<h2 id="1从磁带到协程">1.从磁带到协程</h2>
+
+<h2 id="1从磁带到协程" class="anchor-link"><a href="#1%e4%bb%8e%e7%a3%81%e5%b8%a6%e5%88%b0%e5%8d%8f%e7%a8%8b">1.从磁带到协程</a></h2>
 <p>COBOL 是最早的高级语言之一。编译器则是高级语言必不可少的一部分。现如今，我们对编译器了解，已经到了可以把核心内容浓缩成一本教科书的程度。然而在六十年代，如何写作高效的语言编译器是那个时代绕不过的现实问题。比如，1960 年夏天，D. E. Knuth 就是利用开车横穿美国去加州理工读研究生的时间，对着 Burroughs 205 机器指令集手写 COBOL 编译器。最早提出“协程”概念的 Melvin Conway 的出发点，也是如何写一个只扫描一遍程序 (one-pass) 的 COBOL 编译器。众多的“高手”纷纷投入编译器书写，可见一门新科学发展之初也是筚路蓝缕</p>
 <p>以现代眼光来看，高级语言编译器实际上是多个步骤组合而成：词法解析，语法解析，语法树构建，以及优化和目标代码生成等等。编译实质上就是从源程序出发，依次将这些步骤的输出作为下一步的输入，最终输出目标代码。在现代计算机上实现这种管道式的架构毫无困难：只需要依次运行，中间结果存为中间文件或放入内存即可。GCC 和 Clang 编译器，以及 ANTLR 构建的编译器，都遵循这样的设计。</p>
 <p>在 Conway 的设计里，词法和语法解析不再是两个独立运行的步骤，而是交织在一起。编译器的控制流在词法和语法解析之间来回切换：当词法模块读入足够多的 token 时，控制流交给语法分析；当语法分析消化完所有 token 后，控制流交给词法分析。词法和语法分别独立维护自身的运行状态。Conway 构建的这种协同工作机制，需要参与者“让出 (yield)”控制流时，记住自身状态，以便在控制流返回时能够从上次让出的位置恢复(resume)执行。简言之，协程的全部精神就在于控制流的主动让出和恢复。我们熟悉的子过程调用可以看作在返回时让出控制流的一种特殊的协程，其内部状态在返回时被丢弃了，因此不存在“恢复”这个操作。</p>
 <p>以现在眼光来看，编译器的实现并不必然需要协程。然而，Conway 用协程实现 COBOL 编译器在当时绝不是舍近求远。</p>
-<h2 id="2自顶向下无需协同">2.自顶向下，无需协同</h2>
+
+<h2 id="2自顶向下无需协同" class="anchor-link"><a href="#2%e8%87%aa%e9%a1%b6%e5%90%91%e4%b8%8b%e6%97%a0%e9%9c%80%e5%8d%8f%e5%90%8c">2.自顶向下，无需协同</a></h2>
 <p>虽然协程是伴随着高级语言诞生的，它却没有能像子过程一样成为通用编程语言的基本元素。</p>
 <p>从 1963 年首次提出到上个世纪九十年代，我们在 ALOGL, Pascal, C, FORTRAN 等主流的命令式编程语言中都没有看到原生的协程支持。协程只稀疏地出现在 Simula，Modular-2 (Pascal 升级版) 和 Smalltalk 等相对小众的语言中。协程作为一个比子进程更加通用的概念，在实际编程却没有取代子进程，这一点不得不说是出乎意外的。如果我们结合当时的程序设计思想看，这一点又是意料之中的：协程是不符合那个时代所崇尚的“自顶向下”的程序设计思想的，自然也就不会成为当时主流的命令式编程语言 (imperative programming) 的一部分。</p>
 <p>正如面向对象的语言是围绕面向对象的开发理念设计一样，命令式编程语言是围绕自顶向下(top-down)的开发理念设计的。在自顶向下的理念指导下，程序被切分为一个主程序和大大小小的子模块，每一个子模块又可能调用更多子模块等等。C 家族语言的 main() 函数就是这种自顶而下思想的体现。在这种理念指导下，各模块形成层次调用关系，而程序设计就是制作这些子过程。在“自顶向下”这种层次化的理念下，具有鲜明层次的子过程调用成为软件系统最自然的组织方式，也是理所当然。相较之下，具有执行中让出和恢复功能的协程在这种架构下无用武之地。可以说，自上而下的设计思想从一开始就排除了对协程的需求。其后的结构化编程(Structural Programming) 思想，更是进一步强化了“子过程调用作为唯一控制结构”的基本假设。在这样的指导思想下，协程一直没有成为当时编程语言的一等公民。</p>
 <p>尽管从提出到上世纪 90 年代，协程在编程语言中没有普遍成为一等公民，但作为一种易于理解的控制结构，协程的概念渗入到了软件设计的许多方面。在结构化编程思想一统天下之时， D. Knuth 曾经专门写过一篇 “Structured Programming with GOTO” 来为 GOTO 语句辩护。在他列出的几条 GOTO 可以方便编程且不破坏程序结构的例子中，有一个（例子7b）就是用 GOTO 实现协程控制结构。相比较之下，不用 GOTO 的“结构化”代码反而失去了良好的结构。当然，追求实际结果的工业界对于学界的这场要不要剔除 GOTO 的争论并不感冒。当时许多语言都附带了不建议使用的 GOTO 语句，显得左右逢源。这方面一个最明显的例子就是 Java：其语言本身预留了 goto 关键字，其编译器却没有提供任何的支持，可以说在 goto 这场争论中做足了中间派。</p>
-<h2 id="3协程的早期应用">3.协程的早期应用</h2>
+
+<h2 id="3协程的早期应用" class="anchor-link"><a href="#3%e5%8d%8f%e7%a8%8b%e7%9a%84%e6%97%a9%e6%9c%9f%e5%ba%94%e7%94%a8">3.协程的早期应用</a></h2>
 <p>实践中，协程的思想频繁应用于任务调度和流处理上。比如，UNIX 管道就可以看成是众多命令间的协同操作。当然，管道的现代实现都是以 pipe() 系统调用和进程间的通信为基础，而非简单遵循协程的 yield/resume 语法。</p>
 <p>许多协同式多任务操作系统，也可以看成协程运行系统。说到协同式多任务系统，一个常见的误区是认为协同式调度比抢占式调度“低级”，因为我们所熟悉的桌面操作系统，都是从协同式调度（如 Windows 3.2， Mac OS 9 等）过渡到抢占式多任务系统的。实际上，调度方式并无高下，完全取决于应用场景。抢占式系统允许操作系统剥夺进程执行权限，抢占控制流，因而天然适合服务器和图形操作系统，因为调度器可以优先保证对用户交互和网络事件的快速响应。当年 Windows 95 刚刚推出的时候，抢占式多任务就被作为一大买点大加宣传。协同式调度则等到进程时间片用完或系统调用时转移执行权限，因此适合实时或分时等等对运行时间有保障的系统。</p>
 <p>另外，抢占式系统依赖于 CPU 的硬件支持。 因为调度器需要“剥夺”进程的执行权，就意味着调度器需要运行在比普通进程高的权限上，否则任何“流氓（rogue）”进程都可以去剥夺其他进程了。只有 CPU 支持了执行权限后，抢占式调度才成为可能。x86 系统从 80386 处理器开始引入 Ring 机制支持执行权限，这也是为何 Windows 95 和 Linux 其实只能运行在 80386 之后的 x86 处理器上的原因。而协同式多任务适用于那些没有处理器权限支持的场景，这些场景包含资源受限的嵌入式系统和实时系统。在这些系统中，程序均以协程的方式运行。调度器负责控制流的让出和恢复。通过协程的模型，无需硬件支持，我们就可以在一个“简陋”的处理器上实现一个多任务的系统。我们见到的许多智能设备，如运动手环，基于硬件限制，都是采用协同调度的架构。</p>
-<h2 id="4协程的复兴和现代形式">4.协程的复兴和现代形式</h2>
+
+<h2 id="4协程的复兴和现代形式" class="anchor-link"><a href="#4%e5%8d%8f%e7%a8%8b%e7%9a%84%e5%a4%8d%e5%85%b4%e5%92%8c%e7%8e%b0%e4%bb%a3%e5%bd%a2%e5%bc%8f">4.协程的复兴和现代形式</a></h2>
 <p>编程思想能否普及开来，很大程度上在于应用场景。协程没有能在自顶向下的世界里立足，却在动态语言世界里大放光彩，这里最显著的例子莫过于 Python 的迭代器和生成器。</p>
 <p>回想一下在 C 的世界里，循环的标准写法是:</p>
 <pre><code>for (i = 0; i &lt; n; ++i) { … }
@@ -308,10 +315,12 @@ div#st-2 .st-btn > img {
 <pre><code>for i in A.Iterator() {func(i)}。
 </code></pre><p>事实上，许多现代语言都支持类似的语法。这种语法抛弃了以 i 变量作为迭代指针的功能，要求迭代器自身能够记住当前迭代位置，调用时返回下一个元素。读者不难看到，这种架构就是我们在文章开始提到的语法分析器的架构。正因为如此，我们可以从协程的角度来理解迭代器：当控制流转换到迭代器上时，迭代器负责生成和返回下一个元素。一旦下一个元素准备就绪，迭代器就让出控制流。这种特殊的迭代器实现在 Python 中又被成为生成器。以协程的角度切入的的好处是设计大大精简。实际上，在 Python 中，生成器本身就是一个普通的函数，和普通函数的唯一不同是它的返回语句是协程风格的 yield。这里，yield 一语双关，既是让出控制流，也是生成迭代器的返回值。</p>
 <p>以上我们仅仅讨论了生成器的最基本的特性。实际上，生成器的强大之处在于我们可以像 UNIX 管道一样串联起来，组成所谓的生成器表达式。如果我们有一个可以生成 1，2，3 … 的生成器 N，则 square = (i **2 for i in N) 就是一个生成平方数的生成器表达式。最终的控制流会在这些串联的部分间转换，无需我们写作复杂的嵌套调用。当然，yield 只是冰山的一角，现代的 Python 语言还充分利用了 yield 关键字构建了 yield from 语句，(yield) 语法等等，使得我们无困难的将协程的思想融入到 Python 编程中去。限于篇幅这里不再展开。</p>
-<h2 id="5协程的实现形式">5.协程的实现形式</h2>
+
+<h2 id="5协程的实现形式" class="anchor-link"><a href="#5%e5%8d%8f%e7%a8%8b%e7%9a%84%e5%ae%9e%e7%8e%b0%e5%bd%a2%e5%bc%8f">5.协程的实现形式</a></h2>
 <p>我们前面说过，协程的思想本质上就是控制流的主动让出和恢复机制。在现代语言里，可以实现协程思想的方法很多，这些实现间并无高下之分，所区别的就是是否适合应用场景。理解这一点，我们对于各种协程的分类，如半对称/对称协程，有栈与无栈协程等具体实现就能提纲挈领，无需在实现细节上纠结。</p>
 <p>协程在实践中的实现方式千差万别，一个简单的原因，是协程本身可以通过许多基本元素构建。基本元素的选取方式不一样，构建出来的协程抽象也就有差别。比如, Lua 语言选取了 create, resume 和 yield 作为基本构建元素, 从调度器层面构建出所谓的“非对程”协程系统。而 Julia 语言绕过调度器，通过在协程内调用 yieldto 函数完成了同样的功能，构建出了一个所谓的对称协程系统。尽管这两个语言使用了同样的 setjmp 库，构造出来的原语却不一样。又比如，许多 C 语言的协程库都使用了 ucontext 库实现，这是因为 POSIX 本身提供了 ucontext 库，不少协程实现是以 ucontext 为蓝本实现的。这些实现，都不可避免地带上了 ucontext 系统的一些基本假设，比如协程间是平等的，一般带有调度器来协调协程等等（比如 libtask 实现，以及云风的 coroutine 库）。Go 语言的一个鲜明特色就是通道（channel）作为一级对象。因此，resume 和 yield 等在其他语言里的原语在 go 里都以通道方式构建。我们还可以举出许多同样的例子。这些风格的差异往往和语言的历史，演化路径，和要解决的问题相关，我们不必苛求他们的协程模型一定要如此这般。</p>
-<h2 id="6总结">6.总结</h2>
+
+<h2 id="6总结" class="anchor-link"><a href="#6%e6%80%bb%e7%bb%93">6.总结</a></h2>
 <p>总的来说，协程为协同任务提供了一种运行时抽象。这种抽象非常适合于协同多任务调度和数据流处理。在现代操作系统和编程语言中，因为用户态线程切换代价比内核态线程小，协程成为了一种轻量级的多任务模型。我们无法预测未来，但是可以看到，协程已经成为许多擅长数据处理的语言的一级对象。随着计算机并行性能的提升，用户态任务调度已经成为一种标准的多任务模型。在这样的大趋势下，协程这个简单且有效的模型就显得更加引人注目。</p>
 <p><strong>参考文献</strong>：</p>
 <p>[1] 徐宥，&ldquo;协程的历史，现在和未来&rdquo;, <a href="https://blog.youxu.info/">https://blog.youxu.info/</a></p>
@@ -361,7 +370,32 @@ div#st-2 .st-btn > img {
     </div>
     
 
+    </br>
+    </br>
     
+    <div class="container disqus">
+        <div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "https-www-hitzhangjie-pro" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+    </div>
+
 
 
                 
@@ -395,7 +429,7 @@ div#st-2 .st-btn > img {
         
 
 
-<script src="https://www.hitzhangjie.pro/js/bundle.23f18222425179f754965a36c9b211bd8cff5e5ab61ee23b52f026cef6699139.js" integrity="sha256-I/GCIkJRefdUllo2ybIRvYz/Xlq2HuI7UvAmzvZpkTk="></script>
+<script src="https://www.hitzhangjie.pro/js/bundle.2ee571453a8980175e10bda96bda797cc9c4e2e745e488df68d50cef5deb57ff.js" integrity="sha256-LuVxRTqJgBdeEL2pa9p5fMnE4udF5IjfaNUM713rV/8="></script>
 
 
 
@@ -411,6 +445,10 @@ if (!doNotTrack) {
 }
 </script>
 <script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
 
 
 

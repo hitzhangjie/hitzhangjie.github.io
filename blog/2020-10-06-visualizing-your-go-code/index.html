@@ -55,6 +55,7 @@ div#st-2 .st-btn > img {
 
 
 
+        
         <meta property="og:title" content="Visualizing Your Go Code - 介绍" />
 <meta property="og:type" content="website" />
 <meta property="og:description" content="Web站点描述"/>
@@ -81,7 +82,7 @@ div#st-2 .st-btn > img {
 
 
 
-<link rel="stylesheet" href="/css/main.min.daa833377fb1636f8cbfa65c601050bb5475623deb7aa6e6fdde94a064a6185d.css" integrity="sha256-2qgzN3&#43;xY2&#43;Mv6ZcYBBQu1R1Yj3reqbm/d6UoGSmGF0=" crossorigin="anonymous" media="screen">
+<link rel="stylesheet" href="/css/main.min.24b21e0909abaf0ad62af509780fea401864367fe10c0d7ffcd89778c9dac466.css" integrity="sha256-JLIeCQmrrwrWKvUJeA/qQBhkNn/hDA1//NiXeMnaxGY=" crossorigin="anonymous" media="screen">
 
 
 
@@ -145,7 +146,9 @@ div#st-2 .st-btn > img {
                 
                   <a class="navbar-item" href="https://www.hitzhangjie.pro/projects/">
                   
+                  
                   项目
+                  
                   
                   </a>
                 
@@ -300,11 +303,13 @@ div#st-2 .st-btn > img {
    
         
         <div class="container markdown top-pad">
-            <h3 id="代码可读性">代码可读性</h3>
+            
+<h3 id="代码可读性" class="anchor-link"><a href="#%e4%bb%a3%e7%a0%81%e5%8f%af%e8%af%bb%e6%80%a7">代码可读性</a></h3>
 <p>作为一名开发人员，代码可读性是我们常常挂在嘴边的。代码写出来除了让计算机能够正常执行以外，终究还是要让人能够理解它，后续才能做进一步的维护工作。如果代码写出来，只有它的作者能够看得懂，那只能说明这个作者逻辑表达能力有问题，透过其代码难以看出解决问题的思路。这是软件工程中要尽力避免的。</p>
 <p>在软件工程方法论指导下，为了尽可能让代码可读性达标，我们往往会根据一些最佳实践拟定一些大多数人认可的标准，让所有开发人员遵守，然后通过代码评审、代码规范检查、持续集成交付流水线等综合起来，以尽可能逼近这一目标。当绝大多数人能够在约定的框架下，保质保量提交代码时，我们已经在代码可读性、可维护性方面前进了一大步。</p>
 <p>然而，这样足够了吗？我认为还不够。</p>
-<h3 id="代码是思维的表达">代码是思维的表达</h3>
+
+<h3 id="代码是思维的表达" class="anchor-link"><a href="#%e4%bb%a3%e7%a0%81%e6%98%af%e6%80%9d%e7%bb%b4%e7%9a%84%e8%a1%a8%e8%be%be">代码是思维的表达</a></h3>
 <p>代码，不过是通过一种大家都理解的语言书写出来的篇章。就好比写文章一样，要有中心思想，然后围绕中心思想要展开层层描述。写代码一样，中心思想就是我们要解决的问题，围绕中心思想的层层描述就是我们解决问题的思路。所以，代码没有什么神秘的，它是人类思维的表达。</p>
 <p>我们是如何快速理解一篇文章的呢？</p>
 <ul>
@@ -324,7 +329,8 @@ div#st-2 .st-btn > img {
 <li>同时，我们还会提供测试用例，来验证上述方案的正确性。</li>
 </ul>
 <p>有没有觉得很相似，或许我们应该采用已有的读书的经验来辅助更好地理解程序？</p>
-<h3 id="oop思想认识世界">OOP思想认识世界</h3>
+
+<h3 id="oop思想认识世界" class="anchor-link"><a href="#oop%e6%80%9d%e6%83%b3%e8%ae%a4%e8%af%86%e4%b8%96%e7%95%8c">OOP思想认识世界</a></h3>
 <p>代码，和文章不同的是，它虽然有明显的程序构造，但是却没有明显的段落之分。</p>
 <p>那我如何才能借鉴多年来养成的还不错的阅读习惯，来帮助我理解代码呢？当然不能盲目套用，不过俗话说，能工摹形，巧匠窃意，思想很多地方还是可以相通的。</p>
 <p>如何更好地理解这个世界，对各种各样的问题进行抽象呢？比如一辆摩托车，它有离合器、发动机、链条、轮毂、轮胎、减震、油箱、排气等很多部件构成，我听说宝马水鸟电子控制很厉害，可以实现无人驾驶，那可是两轮的400多斤的大机器。那它的电子控制系统怎么做到的？至少要能理解一个摩托车有核心部件，整体运转起来如何理解其状态，如何控制个别部件以影响其他部件进而控制整体状态。那它如何控制部件呢？电子操作或机械操作。</p>
@@ -337,12 +343,14 @@ div#st-2 .st-btn > img {
 </ul>
 <p>了解一个人，其实你不需要深入他的家庭本身去了解，看看他天天接触什么人，说些什么话，你也就大致清楚了。感兴趣就继续了解，不感兴趣也就拉倒了。我想绝大多数人都不是窥视狂，在拥有一定判断力的基础上，通过一些局部的信息是可以了解大致的整体信息的。</p>
 <p>理解代码有相同之处？</p>
-<h3 id="流程控制--组件交互">流程控制 + 组件交互</h3>
+
+<h3 id="流程控制--组件交互" class="anchor-link"><a href="#%e6%b5%81%e7%a8%8b%e6%8e%a7%e5%88%b6--%e7%bb%84%e4%bb%b6%e4%ba%a4%e4%ba%92">流程控制 + 组件交互</a></h3>
 <p>某种程度上，我认为理解代码也有相似之处。</p>
 <p>如果能够拎出那些比较重要的对象（objects），以及他们之间的通信（function call, chan send/recv），或者他们的私密信息（注释），是不是也能够大致有个了解呢？</p>
 <p>如果想更深入了解下，加上事情的脉络（控制结构，if-else, switch-case, for-loop）呢？</p>
 <p>其他信息? 我相信还有其他有用的有用信息，能够通过一些更加有效率的方式呈现出来。</p>
-<h3 id="认识-goast">认识 go/ast</h3>
+
+<h3 id="认识-goast" class="anchor-link"><a href="#%e8%ae%a4%e8%af%86-goast">认识 go/ast</a></h3>
 <p>计算机编程语言，有多少种？我认为只有一种，就是人类可以理解的语言。有趣的是，编程语言之多可以覆盖元素周期表，不信来瞧瞧。</p>
 <table>
 <tr>
@@ -390,12 +398,14 @@ div#st-2 .st-btn > img {
 <li>其他；</li>
 </ul>
 <p>可见了解 go/ast，将有助于我们更好地理解代码，并作出一些更有创意的工具。</p>
-<h3 id="微服务可视化">微服务可视化</h3>
+
+<h3 id="微服务可视化" class="anchor-link"><a href="#%e5%be%ae%e6%9c%8d%e5%8a%a1%e5%8f%af%e8%a7%86%e5%8c%96">微服务可视化</a></h3>
 <p>我正在调研一些业界流行的微服务框架，吸收一些比较好的创意，在我从事的团队，现在基本都是采用微服务架构设计、开发、部署了，某种程度上，微服务一点都不微，有些逻辑也很复杂，而且业务代码真的没什么好看的。绝大多数时候，我希望1min了解其逻辑，超过10min我还看不懂的，心里已经开始在犯嘀咕了，这写的啥？</p>
 <p>是我“没耐心”？我倒是不这么认为，如果一个操作我每天要人肉重复几十遍，我就得想办法“偷偷懒”提高下效率了。身为工程师，卖肉是耻辱。</p>
 <p>再回想一下哪些语言构造比较重要，rpc、对象之间的通信（方法调用）、包方法调用、goroutine之间通信（chan send/recv），还有控制逻辑if-else、switch-case、for-loop。</p>
 <p>我们可以先从实用又简单点的开始，比如rpc、对象方法调用、包方法调用，其他的后续再完善。OK!</p>
-<h4 id="找到关心的入口点">找到关心的入口点</h4>
+
+<h4 id="找到关心的入口点" class="anchor-link"><a href="#%e6%89%be%e5%88%b0%e5%85%b3%e5%bf%83%e7%9a%84%e5%85%a5%e5%8f%a3%e7%82%b9">找到关心的入口点</a></h4>
 <p>按照一些微服务框架的编码风格，通常main.go里面会注册service接口级实现，这里就可以作为一个入口，我们可以找出AST中main.go中注册的所有service及其实现，并分析service接口中定义的方法，然后再将service实现中的对应方法作为入口点。</p>
 <p>找到这些入口点之后，我们将可以从AST中遍历所有的方法定义，直到匹配到receiver type、method signature匹配的定义。</p>
 <p>file: main.go</p>
@@ -409,20 +419,24 @@ div#st-2 .st-btn > img {
 		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
 	}
 }
-</code></pre></div><h4 id="从入口点处开始层层展开">从入口点处开始层层展开</h4>
+</code></pre></div>
+<h4 id="从入口点处开始层层展开" class="anchor-link"><a href="#%e4%bb%8e%e5%85%a5%e5%8f%a3%e7%82%b9%e5%a4%84%e5%bc%80%e5%a7%8b%e5%b1%82%e5%b1%82%e5%b1%95%e5%bc%80">从入口点处开始层层展开</a></h4>
 <p>每个函数在AST中都有对应的结构，函数体内包括的每一条语句也是这样，那还有什么不能干的？</p>
 <p>我们可以递归地将一条语句层层展开，抽丝剥茧，直到看到关心的脉络。刚才我们说先只考虑rpc、对象方法调用、包导出函数调用就可以了，这类基本可以形式化成<code>xxx.Func(args...)</code>的形式，就覆盖了上面这几种情况。</p>
 <p>只要碰到这样的语句，我们就记录一下，并将其递归地展开，展开过程中依然记录所有<code>xxx.Func(args...)</code>形式的函数调用……直到没什么可继续展开为止。</p>
 <p>这样，我们就可以大致实现最初的设想：看到对象之间的所有通信过程。</p>
-<h4 id="增加通信过程的说明信息">增加通信过程的说明信息</h4>
+
+<h4 id="增加通信过程的说明信息" class="anchor-link"><a href="#%e5%a2%9e%e5%8a%a0%e9%80%9a%e4%bf%a1%e8%bf%87%e7%a8%8b%e7%9a%84%e8%af%b4%e6%98%8e%e4%bf%a1%e6%81%af">增加通信过程的说明信息</a></h4>
 <p>在go代码规范里面，对于导出方法、导出函数、导出类型通常都是需要添加godoc注释的，这些注释本身就具有一定的说明性。那当我们通过对象间的调用关系进行可视化时，是否可以将这些注释信息添加上，以提供更好的说明呢？当然。</p>
-<h4 id="何时何地以及如何触发">何时何地以及如何触发</h4>
+
+<h4 id="何时何地以及如何触发" class="anchor-link"><a href="#%e4%bd%95%e6%97%b6%e4%bd%95%e5%9c%b0%e4%bb%a5%e5%8f%8a%e5%a6%82%e4%bd%95%e8%a7%a6%e5%8f%91">何时何地以及如何触发</a></h4>
 <p>何时何地以及如何触发了特定的函数调用？</p>
 <ul>
 <li>何时何地？filename:lineno:columnno，每一个ast对象都有一个Pos()方法，配合<code>token.Position(astobj.Pos())</code>就可以计算出源码位置；</li>
 <li>如何触发？函数调用时的参数信息，函数调用发生的作用域（function scope）；</li>
 </ul>
-<h4 id="put-it-together">Put It Together</h4>
+
+<h4 id="put-it-together" class="anchor-link"><a href="#put-it-together">Put It Together</a></h4>
 <p>当我们将上述提及的操作全部组织在一起，就可以实现大致如下效果，篇幅以及时间原因，这里就不再一步步详细描述代码逻辑了。</p>
 <table>
 <tr>
@@ -482,7 +496,32 @@ div#st-2 .st-btn > img {
     </div>
     
 
+    </br>
+    </br>
     
+    <div class="container disqus">
+        <div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "https-www-hitzhangjie-pro" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+    </div>
+
 
 
                 
@@ -516,7 +555,7 @@ div#st-2 .st-btn > img {
         
 
 
-<script src="https://www.hitzhangjie.pro/js/bundle.23f18222425179f754965a36c9b211bd8cff5e5ab61ee23b52f026cef6699139.js" integrity="sha256-I/GCIkJRefdUllo2ybIRvYz/Xlq2HuI7UvAmzvZpkTk="></script>
+<script src="https://www.hitzhangjie.pro/js/bundle.2ee571453a8980175e10bda96bda797cc9c4e2e745e488df68d50cef5deb57ff.js" integrity="sha256-LuVxRTqJgBdeEL2pa9p5fMnE4udF5IjfaNUM713rV/8="></script>
 
 
 
@@ -532,6 +571,10 @@ if (!doNotTrack) {
 }
 </script>
 <script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
 
 
 

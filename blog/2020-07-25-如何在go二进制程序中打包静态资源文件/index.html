@@ -55,6 +55,7 @@ div#st-2 .st-btn > img {
 
 
 
+        
         <meta property="og:title" content="如何在go二进制程序中打包静态资源文件 - 介绍" />
 <meta property="og:type" content="website" />
 <meta property="og:description" content="Web站点描述"/>
@@ -81,7 +82,7 @@ div#st-2 .st-btn > img {
 
 
 
-<link rel="stylesheet" href="/css/main.min.daa833377fb1636f8cbfa65c601050bb5475623deb7aa6e6fdde94a064a6185d.css" integrity="sha256-2qgzN3&#43;xY2&#43;Mv6ZcYBBQu1R1Yj3reqbm/d6UoGSmGF0=" crossorigin="anonymous" media="screen">
+<link rel="stylesheet" href="/css/main.min.24b21e0909abaf0ad62af509780fea401864367fe10c0d7ffcd89778c9dac466.css" integrity="sha256-JLIeCQmrrwrWKvUJeA/qQBhkNn/hDA1//NiXeMnaxGY=" crossorigin="anonymous" media="screen">
 
 
 
@@ -145,7 +146,9 @@ div#st-2 .st-btn > img {
                 
                   <a class="navbar-item" href="https://www.hitzhangjie.pro/projects/">
                   
+                  
                   项目
+                  
                   
                   </a>
                 
@@ -282,10 +285,12 @@ div#st-2 .st-btn > img {
    
         
         <div class="container markdown top-pad">
-            <h1 id="why">Why?</h1>
+            
+<h1 id="why" class="anchor-link"><a href="#why">Why?</a></h1>
 <p>有时我们希望在go二进制程序中打包一些静态资源文件，目的可能有多种，比较常见的是为了简化安装。通常我们安装一个go编写的工具，更倾向于使用 <code>go get $repo</code> 的方式来完成，这似乎已经成为了一种共识。当然，也有些项目还依赖一些静态资源文件，这些静态资源文件是不会被自动安装的，就需要借助其他方式来完成静态资源的安装，比如通过install.sh脚本，后者Makefile构建脚本等等。</p>
 <p>今天，我想讨论下，如何简单快速地支持静态资源打包到二进制程序中，以及在二进制程序中对这些静态资源加以引用。</p>
-<h1 id="how">How?</h1>
+
+<h1 id="how" class="anchor-link"><a href="#how">How?</a></h1>
 <p>github上已经有不少开发者在探索，方法其实都比较雷同，大致思路就是：</p>
 <ul>
 <li>读取静态资源文件，转换成bytes数据；</li>
@@ -302,8 +307,10 @@ div#st-2 .st-btn > img {
 <p>而且，go官方是有意来支持打包静态资源的，关于这一点，已经有issue在跟进讨论：https://github.com/golang/go/issues/35950。</p>
 <p>尽管现在的状态还是Proposal-Hold状态，但是我觉得这个feature的到来也不会等很久了，anyway，我不想在这些即将被淘汰的三方工具上浪费学习的时间、改写代码的时间。</p>
 <p>所以呢，为什么不简单一点，自己写一个当下比较适用项目本身的？写这个东西花不了二十分钟时间！</p>
-<h1 id="lets-do-it">Let&rsquo;s Do it!</h1>
-<h2 id="功能分析">功能分析</h2>
+
+<h1 id="lets-do-it" class="anchor-link"><a href="#lets-do-it">Let&rsquo;s Do it!</a></h1>
+
+<h2 id="功能分析" class="anchor-link"><a href="#%e5%8a%9f%e8%83%bd%e5%88%86%e6%9e%90">功能分析</a></h2>
 <p>我理解实现打包静态资源文件，有这么几个点需要考虑：</p>
 <ul>
 <li>提供一个小工具，通过它可以反复执行类似的静态资源打包的操作；</li>
@@ -312,7 +319,8 @@ div#st-2 .st-btn > img {
 <li>静态资源文件可能有很多，希望能对文件内容进行压缩，以便减小go binary文件尺寸；</li>
 <li>通常是本地组织好静态资源文件，写代码、测试ok、最后发布前希望将其打包到go binary，打包、解包、使用静态资源要最小化项目代码修改；</li>
 </ul>
-<h2 id="功能实现">功能实现</h2>
+
+<h2 id="功能实现" class="anchor-link"><a href="#%e5%8a%9f%e8%83%bd%e5%ae%9e%e7%8e%b0">功能实现</a></h2>
 <p>我们先实现这个打包静态资源的工具，需要这几个参数：input、output，分别代表输入文件（or 目录）、输出文件名（go文件），gopkg代表输出go文件的包名（默认gobin）。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
 
@@ -479,7 +487,32 @@ var StaticGo <span style="color:#f92672">=</span> <span style="color:#f92672">[]
     </div>
     
 
+    </br>
+    </br>
     
+    <div class="container disqus">
+        <div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "https-www-hitzhangjie-pro" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+    </div>
+
 
 
                 
@@ -513,7 +546,7 @@ var StaticGo <span style="color:#f92672">=</span> <span style="color:#f92672">[]
         
 
 
-<script src="https://www.hitzhangjie.pro/js/bundle.23f18222425179f754965a36c9b211bd8cff5e5ab61ee23b52f026cef6699139.js" integrity="sha256-I/GCIkJRefdUllo2ybIRvYz/Xlq2HuI7UvAmzvZpkTk="></script>
+<script src="https://www.hitzhangjie.pro/js/bundle.2ee571453a8980175e10bda96bda797cc9c4e2e745e488df68d50cef5deb57ff.js" integrity="sha256-LuVxRTqJgBdeEL2pa9p5fMnE4udF5IjfaNUM713rV/8="></script>
 
 
 
@@ -529,6 +562,10 @@ if (!doNotTrack) {
 }
 </script>
 <script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
 
 
 

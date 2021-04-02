@@ -55,6 +55,7 @@ div#st-2 .st-btn > img {
 
 
 
+        
         <meta property="og:title" content="学习Apache Ant - 介绍" />
 <meta property="og:type" content="website" />
 <meta property="og:description" content="Web站点描述"/>
@@ -81,7 +82,7 @@ div#st-2 .st-btn > img {
 
 
 
-<link rel="stylesheet" href="/css/main.min.daa833377fb1636f8cbfa65c601050bb5475623deb7aa6e6fdde94a064a6185d.css" integrity="sha256-2qgzN3&#43;xY2&#43;Mv6ZcYBBQu1R1Yj3reqbm/d6UoGSmGF0=" crossorigin="anonymous" media="screen">
+<link rel="stylesheet" href="/css/main.min.24b21e0909abaf0ad62af509780fea401864367fe10c0d7ffcd89778c9dac466.css" integrity="sha256-JLIeCQmrrwrWKvUJeA/qQBhkNn/hDA1//NiXeMnaxGY=" crossorigin="anonymous" media="screen">
 
 
 
@@ -145,7 +146,9 @@ div#st-2 .st-btn > img {
                 
                   <a class="navbar-item" href="https://www.hitzhangjie.pro/projects/">
                   
+                  
                   项目
+                  
                   
                   </a>
                 
@@ -296,12 +299,14 @@ div#st-2 .st-btn > img {
         
         <div class="container markdown top-pad">
             <p>Apache Ant是由Apache开发的基于Java的构建工具，本文对tutorialspoint上面的Apache Ant教程进行简要总结。</p>
-<h3 id="1-为什么需要这样一个构建工具">1 为什么需要这样一个构建工具？</h3>
+
+<h3 id="1-为什么需要这样一个构建工具" class="anchor-link"><a href="#1-%e4%b8%ba%e4%bb%80%e4%b9%88%e9%9c%80%e8%a6%81%e8%bf%99%e6%a0%b7%e4%b8%80%e4%b8%aa%e6%9e%84%e5%bb%ba%e5%b7%a5%e5%85%b7">1 为什么需要这样一个构建工具？</a></h3>
 <p>Ant是Another Neat Tool的缩写形式，为什么需要这样一个工具呢？跟它的名字一样，就是希望我们开发人员的工作能够更加neat！</p>
 <p>开发人员有些琐碎的、重复性的工作，包括：编译代码、打包可执行程序、部署程序到测试服务器、测试改变、拷贝代码到不同的地方。Ant可以帮助我们自动化上面列举的这几个步骤，简化我们的工作。</p>
 <p>Ant是tomcat的作者开发出来的，最初适用于构建tomcat的，并且作为tomcat的一部分，之所以开发它是为了弥补当初Apache Make工具（没有在apache项目列表中搜索到该项目）的不足之处，2000年的时候Ant从tomcat项目中独立出来作为一个独立的项目开发。</p>
 <p>至于Apache Ant的优势具体在哪，这个我们最后在给出来，目的是让大家结合自身工作经历，根据Apache Ant的功能自己主动去发现它的优势。</p>
-<h3 id="2-ant-buildxml">2 Ant build.xml</h3>
+
+<h3 id="2-ant-buildxml" class="anchor-link"><a href="#2-ant-buildxml">2 Ant build.xml</a></h3>
 <p>Ant的构建脚本默认是build.xml，也可以用其他的文件名。build.xml里面通常包括tag <project name="" default="" basedir=""/>，这里name指定了工程的名字，default是默认名字，basedir指定了工程的根目录。另外还包括多个tag <target name="" depends=""/>，其中name指定了目标动作的名字，例如compile、package、clean等等，它们之间存在某种依赖关系，可以通过depends指定。例如package依赖clean、compile，就可以指定depends=&quot;clean,package&rdquo;，注意依赖先后顺序，不要写成depends=&quot;package,clean&rdquo;。</p>
 <p>示例1：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">&lt;?</span>xml version<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;1.0&#34;</span><span style="color:#f92672">?&gt;</span>
@@ -384,7 +389,8 @@ div#st-2 .st-btn > img {
    <span style="color:#f92672">&lt;/</span>target<span style="color:#f92672">&gt;</span>
 <span style="color:#f92672">&lt;/</span>project<span style="color:#f92672">&gt;</span>
 </code></pre></div><p>这样ant构建过程中会输出当前ant使用的版本以及站点名称，其中ant.version是ant的预定义变量，sitename是我们自己定义的变量。</p>
-<h3 id="3-ant-buildproperties">3 Ant build.properties</h3>
+
+<h3 id="3-ant-buildproperties" class="anchor-link"><a href="#3-ant-buildproperties">3 Ant build.properties</a></h3>
 <p>像上线这样在build.xml里面创建自定义变量的方式，如果自定义变量少的话还可以，当面对一个大型的工程有很多自定义变量的时候，直接在build.xml里面定义变量就困难了，那怎么办呢？
 我们可以在一个单独的属性配置文件中对需要用到的自定义属性进行配置，然后在build.xml里面进行引用。这个默认的属性配置文件是build.properties。</p>
 <p>示例1：</p>
@@ -403,7 +409,8 @@ div#st-2 .st-btn > img {
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#960050;background-color:#1e0010">#</span> The Site Name
 sitename<span style="color:#f92672">=</span>www<span style="color:#f92672">.</span><span style="color:#a6e22e">tutorialspoint</span><span style="color:#f92672">.</span><span style="color:#a6e22e">com</span>
 buildversion<span style="color:#f92672">=</span>3<span style="color:#f92672">.</span><span style="color:#a6e22e">3</span><span style="color:#f92672">.</span><span style="color:#a6e22e">2</span>
-</code></pre></div><h3 id="4-ant-data-types">4 Ant Data Types</h3>
+</code></pre></div>
+<h3 id="4-ant-data-types" class="anchor-link"><a href="#4-ant-data-types">4 Ant Data Types</a></h3>
 <p>不要将这里的数据类型跟编程语言中的数据类型混为一谈，这里说要描述的Ant提供的数据类型代表了Ant提供的一种service。</p>
 <p>fileset类型代表了一系列文件集合，通过它可以包括某些文件或者排除某些文件，包括、排除文件是通过模式匹配的方式来实现。</p>
 <p>示例1：</p>
@@ -472,7 +479,8 @@ buildversion<span style="color:#f92672">=</span>3<span style="color:#f92672">.</
    <span style="color:#f92672">&lt;/</span>fileset<span style="color:#f92672">&gt;</span>
 <span style="color:#f92672">&lt;/</span>path<span style="color:#f92672">&gt;</span>
 </code></pre></div><p>上面这个示例就是将${J2EE_HOME}/${j2ee.jar}中的所有*.jar都看做是一个classpath entry，然后用系统对应的classpath分隔符进行连接，最终构成一个完整的classpath。</p>
-<h3 id="5-ant的一个简单构建示例">5 Ant的一个简单构建示例</h3>
+
+<h3 id="5-ant的一个简单构建示例" class="anchor-link"><a href="#5-ant%e7%9a%84%e4%b8%80%e4%b8%aa%e7%ae%80%e5%8d%95%e6%9e%84%e5%bb%ba%e7%a4%ba%e4%be%8b">5 Ant的一个简单构建示例</a></h3>
 <p>下面看一个Ant构建的完整示例，首先要创建一个工程，工程结构如下：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">+---</span>db                <span style="color:#75715e">// 数据库脚本目录
 </span><span style="color:#75715e"></span><span style="color:#f92672">+---</span>src               <span style="color:#75715e">// 源代码目录
@@ -523,7 +531,8 @@ buildversion<span style="color:#f92672">=</span>3<span style="color:#f92672">.</
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">&lt;</span>property name<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;src.dir&#34;</span> value<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;src&#34;</span><span style="color:#f92672">/&gt;</span>
 <span style="color:#f92672">&lt;</span>property name<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;web.dir&#34;</span> value<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;war&#34;</span><span style="color:#f92672">/&gt;</span>
 <span style="color:#f92672">&lt;</span>property name<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;build.dir&#34;</span> value<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;${web.dir}/WEB-INF/classes&#34;</span><span style="color:#f92672">/&gt;</span>
-</code></pre></div><h3 id="6-ant构建文档">6 Ant构建文档</h3>
+</code></pre></div>
+<h3 id="6-ant构建文档" class="anchor-link"><a href="#6-ant%e6%9e%84%e5%bb%ba%e6%96%87%e6%a1%a3">6 Ant构建文档</a></h3>
 <p>Ant可以为工程生成文档，这个是利用javadoc命令行工具来对某些包某些类某些访问类型修饰符对应的成员或者方法根据源代码中添加的javadoc注释来生成项目API文档。下面是一个示例。</p>
 <p>示例1：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">&lt;</span>target name <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;generate-javadoc&#34;</span><span style="color:#f92672">&gt;</span>
@@ -543,7 +552,8 @@ buildversion<span style="color:#f92672">=</span>3<span style="color:#f92672">.</
    
    <span style="color:#f92672">&lt;</span>echo message <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;java doc has been generated!&#34;</span> <span style="color:#f92672">/&gt;</span>
 <span style="color:#f92672">&lt;/</span>target<span style="color:#f92672">&gt;</span>
-</code></pre></div><h3 id="7-ant构建jar包">7 Ant构建jar包</h3>
+</code></pre></div>
+<h3 id="7-ant构建jar包" class="anchor-link"><a href="#7-ant%e6%9e%84%e5%bb%bajar%e5%8c%85">7 Ant构建jar包</a></h3>
 <p>Ant将classes达成jar包示例，例如将faxapp/util下面的除Test.class之外的所有文件达成一个jar包${web.dir}/lib/util.jar。</p>
 <p>示例1：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">&lt;</span>jar destfile <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;${web.dir}/lib/util.jar&#34;</span>
@@ -573,7 +583,8 @@ buildversion<span style="color:#f92672">=</span>3<span style="color:#f92672">.</
       <span style="color:#f92672">&lt;/</span>manifest<span style="color:#f92672">&gt;</span>
    <span style="color:#f92672">&lt;/</span>jar<span style="color:#f92672">&gt;</span>
 <span style="color:#f92672">&lt;/</span>target<span style="color:#f92672">&gt;</span>
-</code></pre></div><h3 id="8-ant构建war包">8 Ant构建war包</h3>
+</code></pre></div>
+<h3 id="8-ant构建war包" class="anchor-link"><a href="#8-ant%e6%9e%84%e5%bb%bawar%e5%8c%85">8 Ant构建war包</a></h3>
 <p>除了上面提到的构建jar包之外，Ant也可以用来构建war包，我们这里只给出一个详细的war包构建配置文件，不再详细展开。</p>
 <p>示例1：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">&lt;</span>target name<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;build-war&#34;</span><span style="color:#f92672">&gt;</span>
@@ -590,7 +601,8 @@ buildversion<span style="color:#f92672">=</span>3<span style="color:#f92672">.</
    <span style="color:#f92672">&lt;/</span>war<span style="color:#f92672">&gt;</span>
    
 <span style="color:#f92672">&lt;/</span>target<span style="color:#f92672">&gt;</span>
-</code></pre></div><h3 id="9-ant的一个完整buildxml配置">9 Ant的一个完整build.xml配置</h3>
+</code></pre></div>
+<h3 id="9-ant的一个完整buildxml配置" class="anchor-link"><a href="#9-ant%e7%9a%84%e4%b8%80%e4%b8%aa%e5%ae%8c%e6%95%b4buildxml%e9%85%8d%e7%bd%ae">9 Ant的一个完整build.xml配置</a></h3>
 <p>这里给出了一个综合配置示例，对前面说描述的内容进行了一下综合。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">&lt;?</span>xml version <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;1.0&#34;</span><span style="color:#f92672">?&gt;</span>
 <span style="color:#f92672">&lt;</span>project name <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;fax&#34;</span> basedir <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;.&#34;</span> <span style="color:#66d9ef">default</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;usage&#34;</span><span style="color:#f92672">&gt;</span>
@@ -674,7 +686,8 @@ buildversion<span style="color:#f92672">=</span>3<span style="color:#f92672">.</
    <span style="color:#f92672">&lt;/</span>target<span style="color:#f92672">&gt;</span>
    
 <span style="color:#f92672">&lt;/</span>project<span style="color:#f92672">&gt;</span>
-</code></pre></div><h3 id="10-ant的一个更完整配置示例">10 Ant的一个更完整配置示例</h3>
+</code></pre></div>
+<h3 id="10-ant的一个更完整配置示例" class="anchor-link"><a href="#10-ant%e7%9a%84%e4%b8%80%e4%b8%aa%e6%9b%b4%e5%ae%8c%e6%95%b4%e9%85%8d%e7%bd%ae%e7%a4%ba%e4%be%8b">10 Ant的一个更完整配置示例</a></h3>
 <p>这里针对war包与tomcat的结合给出一个配置示例。</p>
 <p>build.properties：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#960050;background-color:#1e0010">#</span> Ant properties <span style="color:#66d9ef">for</span> building the springapp
@@ -800,7 +813,8 @@ tomcat<span style="color:#f92672">.</span><span style="color:#a6e22e">manager</s
 |StartTask|Starts a web application. Class Name: org.apache.catalina.ant.StartTask|
 |StopTask|Stops a web application. Class Name: org.apache.catalina.ant.StopTask|
 |ReloadTask|Reloads a web application without stopping. Class Name: org.apache.catalina.ant.ReloadTask|</p>
-<h3 id="11-ant执行程序">11 Ant执行程序</h3>
+
+<h3 id="11-ant执行程序" class="anchor-link"><a href="#11-ant%e6%89%a7%e8%a1%8c%e7%a8%8b%e5%ba%8f">11 Ant执行程序</a></h3>
 <p>下面给出一个Ant传递参数并执行程序的配置示例。</p>
 <p>java类：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">NotifyAdministrator</span>
@@ -825,7 +839,8 @@ tomcat<span style="color:#f92672">.</span><span style="color:#a6e22e">manager</s
       <span style="color:#f92672">&lt;/</span>java<span style="color:#f92672">&gt;</span>
    <span style="color:#f92672">&lt;/</span>target<span style="color:#f92672">&gt;</span>
 <span style="color:#f92672">&lt;/</span>project<span style="color:#f92672">&gt;</span>
-</code></pre></div><h3 id="12-扩展ant">12 扩展Ant</h3>
+</code></pre></div>
+<h3 id="12-扩展ant" class="anchor-link"><a href="#12-%e6%89%a9%e5%b1%95ant">12 扩展Ant</a></h3>
 <p>Ant中有一些自定义的task，但是我们也可以自己定义task并在target中使用，下面是一个示例。</p>
 <p>java代码：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">package</span> com.tutorialspoint.ant<span style="color:#f92672">;</span>
@@ -847,7 +862,8 @@ tomcat<span style="color:#f92672">.</span><span style="color:#a6e22e">manager</s
    <span style="color:#f92672">&lt;</span>taskdef name<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;custom&#34;</span> classname<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;com.tutorialspoint.ant.MyTask&#34;</span> <span style="color:#f92672">/&gt;</span>
    <span style="color:#f92672">&lt;</span>custom message<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Hello World!&#34;</span><span style="color:#f92672">/&gt;</span>
 <span style="color:#f92672">&lt;/</span>target<span style="color:#f92672">&gt;</span>
-</code></pre></div><h3 id="13-在ide中使用ant">13 在IDE中使用Ant</h3>
+</code></pre></div>
+<h3 id="13-在ide中使用ant" class="anchor-link"><a href="#13-%e5%9c%a8ide%e4%b8%ad%e4%bd%bf%e7%94%a8ant">13 在IDE中使用Ant</a></h3>
 <p>在IDE中使用Ant也是一种不错的选择，目前的主流开发工具Eclipse和Idea都继承了Ant构建插件，开发人员可以根据自己的情况选择使用。</p>
 <p>参考内容：</p>
 <p>[<a href="https://www.tutorialspoint.com/ant/index.htm">1</a>] TutorialsPoint: Learn Apache Ant</p>
@@ -897,7 +913,32 @@ tomcat<span style="color:#f92672">.</span><span style="color:#a6e22e">manager</s
     </div>
     
 
+    </br>
+    </br>
     
+    <div class="container disqus">
+        <div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "https-www-hitzhangjie-pro" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+    </div>
+
 
 
                 
@@ -931,7 +972,7 @@ tomcat<span style="color:#f92672">.</span><span style="color:#a6e22e">manager</s
         
 
 
-<script src="https://www.hitzhangjie.pro/js/bundle.23f18222425179f754965a36c9b211bd8cff5e5ab61ee23b52f026cef6699139.js" integrity="sha256-I/GCIkJRefdUllo2ybIRvYz/Xlq2HuI7UvAmzvZpkTk="></script>
+<script src="https://www.hitzhangjie.pro/js/bundle.2ee571453a8980175e10bda96bda797cc9c4e2e745e488df68d50cef5deb57ff.js" integrity="sha256-LuVxRTqJgBdeEL2pa9p5fMnE4udF5IjfaNUM713rV/8="></script>
 
 
 
@@ -947,6 +988,10 @@ if (!doNotTrack) {
 }
 </script>
 <script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
 
 
 

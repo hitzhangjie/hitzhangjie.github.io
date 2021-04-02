@@ -55,6 +55,7 @@ div#st-2 .st-btn > img {
 
 
 
+        
         <meta property="og:title" content="如何高效开发一个命令行工具 - 介绍" />
 <meta property="og:type" content="website" />
 <meta property="og:description" content="Web站点描述"/>
@@ -81,7 +82,7 @@ div#st-2 .st-btn > img {
 
 
 
-<link rel="stylesheet" href="/css/main.min.daa833377fb1636f8cbfa65c601050bb5475623deb7aa6e6fdde94a064a6185d.css" integrity="sha256-2qgzN3&#43;xY2&#43;Mv6ZcYBBQu1R1Yj3reqbm/d6UoGSmGF0=" crossorigin="anonymous" media="screen">
+<link rel="stylesheet" href="/css/main.min.24b21e0909abaf0ad62af509780fea401864367fe10c0d7ffcd89778c9dac466.css" integrity="sha256-JLIeCQmrrwrWKvUJeA/qQBhkNn/hDA1//NiXeMnaxGY=" crossorigin="anonymous" media="screen">
 
 
 
@@ -145,7 +146,9 @@ div#st-2 .st-btn > img {
                 
                   <a class="navbar-item" href="https://www.hitzhangjie.pro/projects/">
                   
+                  
                   项目
+                  
                   
                   </a>
                 
@@ -269,7 +272,8 @@ div#st-2 .st-btn > img {
         <div class="container markdown top-pad">
             <p>我经常会开发一些命令行工具来协助处理一些事情，如开发一个代码生成工具快速生成服务代码，或者开发一个工具来方便管理github上的工具，或者开发一个工具rm来替换掉不安全的rm，等等。</p>
 <p>命令行工具开发过程中，比较常见的一个问题就是对功能进行分组，开发多个命令不利于使用，在命令中支持子命令是一个更常见、更友好的做法，如go build，go tool，go pprof，等等。我们还希望为不同的子命令添加不同的命令行选项，如<code>go build -gcflags=</code>，<code>go pprof --seconds=</code>，等等。</p>
-<h3 id="如何支持子命令字呢">如何支持子命令字呢？</h3>
+
+<h3 id="如何支持子命令字呢" class="anchor-link"><a href="#%e5%a6%82%e4%bd%95%e6%94%af%e6%8c%81%e5%ad%90%e5%91%bd%e4%bb%a4%e5%ad%97%e5%91%a2">如何支持子命令字呢？</a></h3>
 <p>假如我们开发一个命令行程序 <code>gox</code>，我们希望能为它添加一个子命令<code>gox create</code>来创建一个完整的服务工程，包括自动生成工程下的代码。</p>
 <p>那如何为命令行程序<code>gox</code>添加这个子命令字呢？</p>
 <p><code>gox</code>是shell搜索路径定位到的程序，<code>create</code>只能是shell传递给进程的一个普通参数，在<code>gox</code>程序启动之后只能从<code>os.Args</code>来获取该参数，以及后续<code>gox create -protofile= -protodir</code>的参数<code>-protofile</code>及<code>-protodir</code>。</p>
@@ -356,7 +360,8 @@ div#st-2 .st-btn > img {
 
 }
 </code></pre></div><p>是不是很简单？本来就很简单 :)</p>
-<h3 id="如何为子命令字添加不同的选项呢">如何为子命令字添加不同的选项呢？</h3>
+
+<h3 id="如何为子命令字添加不同的选项呢" class="anchor-link"><a href="#%e5%a6%82%e4%bd%95%e4%b8%ba%e5%ad%90%e5%91%bd%e4%bb%a4%e5%ad%97%e6%b7%bb%e5%8a%a0%e4%b8%8d%e5%90%8c%e7%9a%84%e9%80%89%e9%a1%b9%e5%91%a2">如何为子命令字添加不同的选项呢？</a></h3>
 <p>那现在要给各个子命令字添加独立的命令行选项怎么办呢？比如<code>gox create</code>的命令参数和<code>gox update</code>的命令行参数是不同的，那怎么办呢？你当然可以根据os.Args[1:]来解析，想怎么解析都可以，我们这里讨论如何借助go标准库提供的flag包来解析。</p>
 <p>大家可能都使用过<code>flag.Parse()</code>来解析命令行参数，这个函数其实是将os.Args[1:]中的参数解析完后填充到一个默认的flagset。如果要为不同的子命令添加不同的命令行选项，那么为每个子命令创建独立的flagset就可以了。各个子命令使用自己的flagset来执行<code>flagset.Parse()</code>代替<code>flag.Parse()</code>就可以了。</p>
 <p>就这么简单，我们对前面的程序进行一点调整：</p>
@@ -408,7 +413,8 @@ div#st-2 .st-btn > img {
     <span style="color:#f92672">...</span>
 }
 </code></pre></div><p>这样就完成了，是不是很简单，本来就很简单。</p>
-<h3 id="如何显示命令帮助信息">如何显示命令帮助信息？</h3>
+
+<h3 id="如何显示命令帮助信息" class="anchor-link"><a href="#%e5%a6%82%e4%bd%95%e6%98%be%e7%a4%ba%e5%91%bd%e4%bb%a4%e5%b8%ae%e5%8a%a9%e4%bf%a1%e6%81%af">如何显示命令帮助信息？</a></h3>
 <p>当然了，只能运行命令还不行，有多少注册的子命令可执行？每个子命令有什么命令行参数呢？我们还需要能够显示命令行的帮助信息。</p>
 <p>这个怎么实现呢？各个子命令需要能够指明命令的使用帮助：</p>
 <ul>
@@ -500,7 +506,8 @@ div#st-2 .st-btn > img {
     <span style="color:#f92672">...</span>
 }
 </code></pre></div><p>嗯，就这些了，是不是很简单？本来就很简单。</p>
-<h3 id="小结">小结</h3>
+
+<h3 id="小结" class="anchor-link"><a href="#%e5%b0%8f%e7%bb%93">小结</a></h3>
 <p>当然，除了这些，我们可能还希望为命令行工具添加shell auto-completion输入补全功能，提示信息的国际化、本地化，命令字扩展时的便利程度等，还是有些问题需要进一步考虑的。</p>
 <p>我这里只是介绍下实现的一个大致思路，具体实践的时候倒并不一定要这么去实现，可以考虑下cobra，通过cobra来实现posix风格的命令行是很方便的。这些内容感兴趣的话可以自己了解下。</p>
 <p>和本文内容接近的，可以参考我的一个工具<a href="https://github.com/hitzhangjie/rm">rm-safe</a>，希望对读者朋友有帮助！</p>
@@ -550,7 +557,32 @@ div#st-2 .st-btn > img {
     </div>
     
 
+    </br>
+    </br>
     
+    <div class="container disqus">
+        <div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "https-www-hitzhangjie-pro" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+    </div>
+
 
 
                 
@@ -584,7 +616,7 @@ div#st-2 .st-btn > img {
         
 
 
-<script src="https://www.hitzhangjie.pro/js/bundle.23f18222425179f754965a36c9b211bd8cff5e5ab61ee23b52f026cef6699139.js" integrity="sha256-I/GCIkJRefdUllo2ybIRvYz/Xlq2HuI7UvAmzvZpkTk="></script>
+<script src="https://www.hitzhangjie.pro/js/bundle.2ee571453a8980175e10bda96bda797cc9c4e2e745e488df68d50cef5deb57ff.js" integrity="sha256-LuVxRTqJgBdeEL2pa9p5fMnE4udF5IjfaNUM713rV/8="></script>
 
 
 
@@ -600,6 +632,10 @@ if (!doNotTrack) {
 }
 </script>
 <script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
 
 
 

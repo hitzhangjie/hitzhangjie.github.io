@@ -55,6 +55,7 @@ div#st-2 .st-btn > img {
 
 
 
+        
         <meta property="og:title" content="Monkey Patching in Go - 介绍" />
 <meta property="og:type" content="website" />
 <meta property="og:description" content="Web站点描述"/>
@@ -81,7 +82,7 @@ div#st-2 .st-btn > img {
 
 
 
-<link rel="stylesheet" href="/css/main.min.daa833377fb1636f8cbfa65c601050bb5475623deb7aa6e6fdde94a064a6185d.css" integrity="sha256-2qgzN3&#43;xY2&#43;Mv6ZcYBBQu1R1Yj3reqbm/d6UoGSmGF0=" crossorigin="anonymous" media="screen">
+<link rel="stylesheet" href="/css/main.min.24b21e0909abaf0ad62af509780fea401864367fe10c0d7ffcd89778c9dac466.css" integrity="sha256-JLIeCQmrrwrWKvUJeA/qQBhkNn/hDA1//NiXeMnaxGY=" crossorigin="anonymous" media="screen">
 
 
 
@@ -145,7 +146,9 @@ div#st-2 .st-btn > img {
                 
                   <a class="navbar-item" href="https://www.hitzhangjie.pro/projects/">
                   
+                  
                   项目
+                  
                   
                   </a>
                 
@@ -301,7 +304,8 @@ div#st-2 .st-btn > img {
         
         <div class="container markdown top-pad">
             <p>前几天写了篇<a href="https://hitzhangjie.github.io/blog/2020-08-20-x64%E6%B1%87%E7%BC%96%E5%BC%80%E5%8F%91%E4%BB%8B%E7%BB%8D/">x64汇编开发介绍</a>的文章，当时有提到接下来会介绍下go中如何实现monkey patching，嗯，今天就来说下这个事情。</p>
-<h1 id="monkey-patching-简介">Monkey Patching 简介</h1>
+
+<h1 id="monkey-patching-简介" class="anchor-link"><a href="#monkey-patching-%e7%ae%80%e4%bb%8b">Monkey Patching 简介</a></h1>
 <p>monkey patching，一说到这个，很多熟悉go的同学可能会联想起gomonkey这个mock测试框架。该术语的定义取决于使用它的社区。在Ruby，Python 和许多其他动态编程语言中，“monkey patching”一词仅指在运行时对类或模块的动态修改，其目的是为了修补现有的第三方代码，以此作为解决方法。错误或功能无法正常运行。根据其不同的意图，在运行时修改类的其他形式也具有不同的名称。例如，在Zope和Plone中，安全补丁通常是使用动态类修改来提供的，但它们被称为热修补程序(hot fixes)。</p>
 <p>monkey pathcing，它常用语如下场景：</p>
 <ul>
@@ -311,14 +315,17 @@ div#st-2 .st-btn > img {
 <li>分发与原始源代码一起存在的安全性或行为修复程序（例如，将其作为Ruby on Rails平台的插件分发）；</li>
 <li>探索各种自动修复程序以提供自我修复。</li>
 </ul>
-<h1 id="monkey-patching-in-go">Monkey Patching in Go</h1>
+
+<h1 id="monkey-patching-in-go" class="anchor-link"><a href="#monkey-patching-in-go">Monkey Patching in Go</a></h1>
 <p>最近在写mock测试的时候，有些场景下用到了gomonkey，这个测试框架挺好用的，之前也简单了解过大致的实现，最近也在看些底层工具链相关的东西，就想整理下这方面的一点东西。也希望能帮助到想了解这方面内容的同学。</p>
 <p>那现在就就开始吧，首先我会简单介绍下go函数的实现、指令patching的概念，然后看下反汇编、指令级调试如何帮助快速定位问题，然后通过几个简单的demo来演示下如何实现指令patch，然后我们再回到go实现monkey patching。</p>
 <blockquote>
 <p>怎么说呢，如果不感兴趣就真的不要看了，就好像别人骑车摔破头也觉得很爽，但是你觉得骑车没什么好玩的，一个道理。</p>
 </blockquote>
-<h2 id="go函数表示">Go函数表示</h2>
-<h3 id="demo1">demo1</h3>
+
+<h2 id="go函数表示" class="anchor-link"><a href="#go%e5%87%bd%e6%95%b0%e8%a1%a8%e7%a4%ba">Go函数表示</a></h2>
+
+<h3 id="demo1" class="anchor-link"><a href="#demo1">demo1</a></h3>
 <p>下面定义了一个简单的函数<code>a()</code>，然后再main函数中调用它，然后调用通过print打印出它的返回值。</p>
 <p>file: main.go</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
@@ -375,7 +382,8 @@ $ r2 ./main
 │           0x00459250      48c744240800.  mov qword <span style="color:#f92672">[</span>arg_8h<span style="color:#f92672">]</span>, <span style="color:#ae81ff">0</span>
 │           0x00459259      48c744240801.  mov qword <span style="color:#f92672">[</span>arg_8h<span style="color:#f92672">]</span>, <span style="color:#ae81ff">1</span>
 └           0x00459262      c3             ret
-</code></pre></div><h3 id="demo2">demo2</h3>
+</code></pre></div>
+<h3 id="demo2" class="anchor-link"><a href="#demo2">demo2</a></h3>
 <p>看完上面这个，我们看点跟monkey patching相关的一个demo。</p>
 <p>这个demo也很简单，定义了一个函数a，然后定义了一个变量b，将a赋值给b。有过cc++基础的同学，会自然联想到函数指针，我也是写cc++过来的，所以很自然会想到，f是一个函数指针，它指向a这个函数。下面的打印语句呢，它应该打印出函数a的地址。</p>
 <p>file: main2.go</p>
@@ -404,7 +412,8 @@ $ ./main2
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#f92672">[</span>0x0045c410<span style="color:#f92672">]</span>&gt; px/1ag 0x4ecc28
 0x004ecc28  0x004abf20 0x00000000                         .J.....
 </code></pre></div><p>px/1ag就是就是类似gdb调试器里面的x/FMT或者dlv里面的x -FMT hex -len 8 address。我们打印地址0x4ecc28地址处的一个8字节地址出来，发现刚好就是函数a的地址0x004abf20。所以，上述<code>f := a</code> 关于f结构的猜想就得到了验证，它就是一个funcval，并非cc++意义上的函数指针。</p>
-<h3 id="demo3">demo3</h3>
+
+<h3 id="demo3" class="anchor-link"><a href="#demo3">demo3</a></h3>
 <p>理解了funcval之后，再来一个demo，再来一个修改版的demo，这下应该可以打印出相同的地址了。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
 
@@ -465,7 +474,8 @@ $ r2 ./main4
 </code></pre></div><p>这里其实可以确定的是，0x00480390 就是变量f这个funcval的地址，下面又取 [0x00480390] 这个内存单元中的内容送rax，此时rax中的内容也就是函数a的地址了，最后 <code>call rax</code> 完成函数调用。</p>
 <p>这里其实实现了一个操作，本来f也可以指向另一个函数b，但是我却通过赋值操作 <code>f := a</code> 将其执行了另一个函数a去执行。这样类似的操作，提炼下是否可以拿来用于实现monkey patching呢？可以。</p>
 <p>现在要在程序运行的时候，动态调整一个函数要执行的目的代码，其实也可以通过类似的操作。</p>
-<h2 id="指令patching">指令Patching</h2>
+
+<h2 id="指令patching" class="anchor-link"><a href="#%e6%8c%87%e4%bb%a4patching">指令Patching</a></h2>
 <p>指令patching是一个比monkey patching覆盖面更广的范畴，意思就是运行时修改程序执行的指令。其实，指令patching技术大家都已经用过无数次了，只不过不是你亲自操作的。</p>
 <p>比如，当你调试一个程序的时候，就需要指令patch让你的被调试任务（俗称tracee）停下来，这个时候就需要将tracee下一条要执行的指令的首字节篡改为<code>0xcc</code>，处理器遇到这个指令就会让你的程序停下来。通常<code>int3</code>用来生成一字节指令<code>0xcc</code>，处理器取值、译码、执行完之后就会停下来触发中断，然后内核提供的中断服务程序开始执行。正常BIOS提供的都是16位中断服务程序，以Linux为例，内核初始化的时候会重建保护模式下的32/64中断服务程序，意思也就是说，碰到这个指令之后，内核就相当于收到了通知来处理tracee的暂停工作。等tracee停下来之后就会通知tracer（也就是调试器），tracer就可以通过系统调用等手段来检查tracee的运行时信息，包括registers、ram等等。</p>
 <p>这里的monkey patching呢，其实也是有点类似，简单一句就是篡改指令而已。问题是这里该怎么篡改？</p>
@@ -479,7 +489,8 @@ $ r2 ./main4
 	<span style="color:#a6e22e">replace</span>(<span style="color:#a6e22e">a</span>, <span style="color:#a6e22e">b</span>)
 	print(<span style="color:#a6e22e">a</span>())
 }
-</code></pre></div><h2 id="大致实现">大致实现</h2>
+</code></pre></div>
+<h2 id="大致实现" class="anchor-link"><a href="#%e5%a4%a7%e8%87%b4%e5%ae%9e%e7%8e%b0">大致实现</a></h2>
 <p>因为是在运行时修改，在运行时能干什么呢？我们不能修改a的地址，只能再a的地址处玩些花招：指令patch，篡改这里的指令。怎么篡改呢？</p>
 <ul>
 <li>前面讲过，我们是可以拿到一个funcval变量中保存的目的函数地址的；</li>
@@ -531,7 +542,8 @@ $ r2 ./main4
 </ul>
 <p>这样当程序跑起来之后，跑到a的地址处，立即就JMP到函数b的地址处执行函数b的指令。我们这里不考虑将a数据恢复的问题，其实要做也很简单，你记录一下哪个地址，覆写了多少哪些数据就行了。调试器调试安插0xcc指令的时候都是需要做好保存、恢复类操作的，不然生成的端点（0xcc）就把指令弄乱套了。我们这里就不做这些了。</p>
 <p>OK，那这里的函数 <code>assembleJump(f func() int)</code> 如何动态生成它的跳转指令呢？这里可以先借助指令级调试先自己测试下。</p>
-<h2 id="指令级调试">指令级调试</h2>
+
+<h2 id="指令级调试" class="anchor-link"><a href="#%e6%8c%87%e4%bb%a4%e7%ba%a7%e8%b0%83%e8%af%95">指令级调试</a></h2>
 <p>调试器，大家都熟悉吧？其实调试器也是可以分成好几类比较通俗的分类是源码级调试器、指令级调试器。</p>
 <p>指令级调试器，大家听说过的应该有IDA、OlleDbg、Hopper、Cutter、Radare2，指令级调试器一般工作在汇编指令层级，对上层高级语言的东西不怎么理解，它理解的就是一些最原始的信息，指令、数据、寄存器、内存，没有文件、源码、行号、变量名&hellip;各自有各自的用途，一些符号级调试器如dlv、gdb、lldb等等的也会支持一些基础的指令级调试的能力，比如反汇编、step、step reverse等等的。</p>
 <p>我们这里希望在指令级完成调试，比如修改些指令看看效果之类的，一般的工具还是不方便的。Radare2支持指令级调试、指令修改、根据调用约定动态生成调用图等之类的，还是很方便的。</p>
@@ -576,7 +588,8 @@ jmp rdx               ; 然后直接跳转过去执行
 <li>r2附带工具生成汇编对应的16进制数据，用<code>wx+16进制数</code>来覆写指令；</li>
 <li>其实你也可以用一些<a href="https://defuse.ca/online-x86-assembler.htm#disassembly">在线的汇编工具</a>生成，再用其他16进制工具打开可执行程序，然后修改替换。</li>
 </ul>
-<h3 id="r2-wa汇编指令">r2: wa+汇编指令</h3>
+
+<h3 id="r2-wa汇编指令" class="anchor-link"><a href="#r2-wa%e6%b1%87%e7%bc%96%e6%8c%87%e4%bb%a4">r2: wa+汇编指令</a></h3>
 <p>通过wa来直接写入汇编指令，这个比较省事，不用单独运行rasm2去得到汇编后的指令16禁止数据再去覆写。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#f92672">[</span>root@centos test<span style="color:#f92672">]</span><span style="color:#75715e"># r2 -w ./mainx</span>
  -- The <span style="color:#e6db74">&#39;?&#39;</span> command can be used to evaluate math expressions. Like this: <span style="color:#e6db74">&#39;? (0x34+22)*4&#39;</span>
@@ -602,7 +615,8 @@ Written <span style="color:#ae81ff">2</span> byte<span style="color:#f92672">(</
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ./mainx
 <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">2</span>
 </code></pre></div><p>完全符合预期。</p>
-<h3 id="r2-wxhex">r2: wx+hex</h3>
+
+<h3 id="r2-wxhex" class="anchor-link"><a href="#r2-wxhex">r2: wx+hex</a></h3>
 <p>那我们得看下这些汇编指令对应的机器指令是啥样的，radare2也提供了工具来处理。</p>
 <p>汇编、机器指令都是平台相关的，汇编前先看下平台相关信息，好，我的是Intel x86_64, 64位。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ uname -a Linux centos 4.19.76-linuxkit <span style="color:#75715e">#1 SMP Tue May 26 11:42:35 UTC 2020 x86_64 x86_64 x86_64 GNU/Linux</span>
@@ -622,7 +636,8 @@ ffe2
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ ./mainx
 <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">2</span>
 </code></pre></div><p>上面只是为了测试下，行还是不行，肯定是行啊，我只是想炫耀下radare2有多强大好玩而已。</p>
-<h3 id="monkey-patching">Monkey Patching</h3>
+
+<h3 id="monkey-patching" class="anchor-link"><a href="#monkey-patching">Monkey Patching</a></h3>
 <p>上面兜了个圈子，给大家演示了下radare2怎么使用，接下来我们运行时patch下指令测试下。还是mainx.go这个程序。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
 
@@ -700,7 +715,8 @@ PTRACE_CONT: No such process
 <span style="color:#f92672">[</span>0x004549f3<span style="color:#f92672">]</span>&gt; dc                                                            ;; 再来一次，continue到tracee结束
 <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">2</span>                                                                         ;; 输出了结果 <span style="color:#e6db74">`</span><span style="color:#ae81ff">2</span> 2<span style="color:#e6db74">`</span>
 </code></pre></div><p>OK，经过上面相关的演示之后，应该已经了解了我们patch的大致方法及实际效果了，也介绍了radare2的常用操作。</p>
-<h2 id="put-it-together">Put It Together</h2>
+
+<h2 id="put-it-together" class="anchor-link"><a href="#put-it-together">Put It Together</a></h2>
 <p>现在我们收一下，将前面掌握的技能点综合起来，来实现我们前面遗留的任务：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">assembleJump</span>(<span style="color:#a6e22e">f</span> <span style="color:#66d9ef">func</span>() <span style="color:#66d9ef">int</span>) []<span style="color:#66d9ef">byte</span> {
 	<span style="color:#a6e22e">funcVal</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">*</span>(<span style="color:#f92672">*</span><span style="color:#66d9ef">uintptr</span>)(<span style="color:#a6e22e">unsafe</span>.<span style="color:#a6e22e">Pointer</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">f</span>))
@@ -810,13 +826,15 @@ $ ff22
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ go run -gcflags<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;all=-N -l&#34;</span> jump.gomonkey
 <span style="color:#ae81ff">2</span>
 </code></pre></div><p>gomonkey写mock测试，对函数的处理大致就是这个这么实现的，这里就不继续说gomonkey的具体实现细节了。</p>
-<h1 id="总结">总结</h1>
+
+<h1 id="总结" class="anchor-link"><a href="#%e6%80%bb%e7%bb%93">总结</a></h1>
 <p>本文所提内容并非原创，在了解gomonkey的过程中看到了《monkey-patching-in-go》这篇文章，结合自己的一些理解重新解释下背后的原理。</p>
 <p>其实本没有必要解释这么多，我可以一句话总结完，”go funcval + 指令patch“。但是呢，”纸上得来终觉浅”，没有经过实践检验的“懂”也只是自己骗自己罢了。</p>
 <p>大篇幅介绍了radare2调试器的一些使用，应该有读者会对调试器工作原理、底层实现比较感兴趣，这也是大篇幅介绍的一点小小的私心。</p>
 <p>从2018年开始陆续整理调试原理的一些知识，将这些整理的内容放在了github上<a href="https://github.com/hitzhangjie/golang-debugger-book">golang-debugger-book</a>。原理的部分大致已经介绍完了，现在还需要结合一个实现来辅助使内容更加详实一点，这里也会涉及到对go实现细节的一些知识点补充，感兴趣的可以一起来。</p>
 <p>时间精力实在有限，拖得久了，很没有成就感。</p>
-<h1 id="参考文章">参考文章</h1>
+
+<h1 id="参考文章" class="anchor-link"><a href="#%e5%8f%82%e8%80%83%e6%96%87%e7%ab%a0">参考文章</a></h1>
 <p>1.monkey-patching-in-go, <a href="https://bou.ke/blog/monkey-patching-in-go/">https://bou.ke/blog/monkey-patching-in-go/</a></p>
 <p>2.a-journey-into-radare2, <a href="https://www.megabeets.net/a-journey-into-radare-2-part-1/">https://www.megabeets.net/a-journey-into-radare-2-part-1/</a></p>
 <p>3.monkey patching, <a href="https://en.wikipedia.org/wiki/Monkey_patch">https://en.wikipedia.org/wiki/Monkey_patch</a></p>
@@ -867,7 +885,32 @@ $ ff22
     </div>
     
 
+    </br>
+    </br>
     
+    <div class="container disqus">
+        <div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "https-www-hitzhangjie-pro" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+    </div>
+
 
 
                 
@@ -901,7 +944,7 @@ $ ff22
         
 
 
-<script src="https://www.hitzhangjie.pro/js/bundle.23f18222425179f754965a36c9b211bd8cff5e5ab61ee23b52f026cef6699139.js" integrity="sha256-I/GCIkJRefdUllo2ybIRvYz/Xlq2HuI7UvAmzvZpkTk="></script>
+<script src="https://www.hitzhangjie.pro/js/bundle.2ee571453a8980175e10bda96bda797cc9c4e2e745e488df68d50cef5deb57ff.js" integrity="sha256-LuVxRTqJgBdeEL2pa9p5fMnE4udF5IjfaNUM713rV/8="></script>
 
 
 
@@ -917,6 +960,10 @@ if (!doNotTrack) {
 }
 </script>
 <script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
 
 
 

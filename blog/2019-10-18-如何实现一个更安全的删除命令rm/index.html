@@ -55,6 +55,7 @@ div#st-2 .st-btn > img {
 
 
 
+        
         <meta property="og:title" content="如何实现一个更安全的删除命令rm - 介绍" />
 <meta property="og:type" content="website" />
 <meta property="og:description" content="Web站点描述"/>
@@ -81,7 +82,7 @@ div#st-2 .st-btn > img {
 
 
 
-<link rel="stylesheet" href="/css/main.min.daa833377fb1636f8cbfa65c601050bb5475623deb7aa6e6fdde94a064a6185d.css" integrity="sha256-2qgzN3&#43;xY2&#43;Mv6ZcYBBQu1R1Yj3reqbm/d6UoGSmGF0=" crossorigin="anonymous" media="screen">
+<link rel="stylesheet" href="/css/main.min.24b21e0909abaf0ad62af509780fea401864367fe10c0d7ffcd89778c9dac466.css" integrity="sha256-JLIeCQmrrwrWKvUJeA/qQBhkNn/hDA1//NiXeMnaxGY=" crossorigin="anonymous" media="screen">
 
 
 
@@ -145,7 +146,9 @@ div#st-2 .st-btn > img {
                 
                   <a class="navbar-item" href="https://www.hitzhangjie.pro/projects/">
                   
+                  
                   项目
+                  
                   
                   </a>
                 
@@ -288,12 +291,14 @@ div#st-2 .st-btn > img {
    
         
         <div class="container markdown top-pad">
-            <h2 id="背景">背景</h2>
+            
+<h2 id="背景" class="anchor-link"><a href="#%e8%83%8c%e6%99%af">背景</a></h2>
 <p>大家有没有因为一时大意，错误地执行了<code>rm -rf</code>而导致重要文件被删除的情况？一定有那么一次两次的吧。前几天，我又犯了这一次这样的错误。本来是要删除当前目录下的一个文件，于是执行 <code>rm -rf .</code>，这里还没有输入完，因为我调整了KeyRepeat设置项的原因吧，按键延迟很短，结果命令变成了 <code>rm -rf ..</code>，这个时候<code>..</code>已经指向了HOME目录……额，没关注右手，左手还没有tab候选，右手已经键入了回车，gg，眼睁睁地看着大量文件被删除，ctrl+c已经太晚了 :( 。</p>
 <p>多亏macOS默认对Desktop、Document等目录下的文件做了自动地备份，不然就真的要苦了，虽然对重要文件、数据也有做过备份，但是也不能做到按月、按天的备份，哪怕是最近几个月的数据、配置的丢失，对我来说也是挺伤的。果不其然，后续几天陆陆续续发现丢失了各种各样的配置，IDE的、bash的、git的、pet的……各种各样的！</p>
 <p>不幸中的万幸，一些自己认为真的很重要的数据，一般在Document中交给icloud做了备份，这些数据倒是可以恢复，虽然慢了点，但是能恢复总还是好的！感谢icloud提供的云存储服务！</p>
 <p><img src="/blog/assets/rm/icloud.jpeg" alt="icloud恢复文件"></p>
-<h2 id="如何避免误删除文件">如何避免误删除文件</h2>
+
+<h2 id="如何避免误删除文件" class="anchor-link"><a href="#%e5%a6%82%e4%bd%95%e9%81%bf%e5%85%8d%e8%af%af%e5%88%a0%e9%99%a4%e6%96%87%e4%bb%b6">如何避免误删除文件</a></h2>
 <p>经此一役之后，我还是思考了一些如何规避的问题，我有多年的Linux使用经验，竟然也会犯这样的错误，我将其归因于：过失问题，虽然像我这样的有经验的开发者极少会犯这样的错误，但是还是会偶尔发生！很多开发者都提出了自己的一些想法，如何规避rm造成的文件误删问题，我们这里不考虑如何恢复的问题，如果是私人笔记本单硬盘单分区的话，恢复的困难度是比较高的。</p>
 <ul>
 <li>
@@ -310,8 +315,10 @@ div#st-2 .st-btn > img {
 </li>
 </ul>
 <p>看上去没有一个现有工具能够完全满足自己的选择，那就自己按自己的需要开发一个吧！</p>
-<h2 id="设计更安全的rm工具">设计更安全的rm工具</h2>
-<h3 id="分析binrm">分析/bin/rm</h3>
+
+<h2 id="设计更安全的rm工具" class="anchor-link"><a href="#%e8%ae%be%e8%ae%a1%e6%9b%b4%e5%ae%89%e5%85%a8%e7%9a%84rm%e5%b7%a5%e5%85%b7">设计更安全的rm工具</a></h2>
+
+<h3 id="分析binrm" class="anchor-link"><a href="#%e5%88%86%e6%9e%90binrm">分析/bin/rm</a></h3>
 <p>首先，不得不说，/bin/rm是一个非常好用的命令，删除文件、删除没目录等等，可以说使用频率非常高，它也确实很好用。说白了，我们只是要在它的基础上做些安全方面的风险规避就能满足需求。</p>
 <p>/bin/rm，它有一系列的命令选项，且是POSIX风格的。</p>
 <ul>
@@ -319,7 +326,8 @@ div#st-2 .st-btn > img {
 <li>涉及到rm相关的选项，原来rm有的我们也要有，而且功能必须保持一致；</li>
 </ul>
 <p>说白了就是，我们要保证用户使用的时候，习惯保持不变，甚至没有意识到自己在使用一个安全增强的rm。</p>
-<h3 id="如何安全增强">如何安全增强</h3>
+
+<h3 id="如何安全增强" class="anchor-link"><a href="#%e5%a6%82%e4%bd%95%e5%ae%89%e5%85%a8%e5%a2%9e%e5%bc%ba">如何安全增强</a></h3>
 <p>rm动作是用户自己执行的，除了用户自己清楚目标文件是否重要，没有其他人可以做出胜过文件拥有者的决定，所以安全增强的决定还是交给用户自己来做出，我们的工具只是协助用户完成这样的动作。</p>
 <p>设计一个安全增强的rm：</p>
 <ul>
@@ -336,7 +344,8 @@ div#st-2 .st-btn > img {
 </li>
 <li>支持<code>-r</code>选项，允许递归地添加、移除保护；</li>
 </ul>
-<h3 id="实现该rm命令">实现该rm命令</h3>
+
+<h3 id="实现该rm命令" class="anchor-link"><a href="#%e5%ae%9e%e7%8e%b0%e8%af%a5rm%e5%91%bd%e4%bb%a4">实现该rm命令</a></h3>
 <p>以下是大致的rm命令操作的help信息，它有3个子命令，help显示帮助信息，pin用来对目录添加保护，unpin移除保护。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ rm help
 
@@ -363,7 +372,8 @@ rm unpin:
 </ul>
 <p>代码量不多，感兴趣的话，可以自行查看源码，了解具体的实现细节。</p>
 <p>如果希望自己也能避免因为手贱带来的文件误删问题，欢迎使用体验该工具！</p>
-<h2 id="小结">小结</h2>
+
+<h2 id="小结" class="anchor-link"><a href="#%e5%b0%8f%e7%bb%93">小结</a></h2>
 <p>从日常使用角度出发，思考了靠人来避免误删除文件的操作是基本行不通的，还是要提供有效的工具去协助人来对重要文件进行保护。经历过一两次这样的文件误删除操作之后，痛得难受，就醒了，于是自己开发了这个安全增强版本的rm工具，其实寥寥数行代码而已，但是却帮了我大忙。现在偶尔也是会敲出很可怕的命令，但是因为我已经提前对重要文件目录做了保护，再没发生过重要文件被rm误删除的场景了。</p>
 <p>我不能保证自己以后不会手贱，但是有这个工具的存在，很大程度上减轻了我的心理压力，哈哈！希望对读者们有帮助! :)</p>
 
@@ -412,7 +422,32 @@ rm unpin:
     </div>
     
 
+    </br>
+    </br>
     
+    <div class="container disqus">
+        <div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "https-www-hitzhangjie-pro" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+    </div>
+
 
 
                 
@@ -446,7 +481,7 @@ rm unpin:
         
 
 
-<script src="https://www.hitzhangjie.pro/js/bundle.23f18222425179f754965a36c9b211bd8cff5e5ab61ee23b52f026cef6699139.js" integrity="sha256-I/GCIkJRefdUllo2ybIRvYz/Xlq2HuI7UvAmzvZpkTk="></script>
+<script src="https://www.hitzhangjie.pro/js/bundle.2ee571453a8980175e10bda96bda797cc9c4e2e745e488df68d50cef5deb57ff.js" integrity="sha256-LuVxRTqJgBdeEL2pa9p5fMnE4udF5IjfaNUM713rV/8="></script>
 
 
 
@@ -462,6 +497,10 @@ if (!doNotTrack) {
 }
 </script>
 <script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
 
 
 

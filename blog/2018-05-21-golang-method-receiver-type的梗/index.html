@@ -55,6 +55,7 @@ div#st-2 .st-btn > img {
 
 
 
+        
         <meta property="og:title" content="golang method receiver-type的梗 - 介绍" />
 <meta property="og:type" content="website" />
 <meta property="og:description" content="Web站点描述"/>
@@ -81,7 +82,7 @@ div#st-2 .st-btn > img {
 
 
 
-<link rel="stylesheet" href="/css/main.min.daa833377fb1636f8cbfa65c601050bb5475623deb7aa6e6fdde94a064a6185d.css" integrity="sha256-2qgzN3&#43;xY2&#43;Mv6ZcYBBQu1R1Yj3reqbm/d6UoGSmGF0=" crossorigin="anonymous" media="screen">
+<link rel="stylesheet" href="/css/main.min.24b21e0909abaf0ad62af509780fea401864367fe10c0d7ffcd89778c9dac466.css" integrity="sha256-JLIeCQmrrwrWKvUJeA/qQBhkNn/hDA1//NiXeMnaxGY=" crossorigin="anonymous" media="screen">
 
 
 
@@ -145,7 +146,9 @@ div#st-2 .st-btn > img {
                 
                   <a class="navbar-item" href="https://www.hitzhangjie.pro/projects/">
                   
+                  
                   项目
+                  
                   
                   </a>
                 
@@ -264,7 +267,8 @@ div#st-2 .st-btn > img {
         
         <div class="container markdown top-pad">
             <p>这里来聊聊method receiver type为什么不能是pointer和interface类型。</p>
-<h1 id="1-receiver-type必须满足的条件">1 receiver-type必须满足的条件</h1>
+
+<h1 id="1-receiver-type必须满足的条件" class="anchor-link"><a href="#1-receiver-type%e5%bf%85%e9%a1%bb%e6%bb%a1%e8%b6%b3%e7%9a%84%e6%9d%a1%e4%bb%b6">1 receiver-type必须满足的条件</a></h1>
 <p>golang里面提供了一定的面向对象支持，比如我们可以为类型T或者*T定义成员方法（类型T称为成员方法的receiver-type），但是这里的类型T必须满足如下几个条件：</p>
 <ul>
 <li>T必须是已经定义过的类型；</li>
@@ -273,7 +277,8 @@ div#st-2 .st-btn > img {
 <li>T不能是接口类型；</li>
 </ul>
 <p>前面两点都比较容易理解，下面两点是什么梗？为什么就不能在指针类型上添加方法？为什么就不能在interface上添加方法？当然可以一句话待过，golang不支持，但是我想问下为什么？</p>
-<h1 id="2-receiver-type为什么不能是指针类型">2 receiver-type为什么不能是指针类型？</h1>
+
+<h1 id="2-receiver-type为什么不能是指针类型" class="anchor-link"><a href="#2-receiver-type%e4%b8%ba%e4%bb%80%e4%b9%88%e4%b8%8d%e8%83%bd%e6%98%af%e6%8c%87%e9%92%88%e7%b1%bb%e5%9e%8b">2 receiver-type为什么不能是指针类型？</a></h1>
 <p>golang允许为 <strong>类型指针*T</strong> 添加方法，但是不允许为 <strong>指针类型本身</strong> 添加方法。<strong>按现有golang的实现方式，为指针类型添加方法会导致方法调用时的歧义</strong>。</p>
 <p>看下面这个示例程序。</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-golang" data-lang="golang"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">T</span> <span style="color:#66d9ef">int</span> 
@@ -291,7 +296,8 @@ div#st-2 .st-btn > img {
     <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">v1</span>.<span style="color:#a6e22e">Get</span>(), <span style="color:#a6e22e">v2</span>.<span style="color:#a6e22e">Get</span>(), <span style="color:#a6e22e">v3</span>.<span style="color:#a6e22e">Get</span>()) 
 }
 </code></pre></div><p>示例程序中 <code>v3.Get()</code> 存在调用歧义，编译器不知道该调用哪个方法了。如果要支持在指针这种receiver-type上定义方法，golang编译器势必要实现地更复杂才能支持到，指针本来就比较容易破坏可读性，还要在一种指针类型上定义方法，对使用者、编译器开发者而言可能都是件费力不讨好的事情。</p>
-<h1 id="3-receiver-type为什么不能是接口类型">3 receiver-type为什么不能是接口类型？</h1>
+
+<h1 id="3-receiver-type为什么不能是接口类型" class="anchor-link"><a href="#3-receiver-type%e4%b8%ba%e4%bb%80%e4%b9%88%e4%b8%8d%e8%83%bd%e6%98%af%e6%8e%a5%e5%8f%a3%e7%b1%bb%e5%9e%8b">3 receiver-type为什么不能是接口类型？</a></h1>
 <p>这没有什么好揣测的，只是golang runtime不支持而已。golang现在的实现里，<strong>interface内部结构只能表示方法原型，但是不包括方法定义，struct才可以包括方法定义</strong>（这部分内容感兴趣的可以翻下golang的源码，这里不展开了）。</p>
 <p>当一个类型实现了某个接口声明的全部方法时，就说这个类型实现了这个接口，就可以将这个类型的值赋值给该接口类型的值，此时会更新接口值的 <strong>dynamic value和dynamic type</strong> 字段。这里需要 <strong>根据接口中是否定义了方法列表</strong> 来进一步分析，可以细分为 <strong>接口方法列表为空</strong> 和 <strong>接口方法列表不空</strong> 两种情况讨论。</p>
 <p>下面以这里的示例代码为例进行分析：</p>
@@ -319,7 +325,8 @@ div#st-2 .st-btn > img {
 <span style="color:#66d9ef">var</span> <span style="color:#a6e22e">eface</span> <span style="color:#a6e22e">EmptyIface</span> = <span style="color:#a6e22e">b</span>
 <span style="color:#66d9ef">var</span> <span style="color:#a6e22e">iface</span> <span style="color:#a6e22e">Stringer</span> = <span style="color:#a6e22e">b</span>
 <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">iface</span>)
-</code></pre></div><h2 id="31-空接口interface">3.1 空接口interface</h2>
+</code></pre></div>
+<h2 id="31-空接口interface" class="anchor-link"><a href="#31-%e7%a9%ba%e6%8e%a5%e5%8f%a3interface">3.1 空接口interface</a></h2>
 <p>eface对应接口类型是interface{}，并且Binary值b小于等于sizeof(uintptr)，那么eface的dynamic value就是直接拷贝b；如果这里是eface := anyBigStruct {&hellip;.}，并且anyBigStruct size大于sizeof(uintptr)，那么就需要开辟内存拷贝anyBigStruct的值，并将新开辟内存的地址设置到dynamic value字段。dynamic type就指向对应类型的定义了。</p>
 <p>此时的接口类型可以表示为：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-golang" data-lang="golang"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">eface</span> <span style="color:#66d9ef">struct</span> {
@@ -328,7 +335,8 @@ div#st-2 .st-btn > img {
 }
 </code></pre></div><p>此时的接口值可以表示为：
 <img src="data:image/png;base64,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" alt="eface"></p>
-<h2 id="32-非空接口interface-method-list-">3.2 非空接口interface{ method-list }</h2>
+
+<h2 id="32-非空接口interface-method-list-" class="anchor-link"><a href="#32-%e9%9d%9e%e7%a9%ba%e6%8e%a5%e5%8f%a3interface-method-list-">3.2 非空接口interface{ method-list }</a></h2>
 <p>如果iface对应接口类型interface{methods-list}，<strong>这个时候dynamic value还是与1）中同样的处理，但是dynamic type处理方式不同，需要对运行时接口方法的调用地址进行处理</strong>。</p>
 <p>这时会创建一个 <strong>itable</strong>（类似c++虚函数vtable），这个itable里面保存了iface的接口类型以及接口中声明的各个方法原型对应的调用地址，调用地址从何而来？这里的调用地址也就是接口值动态类型中实现的方法的调用地址。设置完接口方法的所有调用地址后，itable构建完成，然后将iface接口值里面的tab字段指向该itable。</p>
 <p>此时的接口类型可以表示为：</p>
@@ -338,12 +346,14 @@ div#st-2 .st-btn > img {
 }
 </code></pre></div><p>此时的接口值可以表示为：
 <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAeYAAADuCAAAAADJ3PvKAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AABfhSURBVHja7Z1PiCxJXscDwes+4iiKSIJ4WFAxL8Os6GHjsHhaBlIWFgYvkyLK+FiZjcOchGVIloX1IELgwYsHDVxEns6jDbeHmbcsPWy8URuWZqFT913epSHoy/PQlzR+EZmVUVmZWfm3OrMyvoeu7KyKqMj4VPz/xS9QtiZRRHuHkRGGgLsowv5RrF9ofBQTSkQIYZI2vj8AM0OxcDErFobqsZ/z5FoU5hQRLkRiMNNpUsYRq8amou1xXhRmipRzPUWMCtPD2IqbG9KcmJNQV8HVHKWo+SsTJItkWRETQFEMgSjcyeNQcR6zDFHAiblMAhTYb0OU668WJkZVhkBR/iui+KR5vADNiFmgSAiWVO62YVYYszysiJEQQpoAJOKJDpTCzTyOMKQh4voeDjkPDXHdbgtqq2hEMBMGMyHFt+pIGA6LlInT5/SjakbMbhVcSlBb4kQu6b6ZEhSwIvQumlgXWuLeNLcUdMdipBtyBYU4Nb2z2IBEWN8lEHPRZbP8eYF3QId93ZoRs8RB0txpRk697EgQZDtIDuby3R1mE4NmFRisUGkzlIiiuJcUS8x7/3rMEyqNsW44+4YS2JDvhtn+SgAzzX82xTv543nM9oHnjV5GqIFzbaVtZJH0xZw4TURJMSRuQIVsT8G3zVNLVQtO0TY3VNpacQB/u2Em0DYzuJKo7OyV30mxckIwlOZ3Z37qxWnOLhjlghNUaZ7betqUMmheTSeMQz9dZEcwcz2GirCZv4xRzIWgaeZiTlExbtY9MoEj848fN0+phOjCGlWrx9ZxM9EDZJLX8jRAKMiOYM5YoAFalgyG6dE+Zl1wTatACbTdsSnaKgpPkrVL0qJmwQZKtjW1Maa2PlHCQE79nPb6pHQ9rbm1fSTBe8/oV6hWKAkVdXykdMpucZ2zVo7Zq5s85k3IY96EPOZNaDbM33pKB+qdx86TM9RsmH/zG0Mx+wpmes2Wp2Tw6oDHPL085k3IY96EPOZNyGPehCbPUxHH5tVjXpKmz9PcOsRjXpKmyVPpMA3tgpDHvCRNkqcCl5ZAaW5n1Yb5Kfq9lrVDj3l6TZGnaRwKlclEMKQyFosIbK1aMMtffvZNNm+SvPY1SZ5GYA4fgWUGXLMsRbINs/qVb//1x3fzJslrT5PkKRa6rtb1dqxxG6vJdsyZePdvXl1eNYH2mKfXFHkqdSQwjFIatwDDaBZ06IK9unz5ZrYkee1rijxNiC7E3NrVUhg1w46aDj3tV5fXdaA95uk1RZ5GVCjEM05JqkJNOIb+VacB1e1FDWiPeXpNkaeBHipTHMlEl+I44cwA7jZufrg5BO0xT69JBlR1g+Cu0yMPN5c3D5MnyWtfC1i6qIL2mKfXAjBr0NcXDmiPeXotAnOWvdGgZ0/ShjVbnv7675Beeuejv39qrzzm6bWQ0gx68/Ly1axJ2rAWhDnL7q4AtMc8vRaFGUC/uPOYp9fCMANodDcspFezFodZJ6l58cproEZjTqOo9v4YI6FXHvTEGl+a43onD+NswRoWr7wGajxm7Ph3c0z/xpr8edBTajRm6XjXc03/2jCrFl+euyTVLV55DdQ4zDzhxskWZ5yG+6Z/bZiffO1LLZx3SdKgK4tXXgM1CjOj1l9mnNhX1/SvBfNPPnz2taQ5VidJh6uUXoM0BrMAJ3xIZhxeA7Fv+teM+dXF999+0tVO25foSTQGM3g459i+CrRv+teI+f7q4lW7p65Kkt5ce9CjNQKz6XyRKH8l+6Z/DZgfbp4dZXaQJA361WPn08o1ArPQeGmYcHhNIir3TP/qMb++fHE/JElvri896DEaU2mTIJaYSHhVkX51Tf/qML+5urgdmqT7Kw96hMaOm11zvz3Tv0PMN8+uO7WxDUm6u7p8fercORudbOni7vKy4zx1Y5LurvxU90CdCPObl6Wt14gkedADdRrMtxcvu89btibJL14N0myYv/Ld4mwa8YPvf+8fRXcdSZIG7ae6+2o2zG99JTfZ/Opbv/32V/vYeAbHovaLV701u+HV7cUMhe/WL17108yYzdTmDPKrlP00K+YjU5sDzlZ34/aLV901J+Y/+yWEgqj5/VGYPeg+mg/zm3fRH+t+s11YnufszQe/eNVRc2HW9TX6wPmamQ5/crfYeTVrJswwtYmL+lrkp37aM9MVxXB+IC1O4YVbMbLHNsoQBRzsUDIFhwInmRuiXn7xqotmwWynNinKZ8KUECjW9TfYf+mbEU/0t6bFmdr6VhjSEA4ATnHIeQjEVYiZsEeo70I0fpsHfVRzYL7JpzZ5UIAuK22KYl1oSX5d3jIHAMdwPKwKzBUEjMNKiAbd+VXKI5oe892LcsGQEUTM6qSDufzkwfmtgTnsESrtAMG0pynunY440aD9VHeLpsb8cL0/VBbYlMNumMuz1YtDvLOOmP3iVbsmxnw4temctVz+u3ddh9k5SLvzgUV3fvGqUZNirpvajMxKRDfM5uh2ZlrpQGU1IY7Ir1I2aULM1alNQrkQkektZ0R3nAWY7bZi5iigEYYDllMcJEIwmvXC7BevmjQd5tcXFatNSnTjGtmNdDKCM++zI5gzpvvm0lylcYBQUA3RQR50nabC3NFqs4MkGryX0sovXh1qGswPXa0226V0Lc/CcHxqLqZIzTlpEszdrTbbJUOEcKzGR+QXryqaAHMfq82TyW+x29N4zDd9rDZPKL/FztFYzHcvljvL2HGLnUhosUNTMr73lpIdwj+G+vZSx2GuTm0uTQeLVxQfukkQcX50VpZStIdZ0g79BIHI8Q9NHQvruX4/CvMsVpvT6s3+4lUd5qx0ecWRy1Wa0y7NkJ/wpi8YgRkm7TEbFgtjvT4+AvP91cUa9q7VrFKy/ToP7zxkUHcwp8yEK6yBC8FNiJ4zNceEYsHDobME/Tw1DU54lw3pC1F18SrZK7OZRLsSHrp1oT26ljofnhozzdfZh4gd3bWw91UDk/j64ur4hvTFKActacyyNEAYioKilCZY97FooOtyO8Nqm2YV0ygu/klQ0Q0j5eKoJqTLoS6IojB+MrcCZM5BlQRhan8S8KkodUO4eW8ws6w+FgqTCLubJmy+ISWG+l2hPtX2MMzTTW2eSnbxihpmJkdVyGBFJYMlFio0TQaLY1BypW4vBSr4KozzjpgUsTF2MNkGazE64xXs+cpZhEizDaGa1+9FGHKWoUjXy4Ebws17mqUEWoa6WLIwgYUf7oZlBm1qAeMo664hmCea2jyxYIud6VObzFamfibGPCkq2BujJAlFSPfKojxrjD2iBV1W2gi6csSW8wKQqRnAy47BAMFT06+y1YIboohEKygajGos9rvt3V3YAOKjtkwTnHXXAMx3ly8WO1Ru1avLL72T5Zlo8spUfBxBD8wUEbBCywKsMkpUVh7GkFJsO8QOZqdF3VW3+ScCUyfAFTOWjrag1rTB+paMiKqPxb27C8t0DaPyznmvwyJ6Y17k1GZHSfTn12+M0yNlWj0GnS9bOBIN1xQ7hkhCzbF4TtYoa4LYDbNtvWlhpJw3u/WYdd0c18dil2IrmBWOM4btD2NWzEud2uykBP3s5uIaSi83DW9g/NaZlhqwm6Y5KtrPyM0aVVvK9q5rMLtd+ibMRZzVWFIMbUkFM/T7g/yfOSrtezv0nGop6pEUBZl6+Cv0Tz8rKu4oS1MD3LTK+o/MC4lyu9gZ1APWZHyXbS2YCXxWYtM2J1ldCPdWMQVXjcW1oSvDpigqfjrB9F2we1NRL31q86gwlUIPnj7/1s1HiCvKnvxJohjkQGxayMC8DaVZJrsOLYvBWgmH8AGhO85CwFUbZq67bDEm1io15kJQ4YRgKN4F1C33brtgNRaGEsGjKmbdv8uDzzCgur+4zlYxtXlEGByW6ax7uP7B20hf49/4B90JojRi5dsqRCQ2hdBOj4gIrJWKrra+xrsxWZGF1VaV6ZEvt6WRwWCbuJh1e73rXMNkJ23qgsX6axk1fXXn23gRmuM+6/JdMBvK9y9WMbXZqhSyyKw65VvsHl66I8PU5qDMK2sVjDFwiBrnqLtOXpuEVpfISFFVt8yy16gDZqC8oqnNjsoXr65fND+WjLtH54qbDSNNc85y+ObQVEebc++5RHUcM1B+taqpzY6yoG9bvIh2Wog8FMEIhU2FLU16xbUnioK8QZ58IVJTtlObr29WNr95XGbx6tVFM2c10sh0Nk1tVvBw+V83z67/7/X1xcX1eRXom9t7u8XufgPbKY9gfnhxdfnZT18+u7xZ83i5Vnc3VxdXN3d3V1c/vzy7eqqqdswPn/7wuXj24ua8ynEpjfrZ1ReXP/7k+rFTMrNaMT88/9dnn96ufLB8TPe3L59//PyT8xpHVIV+EQ3VO4+d9p763cFP+guPnfTRQsPsCrToTM6BZtPwBE9lGzTSHnhEt99j7qCJMB8Mw2e22nWfwGM+rmkw20m1E1rtuk/gMR9Xtzxi7ZVqPkV+Qqtd9wk85uPqlEcVs+AD2QWvU1rtuk/gMR9XhzwyZsHfpcb2CJOUxrGKSWRtQ1174FNa7bpP4DEf134e3V3VTgkaZIYJuDNDUZKmxlnWvj3wKa123cSdHWbZ1H5NVprvb19eHKC2NthgepnxCIx5MmuVV7UHPqHVrvsE54ZZ4KajodsSLL7+F13PoLU6QG0pWZ+UXOMG6CE+tAc+odWu+wRnhhmOCv878ECEueKI0dCUHM552JrgJ3/4B9+5axSqv/3z//7x88/k/9gYiB0bhSRTBPyaZcA8PrQHPqHVrqNzw2yOCofThkVifBLZ4sWyFLclOEV/+5ffuWkUarj/05/86N//7ZM8I625ANXfowuycXUFzfGBPfAJrXYdnR1mODsajhfmaZaYY8Rplui2krDWBH+AnrQMSevy6OH1zYuLl7fF2h1HMs1fo3w/jbH9PrAHPqHVrvsEZ4ZZmufRRZrlBVvnLo4oTY8kOG2LtJpHFcQmN7AyrWeKwtRu57C7tKr2wKe02nWf4MwwJ8T+BR/t0H+NI3PO9LgEVwZUVcSgaEcOKu8YRdRYZx/YA5/Satd9gjPDDEeFQ3eb24ItQmVPi+fTYX6oM7IoFp9SU6tixya0nz3wlFa77hNUMUcY2Z2gxrt9wCtXpZaJOTCTSRlkaYI5SyBro4BC8TnF0oUyzutkbd060B54uNWu+wTVR6Bc8NDUDRxRYV3rlFfuBxeJ2R4VbqZIyC6BUo1LcEfMMlLmZ6W7W7VN/TB74OFWu+4T1D2C3eJlBgVmAFheuV+/SMxGys4WVvrOs2PmKLI/shDxWqAj7YEnNyuA5t96whW6wiivpsm1mUWtKTyvrhg99nrzY6oWs9n9m58JpAt2eeVqsZhtb0jlXkKmSPA5YD6cxLv9rXf13/ftO+h958rV+x+M//aT6o/eogN1DpgPpvA+//KXP9cv79l30HvOlav3nj522ntq25ird1QY5t1F+4HVVdpN2nalXb0T5zMtq+2CNcljdpTshvbrHVDVy2N2hBG0RlB8Vzk90iKPee/GzhRtjZOdLfKYh8hjXpE85g7ymFckj3mIPOYVyWPuII95RfKYh8hjXpE8ZqvWA0g95hWpNcG4zc7dY16R2u202wy1PeYVybfNQ+Qxr0gecwd5zCuS72kP0XlhPvee9nacOW66p/3YCTidNt02P3YCTiePeRPymJ3/1/9ITdp0Tzs38ouK/fPrf6QmbbqnXXjD6OcLdo3aeE+74nzsbLXxttm6MDLOlWqchcIphy3OQlckj1nZLTV1zkJj2u4sdD3aOmZQsaeit7PQ9WjrmGmW0mLvTG9noeuRx2z90pn/+zoLXY885myfbx9noeuRx1z4iBrgLHQ92jrmWAgW4vpK+5iz0BVp65hBYe5x4qBtpjBspmYOtM5Z6Iq0ccxHZNxspZUqmgz06/yY8pj7yXEWuiZ5zP1UOgtdlTzmTchj3oSefkMM1Pozaf1P0Flf/zUyUOvPpPU/QWf5SnsTmh+zokGza/Oe5lc4GjCYIU0nBnvMHdQxk9IwtF7xRZ7bY6zsJK1Zz6cBQm1HUXnM82NW+ZGAKkuRNAdbjbOyEwecKaK6Q7i3+DDpE5yF5sZM86XZMOBEEFjaGWllR6trvS7aTWJWojrHjiKaZjKicNYXo3BC49yYc4u5jNNEfyMrMA+3slMVD+bl6c0Cla5VKVIUQ4tA4I55W9+K86hliPSv7kwMOhmX1RYLWikFB0aSxOTLhKfK1Rwql5UNsv5awm2DPNbKjlTqe90A2O9QOjrdIJjftr4ZcfBsL4WIC8xhSEOIOsWRYBifB+a0ZssEZDqF+3D866SYNeibq0PUZVaGQRaYEwbGWtkd0NEVQQ66rLQprAlL4gYwt+xZtxCVROeBuQ4gYCbQJ0rh6hjmj37191tWVusy6QB1iY7yTJjT5cZa2dXQ0TU9UXtB3A/tMBefCPLozwCzEigRaahr7STMOIllDGUD4JZ5eASzevKn3/x272O679IvPnv+6X/WZHeusVZ2tXQEJntBWjGj88FsD/PFif3thoxZxP0wf/jh9/of0/3Fj3748X9c5XHwwzHrWCs7UjsWc+22sg1hZiGglqYTlOoHM0sNvTBPUWkf9ItHW9ntYhR7SY+CvSCtmE3XPT4PzJAJcPJ6pDtbTFfY5gznfm1zuzp1wQ7OfBltZbcbN9N8oEQoh865abqhby5kdgQzQ4SG5DwwEzh5XbdpcWQPw4ZT2A3mZJaedsOAStfCVTPIcVZ2YtdJLzBTGBpH9q6M9HWcHcGsfyooVueBGSyWAi55yHgG/dqAiWLcLPPzfactzQ0SPZcbWq3sBJ1sj5pEZ7BinkkorjhkGSYyNb0xGIGaDpGMaWzgngSzHr2icUf3OlZ2g1aoDlMkdLOhB+NngDkxLbAuFEVtZ173M/w0mA/LZk9NbmXHQt0y6DH86jHLLKrtI++fjsZPhHmpWvsTyEAmtW9QSnf4GQXEHvOKJTs3YR7zJuRN/jah//3noQa8//LYSR+tDWHesjzmTCS0aN8l46OiWqw2hpniw9GXiAsPf+nBIdXnIo85y6KdgRFfnw+GbtoYZiu2PyWJdyNvGvaOax3aIuZkv8zK0vNCuDq/OR21KcySxixLA4TBbk5RShNjfxfAcp21ADBNs4pptD7XKq3aFOaMmvUfg1SFDNbmM1ippCIzdrbMFHOJWXYOK3euzuxxjii2JgZQlk39TIyha1Swj6FplmDHHq3Qt0qbtoXZbFuwphtg0aOgCHNjcWVM4I2xXYBVRsmZ9bg3hVkagwywl1R4Z1trjd8TrGzTzBBJ6Bpdq7RqU5gT06eG0stNIx0AYVOEDXbTNEcjDUCWqU1hjoJMAeG0qLijLE0NcNMq6z8ys8tRZ1ZnbwszplKAWSzT5ZoryjBNFIMciE1bHJi3oTQ3mCqsV9vCDHafxjRaEaSvcShhbyyNWPm2ChGJz43ytjCb42mUbH27jz3KerQpzNuVx7wJecybkMe8CXnMm5DHvAl5zJuQx7wJecyb0OYwd1l/Or81qq1hNkvJCteb9ok4JCSMiexs+bcWbw8rSeZUis0iRT1mFRlL3jQkmvfubuEesz4+j3mJ4i1Oj1WI7ZoFB0dLu90XCjxhCmHq8UOoHvMCpXDL3hlSeOFSAtwPOYYFO5Ye8ypkDXQVowQsB2KRJYSW77luvZTrxidnScrqm4a5j2Tj0njnAH+52hTmKCeJIvCYiRRlcek2d99JH3YseHPM0tbeUH2HSe4j2Xg5Znjxe3I2hdk6Nc3dK0Yhk9YGDKTQ/nmIBJfX9ZW2cWRsnXfxxZsJbgpzfuxEYvdegCnQbtOUqPSlXUcUDW2zxby7XLS2iNnU3cLU3Lv9zP0w73wke8wLVF5pY+vqUhR9MpCutPd2PrdW2qWPZHunxvnuwrQpzJFhJxEcNxLmltkF3LgokdSQD5wR9gHm0vWpvWKLP7R8U5ht4U2QSvICGFBZ1NoqRDTVg63cVeaufLrTI7qi11fK8ZGse9oSXLI+9pMd06YwZ8YjZoJile+uwUE5X6JgMBzmdMvpkb3JTjjVDebK9Fg5YHCQGCUU/B37cfOiZCc7y9FP2lTZHjPIN8bettwrsXjIW8Oc0W6egsSZOSvYGuaMdpnI6L4QuRZtDXPWpTif3+6a/weUlOyjOhcPBgAAAABJRU5ErkJggg==" alt="iface"></p>
-<h2 id="33-接口方法调用">3.3 接口方法调用</h2>
+
+<h2 id="33-接口方法调用" class="anchor-link"><a href="#33-%e6%8e%a5%e5%8f%a3%e6%96%b9%e6%b3%95%e8%b0%83%e7%94%a8">3.3 接口方法调用</a></h2>
 <p><strong>通过接口值调用方法的时候，需要根据 “该接口值类型、接口值对应的动态类型” 查询对应的接口方法实际的调用地址</strong>。如果该接口类型里面根本就没有方法列表，那肯定就报错了也不会查询tab，eface里面也没这个字段；如果接口类型里面有这个方法定义，那就根据iface.tab指向的itable去查询对应该接口类型、动态类型的对应方法的调用地址，然后执行目标地址处的方法体。</p>
 <p>从将Binary值b赋值给iface，再到通过iface查询动态类型Binary中实现的方法Stringer调用地址，最终执行Binary中实现的方法String()，这整个逻辑处理过程中如何对接口类型声明方法列表、动态类型实现方法列表进行处理，我们应该清楚了。</p>
 <p>总而言之，现在golang实现中interface的内部表示不包含“方法定义”相关的字段，无法表示为interface添加的方法定义，编译器当然也不允许。</p>
 <p>不同的编程语言对函数调用的多态实现有不同的思路，c++是通过填充基本类型的虚函数表的方式，golang是通过类似的这样一种查询表的形式。总结一下就是并非golang无法通过扩展支持在接口上添加方法，只是这样是否真的有必要，值得商榷。至少非空接口是用来定义一种明确的行为（contract）的，在上面又加个方法，是什么意思呢？因此不允许将接口类型定义为receiver type也是与接口的定位相对应的吧。</p>
-<h1 id="4-总结">4 总结</h1>
+
+<h1 id="4-总结" class="anchor-link"><a href="#4-%e6%80%bb%e7%bb%93">4 总结</a></h1>
 <p>receiver-type不允许为指针类型和接口类型，对其中原因进行了一点思考和总结。</p>
 <p>参考资料</p>
 <ol>
@@ -396,7 +406,32 @@ div#st-2 .st-btn > img {
     </div>
     
 
+    </br>
+    </br>
     
+    <div class="container disqus">
+        <div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "https-www-hitzhangjie-pro" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+    </div>
+
 
 
                 
@@ -430,7 +465,7 @@ div#st-2 .st-btn > img {
         
 
 
-<script src="https://www.hitzhangjie.pro/js/bundle.23f18222425179f754965a36c9b211bd8cff5e5ab61ee23b52f026cef6699139.js" integrity="sha256-I/GCIkJRefdUllo2ybIRvYz/Xlq2HuI7UvAmzvZpkTk="></script>
+<script src="https://www.hitzhangjie.pro/js/bundle.2ee571453a8980175e10bda96bda797cc9c4e2e745e488df68d50cef5deb57ff.js" integrity="sha256-LuVxRTqJgBdeEL2pa9p5fMnE4udF5IjfaNUM713rV/8="></script>
 
 
 
@@ -446,6 +481,10 @@ if (!doNotTrack) {
 }
 </script>
 <script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
 
 
 

@@ -64,6 +64,10 @@ rel  = "sitemap"
     noClasses = false
     style = "dracula"
     tabWidth = 4
+  [markup.tableOfContents]
+    startLevel = 1
+    endLevel = 4 
+    ordered = false
 
 [sitemap]
   changefreq = "weekly"
@@ -71,6 +75,8 @@ rel  = "sitemap"
   priority = 0.5
 
 [taxonomies]
+  tag = "tags"
+  category = "categories"
   contributor = "contributors"
 
 [RelPermalinks]

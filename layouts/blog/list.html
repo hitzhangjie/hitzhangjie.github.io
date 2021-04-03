@@ -8,9 +8,16 @@
 				{{ range .Data.Pages -}}
 					<div class="card">
 						<div class="card-body">
-							<h2 class="h3"><a class="stretched-link text-body" href="{{ .RelPermalink }}">{{ .Params.title }}</a></h2>
+							<h2 class="h3"><a href="{{ .RelPermalink }}">{{ .Params.title }}</a></h2>
 							<p>{{ .Params.lead | safeHTML }}</p>
 							{{ partial "main/blog-meta.html" . -}}
+                            {{ if .Params.Tags }}
+                            <p>tags: 
+                                {{ range .Params.Tags }}
+                                <a href="/tags/{{.}}/">{{.}}</a>&nbsp;
+                                {{ end }}
+                            </p>
+                            {{ end }}
 						</div>
 					</div>
 				{{ end -}}

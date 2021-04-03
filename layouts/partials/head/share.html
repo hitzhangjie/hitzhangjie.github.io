@@ -1,0 +1,37 @@
+<!-- RSS -->
+{{ with .OutputFormats.Get "RSS" }}<link href="{{ .RelPermalink }}" rel="alternate" type="application/rss+xml" title="{{ $.Site.Title }}" />{{ end }}
+
+<!-- sharethis -->
+<script type="text/javascript" src="https://platform-api.sharethis.com/js/sharethis.js#property=5f24f50fc2418c0012d52ac3&product=inline-share-buttons" async="async">
+</script>
+
+<style>
+/* sharethis分享链接按钮居左显示，去掉按钮边框、阴影 */
+[alt~=sharing] {
+    border: 0px;
+    box-shadow: none;
+}
+div#st-1 {
+    text-align: unset;
+}
+
+/* sharethis调整分享按钮大小，稍微调小点显得清爽些 */
+div#st-1 .st-btn {
+    height: 24px;
+    padding: 0 4px;
+}
+
+div#st-1 .st-btn > img {
+    top: 4.2px;
+}
+
+div#st-2 .st-btn {
+    height: 24px;
+    padding: 0 4px;
+}
+
+div#st-2 .st-btn > img {
+    top: 4.2px;
+}
+</style>
+

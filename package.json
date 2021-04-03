@@ -1,6 +1,6 @@
 {
-  "name": "@hyas/doks",
-  "description": "Doks theme",
+  "name": "@hitzhangjie/myspace",
+  "description": "my space for blogs, books, journey, etc.",
   "version": "0.2.3",
   "hugo-bin": {
     "buildTags": "extended"
@@ -8,7 +8,7 @@
   "browserslist": [
     "defaults"
   ],
-  "repository": "https://github.com/h-enk/doks",
+  "repository": "https://github.com/hitzhangjie/myspace",
   "license": "MIT",
   "publishConfig": {
     "access": "public"

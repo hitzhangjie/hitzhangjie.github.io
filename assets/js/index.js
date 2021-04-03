@@ -80,10 +80,15 @@ Source:
           'description',
         ],
     },
+    tokenize: function(str) {
+        return str.split(/\W+/).concat(str.replace(/[\x00-\x7F]/g, '').split('')).filter(e => !!e)
+    }
   });
 
   var docs = [
-    {{ range $index, $page := (where .Site.Pages "Section" "docs") -}}
+    // - index all documents: range $index, $page := .Site.Pages
+    // - index only the blogs: range $index, $page := (where .Site.Pages "Section" "blog")
+    {{ range $index, $page := .Site.Pages -}}
       {
         id: {{ $index }},
         href: "{{ .RelPermalink | relURL }}",

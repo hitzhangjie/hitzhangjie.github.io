@@ -34,7 +34,8 @@
     "env": "env",
     "precheck": "npm version",
     "check": "hugo version",
-    "copy:katex-fonts": "shx cp ./node_modules/katex/dist/fonts/* ./static/fonts/"
+    "copy:katex-fonts": "shx cp ./node_modules/katex/dist/fonts/* ./static/fonts/",
+    "copy:images": "shx cp ./assets/images/* ./static/images/"
   },
   "devDependencies": {
     "@babel/cli": "^7.13",

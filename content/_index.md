@@ -22,15 +22,3 @@ $> Keep! 日出之时，再行万里! :notes:
 </script>
 -->
 
-<!-- SCM Music Player https://www.scmplayer.net, theme: panda -->
-<!--
-<script type="text/javascript" src="https://www.scmplayer.net/script.js"
-data-config="{'skin':'https://static.tumblr.com/su8juwr/Jw7mnmh6k/panda.css','volume':10,'autoplay':true,'shuffle':false,'repeat':1,'placement':'bottom','showplaylist':false,'playlist':[{'title':'Lone Ranger','url':'https://webfs.yun.kugou.com/202104080013/9e674c6831f9e01abcc1ec89b79a84fc/G103/M03/18/11/R5QEAFvsUeWAc6GqAC5YF1JSTTI941.mp3'}]}" ></script>
--->
-<!-- SCM Music Player script end -->
-
-<!-- SCM Music Player https://www.scmplayer.net, theme: eyes -->
-<script type="text/javascript" src="https://www.scmplayer.net/script.js"
-data-config="{'skin':'https://static.tumblr.com/su8juwr/kBmmxnzeh/olhoss.css','volume':10,'autoplay':true,'shuffle':false,'repeat':1,'placement':'bottom','showplaylist':false,'playlist':[{'title':'Lone Ranger','url':'https://webfs.yun.kugou.com/202104080013/9e674c6831f9e01abcc1ec89b79a84fc/G103/M03/18/11/R5QEAFvsUeWAc6GqAC5YF1JSTTI941.mp3'}]}" ></script>
-<!-- SCM Music Player script end -->
-

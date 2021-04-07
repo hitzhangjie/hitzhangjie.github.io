@@ -1,0 +1,94 @@
+---
+layout: post
+title: "Nothing, Just Linux!"
+color: orange
+width: 4
+height: 1
+tags: ["linux","grub","plymouth","desktop"]
+toc: true
+---
+
+# 1 邂逅Linux
+
+初次接触Linux操作系统是在什么时候？想想～～
+
+高三毕业后买了第一台电脑，一台清华同方的台式机，随机赠送的光盘里面有一张操作系
+统光盘“家电下乡Linux适农版”……那是我第一次接触并运行Linux，但那时的我并没有意识
+到，放在我面前的是一个即将深深地吸引我并要在多年的职业生涯中去不断锤炼的存在。
+
+大一、大二这两年，我或多或少地接触到了Linux，但是并没有产生多大兴趣，直到有一
+天我激怒了一个同学。当时他正在摆弄Ubuntu，错误地GRUB配置导致系统引导失败，着急
+的他在QQ空间发了一条状态，意思就是大神求救之类的。当时我回了一个字“水”。他看后
+很生气，系统都启动不了了能不着急吗？于是呢，就言辞激烈地“回敬”了我几句……
+
+事后我想，Linux有这么复杂吗？于是我开始试图取了解Linux，当然这只是个引子，后面
+陆陆续续看到有不少同学都在使用各种Linux的发行版，我才决定认真去了解、学习一下
+Linux，没想到这竟是一条不归路……
+
+* LiveCD & RemasterSys & dump & restore
+* GRUB 2 & Customize Boot Menu to bootstrap Multiple OS
+* Plymouth
+* Tweak KDE/GNOME/Unity Appearance (Colors & Themes)
+* Linux Commandline Techs & Administration
+* Unix/Linux Programming
+* Linux Kernel 0.11
+* Linux Kernel 2.4
+* Keep going along the roadmap to Linux World!
+
+上面大体上是我初识、折腾、学习、应用、研究Linux的过程，而且这个过程在相当长一
+段事时间内还将一直向前延伸下去。与其说对Linux感兴趣，不如说是好奇心驱使，还有
+很多疑问没有揭开，这里当然不只是Linux操作系统内核本身。
+
+我这个博客所要描述的东西可能就比较杂了，这里面我会穿插着记录很多东西～与其说是
+博客，不如说是我自己的一个学习笔记了，但是我这个人比较喜欢分享，但有不想那么刻
+意，所以我就把它丢在这，谁看见了找到点自己感兴趣的东西，也算是种缘分。
+
+# 2 LiveCD & RemasterSys & dump & restore
+
+## 2.1 LiveCD
+
+在学习Linux过程中，会有体验不同Linux发行版这样的需求的，这个时候你有不想频繁地安装系统来解决。LiveCD就是发行版厂商针对用户的这种需求推出的一个玩意，用户可以插入光盘到光驱、BIOS引导从光驱启动来体验。
+
+可能吧，时间让你明白，Linux最吸引人的地方，并不是有很多的发行版供你换来换去，而是内在的自由。最后，你还是会深度使用某一个发行版并安定下来，而那些各种各样的桌面环境也会有点选择困难。Ubuntu->Debian->Fedora->OpenSuSE->RHEL->CentOS->...Fedora! Unity->GNOME3->GNOME2->KDE->...->KDE! 我已经坚守在Fedora/CentOS+KDE很多年了，适合自己的就是最好的！
+
+LiveCD不仅可以帮助我们预先体验Linux发行版，也可以用来安装Linux发行版、修复系统问题。带着一张LiveCD或者Bootable USB Installer，就好像随身携带了一个移动版的操作系统。还是很方便、很酷的一件事情。
+
+UNetBootin等类似的将USB变身成可引导的Bootable Linux Installer的工具，也是必不可少的工具。
+
+## 2.2 RemasterSys
+
+当你深度使用了一段时间之后，会发现不管是配置文件，还是GUI，还是软件列表...都已经被自己深度定制化过了，这个时候就很自然会去想系统备份的事情，以免准备多台设备办公时能遍历地迁移备份，或者在设备系统出现问题时能够便捷地还原的问题。
+
+当你了解了Linux定制化意味着什么的时候，你就应该能体会到定制化背后意味着的工作量、投入的时间，你不会愿意再从安装开始重新定制化了，
+没有规划的人才将这种重复性劳动当做是习惯。我为什么不能将现在的完整的系统做成一个初始的可安装的系统呢？
+
+虽然这要花费的时间、存储可能会大一点，但是适当精简下软件列表、用户文件，完全可以控制在一个合理的范围内，按市面上常见的DVD存储容量来看，完全是hold得住的。而且DVD是真的便宜，存放时间也更长久。
+
+RemasterSys就是为了满足这样的需求而设计出来的，它就可以把我们当前运行的系统重新做成一个可安装的系统，安装完成后就是现在的样子。但是原作者可能很久没有再更新了吧，在我了解到这款系统工具时，它已经接近失修的边缘了。Sad
+
+## 2.3 dump & restore
+
+慢慢地意识到，所谓的定制都是私人潜意识里面的思想固化，总有不适合他人应用场景的时候，除非你有能力自己给自己定制。最简单的东西，就是最好用的、最靠谱的。一段时间下来，我发现dump & restore就是逼近完美的选择。它专注于转储、恢复操作，非常原始。
+
+dd最原始直接读写存储设备原始数据，甚至都不理解你的文件系统，但是它缺少一点灵活性。
+
+dump允许我们在文件系统之上做一些选择，如选择备份哪些目录、文件等等，dump备份的时候会同时备份文件的属性信息，整个打包成一个文件，后续备份恢复的时候你也可以通过restore选择恢复哪些文件到文件系统。
+
+刚开始的时候，可能觉得全是命令行操作，好复杂？万一出错了怎么办？Linux强大的地方就是命令行操作，习惯了之后就真的爱上了。dump & restore是目前我觉得比较好用的，虽然看上去不像macOS timemachine那样方便，但是它真的算得上最灵活的。
+
+# 3 GRUB 2 & Customize Boot Menu to bootstrap Multiple OS
+
+# 4 Plymouth
+
+# 5 Tweak KDE/GNOME/Unity Appearance (Colors & Themes)
+
+# 6 Linux Commandline Techs & Administration
+
+# 7 Unix/Linux Programming
+
+# 8 Linux Kernel 0.11
+
+# 9 Linux Kernel 2.4
+
+# 10 Keep going along the roadmap to Linux World!
+

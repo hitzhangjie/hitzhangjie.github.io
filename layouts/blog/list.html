@@ -1,9 +1,13 @@
 {{ define "main" }}
 <div class="row justify-content-center">
-  <div class="col-md-12 col-lg-10 col-xl-8">
-    <article>
-      <h1 class="text-center">{{ .Title }}</h1>
-      <div class="text-center">{{ .Content }}</div>
+	<div class="col-md-12 col-lg-10 col-xl-8">
+		<article>
+			<!-- display article -->
+			<h1 class="text-center">{{ .Title }}</h1>
+			<div class="text-center">{{ .Content }}</div>
+
+			<!-- display blogs in card-list manner -->
+			{{ if eq .Site.Params.blog.Style "card-list" }}
 			<div class="card-list">
 				{{ range .Data.Pages -}}
 					<div class="card">
@@ -11,18 +15,46 @@
 							<h2 class="h3"><a href="{{ .RelPermalink }}">{{ .Params.title }}</a></h2>
 							<p>{{ .Params.lead | safeHTML }}</p>
 							{{ partial "main/blog-meta.html" . -}}
-                            {{ if .Params.Tags }}
-                            <p>tags: 
-                                {{ range .Params.Tags }}
-                                <a href="/tags/{{.}}/">{{.}}</a>&nbsp;
-                                {{ end }}
-                            </p>
-                            {{ end }}
+							{{ if .Params.Tags }}
+							<p>tags: 
+								{{ range .Params.Tags }}
+								<a href="/tags/{{.}}/">{{.}}</a>&nbsp;
+								{{ end }}
+							</p>
+							{{ end }}
 						</div>
 					</div>
 				{{ end -}}
 			</div>
-    </article>
-  </div>
+			{{ end }}
+
+			<!-- display blogs in simple-list manner -->
+			{{ if eq .Site.Params.blog.Style "simple-list" }}
+				<table border="0">
+				{{ range .Pages.ByPublishDate.Reverse }}
+					<tr>
+					<td width="15%">
+						{{ if .Params.date}} 
+							<span>{{ .Date.Format (.Site.Params.dateFormat | default "2006/01/02") }}</span>
+						{{ end }}
+					</td>
+					<td width="55%">
+						<span><a href="{{ .Permalink }}">《{{ .Title }}》</a></span>
+					</td>
+					<td width="30%">
+						{{ if .Params.tags }}
+						{{ $len := (len .Params.tags) }}
+							🔖{{ if gt $len 1 }}{{ end }}
+							{{ range $index, $tag := .Params.tags }}
+							<a href="{{ "tags/" | relLangURL }}{{ . | urlize }}">{{ . }}</a>{{ if ne (add $index 1) $len }},{{ end }}
+							{{ end }}
+						{{ end }}
+					</td>
+					</tr>
+				{{ end }}
+				</table>
+			{{ end }}
+		</article>
+	</div>
 </div>
 {{ end }}

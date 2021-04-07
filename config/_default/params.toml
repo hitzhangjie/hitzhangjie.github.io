@@ -56,3 +56,7 @@ editPage = false
   breadCrumb = false
   highLight = true
   kaTex = false
+
+[blog]
+  # render blog list in style: card-list/simple-list
+  style = "simple-list" 

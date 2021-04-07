@@ -1,4 +1,7 @@
 {{ define "main" }}
+
+<!-- display blogs in card-list manner, see config/_default/params.toml -->
+{{ if eq .Site.Params.blog.Style "card-list" }}
 <div class="row justify-content-center">
 	<div class="col-md-12 col-lg-10 col-xl-8">
 		<article>
@@ -6,8 +9,7 @@
 			<h1 class="text-center">{{ .Title }}</h1>
 			<div class="text-center">{{ .Content }}</div>
 
-			<!-- display blogs in card-list manner -->
-			{{ if eq .Site.Params.blog.Style "card-list" }}
+            <!-- display blog list -->
 			<div class="card-list">
 				{{ range .Data.Pages -}}
 					<div class="card">
@@ -16,7 +18,7 @@
 							<p>{{ .Params.lead | safeHTML }}</p>
 							{{ partial "main/blog-meta.html" . -}}
 							{{ if .Params.Tags }}
-							<p>tags: 
+							<p>🔖&nbsp;
 								{{ range .Params.Tags }}
 								<a href="/tags/{{.}}/">{{.}}</a>&nbsp;
 								{{ end }}
@@ -26,22 +28,33 @@
 					</div>
 				{{ end -}}
 			</div>
-			{{ end }}
+		</article>
+	</div>
+</div>
+{{ end }}
 
-			<!-- display blogs in simple-list manner -->
-			{{ if eq .Site.Params.blog.Style "simple-list" }}
-				<table border="0">
-				{{ range .Pages.ByPublishDate.Reverse }}
-					<tr>
+<!-- display blogs in simple-list manner, see config/_default/params.toml -->
+{{ if eq .Site.Params.blog.Style "simple-list" }}
+<div class="row justify-content-center">
+	<div class="col-md-12">
+		<article>
+			<!-- display article -->
+			<h1 class="text-center">{{ .Title }}</h1>
+			<div class="text-center">{{ .Content }}</div>
+
+            <!-- display blog list -->
+			<table border="0">
+			{{ range .Pages.ByPublishDate.Reverse }}
+				<tr>
 					<td width="15%">
-						{{ if .Params.date}} 
+						{{ if .Params.date | default "1970-01-01" }} 
 							<span>{{ .Date.Format (.Site.Params.dateFormat | default "2006/01/02") }}</span>
 						{{ end }}
 					</td>
 					<td width="55%">
 						<span><a href="{{ .Permalink }}">《{{ .Title }}》</a></span>
 					</td>
-					<td width="30%">
+					<td width="33%">
 						{{ if .Params.tags }}
 						{{ $len := (len .Params.tags) }}
 							🔖{{ if gt $len 1 }}{{ end }}
@@ -50,11 +63,11 @@
 							{{ end }}
 						{{ end }}
 					</td>
-					</tr>
-				{{ end }}
-				</table>
+				</tr>
 			{{ end }}
+			</table>
 		</article>
 	</div>
 </div>
+{{ end }}
 {{ end }}

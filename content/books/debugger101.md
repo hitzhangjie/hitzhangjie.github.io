@@ -5,7 +5,7 @@ lead: "A book teach you how to build a golang microservice framework from scratc
 date: 2020-10-06T08:48:23+00:00
 lastmod: 2020-10-06T08:48:23+00:00
 draft: false
-book: true
+book: "/debugger101/" 
 cover : "https://res.cloudinary.com/practicaldev/image/fetch/s--TRTxk2sF--/c_imagga_scale,f_auto,fl_progressive,h_420,q_auto,w_1000/https://dev-to-uploads.s3.amazonaws.com/i/npklcwdz6haqp0wt9yz6.png"
 images: []
 ---

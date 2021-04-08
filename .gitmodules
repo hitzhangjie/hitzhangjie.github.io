@@ -1,0 +1,12 @@
+[submodule "gorpc101"]
+	path = static/gorpc101
+	url = https://github.com/hitzhangjie/gorpc101
+	branch = master
+[submodule "debugger101"]
+	path = static/debugger101
+	url = https://github.com/hitzhangjie/debugger101.io
+	branch = master
+[submodule "libmill"]
+	path = static/libmill
+	url = https://github.com/hitzhangjie/libmill-book
+	branch = master

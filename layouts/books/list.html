@@ -6,11 +6,11 @@
       <div class="text-center">{{ .Content }}</div>
             <div class="card-list">
                 {{ $currentSection := .CurrentSection }}
-                {{ range where .Site.RegularPages "Params.book" true}}
+                {{ range .Site.RegularPages }}
                     {{ if in (.RelPermalink | string) $currentSection.RelPermalink }}
                         <div class="card my-3">
                             <div class="card-body">
-                                <h2><a class="stretched-link" href="{{ .RelPermalink }}">{{ .Params.title | title }}</a></h1>
+                                <h2><a class="stretched-link" href="{{ .Params.book }}">{{ .Params.title | title }}</a></h1>
                                 <div align="center">
                                     <img src="{{ .Params.Cover }}" style="width:360px;height:160px;"/>
                                 </div>

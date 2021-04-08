@@ -1,15 +1,15 @@
 {{ define "main" }}
 <div class="row justify-content-center">
-  <div class="col-md-12 col-lg-10 col-xl-8">
+  <div class="col-md-12 col-lg-10">
     <article>
       <h1 class="text-center">{{ .Title }}</h1>
       <div class="text-center">{{ .Content }}</div>
-			<div class="card-list">
-				{{ $currentSection := .CurrentSection }}
+            <div class="card-list">
+                {{ $currentSection := .CurrentSection }}
                 {{ range where .Site.RegularPages "Params.book" true}}
-					{{ if in (.RelPermalink | string) $currentSection.RelPermalink }}
-						<div class="card my-3">
-							<div class="card-body">
+                    {{ if in (.RelPermalink | string) $currentSection.RelPermalink }}
+                        <div class="card my-3">
+                            <div class="card-body">
                                 <h2><a class="stretched-link" href="{{ .RelPermalink }}">{{ .Params.title | title }}</a></h1>
                                 <div align="center">
                                     <img src="{{ .Params.Cover }}" style="width:360px;height:160px;"/>
@@ -18,11 +18,11 @@
                                 <div>
                                     <b><font size="-1">{{ .Params.Description}}</font></b>
                                 </div>
-							</div>
-						</div>
-					{{ end }}
-				{{ end }}
-			</div>
+                            </div>
+                        </div>
+                    {{ end }}
+                {{ end }}
+            </div>
     </article>
   </div>
 </div>

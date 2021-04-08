@@ -12,7 +12,7 @@ $> Keep! 日出之时，再行万里! :notes:
 
 <!--
 <audio id="music-player" autoplay controls>
-    <source type="audio/mp3" src="https://webfs.yun.kugou.com/202104080013/9e674c6831f9e01abcc1ec89b79a84fc/G103/M03/18/11/R5QEAFvsUeWAc6GqAC5YF1JSTTI941.mp3"></source>
+    <source type="audio/mp3" src="/dat/lone-ranger.mp3"></source>
     <p>Your browser does not support the audio element.</p>
 </audio>
 
@@ -21,4 +21,3 @@ $> Keep! 日出之时，再行万里! :notes:
     player.volume = 0.1;
 </script>
 -->
-

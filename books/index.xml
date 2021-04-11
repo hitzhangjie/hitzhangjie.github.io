@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>My Books on </title>
+    <link>https://doks.netlify.app/books/</link>
+    <description>Recent content in My Books on </description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-US</language>
+    <lastBuildDate>Tue, 06 Oct 2020 08:48:23 +0000</lastBuildDate><atom:link href="https://doks.netlify.app/books/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>debugger101: go调试器开发内幕</title>
+      <link>https://doks.netlify.app/books/debugger101/</link>
+      <pubDate>Tue, 06 Oct 2020 08:48:23 +0000</pubDate>
+      
+      <guid>https://doks.netlify.app/books/debugger101/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>GoRPC 101: 微服务框架开发内幕</title>
+      <link>https://doks.netlify.app/books/gorpc101/</link>
+      <pubDate>Tue, 06 Oct 2020 08:48:23 +0000</pubDate>
+      
+      <guid>https://doks.netlify.app/books/gorpc101/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>libmill: go风格协程库设计实现</title>
+      <link>https://doks.netlify.app/books/libmill/</link>
+      <pubDate>Tue, 06 Oct 2020 08:48:23 +0000</pubDate>
+      
+      <guid>https://doks.netlify.app/books/libmill/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>

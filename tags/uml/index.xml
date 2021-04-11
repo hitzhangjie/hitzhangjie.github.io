@@ -6,11 +6,7 @@
     <description>Recent content in uml on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Tue, 06 Oct 2020 23:13:52 +0800</lastBuildDate>
-    
-	<atom:link href="https://www.hitzhangjie.pro/tags/uml/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Tue, 06 Oct 2020 23:13:52 +0800</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/uml/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Visualizing Your Go Code</title>
       <link>https://www.hitzhangjie.pro/blog/2020-10-06-visualizing-your-go-code/</link>

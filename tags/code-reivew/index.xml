@@ -6,11 +6,7 @@
     <description>Recent content in code reivew on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Tue, 10 Sep 2019 17:26:01 +0800</lastBuildDate>
-    
-	<atom:link href="https://www.hitzhangjie.pro/tags/code-reivew/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Tue, 10 Sep 2019 17:26:01 +0800</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/code-reivew/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Google CR指引, 如何推进代码评审</title>
       <link>https://www.hitzhangjie.pro/blog/2019-09-10-%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E5%9C%B0%E8%BF%9B%E8%A1%8C%E4%BB%A3%E7%A0%81review/</link>

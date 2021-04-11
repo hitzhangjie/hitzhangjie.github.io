@@ -6,11 +6,7 @@
     <description>Recent content in maven on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Sat, 01 Apr 2017 17:45:40 +0800</lastBuildDate>
-    
-	<atom:link href="https://www.hitzhangjie.pro/tags/maven/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Sat, 01 Apr 2017 17:45:40 +0800</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/maven/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>学习Apache Ant</title>
       <link>https://www.hitzhangjie.pro/blog/2017-04-01-%E5%AD%A6%E4%B9%A0apache-ant/</link>

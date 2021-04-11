@@ -6,11 +6,7 @@
     <description>Recent content in protoc on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Tue, 23 May 2017 16:29:25 +0800</lastBuildDate>
-    
-	<atom:link href="https://www.hitzhangjie.pro/tags/protoc/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Tue, 23 May 2017 16:29:25 +0800</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/protoc/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Protoc及其插件工作原理分析(精华版)</title>
       <link>https://www.hitzhangjie.pro/blog/2017-05-23-protoc%E5%8F%8A%E6%8F%92%E4%BB%B6%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90%E7%B2%BE%E5%8D%8E%E7%89%88/</link>

@@ -82,7 +82,7 @@ div#st-2 .st-btn > img {
 
 
 
-<link rel="stylesheet" href="/css/main.min.24b21e0909abaf0ad62af509780fea401864367fe10c0d7ffcd89778c9dac466.css" integrity="sha256-JLIeCQmrrwrWKvUJeA/qQBhkNn/hDA1//NiXeMnaxGY=" crossorigin="anonymous" media="screen">
+<link rel="stylesheet" href="/css/main.min.b4f2dd2e4b598457569caeeedcb3ed7c33d1d66cc7964445a00df66235fc4d08.css" integrity="sha256-tPLdLktZhFdWnK7u3LPtfDPR1mzHlkRFoA32YjX8TQg=" crossorigin="anonymous" media="screen">
 
 
 
@@ -217,7 +217,7 @@ div#st-2 .st-btn > img {
         </h2>
         <div class="post-data">
             发表时间：2017-05-19 <br> 
-            阅读时长：58 分钟 (28712字)
+            阅读时长：58 分钟 (28717字)
         </div>
 
         
@@ -920,8 +920,8 @@ class CodeGenerator;        <span style="color:#75715e">// code_generator.h
 
 </code></pre></div><p>语法分析的过程这里就不解释了，感兴趣的可以看一下protobuf中grammar的定义，无非也就是些规约的事情，只要能够按照grammar将词法分析输出的token串构建出一棵完整的语法分析树proto文件就是合法的，否则就是不合法的，至于语法分析过程中伴随的语义分析过程，语义分析过程中执行哪些语义动作，不说也知道，肯定是生成某些“中间代码”之类的鬼东西。学过编译原理的这些处理过程应该都是比较清楚的，这里就不再展开了。语法分析成功之后就得到了proto对应的FileDescriptor对象，因为可能输入的是多个proto，所以多个FileDescriptor就用vector来存储了。</p>
 <ul>
-<li>遍历之前记录下来的输出指令OutputDirective output_directives[]，output_directives[i].output_location指明了输出目录，针对输出目录创建GeneratorContextImpl，并记录到hash_map&lt;string, GeneratorContextImpl<em>&gt; output_directories这个map中，key为flag_out,如&ndash;foo_out，value为GeneratorContextImpl。由于可能多个&ndash;${lang}_out都指向相同的输出目录，所以同一个GeneratorContextImpl也存在复用的情况。每个GeneratorContextImpl记录了一个输出目录、所有该目录下的待创建的源代码文件的信息，待创建的源代码文件信息记录在map&lt;string,string</em>&gt; files_里面，key为源代码文件名，val为源代码文件的内容，另外还包括了一个vector&lt;FileDescriptor*&gt; parsed_files记录了所有解析成功的proto文件信息。<br>
-遍历output_directives的同时，因为同一个output_directives[i]对应的输出目录下可能有多个源代码文件要输出，并且不管flag_name是什么，要处理的proto文件都是相同的，所以每个output_directives[i]都会对其调用<strong>GenerateOutput</strong>(parsed_files, output_directives[i], *map_slot)，output_directives[i].plugin指明了语言的代码生成器(为NULL则使用插件)，对所有的解析成功的proto文件parsed_files[i]生成源代码，源代码全部输出到output_directive[i].output_location下，源代码的文件名都记录在parsed_files[i].name()里面，而最终生成的源代码信息都存储在这里的CodeGeneratorImpl **map_slot中，也就相当于存储在了output_directories[]中。</li>
+<li>遍历之前记录下来的输出指令OutputDirective output_directives[]，output_directives[i].output_location指明了输出目录，针对输出目录创建GeneratorContextImpl，并记录到hash_map&lt;string, GeneratorContextImpl*&gt; output_directories这个map中，key为flag_out,如&ndash;foo_out，value为GeneratorContextImpl。由于可能多个&ndash;${lang}_out都指向相同的输出目录，所以同一个GeneratorContextImpl也存在复用的情况。每个GeneratorContextImpl记录了一个输出目录、所有该目录下的待创建的源代码文件的信息，待创建的源代码文件信息记录在map&lt;string,string*&gt; files_里面，key为源代码文件名，val为源代码文件的内容，另外还包括了一个vector&lt;FileDescriptor*&gt; parsed_files记录了所有解析成功的proto文件信息。<br>
+遍历output_directives的同时，因为同一个output_directives[i]对应的输出目录下可能有多个源代码文件要输出，并且不管flag_name是什么，要处理的proto文件都是相同的，所以每个output_directives[i]都会对其调用**GenerateOutput**(parsed_files, output_directives[i], *map_slot)，output_directives[i].plugin指明了语言的代码生成器(为NULL则使用插件)，对所有的解析成功的proto文件parsed_files[i]生成源代码，源代码全部输出到output_directive[i].output_location下，源代码的文件名都记录在parsed_files[i].name()里面，而最终生成的源代码信息都存储在这里的CodeGeneratorImpl **map_slot中，也就相当于存储在了output_directories[]中。</li>
 <li>最后遍历output_directories[]，将每个输出目录下要写的所有文件的数据全部写出到磁盘，即output_directories[i]-&gt;WriteAllToDisk()。</li>
 <li>done！</li>
 </ul>
@@ -2512,43 +2512,17 @@ message MethodOptions {
             <img src="/common/qrcode.jpg" style="height:238px;margin-top:10px;"/>
             <img src="/common/yuanbao.png" style="height:238px;margin-top:10px;margin-left:5px;"/>
         </div>
-
         <div>
             <p>
                 感谢打赏，小七🐶、元宝🐱可以改善伙食咯 😘
             </p>
         </div>
-
-
     </div>
     
 
     </br>
     </br>
     
-    <div class="container disqus">
-        <div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "https-www-hitzhangjie-pro" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-    </div>
-
 
 
                 
@@ -2582,7 +2556,7 @@ message MethodOptions {
         
 
 
-<script src="https://www.hitzhangjie.pro/js/bundle.2ee571453a8980175e10bda96bda797cc9c4e2e745e488df68d50cef5deb57ff.js" integrity="sha256-LuVxRTqJgBdeEL2pa9p5fMnE4udF5IjfaNUM713rV/8="></script>
+<script src="https://www.hitzhangjie.pro/js/bundle.f1741e9868b2f697e71cf8fccfcc12166540999b3d36f8fb9edd0882ba425d55.js" integrity="sha256-8XQemGiy9pfnHPj8z8wSFmVAmZs9Nvj7nt0IgrpCXVU="></script>
 
 
 

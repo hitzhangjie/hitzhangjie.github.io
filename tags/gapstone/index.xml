@@ -6,11 +6,7 @@
     <description>Recent content in gapstone on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Sun, 06 Sep 2020 18:55:39 +0800</lastBuildDate>
-    
-	<atom:link href="https://www.hitzhangjie.pro/tags/gapstone/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Sun, 06 Sep 2020 18:55:39 +0800</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/gapstone/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>剖析go二进制文件</title>
       <link>https://www.hitzhangjie.pro/blog/2020-09-06-%E5%89%96%E6%9E%90go%E4%BA%8C%E8%BF%9B%E5%88%B6%E6%96%87%E4%BB%B6/</link>

@@ -82,7 +82,7 @@ div#st-2 .st-btn > img {
 
 
 
-<link rel="stylesheet" href="/css/main.min.24b21e0909abaf0ad62af509780fea401864367fe10c0d7ffcd89778c9dac466.css" integrity="sha256-JLIeCQmrrwrWKvUJeA/qQBhkNn/hDA1//NiXeMnaxGY=" crossorigin="anonymous" media="screen">
+<link rel="stylesheet" href="/css/main.min.b4f2dd2e4b598457569caeeedcb3ed7c33d1d66cc7964445a00df66235fc4d08.css" integrity="sha256-tPLdLktZhFdWnK7u3LPtfDPR1mzHlkRFoA32YjX8TQg=" crossorigin="anonymous" media="screen">
 
 
 
@@ -217,7 +217,7 @@ div#st-2 .st-btn > img {
         </h2>
         <div class="post-data">
             发表时间：2017-04-01 <br> 
-            阅读时长：9 分钟 (4311字)
+            阅读时长：9 分钟 (4315字)
         </div>
 
         
@@ -307,7 +307,7 @@ div#st-2 .st-btn > img {
 <p>至于Apache Ant的优势具体在哪，这个我们最后在给出来，目的是让大家结合自身工作经历，根据Apache Ant的功能自己主动去发现它的优势。</p>
 
 <h3 id="2-ant-buildxml" class="anchor-link"><a href="#2-ant-buildxml">2 Ant build.xml</a></h3>
-<p>Ant的构建脚本默认是build.xml，也可以用其他的文件名。build.xml里面通常包括tag <project name="" default="" basedir=""/>，这里name指定了工程的名字，default是默认名字，basedir指定了工程的根目录。另外还包括多个tag <target name="" depends=""/>，其中name指定了目标动作的名字，例如compile、package、clean等等，它们之间存在某种依赖关系，可以通过depends指定。例如package依赖clean、compile，就可以指定depends=&quot;clean,package&rdquo;，注意依赖先后顺序，不要写成depends=&quot;package,clean&rdquo;。</p>
+<p>Ant的构建脚本默认是build.xml，也可以用其他的文件名。build.xml里面通常包括tag <project name="" default="" basedir=""/>，这里name指定了工程的名字，default是默认名字，basedir指定了工程的根目录。另外还包括多个tag <target name="" depends=""/>，其中name指定了目标动作的名字，例如compile、package、clean等等，它们之间存在某种依赖关系，可以通过depends指定。例如package依赖clean、compile，就可以指定depends=&ldquo;clean,package&rdquo;，注意依赖先后顺序，不要写成depends=&ldquo;package,clean&rdquo;。</p>
 <p>示例1：</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">&lt;?</span>xml version<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;1.0&#34;</span><span style="color:#f92672">?&gt;</span>
    <span style="color:#f92672">&lt;</span>project name<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Hello World Project&#34;</span> <span style="color:#66d9ef">default</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;info&#34;</span><span style="color:#f92672">&gt;</span>
@@ -333,50 +333,50 @@ div#st-2 .st-btn > img {
 <table>
 <thead>
 <tr>
-<th align="left">property</th>
-<th align="left">desc</th>
+<th style="text-align:left">property</th>
+<th style="text-align:left">desc</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td align="left">ant.file</td>
-<td align="left">The full location of the build file.</td>
+<td style="text-align:left">ant.file</td>
+<td style="text-align:left">The full location of the build file.</td>
 </tr>
 <tr>
-<td align="left">ant.version</td>
-<td align="left">The version of the Apache Ant installation.</td>
+<td style="text-align:left">ant.version</td>
+<td style="text-align:left">The version of the Apache Ant installation.</td>
 </tr>
 <tr>
-<td align="left">basedir</td>
-<td align="left">The basedir of the build, as specified in the basedir attribute of the project element.</td>
+<td style="text-align:left">basedir</td>
+<td style="text-align:left">The basedir of the build, as specified in the basedir attribute of the project element.</td>
 </tr>
 <tr>
-<td align="left">ant.java.version</td>
-<td align="left">The version of the JDK that is used by Ant.</td>
+<td style="text-align:left">ant.java.version</td>
+<td style="text-align:left">The version of the JDK that is used by Ant.</td>
 </tr>
 <tr>
-<td align="left">ant.project.name</td>
-<td align="left">The name of the project, as specified in the name atrribute of the project element.</td>
+<td style="text-align:left">ant.project.name</td>
+<td style="text-align:left">The name of the project, as specified in the name atrribute of the project element.</td>
 </tr>
 <tr>
-<td align="left">ant.project.default-target</td>
-<td align="left">The default target of the current project.</td>
+<td style="text-align:left">ant.project.default-target</td>
+<td style="text-align:left">The default target of the current project.</td>
 </tr>
 <tr>
-<td align="left">ant.project.invoked-targets</td>
-<td align="left">Comma separated list of the targets that were invoked in the current project.</td>
+<td style="text-align:left">ant.project.invoked-targets</td>
+<td style="text-align:left">Comma separated list of the targets that were invoked in the current project.</td>
 </tr>
 <tr>
-<td align="left">ant.core.lib</td>
-<td align="left">The full location of the Ant jar file.</td>
+<td style="text-align:left">ant.core.lib</td>
+<td style="text-align:left">The full location of the Ant jar file.</td>
 </tr>
 <tr>
-<td align="left">ant.home</td>
-<td align="left">The home directory of Ant installation.</td>
+<td style="text-align:left">ant.home</td>
+<td style="text-align:left">The home directory of Ant installation.</td>
 </tr>
 <tr>
-<td align="left">ant.library.dir</td>
-<td align="left">The home directory for Ant library files - typically ANT_HOME/lib folder.</td>
+<td style="text-align:left">ant.library.dir</td>
+<td style="text-align:left">The home directory for Ant library files - typically ANT_HOME/lib folder.</td>
 </tr>
 </tbody>
 </table>
@@ -433,22 +433,22 @@ buildversion<span style="color:#f92672">=</span>3<span style="color:#f92672">.</
 <table>
 <thead>
 <tr>
-<th align="left">character</th>
-<th align="left">desc</th>
+<th style="text-align:left">character</th>
+<th style="text-align:left">desc</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td align="left">?</td>
-<td align="left">可以匹配任意当个字符</td>
+<td style="text-align:left">?</td>
+<td style="text-align:left">可以匹配任意当个字符</td>
 </tr>
 <tr>
-<td align="left">*</td>
-<td align="left">可以匹配0个或者多个字符</td>
+<td style="text-align:left">*</td>
+<td style="text-align:left">可以匹配0个或者多个字符</td>
 </tr>
 <tr>
-<td align="left">**</td>
-<td align="left">可以匹配当前目录或者任意多级子目录（递归地哦）</td>
+<td style="text-align:left">**</td>
+<td style="text-align:left">可以匹配当前目录或者任意多级子目录（递归地哦）</td>
 </tr>
 </tbody>
 </table>
@@ -804,15 +804,41 @@ tomcat<span style="color:#f92672">.</span><span style="color:#a6e22e">manager</s
           password<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;${tomcat.manager.password}&#34;</span> path<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;/${name}&#34;</span><span style="color:#f92672">/&gt;</span>
     <span style="color:#f92672">&lt;/</span>target<span style="color:#f92672">&gt;</span>
 <span style="color:#f92672">&lt;/</span>project<span style="color:#f92672">&gt;</span>
-</code></pre></div><p>下面对tomcat相关的几个targe他进行一下描述：
-| task | desc |
-|:&mdash;-:|:&mdash;-:|
-|InstallTask|Installs a web application. Class Name: org.apache.catalina.ant.InstallTask|
-|ReloadTask|Reload a web application. Class Name: org.apache.catalina.ant.ReloadTask|
-|ListTask|Lists all web applications. Class Name: org.apache.catalina.ant.ListTask|
-|StartTask|Starts a web application. Class Name: org.apache.catalina.ant.StartTask|
-|StopTask|Stops a web application. Class Name: org.apache.catalina.ant.StopTask|
-|ReloadTask|Reloads a web application without stopping. Class Name: org.apache.catalina.ant.ReloadTask|</p>
+</code></pre></div><p>下面对tomcat相关的几个targe他进行一下描述：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">task</th>
+<th style="text-align:center">desc</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">InstallTask</td>
+<td style="text-align:center">Installs a web application. Class Name: org.apache.catalina.ant.InstallTask</td>
+</tr>
+<tr>
+<td style="text-align:center">ReloadTask</td>
+<td style="text-align:center">Reload a web application. Class Name: org.apache.catalina.ant.ReloadTask</td>
+</tr>
+<tr>
+<td style="text-align:center">ListTask</td>
+<td style="text-align:center">Lists all web applications. Class Name: org.apache.catalina.ant.ListTask</td>
+</tr>
+<tr>
+<td style="text-align:center">StartTask</td>
+<td style="text-align:center">Starts a web application. Class Name: org.apache.catalina.ant.StartTask</td>
+</tr>
+<tr>
+<td style="text-align:center">StopTask</td>
+<td style="text-align:center">Stops a web application. Class Name: org.apache.catalina.ant.StopTask</td>
+</tr>
+<tr>
+<td style="text-align:center">ReloadTask</td>
+<td style="text-align:center">Reloads a web application without stopping. Class Name: org.apache.catalina.ant.ReloadTask</td>
+</tr>
+</tbody>
+</table>
 
 <h3 id="11-ant执行程序" class="anchor-link"><a href="#11-ant%e6%89%a7%e8%a1%8c%e7%a8%8b%e5%ba%8f">11 Ant执行程序</a></h3>
 <p>下面给出一个Ant传递参数并执行程序的配置示例。</p>
@@ -902,43 +928,17 @@ tomcat<span style="color:#f92672">.</span><span style="color:#a6e22e">manager</s
             <img src="/common/qrcode.jpg" style="height:238px;margin-top:10px;"/>
             <img src="/common/yuanbao.png" style="height:238px;margin-top:10px;margin-left:5px;"/>
         </div>
-
         <div>
             <p>
                 感谢打赏，小七🐶、元宝🐱可以改善伙食咯 😘
             </p>
         </div>
-
-
     </div>
     
 
     </br>
     </br>
     
-    <div class="container disqus">
-        <div id="disqus_thread"></div>
-<script type="application/javascript">
-    var disqus_config = function () {
-    
-    
-    
-    };
-    (function() {
-        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
-            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
-            return;
-        }
-        var d = document, s = d.createElement('script'); s.async = true;
-        s.src = '//' + "https-www-hitzhangjie-pro" + '.disqus.com/embed.js';
-        s.setAttribute('data-timestamp', +new Date());
-        (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
-    </div>
-
 
 
                 
@@ -972,7 +972,7 @@ tomcat<span style="color:#f92672">.</span><span style="color:#a6e22e">manager</s
         
 
 
-<script src="https://www.hitzhangjie.pro/js/bundle.2ee571453a8980175e10bda96bda797cc9c4e2e745e488df68d50cef5deb57ff.js" integrity="sha256-LuVxRTqJgBdeEL2pa9p5fMnE4udF5IjfaNUM713rV/8="></script>
+<script src="https://www.hitzhangjie.pro/js/bundle.f1741e9868b2f697e71cf8fccfcc12166540999b3d36f8fb9edd0882ba425d55.js" integrity="sha256-8XQemGiy9pfnHPj8z8wSFmVAmZs9Nvj7nt0IgrpCXVU="></script>
 
 
 

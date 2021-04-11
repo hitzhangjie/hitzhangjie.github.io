@@ -6,11 +6,7 @@
     <description>Recent content in toolchain on 介绍</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Mon, 28 Sep 2020 22:18:43 +0800</lastBuildDate>
-    
-	<atom:link href="https://www.hitzhangjie.pro/tags/toolchain/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Mon, 28 Sep 2020 22:18:43 +0800</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/toolchain/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>go源码剖析 - go命令</title>
       <link>https://www.hitzhangjie.pro/blog/2020-09-28-go%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-go%E5%91%BD%E4%BB%A4/</link>

@@ -2,17 +2,17 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>IPS on </title>
-    <link>https://doks.netlify.app/tags/ips/</link>
+    <link>https://www.hitzhangjie.pro/tags/ips/</link>
     <description>Recent content in IPS on </description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-US</language>
-    <lastBuildDate>Wed, 17 Mar 2021 02:20:12 +0800</lastBuildDate><atom:link href="https://doks.netlify.app/tags/ips/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 17 Mar 2021 02:20:12 +0800</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/ips/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>聊聊处理器是如何工作的</title>
-      <link>https://doks.netlify.app/blog/2020-12-16-%E8%81%8A%E8%81%8Acpu%E5%A4%84%E7%90%86%E5%99%A8%E6%98%AF%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%E7%9A%84/</link>
+      <link>https://www.hitzhangjie.pro/blog/2020-12-16-%E8%81%8A%E8%81%8Acpu%E5%A4%84%E7%90%86%E5%99%A8%E6%98%AF%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%E7%9A%84/</link>
       <pubDate>Wed, 17 Mar 2021 02:20:12 +0800</pubDate>
       
-      <guid>https://doks.netlify.app/blog/2020-12-16-%E8%81%8A%E8%81%8Acpu%E5%A4%84%E7%90%86%E5%99%A8%E6%98%AF%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%E7%9A%84/</guid>
+      <guid>https://www.hitzhangjie.pro/blog/2020-12-16-%E8%81%8A%E8%81%8Acpu%E5%A4%84%E7%90%86%E5%99%A8%E6%98%AF%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%E7%9A%84/</guid>
       <description>近期突发奇想，虽然自己对内存屏障的作用、使用方式已经很清楚了，但是堆内存屏障的实现还是不清晰，我找了些资料读了些处理器架构设计相关的论文，扫除了很多疑惑。我发现处理器架构设计，对于理解一些技术细节还是非常有帮助的。
 于是我就来了兴趣，希望能整理下学习到的关于处理器架构的知识点。当然这里的东西会涉及到很多，就学到一点总结一点，慢慢积累的方式。
 指令执行相关概念 首先，需要理解一下几个时间相关的概念：振荡周期、时钟周期、机器周期、指令周期、CPI、IPS。如果读者之前有了解过计算机内部计时电路的工作原理，应该对振荡周期、时钟周期不会感到太陌生。我还是试着从头解释下这几个周期的概念。

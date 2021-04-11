@@ -2,17 +2,17 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>cache on </title>
-    <link>https://doks.netlify.app/tags/cache/</link>
+    <link>https://www.hitzhangjie.pro/tags/cache/</link>
     <description>Recent content in cache on </description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-US</language>
-    <lastBuildDate>Fri, 24 Jul 2020 19:46:11 +0800</lastBuildDate><atom:link href="https://doks.netlify.app/tags/cache/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 24 Jul 2020 19:46:11 +0800</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/cache/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>你不认识的cc&#43;&#43; volatile</title>
-      <link>https://doks.netlify.app/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc&#43;&#43;-volatile/</link>
+      <link>https://www.hitzhangjie.pro/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc&#43;&#43;-volatile/</link>
       <pubDate>Fri, 24 Jul 2020 19:46:11 +0800</pubDate>
       
-      <guid>https://doks.netlify.app/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc&#43;&#43;-volatile/</guid>
+      <guid>https://www.hitzhangjie.pro/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc&#43;&#43;-volatile/</guid>
       <description>img { width: 680px; }  1. 令人困惑的volatile volatile字面意思是“不稳定的、易变的”，不少编程语言中存在volatile关键字，也有共同之处，如“表示程序执行期间数据可能会被外部操作修改”，如被外设修改或者被其他线程修改等。这只是字面上给我们的一般性认识，然而具体到不同的编程语言中volatile的语义可能相差甚远。
 很多人以为自己精通CC++，但是被问起volatile的时候却无法清晰、果断地表明态度，那只能说明还是处在“从入门到精通”的路上，如果了解一门语言常见特性的使用、能够写健壮高效的程序就算精通的话，那实在是太藐视“大师”的存在了。从一个volatile关键字折射出了对CC++标准、编译器、操作系统、处理器、MMU各个方面的掌握程度。
 几十年的发展，很多开发者因为自己的偏见、误解，或者对某些语言特性（如Java中的volatile语义）的根深蒂固的认识，赋予了CC++ volatile本不属于它的能力，自己却浑然不知自己犯了多大的一个错误。

@@ -5,3 +5,9 @@ resources
 # Local Netlify folder
 .netlify
 .DS_Store
+# Books
+static/gorpc101
+static/debugger.io
+static/libmill-book
+# Publish
+hitzhangjie.github.io

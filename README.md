@@ -1,1 +1,3 @@
 # README
+
+Welcome to MySpace!

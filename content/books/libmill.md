@@ -5,8 +5,8 @@ lead: "A book teach you how to build a golang microservice framework from scratc
 date: 2020-10-06T08:48:23+00:00
 lastmod: 2020-10-06T08:48:23+00:00
 draft: false
-book: "/libmill/docs/"
-cover : "http://libmill.org/libmill.png"
+book: "/libmill-book"
+cover : "assets/libmill.png"
 images: []
 ---
 

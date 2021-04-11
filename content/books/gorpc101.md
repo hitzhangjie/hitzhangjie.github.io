@@ -5,8 +5,8 @@ lead: "A book teach you how to build a golang microservice framework from scratc
 date: 2020-10-06T08:48:23+00:00
 lastmod: 2020-10-06T08:48:23+00:00
 draft: false
-book: "/gorpc101/docs/"
-cover : "https://miro.medium.com/max/7860/1*_zGotvoM8mdzvzXDvmj1mQ.png"
+book: "/gorpc101"
+cover : "assets/microservices.png"
 images: []
 ---
 

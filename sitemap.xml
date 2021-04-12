@@ -66,6 +66,34 @@
   </url>
   
   <url>
+    <loc>/tags/cpi/</loc>
+    <lastmod>2021-03-17T02:20:12+08:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/ips/</loc>
+    <lastmod>2021-03-17T02:20:12+08:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/%E6%97%B6%E9%92%9F%E5%91%A8%E6%9C%9F/</loc>
+    <lastmod>2021-03-17T02:20:12+08:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <url>
+    <loc>/blog/2020-12-16-%E8%81%8A%E8%81%8Acpu%E5%A4%84%E7%90%86%E5%99%A8%E6%98%AF%E5%A6%82%E4%BD%95%E5%B7%A5%E4%BD%9C%E7%9A%84/</loc>
+    <lastmod>2021-03-17T02:20:12+08:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <url>
     <loc>/tags/clock/</loc>
     <lastmod>2021-03-09T23:59:59+08:00</lastmod>
     <changefreq>weekly</changefreq>
@@ -362,6 +390,20 @@
   <url>
     <loc>/tags/%E7%83%AD%E9%87%8D%E5%90%AF/</loc>
     <lastmod>2020-08-28T03:36:59+08:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <url>
+    <loc>/contact/</loc>
+    <lastmod>2020-08-27T19:25:12+02:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <url>
+    <loc>/privacy-policy/</loc>
+    <lastmod>2020-08-27T19:23:18+02:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>

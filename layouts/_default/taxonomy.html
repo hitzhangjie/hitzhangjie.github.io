@@ -2,7 +2,7 @@
 <div class="row justify-content-center">
 
     <!-- tag name -->
-    <div class="col-md-12 col-lg-10 col-xl-8">
+    <div class="col-md-12">
         <h1 style="text-align: left;">
             {{ .Data.Singular | humanize }}: {{ lower .Title | markdownify }}
         </h1>
@@ -11,18 +11,45 @@
 
     <!-- blogs list -->
     <div class="row justify-content-center">
-        <div class="col-md-12 col-lg-10 col-xl-8">
+        <div class="col-md-12">
+            <article>
+
+			<table border="0">
+
             {{ range .Paginator.Pages }}
-                <article>
-                    {{ .Date.Format (.Site.Params.dateFormat | default "2006/01/02") }}, 
-                    <a href="{{ .RelPermalink }}">{{ .Title }}</a>
-                </article>
-            {{ end }}
+
+                <!-- display blog list -->
+				<tr>
+					<td width="10%">
+						{{ if .Params.date | default "1970-01-01" }} 
+							<span>{{ .Date.Format (.Site.Params.dateFormat | default "2006/01/02") }}</span>
+						{{ end }}
+					</td>
+					<td width="45%">
+						<span><a href="{{ .Permalink }}">《{{ .Title }}》</a></span>
+					</td>
+					<td width="45%">
+						{{ if .Params.tags }}
+						{{ $len := (len .Params.tags) }}
+							🔖{{ if gt $len 1 }}{{ end }}
+							{{ range $index, $tag := .Params.tags }}
+                            <font size="3">
+							<a href="{{ "tags/" | relLangURL }}{{ . | urlize }}">
+                                {{ . }}
+                            </a>{{ if ne (add $index 1) $len }},{{ end }}
+							{{ end }}
+                            </font>
+						{{ end }}
+					</td>
+				</tr>
+			{{ end }}
+			</table>
+
+            </article>
 
             {{ template "_internal/pagination.html" . }}
         </div>
     </div>
-
 </div>
 {{ end }}
 

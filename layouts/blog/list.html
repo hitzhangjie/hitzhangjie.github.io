@@ -46,21 +46,25 @@
 			<table border="0">
 			{{ range .Pages.ByPublishDate.Reverse }}
 				<tr>
-					<td width="15%">
+					<td width="10%">
 						{{ if .Params.date | default "1970-01-01" }} 
 							<span>{{ .Date.Format (.Site.Params.dateFormat | default "2006/01/02") }}</span>
 						{{ end }}
 					</td>
-					<td width="55%">
+					<td width="45%">
 						<span><a href="{{ .Permalink }}">《{{ .Title }}》</a></span>
 					</td>
-					<td width="33%">
+					<td width="45%">
 						{{ if .Params.tags }}
 						{{ $len := (len .Params.tags) }}
 							🔖{{ if gt $len 1 }}{{ end }}
 							{{ range $index, $tag := .Params.tags }}
-							<a href="{{ "tags/" | relLangURL }}{{ . | urlize }}">{{ . }}</a>{{ if ne (add $index 1) $len }},{{ end }}
+                            <font size="3">
+							<a href="{{ "tags/" | relLangURL }}{{ . | urlize }}">
+                                {{ . }}
+                            </a>{{ if ne (add $index 1) $len }},{{ end }}
 							{{ end }}
+                            </font>
 						{{ end }}
 					</td>
 				</tr>

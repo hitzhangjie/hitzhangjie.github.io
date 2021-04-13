@@ -7,6 +7,7 @@ width: 12
 height: 1  
 date: 2017-02-25 21:07:54 +0800  
 tags: ["language","linux","algorithm","pattern"]
+draft: true
 toc: true
 ---
 

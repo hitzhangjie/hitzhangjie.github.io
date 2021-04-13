@@ -38,24 +38,5 @@
       <description></description>
     </item>
     
-    <item>
-      <title>Contact</title>
-      <link>/contact/</link>
-      <pubDate>Thu, 27 Aug 2020 19:25:12 +0200</pubDate>
-      
-      <guid>/contact/</guid>
-      <description>user=&#34;hello&#34;,domain=&#34;getdoks.org&#34;,document.write(user+&#34;@&#34;+domain);hello at getdoks.org </description>
-    </item>
-    
-    <item>
-      <title>Privacy Policy</title>
-      <link>/privacy-policy/</link>
-      <pubDate>Thu, 27 Aug 2020 19:23:18 +0200</pubDate>
-      
-      <guid>/privacy-policy/</guid>
-      <description>TLDR: We do not use cookies and we do not collect any personal data.
-Website visitors  No personal information is collected. No information is stored in the browser. No information is shared with, sent to or sold to third-parties. No information is shared with advertising companies. No information is mined and harvested for personal and behavioral trends. No information is monetized.  Information we collect and what we use it for We run Plausible analytics on getdoks.</description>
-    </item>
-    
   </channel>
 </rss>

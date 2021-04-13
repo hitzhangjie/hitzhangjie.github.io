@@ -13,36 +13,18 @@
   <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
   <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
   <title>golang select-case 实现机制 - MySpace</title>
-<meta name="description" content="MySpace is a hitzhangjie&#39;s personal space, for blogs, books, journey, thinkings.">
+<meta name="description" content="golang chan select-case设计实现">
 <link rel="canonical" href="https://www.hitzhangjie.pro/blog/2018-05-19-golang-select-case%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/">
 <meta name="twitter:card" content="summary_large_image">
       <meta name="twitter:image" content="/doks.png">
     <meta name="twitter:title" content="golang select-case 实现机制">
-<meta name="twitter:description" content="1 chan操作规则 在介绍select-case实现机制之前，最好先了解下chan操作规则，明白goroutine何时阻塞，又在什么时机被唤醒，这对后续理解select-case实现有帮助。所以接下来先介绍chan操作规则，然后再介绍select-case的实现。
-1.1 chan操作规则1 当一个goroutine要从一个non-nil &amp; non-closed chan上接收数据时，goroutine首先会去获取chan上的锁，然后执行如下操作直到某个条件被满足：
-1）如果chan上的value buffer不空，这也意味着chan上的recv goroutine queue也一定是空的，该接收goroutine将从value buffer中unshift出一个value。这个时候，如果send goroutine队列不空的情况下，因为刚才value buffer中空出了一个位置，有位置可写，所以这个时候会从send goroutine queue中unshift出一个发送goroutine并让其恢复执行，让其执行把数据写入chan的操作，实际上是恢复该发送该goroutine执行，并把该发送goroutine要发送的数据push到value buffer中。然后呢，该接收goroutine也拿到了数据了，就继续执行。这种情景，channel的接收操作称为non-blocking操作。
-2）另一种情况，如果value buffer是空的，但是send goroutine queue不空，这种情况下，该chan一定是unbufferred chan，不然value buffer肯定有数据嘛，这个时候接收goroutine将从send goroutine queue中unshift出一个发送goroutine，并将该发送goroutine要发送的数据接收过来（两个goroutine一个有发送数据地址，一个有接收数据地址，拷贝过来就ok），然后这个取出的发送goroutine将恢复执行，这个接收goroutine也可以继续执行。这种情况下，chan接收操作也是non-blocking操作。
-3）另一种情况，如果value buffer和send goroutine queue都是空的，没有数据可接收，将把该接收goroutine push到chan的recv goroutine queue，该接收goroutine将转入blocking状态，什么时候恢复期执行呢，要等到有一个goroutine尝试向chan发送数据的时候了。这种场景下，chan接收操作是blocking操作。
-1.2 chan操作规则2 当一个goroutine常识向一个non-nil &amp; non-closed chan发送数据的时候，该goroutine将先尝试获取chan上的锁，然后执行如下操作直到满足其中一种情况。
-1）如果chan的recv goroutine queue不空，这种情况下，value buffer一定是空的。发送goroutine将从recv goroutine queue中unshift出一个recv goroutine，然后直接将自己要发送的数据拷贝到该recv goroutine的接收地址处，然后恢复该recv goroutine的运行，当前发送goroutine也继续执行。这种情况下，chan send操作是non-blocking操作。
-2）如果chan的recv goroutine queue是空的，并且value buffer不满，这种情况下，send goroutine queue一定是空的，因为value buffer不满发送goroutine可以发送完成不可能会阻塞。该发送goroutine将要发送的数据push到value buffer中然后继续执行。这种情况下，chan send操作是non-blocking操作。
-3）如果chan的recv goroutine queue是空的，并且value buffer是满的，发送goroutine将被push到send goroutine queue中进入阻塞状态。等到有其他goroutine尝试从chan接收数据的时候才能将其唤醒恢复执行。这种情况下，chan send操作是blocking操作。
-1.3 chan操作规则3 当一个goroutine尝试close一个non-nil &amp; non-closed chan的时候，close操作将依次执行如下操作。">
+<meta name="twitter:description" content="golang chan select-case设计实现">
 
 <meta name="twitter:site" content="@hitzhangjie">
 <meta name="twitter:creator" content="@hitzhangjie">
 
 <meta property="og:title" content="golang select-case 实现机制">
-<meta property="og:description" content="1 chan操作规则 在介绍select-case实现机制之前，最好先了解下chan操作规则，明白goroutine何时阻塞，又在什么时机被唤醒，这对后续理解select-case实现有帮助。所以接下来先介绍chan操作规则，然后再介绍select-case的实现。
-1.1 chan操作规则1 当一个goroutine要从一个non-nil &amp; non-closed chan上接收数据时，goroutine首先会去获取chan上的锁，然后执行如下操作直到某个条件被满足：
-1）如果chan上的value buffer不空，这也意味着chan上的recv goroutine queue也一定是空的，该接收goroutine将从value buffer中unshift出一个value。这个时候，如果send goroutine队列不空的情况下，因为刚才value buffer中空出了一个位置，有位置可写，所以这个时候会从send goroutine queue中unshift出一个发送goroutine并让其恢复执行，让其执行把数据写入chan的操作，实际上是恢复该发送该goroutine执行，并把该发送goroutine要发送的数据push到value buffer中。然后呢，该接收goroutine也拿到了数据了，就继续执行。这种情景，channel的接收操作称为non-blocking操作。
-2）另一种情况，如果value buffer是空的，但是send goroutine queue不空，这种情况下，该chan一定是unbufferred chan，不然value buffer肯定有数据嘛，这个时候接收goroutine将从send goroutine queue中unshift出一个发送goroutine，并将该发送goroutine要发送的数据接收过来（两个goroutine一个有发送数据地址，一个有接收数据地址，拷贝过来就ok），然后这个取出的发送goroutine将恢复执行，这个接收goroutine也可以继续执行。这种情况下，chan接收操作也是non-blocking操作。
-3）另一种情况，如果value buffer和send goroutine queue都是空的，没有数据可接收，将把该接收goroutine push到chan的recv goroutine queue，该接收goroutine将转入blocking状态，什么时候恢复期执行呢，要等到有一个goroutine尝试向chan发送数据的时候了。这种场景下，chan接收操作是blocking操作。
-1.2 chan操作规则2 当一个goroutine常识向一个non-nil &amp; non-closed chan发送数据的时候，该goroutine将先尝试获取chan上的锁，然后执行如下操作直到满足其中一种情况。
-1）如果chan的recv goroutine queue不空，这种情况下，value buffer一定是空的。发送goroutine将从recv goroutine queue中unshift出一个recv goroutine，然后直接将自己要发送的数据拷贝到该recv goroutine的接收地址处，然后恢复该recv goroutine的运行，当前发送goroutine也继续执行。这种情况下，chan send操作是non-blocking操作。
-2）如果chan的recv goroutine queue是空的，并且value buffer不满，这种情况下，send goroutine queue一定是空的，因为value buffer不满发送goroutine可以发送完成不可能会阻塞。该发送goroutine将要发送的数据push到value buffer中然后继续执行。这种情况下，chan send操作是non-blocking操作。
-3）如果chan的recv goroutine queue是空的，并且value buffer是满的，发送goroutine将被push到send goroutine queue中进入阻塞状态。等到有其他goroutine尝试从chan接收数据的时候才能将其唤醒恢复执行。这种情况下，chan send操作是blocking操作。
-1.3 chan操作规则3 当一个goroutine尝试close一个non-nil &amp; non-closed chan的时候，close操作将依次执行如下操作。">
+<meta property="og:description" content="golang chan select-case设计实现">
 <meta property="og:type" content="article">
 <meta property="og:url" content="/blog/2018-05-19-golang-select-case%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/">
 
@@ -79,7 +61,7 @@
           "url": "\/logo-doks.png"
         }
         },
-      "description": ""
+      "description": "golang chan select-case设计实现"
     }
     </script>
   <script type="application/ld+json">
@@ -353,10 +335,10 @@ select {
 				</div>
 			</div>
 		</a>
-	<a class="ms-auto" href="https://www.hitzhangjie.pro/blog/2017-12-03-go%E9%A3%8E%E6%A0%BC%E5%8D%8F%E7%A8%8B%E5%BA%93libmill%E4%B9%8B%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">
+	<a class="ms-auto" href="https://www.hitzhangjie.pro/blog/2017-10-14-assembly-language/">
 			<div class="card my-1">
 				<div class="card-body py-2">
-					go风格协程库libmill之源码分析 &rarr;
+					Assembly Language &rarr;
 				</div>
 			</div>
 		</a>
@@ -391,7 +373,7 @@ select {
     
     <script src="https://www.hitzhangjie.pro/js/highlight.min.c32fa100fe3c432c2629ed4542b161ff95a16be545c00c12fcd3ea42ec6c5e283bcd80b1097abf4ba955f8bd0a004d19673ac0bd3ad2394677ce000abbfb4de8.js" integrity="sha512-wy&#43;hAP48QywmKe1FQrFh/5Wha&#43;VFwAwS/NPqQuxsXig7zYCxCXq/S6lV&#43;L0KAE0ZZzrAvTrSOUZ3zgAKu/tN6A==" crossorigin="anonymous" defer></script>
   <script src="https://www.hitzhangjie.pro/main.min.7ab523108435955765bcb88a0ee704f412ba01646b5478e84f3b9feb24f0ce750a14c3f7bd9a62408fe21e41996d361a9eb29f77e85dfe77b7e17f7623bd3a97.js" integrity="sha512-erUjEIQ1lVdlvLiKDucE9BK6AWRrVHjoTzuf6yTwznUKFMP3vZpiQI/iHkGZbTYanrKfd&#43;hd/ne34X92I706lw==" crossorigin="anonymous" defer></script>
-  <script src="https://www.hitzhangjie.pro/index.min.17ec74149fed14922ba0a28eff4475419af8eaab86643123f248bba048e5c15a12a453e12bd9981a36548e2aed87a4b6ffd2abe0dabca0d609dc9be46094001e.js" integrity="sha512-F&#43;x0FJ/tFJIroKKO/0R1QZr46quGZDEj8ki7oEjlwVoSpFPhK9mYGjZUjirth6S2/9Kr4Nq8oNYJ3JvkYJQAHg==" crossorigin="anonymous" defer></script>
+  <script src="https://www.hitzhangjie.pro/index.min.88f41478d21849196bf7c3371e456d4548b7011d2ca49ad0bb6d87ed7c751c908b6e723c3e5e00595bd2068aad172ae86245419872a525b61fcc0e0f24700a60.js" integrity="sha512-iPQUeNIYSRlr98M3HkVtRUi3AR0spJrQu22H7Xx1HJCLbnI8Pl4AWVvSBoqtFyroYkVBmHKlJbYfzA4PJHAKYA==" crossorigin="anonymous" defer></script>
   
   </body>
 </html>

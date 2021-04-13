@@ -6,7 +6,19 @@
     <description>Recent content in dwarf on </description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-US</language>
-    <lastBuildDate>Tue, 09 Jun 2020 20:25:07 +0800</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/dwarf/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Tue, 06 Oct 2020 08:48:23 +0000</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/dwarf/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Debugger101: Go调试器开发内幕</title>
+      <link>https://www.hitzhangjie.pro/books/debugger101/</link>
+      <pubDate>Tue, 06 Oct 2020 08:48:23 +0000</pubDate>
+      
+      <guid>https://www.hitzhangjie.pro/books/debugger101/</guid>
+      <description>授人以鱼不如授人以渔，调试器正是这样一款工具，它虽然不知道您程序中何处引入了bug或者理解不到位，但是当你想到它、捡起它，它就可以指引你一步步追根溯源。
+不仅要做授人以渔的工具，也要做授人以渔的人，不禁要问读者，你们可曾了解过调试器的内部实现？它是如何控制你程序执行的，它是如何知道指定内存地址处的指令或者数据类型的…本书旨在唤帮助读者打通对编译、调试工具链、调试信息标准以及操作系统之间的认识，使具备一定的调试器定制化开发的能力。
+ 由于本书内容涉及大量系统原理、调试信息标准、设计实现、go源码分析内容，篇幅很大，很难用几篇博文讲述清楚，因此单独写一本电子书，《Debugger101：go调试器开发内幕》。
+欢迎阅读，如您在阅读过程中遇到错误、疏漏、建议，不要犹豫，请给我提issue。</description>
+    </item>
+    
     <item>
       <title>A Golang Debugger Book</title>
       <link>https://www.hitzhangjie.pro/blog/2020-06-09-a-golang-debugger-book/</link>

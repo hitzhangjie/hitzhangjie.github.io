@@ -13,38 +13,18 @@
   <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
   <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
   <title>Protoc工作原理分析 - MySpace</title>
-<meta name="description" content="MySpace is a hitzhangjie&#39;s personal space, for blogs, books, journey, thinkings.">
+<meta name="description" content="团队经常使用protobuf作为消息交换格式，由于protobuf具有很强的自描述性，非常适合对一个服务进行建模。结合配套的编译器protoc，可以轻松理解服务信息，在此基础上可以开发一些脚手架工具（如protoc-gen-go）来完成代码生成、接口自动测试、生成api文档等等工作。本文就来介绍下protoc及其插件的工作原理，读完后读者将具备定制化protoc插件开发的能力。">
 <link rel="canonical" href="https://www.hitzhangjie.pro/blog/2017-05-16-protoc%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86/">
 <meta name="twitter:card" content="summary_large_image">
       <meta name="twitter:image" content="/doks.png">
     <meta name="twitter:title" content="Protoc工作原理分析">
-<meta name="twitter:description" content="在进行protoc插件开发之前，首先要了解protoc的工作原理。在protobuf的使用过程中，protoc作为proto文件的编译器，很多开发人员只会用但是不了解其工作原理，更不了解如何扩展其功能。protobuf作为目前常用的数据交换格式在协议开发中被广泛采用，此外，protoc对proto文件的强大解析能力使我们可以开发一些插件，通过插件快速生成特定于proto文件的工具类、配置文件等，从而提高开发效率。
-本文首先会介绍一下protoc的整体工作机制，然后解释一下protoc对proto文件的解析过程，最后给出编写protoc插件扩展protoc功能的一个示例教程。
-1. protoc源代码准备 要想了解protoc的工作机制，查看其源代码了解其核心流程是最靠谱的方法。
-获取程序源代码的方式如下：
-git co https://github.com/google/protobuf  由于我们工程中常用的protoc版本是v2.5.0，所以这里检出对应版本的tag。
-git ck v2.5.0  考虑到可能会进行测试、修改、注释等学习过程，这里最好创建一个新的分支来操作。
-git branch ${new-branch-name} git ck ${new-branch-name}  现在源代码准备好了，我比较喜欢使用vim、ctags、cscope来阅读源码，根据个人习惯吧，下面可以阅读protoc的源码梳理以下工作机制。
-2. protoc源码分析 上述git检出后的protobuf路径，记为${protobuf}，后面如果出现${protobuf}请知晓其含义。如果在描述源代码时没有提及起始路径${protobuf}，那么起始路径均为${protobuf}。
-2.1. protoc程序入口 src/google/protobuf/compiler/main.cc中的main函数，为protoc的入口函数。
-file: src/google/protobuf/compiler/main.cc
-// Author: kenton@google.com (Kenton Varda) // 这个头文件定义了protoc的命令行接口 #include &lt;google/protobuf/compiler/command_line_interface.h&gt; // protoc中内置了对cpp、python、java语言的支持，对其他语言的支持需要以plugin的方式来支持 #include &lt;google/protobuf/compiler/cpp/cpp_generator.h&gt; #include &lt;google/protobuf/compiler/python/python_generator.h&gt; #include &lt;google/protobuf/compiler/java/java_generator.h&gt; int main(int argc, char* argv[]) { // 初始化protoc命令行接口并开启插件 // - 插件只是普通的可执行程序，其文件名以AllowPlugins参数protoc-开头 // - 假定protoc --foo_out，那么实际调用的插件是protoc-foo google::protobuf::compiler::CommandLineInterface cli; cli.AllowPlugins(&quot;protoc-&quot;); // Proto2 C&#43;&#43; (指定了--cpp_out将调用cpp::Generator) google::protobuf::compiler::cpp::CppGenerator cpp_generator; cli.">
+<meta name="twitter:description" content="团队经常使用protobuf作为消息交换格式，由于protobuf具有很强的自描述性，非常适合对一个服务进行建模。结合配套的编译器protoc，可以轻松理解服务信息，在此基础上可以开发一些脚手架工具（如protoc-gen-go）来完成代码生成、接口自动测试、生成api文档等等工作。本文就来介绍下protoc及其插件的工作原理，读完后读者将具备定制化protoc插件开发的能力。">
 
 <meta name="twitter:site" content="@hitzhangjie">
 <meta name="twitter:creator" content="@hitzhangjie">
 
 <meta property="og:title" content="Protoc工作原理分析">
-<meta property="og:description" content="在进行protoc插件开发之前，首先要了解protoc的工作原理。在protobuf的使用过程中，protoc作为proto文件的编译器，很多开发人员只会用但是不了解其工作原理，更不了解如何扩展其功能。protobuf作为目前常用的数据交换格式在协议开发中被广泛采用，此外，protoc对proto文件的强大解析能力使我们可以开发一些插件，通过插件快速生成特定于proto文件的工具类、配置文件等，从而提高开发效率。
-本文首先会介绍一下protoc的整体工作机制，然后解释一下protoc对proto文件的解析过程，最后给出编写protoc插件扩展protoc功能的一个示例教程。
-1. protoc源代码准备 要想了解protoc的工作机制，查看其源代码了解其核心流程是最靠谱的方法。
-获取程序源代码的方式如下：
-git co https://github.com/google/protobuf  由于我们工程中常用的protoc版本是v2.5.0，所以这里检出对应版本的tag。
-git ck v2.5.0  考虑到可能会进行测试、修改、注释等学习过程，这里最好创建一个新的分支来操作。
-git branch ${new-branch-name} git ck ${new-branch-name}  现在源代码准备好了，我比较喜欢使用vim、ctags、cscope来阅读源码，根据个人习惯吧，下面可以阅读protoc的源码梳理以下工作机制。
-2. protoc源码分析 上述git检出后的protobuf路径，记为${protobuf}，后面如果出现${protobuf}请知晓其含义。如果在描述源代码时没有提及起始路径${protobuf}，那么起始路径均为${protobuf}。
-2.1. protoc程序入口 src/google/protobuf/compiler/main.cc中的main函数，为protoc的入口函数。
-file: src/google/protobuf/compiler/main.cc
-// Author: kenton@google.com (Kenton Varda) // 这个头文件定义了protoc的命令行接口 #include &lt;google/protobuf/compiler/command_line_interface.h&gt; // protoc中内置了对cpp、python、java语言的支持，对其他语言的支持需要以plugin的方式来支持 #include &lt;google/protobuf/compiler/cpp/cpp_generator.h&gt; #include &lt;google/protobuf/compiler/python/python_generator.h&gt; #include &lt;google/protobuf/compiler/java/java_generator.h&gt; int main(int argc, char* argv[]) { // 初始化protoc命令行接口并开启插件 // - 插件只是普通的可执行程序，其文件名以AllowPlugins参数protoc-开头 // - 假定protoc --foo_out，那么实际调用的插件是protoc-foo google::protobuf::compiler::CommandLineInterface cli; cli.AllowPlugins(&quot;protoc-&quot;); // Proto2 C&#43;&#43; (指定了--cpp_out将调用cpp::Generator) google::protobuf::compiler::cpp::CppGenerator cpp_generator; cli.">
+<meta property="og:description" content="团队经常使用protobuf作为消息交换格式，由于protobuf具有很强的自描述性，非常适合对一个服务进行建模。结合配套的编译器protoc，可以轻松理解服务信息，在此基础上可以开发一些脚手架工具（如protoc-gen-go）来完成代码生成、接口自动测试、生成api文档等等工作。本文就来介绍下protoc及其插件的工作原理，读完后读者将具备定制化protoc插件开发的能力。">
 <meta property="og:type" content="article">
 <meta property="og:url" content="/blog/2017-05-16-protoc%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86/">
 
@@ -81,7 +61,7 @@ file: src/google/protobuf/compiler/main.cc
           "url": "\/logo-doks.png"
         }
         },
-      "description": ""
+      "description": "团队经常使用protobuf作为消息交换格式，由于protobuf具有很强的自描述性，非常适合对一个服务进行建模。结合配套的编译器protoc，可以轻松理解服务信息，在此基础上可以开发一些脚手架工具（如protoc-gen-go）来完成代码生成、接口自动测试、生成api文档等等工作。本文就来介绍下protoc及其插件的工作原理，读完后读者将具备定制化protoc插件开发的能力。"
     }
     </script>
   <script type="application/ld+json">
@@ -2481,7 +2461,7 @@ func (g *grpc) generateService(file *generator.FileDescriptor, service *pb.Servi
     
     <script src="https://www.hitzhangjie.pro/js/highlight.min.c32fa100fe3c432c2629ed4542b161ff95a16be545c00c12fcd3ea42ec6c5e283bcd80b1097abf4ba955f8bd0a004d19673ac0bd3ad2394677ce000abbfb4de8.js" integrity="sha512-wy&#43;hAP48QywmKe1FQrFh/5Wha&#43;VFwAwS/NPqQuxsXig7zYCxCXq/S6lV&#43;L0KAE0ZZzrAvTrSOUZ3zgAKu/tN6A==" crossorigin="anonymous" defer></script>
   <script src="https://www.hitzhangjie.pro/main.min.7ab523108435955765bcb88a0ee704f412ba01646b5478e84f3b9feb24f0ce750a14c3f7bd9a62408fe21e41996d361a9eb29f77e85dfe77b7e17f7623bd3a97.js" integrity="sha512-erUjEIQ1lVdlvLiKDucE9BK6AWRrVHjoTzuf6yTwznUKFMP3vZpiQI/iHkGZbTYanrKfd&#43;hd/ne34X92I706lw==" crossorigin="anonymous" defer></script>
-  <script src="https://www.hitzhangjie.pro/index.min.17ec74149fed14922ba0a28eff4475419af8eaab86643123f248bba048e5c15a12a453e12bd9981a36548e2aed87a4b6ffd2abe0dabca0d609dc9be46094001e.js" integrity="sha512-F&#43;x0FJ/tFJIroKKO/0R1QZr46quGZDEj8ki7oEjlwVoSpFPhK9mYGjZUjirth6S2/9Kr4Nq8oNYJ3JvkYJQAHg==" crossorigin="anonymous" defer></script>
+  <script src="https://www.hitzhangjie.pro/index.min.88f41478d21849196bf7c3371e456d4548b7011d2ca49ad0bb6d87ed7c751c908b6e723c3e5e00595bd2068aad172ae86245419872a525b61fcc0e0f24700a60.js" integrity="sha512-iPQUeNIYSRlr98M3HkVtRUi3AR0spJrQu22H7Xx1HJCLbnI8Pl4AWVvSBoqtFyroYkVBmHKlJbYfzA4PJHAKYA==" crossorigin="anonymous" defer></script>
   
   </body>
 </html>

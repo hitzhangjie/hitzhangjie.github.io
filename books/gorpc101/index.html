@@ -12,18 +12,18 @@
   <meta name="robots" content="index, follow">
   <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
   <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
-  <title>GoRPC 101: 微服务框架开发内幕 - MySpace</title>
+  <title>GoRPC101: 微服务框架开发内幕 - MySpace</title>
 <meta name="description" content="如今微服务架构大行其道，微服务框架也层出不穷，如grpc、springcloud、vert.x、ballerina，等等，这也反映出技术团队对开发效率、运营质量的不断探索与追求。合格的工程师要熟练运用框架，有追求的工程师则应掌握更全面的技能，能对框架进行定制化开发。">
 <link rel="canonical" href="https://www.hitzhangjie.pro/books/gorpc101/">
 <meta name="twitter:card" content="summary_large_image">
       <meta name="twitter:image" content="/doks.png">
-    <meta name="twitter:title" content="GoRPC 101: 微服务框架开发内幕">
+    <meta name="twitter:title" content="GoRPC101: 微服务框架开发内幕">
 <meta name="twitter:description" content="如今微服务架构大行其道，微服务框架也层出不穷，如grpc、springcloud、vert.x、ballerina，等等，这也反映出技术团队对开发效率、运营质量的不断探索与追求。合格的工程师要熟练运用框架，有追求的工程师则应掌握更全面的技能，能对框架进行定制化开发。">
 
 <meta name="twitter:site" content="@hitzhangjie">
 <meta name="twitter:creator" content="@hitzhangjie">
 
-<meta property="og:title" content="GoRPC 101: 微服务框架开发内幕">
+<meta property="og:title" content="GoRPC101: 微服务框架开发内幕">
 <meta property="og:description" content="如今微服务架构大行其道，微服务框架也层出不穷，如grpc、springcloud、vert.x、ballerina，等等，这也反映出技术团队对开发效率、运营质量的不断探索与追求。合格的工程师要熟练运用框架，有追求的工程师则应掌握更全面的技能，能对框架进行定制化开发。">
 <meta property="og:type" content="article">
 <meta property="og:url" content="/books/gorpc101/">
@@ -151,8 +151,7 @@ div#st-2 .st-btn > img {
 	<div class="row flex-xl-nowrap">
 		<div class="col-lg-5 col-xl-4 docs-sidebar">
 			<nav class="docs-links" aria-label="Main navigation">
-				"current book: "
-
+				
 			</nav>
 		</div>
 		<nav class="docs-toc d-none d-xl-block col-xl-3" aria-label="Secondary navigation">
@@ -164,15 +163,21 @@ div#st-2 .st-btn > img {
 		</nav>
 		<main class="docs-content col-lg-11 col-xl-9 mx-xl-auto">
 		
-			<h1>GoRPC 101: 微服务框架开发内幕</h1>
-			<p class="lead">A book teach you how to build a golang microservice framework from scratch.</p>
-			
+			<h1>GoRPC101: 微服务框架开发内幕</h1>
+			<p class="lead"></p>
+			<p>如今微服务架构大行其道，微服务框架也层出不穷，如grpc、springcloud、vert.x、ballerina，等等，这也反映出技术团队对开发效率、运营质量的不断探索与追求。合格的工程师要熟练运用框架，有追求的工程师则应掌握更全面的技能，能对框架进行定制化开发。</p>
+<div align="center">
+<img alt="microservices" src="https://www.hitzhangjie.pro/books/assets/microservices.png" style="width:600px;"/>
+</div>
+<p>由于本内容涉及到大量的设计实现、系统原理、性能调优、研发流程、工程素养、社区维护等等诸多内容，几篇博文实在难以介绍清楚。为了保证内容的完整性，让读者能够感受到笔者微服务框架开发工作中的真实例程，还是决定单独写一本电子书，《<a href="https://www.hitzhangjie.pro/gorpc101">GoRPC101：微服务框架开发内幕</a>》。</p>
+<p>欢迎阅读，如果您在阅读过程中发现有错误、疏漏、建议，不要很犹豫，请给我提issue。</p>
+
 			<div class="docs-navigation d-flex justify-content-between">
 	
 	<a href="https://www.hitzhangjie.pro/books/debugger101/">
 			<div class="card my-1">
 				<div class="card-body py-2">
-					&larr; debugger101: go调试器开发内幕
+					&larr; Debugger101: Go调试器开发内幕
 				</div>
 			</div>
 		</a>
@@ -214,7 +219,7 @@ div#st-2 .st-btn > img {
     
     <script src="https://www.hitzhangjie.pro/js/highlight.min.c32fa100fe3c432c2629ed4542b161ff95a16be545c00c12fcd3ea42ec6c5e283bcd80b1097abf4ba955f8bd0a004d19673ac0bd3ad2394677ce000abbfb4de8.js" integrity="sha512-wy&#43;hAP48QywmKe1FQrFh/5Wha&#43;VFwAwS/NPqQuxsXig7zYCxCXq/S6lV&#43;L0KAE0ZZzrAvTrSOUZ3zgAKu/tN6A==" crossorigin="anonymous" defer></script>
   <script src="https://www.hitzhangjie.pro/main.min.7ab523108435955765bcb88a0ee704f412ba01646b5478e84f3b9feb24f0ce750a14c3f7bd9a62408fe21e41996d361a9eb29f77e85dfe77b7e17f7623bd3a97.js" integrity="sha512-erUjEIQ1lVdlvLiKDucE9BK6AWRrVHjoTzuf6yTwznUKFMP3vZpiQI/iHkGZbTYanrKfd&#43;hd/ne34X92I706lw==" crossorigin="anonymous" defer></script>
-  <script src="https://www.hitzhangjie.pro/index.min.17ec74149fed14922ba0a28eff4475419af8eaab86643123f248bba048e5c15a12a453e12bd9981a36548e2aed87a4b6ffd2abe0dabca0d609dc9be46094001e.js" integrity="sha512-F&#43;x0FJ/tFJIroKKO/0R1QZr46quGZDEj8ki7oEjlwVoSpFPhK9mYGjZUjirth6S2/9Kr4Nq8oNYJ3JvkYJQAHg==" crossorigin="anonymous" defer></script>
+  <script src="https://www.hitzhangjie.pro/index.min.88f41478d21849196bf7c3371e456d4548b7011d2ca49ad0bb6d87ed7c751c908b6e723c3e5e00595bd2068aad172ae86245419872a525b61fcc0e0f24700a60.js" integrity="sha512-iPQUeNIYSRlr98M3HkVtRUi3AR0spJrQu22H7Xx1HJCLbnI8Pl4AWVvSBoqtFyroYkVBmHKlJbYfzA4PJHAKYA==" crossorigin="anonymous" defer></script>
   
   </body>
 </html>

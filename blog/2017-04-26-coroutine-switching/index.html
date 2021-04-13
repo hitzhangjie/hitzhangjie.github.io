@@ -13,20 +13,18 @@
   <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
   <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
   <title>Coroutine-Switching - MySpace</title>
-<meta name="description" content="MySpace is a hitzhangjie&#39;s personal space, for blogs, books, journey, thinkings.">
+<meta name="description" content="如今协程得到大量应用，大家对此并不陌生。本文对协程上下文切换做了一个简单的实验，以更好地认识协程切换及其开销。">
 <link rel="canonical" href="https://www.hitzhangjie.pro/blog/2017-04-26-coroutine-switching/">
 <meta name="twitter:card" content="summary_large_image">
       <meta name="twitter:image" content="/doks.png">
     <meta name="twitter:title" content="Coroutine-Switching">
-<meta name="twitter:description" content="1. 协程Coroutine 1.1. 协程coroutine声明 file: coroutine.h
-#include &lt;stdint.h&gt; typedef int64_t (*EntryCallback)(void*); //硬件上下文信息 struct stRegister { uint64_t rax; uint64_t rbx; uint64_t rcx; uint64_t rdx; uint64_t rsi; uint64_t rdi; uint64_t r8; uint64_t r9; uint64_t r10; uint64_t r11; uint64_t r12; uint64_t r13; uint64_t r14; uint64_t r15; uint64_t rbp; uint64_t rsp; uint64_t rip; }; //协程上下文 struct stContext { struct stRegister cpu_register; void *arg; uint8_t *stack; }; typedef struct stContext Coroutine; //创建协程 Coroutine* CreateCoroutine(EntryCallback entry, void *arg); //删除协程 void DeleteCoroutine(Coroutine *ptr); //设置协程栈尺寸 void SetStackSize(uint32_t size); //协程切换 void __SwitchCoroutine__(Coroutine *cur, const Coroutine *next);  1.">
+<meta name="twitter:description" content="如今协程得到大量应用，大家对此并不陌生。本文对协程上下文切换做了一个简单的实验，以更好地认识协程切换及其开销。">
 
 <meta name="twitter:site" content="@hitzhangjie">
 <meta name="twitter:creator" content="@hitzhangjie">
 
 <meta property="og:title" content="Coroutine-Switching">
-<meta property="og:description" content="1. 协程Coroutine 1.1. 协程coroutine声明 file: coroutine.h
-#include &lt;stdint.h&gt; typedef int64_t (*EntryCallback)(void*); //硬件上下文信息 struct stRegister { uint64_t rax; uint64_t rbx; uint64_t rcx; uint64_t rdx; uint64_t rsi; uint64_t rdi; uint64_t r8; uint64_t r9; uint64_t r10; uint64_t r11; uint64_t r12; uint64_t r13; uint64_t r14; uint64_t r15; uint64_t rbp; uint64_t rsp; uint64_t rip; }; //协程上下文 struct stContext { struct stRegister cpu_register; void *arg; uint8_t *stack; }; typedef struct stContext Coroutine; //创建协程 Coroutine* CreateCoroutine(EntryCallback entry, void *arg); //删除协程 void DeleteCoroutine(Coroutine *ptr); //设置协程栈尺寸 void SetStackSize(uint32_t size); //协程切换 void __SwitchCoroutine__(Coroutine *cur, const Coroutine *next);  1.">
+<meta property="og:description" content="如今协程得到大量应用，大家对此并不陌生。本文对协程上下文切换做了一个简单的实验，以更好地认识协程切换及其开销。">
 <meta property="og:type" content="article">
 <meta property="og:url" content="/blog/2017-04-26-coroutine-switching/">
 
@@ -63,7 +61,7 @@
           "url": "\/logo-doks.png"
         }
         },
-      "description": ""
+      "description": "如今协程得到大量应用，大家对此并不陌生。本文对协程上下文切换做了一个简单的实验，以更好地认识协程切换及其开销。"
     }
     </script>
   <script type="application/ld+json">
@@ -525,7 +523,7 @@ ready to start coroutine switching
     
     <script src="https://www.hitzhangjie.pro/js/highlight.min.c32fa100fe3c432c2629ed4542b161ff95a16be545c00c12fcd3ea42ec6c5e283bcd80b1097abf4ba955f8bd0a004d19673ac0bd3ad2394677ce000abbfb4de8.js" integrity="sha512-wy&#43;hAP48QywmKe1FQrFh/5Wha&#43;VFwAwS/NPqQuxsXig7zYCxCXq/S6lV&#43;L0KAE0ZZzrAvTrSOUZ3zgAKu/tN6A==" crossorigin="anonymous" defer></script>
   <script src="https://www.hitzhangjie.pro/main.min.7ab523108435955765bcb88a0ee704f412ba01646b5478e84f3b9feb24f0ce750a14c3f7bd9a62408fe21e41996d361a9eb29f77e85dfe77b7e17f7623bd3a97.js" integrity="sha512-erUjEIQ1lVdlvLiKDucE9BK6AWRrVHjoTzuf6yTwznUKFMP3vZpiQI/iHkGZbTYanrKfd&#43;hd/ne34X92I706lw==" crossorigin="anonymous" defer></script>
-  <script src="https://www.hitzhangjie.pro/index.min.17ec74149fed14922ba0a28eff4475419af8eaab86643123f248bba048e5c15a12a453e12bd9981a36548e2aed87a4b6ffd2abe0dabca0d609dc9be46094001e.js" integrity="sha512-F&#43;x0FJ/tFJIroKKO/0R1QZr46quGZDEj8ki7oEjlwVoSpFPhK9mYGjZUjirth6S2/9Kr4Nq8oNYJ3JvkYJQAHg==" crossorigin="anonymous" defer></script>
+  <script src="https://www.hitzhangjie.pro/index.min.88f41478d21849196bf7c3371e456d4548b7011d2ca49ad0bb6d87ed7c751c908b6e723c3e5e00595bd2068aad172ae86245419872a525b61fcc0e0f24700a60.js" integrity="sha512-iPQUeNIYSRlr98M3HkVtRUi3AR0spJrQu22H7Xx1HJCLbnI8Pl4AWVvSBoqtFyroYkVBmHKlJbYfzA4PJHAKYA==" crossorigin="anonymous" defer></script>
   
   </body>
 </html>

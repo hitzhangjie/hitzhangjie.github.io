@@ -13,28 +13,18 @@
   <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
   <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
   <title>golang method receiver-type的梗 - MySpace</title>
-<meta name="description" content="MySpace is a hitzhangjie&#39;s personal space, for blogs, books, journey, thinkings.">
+<meta name="description" content="golang中方法为什么receiver-type不能为指针类型、接口类型">
 <link rel="canonical" href="https://www.hitzhangjie.pro/blog/2018-05-21-golang-method-receiver-type%E7%9A%84%E6%A2%97/">
 <meta name="twitter:card" content="summary_large_image">
       <meta name="twitter:image" content="/doks.png">
     <meta name="twitter:title" content="golang method receiver-type的梗">
-<meta name="twitter:description" content="这里来聊聊method receiver type为什么不能是pointer和interface类型。
-1 receiver-type必须满足的条件 golang里面提供了一定的面向对象支持，比如我们可以为类型T或者*T定义成员方法（类型T称为成员方法的receiver-type），但是这里的类型T必须满足如下几个条件：
- T必须是已经定义过的类型； T与当前方法定义必须在同一个package下面； T不能是指针； T不能是接口类型；  前面两点都比较容易理解，下面两点是什么梗？为什么就不能在指针类型上添加方法？为什么就不能在interface上添加方法？当然可以一句话待过，golang不支持，但是我想问下为什么？
-2 receiver-type为什么不能是指针类型？ golang允许为 类型指针*T 添加方法，但是不允许为 指针类型本身 添加方法。按现有golang的实现方式，为指针类型添加方法会导致方法调用时的歧义。
-看下面这个示例程序。
-type T int func (t *T) Get() T { return *t &#43; 1 } type P *T func (p P) Get() T { return *p &#43; 2 } func F() { var v1 T var v2 = &amp;v1 var v3 P = &amp;v1 fmt.Println(v1.Get(), v2.Get(), v3.Get()) }  示例程序中 v3.">
+<meta name="twitter:description" content="golang中方法为什么receiver-type不能为指针类型、接口类型">
 
 <meta name="twitter:site" content="@hitzhangjie">
 <meta name="twitter:creator" content="@hitzhangjie">
 
 <meta property="og:title" content="golang method receiver-type的梗">
-<meta property="og:description" content="这里来聊聊method receiver type为什么不能是pointer和interface类型。
-1 receiver-type必须满足的条件 golang里面提供了一定的面向对象支持，比如我们可以为类型T或者*T定义成员方法（类型T称为成员方法的receiver-type），但是这里的类型T必须满足如下几个条件：
- T必须是已经定义过的类型； T与当前方法定义必须在同一个package下面； T不能是指针； T不能是接口类型；  前面两点都比较容易理解，下面两点是什么梗？为什么就不能在指针类型上添加方法？为什么就不能在interface上添加方法？当然可以一句话待过，golang不支持，但是我想问下为什么？
-2 receiver-type为什么不能是指针类型？ golang允许为 类型指针*T 添加方法，但是不允许为 指针类型本身 添加方法。按现有golang的实现方式，为指针类型添加方法会导致方法调用时的歧义。
-看下面这个示例程序。
-type T int func (t *T) Get() T { return *t &#43; 1 } type P *T func (p P) Get() T { return *p &#43; 2 } func F() { var v1 T var v2 = &amp;v1 var v3 P = &amp;v1 fmt.Println(v1.Get(), v2.Get(), v3.Get()) }  示例程序中 v3.">
+<meta property="og:description" content="golang中方法为什么receiver-type不能为指针类型、接口类型">
 <meta property="og:type" content="article">
 <meta property="og:url" content="/blog/2018-05-21-golang-method-receiver-type%E7%9A%84%E6%A2%97/">
 
@@ -71,7 +61,7 @@ type T int func (t *T) Get() T { return *t &#43; 1 } type P *T func (p P) Get() 
           "url": "\/logo-doks.png"
         }
         },
-      "description": ""
+      "description": "golang中方法为什么receiver-type不能为指针类型、接口类型"
     }
     </script>
   <script type="application/ld+json">
@@ -368,7 +358,7 @@ fmt.Println(iface)
     
     <script src="https://www.hitzhangjie.pro/js/highlight.min.c32fa100fe3c432c2629ed4542b161ff95a16be545c00c12fcd3ea42ec6c5e283bcd80b1097abf4ba955f8bd0a004d19673ac0bd3ad2394677ce000abbfb4de8.js" integrity="sha512-wy&#43;hAP48QywmKe1FQrFh/5Wha&#43;VFwAwS/NPqQuxsXig7zYCxCXq/S6lV&#43;L0KAE0ZZzrAvTrSOUZ3zgAKu/tN6A==" crossorigin="anonymous" defer></script>
   <script src="https://www.hitzhangjie.pro/main.min.7ab523108435955765bcb88a0ee704f412ba01646b5478e84f3b9feb24f0ce750a14c3f7bd9a62408fe21e41996d361a9eb29f77e85dfe77b7e17f7623bd3a97.js" integrity="sha512-erUjEIQ1lVdlvLiKDucE9BK6AWRrVHjoTzuf6yTwznUKFMP3vZpiQI/iHkGZbTYanrKfd&#43;hd/ne34X92I706lw==" crossorigin="anonymous" defer></script>
-  <script src="https://www.hitzhangjie.pro/index.min.17ec74149fed14922ba0a28eff4475419af8eaab86643123f248bba048e5c15a12a453e12bd9981a36548e2aed87a4b6ffd2abe0dabca0d609dc9be46094001e.js" integrity="sha512-F&#43;x0FJ/tFJIroKKO/0R1QZr46quGZDEj8ki7oEjlwVoSpFPhK9mYGjZUjirth6S2/9Kr4Nq8oNYJ3JvkYJQAHg==" crossorigin="anonymous" defer></script>
+  <script src="https://www.hitzhangjie.pro/index.min.88f41478d21849196bf7c3371e456d4548b7011d2ca49ad0bb6d87ed7c751c908b6e723c3e5e00595bd2068aad172ae86245419872a525b61fcc0e0f24700a60.js" integrity="sha512-iPQUeNIYSRlr98M3HkVtRUi3AR0spJrQu22H7Xx1HJCLbnI8Pl4AWVvSBoqtFyroYkVBmHKlJbYfzA4PJHAKYA==" crossorigin="anonymous" defer></script>
   
   </body>
 </html>

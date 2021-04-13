@@ -1,11 +1,9 @@
 ---
 layout: post
 title:  "golang select-case 实现机制"
-color: blue
-width:   6
-height:  1
+description: "golang chan select-case设计实现"
 date:   2018-05-19 19:21:11 +0800
-categories: jekyll update
+categories: go设计实现
 tags: ["go","chann"]
 toc: true
 ---

@@ -1,9 +1,8 @@
 ---
 layout: post
 title: "golang method receiver-type的梗"
-color: teal
-width: 6
-height: 1
+description: "golang中方法为什么receiver-type不能为指针类型、接口类型"
+categories: go设计实现
 date: 2018-05-21 12:33:23 +0800
 tags: ["go", "method", "receiver"]
 ---

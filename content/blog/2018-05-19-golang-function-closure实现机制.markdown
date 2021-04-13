@@ -1,10 +1,9 @@
 ---
 layout: post
 title:  "golang function-closure 实现机制"
-color: green
-width:  6
-height:  1
+description: "go函数闭包设计实现"
 date:   2018-05-19 19:55:15 +0800
+categories: go设计实现
 tags: ["go", "golang", "closure"]
 toc: true
 ---

@@ -1,9 +1,7 @@
 ---
 layout: post
 title: "协程的历史、现在和未来!"
-color: teal
-width: 6
-height: 1
+description: "进程、线程大家并不陌生，协程呢？近些年协程得到大量运用，如Java字节码增强实现协程的Kilim、Quasar，C++ boost coroutine，微信libco、libtask，当然还有名声在外的Go语言。其实协程思想由来已久，并非近几年才诞生，不妨来了解下这段历史。"
 date: 2017-04-27 02:25:36 +0800
 tags: ["coroutine"]
 toc: true

@@ -1,6 +1,7 @@
 ---
 layout: post
-title: "Nothing, Just Linux!"
+title: "聊聊伴我多年的老友，Linux"
+description: "使用Linux已经快10年了，从大三开始到研究生毕业，Linux作为了我的主力操作系统，Windows几乎没有再怎么使用过（曾经我Windows玩的也很溜的）。这么多年，Linux让我重新认识了桌面环境的效率，也让我认识了定制化的自由，还有它简单却精妙绝伦的设计。也是时间来聊聊这位老友了。"
 color: orange
 width: 4
 height: 1

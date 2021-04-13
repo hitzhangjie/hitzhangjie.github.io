@@ -81,7 +81,7 @@ Source:
         ],
     },
     tokenize: function(str) {
-        return str.split(/\W+/).concat(str.replace(/[\x00-\x7F]/g, '').split('')).filter(e => !!e)
+        return str.split(/\W+/).concat(str.replace(/[\x00-\x7F]/g, '').split('')).filter(e => !!e);
     }
   });
 

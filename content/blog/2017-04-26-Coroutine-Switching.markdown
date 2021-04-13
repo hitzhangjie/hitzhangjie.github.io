@@ -1,9 +1,7 @@
 ---
 layout: post  
 title: Coroutine-Switching
-color: pink
-width: 4
-height: 1  
+description: "如今协程得到大量应用，大家对此并不陌生。本文对协程上下文切换做了一个简单的实验，以更好地认识协程切换及其开销。"
 date: 2017-04-26 16:23:49 +0800
 tags: ["coroutine","ucontext","libtask"]
 toc: true

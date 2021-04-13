@@ -1,6 +1,7 @@
 ---
 layout: post  
 title: Protoc工作原理分析
+description: "团队经常使用protobuf作为消息交换格式，由于protobuf具有很强的自描述性，非常适合对一个服务进行建模。结合配套的编译器protoc，可以轻松理解服务信息，在此基础上可以开发一些脚手架工具（如protoc-gen-go）来完成代码生成、接口自动测试、生成api文档等等工作。本文就来介绍下protoc及其插件的工作原理，读完后读者将具备定制化protoc插件开发的能力。"
 color: blue 
 width: 4
 height: 1  

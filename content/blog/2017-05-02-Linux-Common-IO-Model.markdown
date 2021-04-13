@@ -1,9 +1,7 @@
 ---
 layout: post  
 title: Linux常见IO模型
-color: red  
-width: 4
-height: 1  
+description: "高性能服务器开发，离不开对网络IO的深刻认识。本文结合Linux平台，详细总结了阻塞IO、非阻塞IO、IO多路复用、实时信号驱动、异步IO的原理、使用、适用场景，加深了对网络IO的认识。"
 date: 2017-05-02 21:42:13 +0800
 tags: ["io","io-multiplex","rtsig","aio"]
 toc: true

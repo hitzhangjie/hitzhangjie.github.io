@@ -1,11 +1,9 @@
 ---
 layout: page 
 title: 学习Apache Ant
-color: blue 
-width: 4
-height: 1
+description: "Apache Ant是Java工程中比较常用的一个依赖管理、构建工具，本文总结了Ant相关的一些基础知识。"
 date: 2017-04-01 17:45:40 +0800
-tags: ["maven", "java"]
+tags: ["ant", "java"]
 toc: true
 ---
 

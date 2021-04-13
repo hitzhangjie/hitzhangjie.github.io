@@ -1,9 +1,7 @@
 ---
 layout: post 
 title: Java NIO Tutorials
-color: red  
-width: 4
-height: 1  
+description: "Java网络编程中离不开对NIO的熟练运用，本文总结了NIO的实现原理、使用方式，以及并发编程中需要关注的一些核心问题。"
 date: 2017-04-05 14:56:32 +0800
 tags: ["nio","java"]
 toc: true

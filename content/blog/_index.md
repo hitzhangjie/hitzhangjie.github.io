@@ -7,4 +7,8 @@ draft: false
 images: []
 ---
 
-:notes: **欢迎来到 Kn's Blog... 这里记录着我的认识和思考**
+:notes: **欢迎来到 Kn's Blog... 这里记录着我的认识和思考** 
+<hr>
+
+See by <a href="/categories">categories</a> <a href="/tags">tags</a>
+<hr>

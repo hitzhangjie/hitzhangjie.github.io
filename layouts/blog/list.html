@@ -37,40 +37,47 @@
 {{ if eq .Site.Params.blog.Style "simple-list" }}
 <div class="row justify-content-center">
 	<div class="col-md-12">
-		<article>
-			<!-- display article -->
-			<h1 class="text-center">{{ .Title }}</h1>
-			<div class="text-center">{{ .Content }}</div>
+		<!-- display article -->
+		<h1 class="text-center">{{ .Title }}</h1>
+		<div class="text-center">{{ .Content }}</div>
 
-            <!-- display blog list -->
-			<table border="0">
-			{{ range .Pages.ByPublishDate.Reverse }}
-				<tr>
-					<td width="10%">
-						{{ if .Params.date | default "1970-01-01" }} 
-							<span>{{ .Date.Format (.Site.Params.dateFormat | default "2006/01/02") }}</span>
+        <!-- display blog list -->
+		<table border="0">
+		{{ range .Paginator.Pages }}
+			<tr>
+				<td width="10%">
+					{{ if .Params.date | default "1970-01-01" }} 
+						<span>{{ .Date.Format (.Site.Params.dateFormat | default "2006/01/02") }}</span>
+					{{ end }}
+				</td>
+				<td width="45%">
+					<span><a href="{{ .Permalink }}">{{ .Title }}</a></span>
+				</td>
+				<td width="45%">
+					{{ if .Params.tags }}
+					{{ $len := (len .Params.tags) }}
+						🔖{{ if gt $len 1 }}{{ end }}
+						{{ range $index, $tag := .Params.tags }}
+                        <font size="3">
+						<a href="{{ "tags/" | relLangURL }}{{ . | urlize }}">
+                            {{ . }}
+                        </a>{{ if ne (add $index 1) $len }},{{ end }}
 						{{ end }}
-					</td>
-					<td width="45%">
-						<span><a href="{{ .Permalink }}">《{{ .Title }}》</a></span>
-					</td>
-					<td width="45%">
-						{{ if .Params.tags }}
-						{{ $len := (len .Params.tags) }}
-							🔖{{ if gt $len 1 }}{{ end }}
-							{{ range $index, $tag := .Params.tags }}
-                            <font size="3">
-							<a href="{{ "tags/" | relLangURL }}{{ . | urlize }}">
-                                {{ . }}
-                            </a>{{ if ne (add $index 1) $len }},{{ end }}
-							{{ end }}
-                            </font>
-						{{ end }}
-					</td>
-				</tr>
-			{{ end }}
-			</table>
-		</article>
+                        </font>
+					{{ end }}
+				</td>
+			</tr>
+		{{ end }}
+	    </table>
+
+		<!-- pagination -->
+        <table border="0"> 
+		    <tr>
+                <td width="10%" style="visibility:hidden;">1234567890</td>
+                <td width="45%" style="border-bottom-width:0;">{{ template "_internal/pagination.html" . }}</td>
+                <td width="45%" style="border-bottom-width:0;"></td>
+            </tr>
+        </table>
 	</div>
 </div>
 {{ end }}

@@ -10,5 +10,5 @@ images: []
 :notes: **欢迎来到 Kn's Blog... 这里记录着我的认识和思考** 
 <hr>
 
-See by <a href="/categories">categories</a> <a href="/tags">tags</a>
+:eyes:&nbsp;<a href="/categories">所有分类</a> &nbsp;&nbsp;|&nbsp;&nbsp; :eyes:&nbsp;<a href="/tags">所有标签</a>
 <hr>

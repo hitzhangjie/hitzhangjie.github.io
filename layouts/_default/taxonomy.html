@@ -20,15 +20,10 @@
 
                 <!-- display blog list -->
 				<tr>
-					<td width="10%">
-						{{ if .Params.date | default "1970-01-01" }} 
-							<span>{{ .Date.Format (.Site.Params.dateFormat | default "2006/01/02") }}</span>
-						{{ end }}
-					</td>
-					<td width="45%">
+					<td width="50%">
 						<span><a href="{{ .Permalink }}">《{{ .Title }}》</a></span>
 					</td>
-					<td width="45%">
+					<td width="50%">
 						{{ if .Params.tags }}
 						{{ $len := (len .Params.tags) }}
 							🔖{{ if gt $len 1 }}{{ end }}

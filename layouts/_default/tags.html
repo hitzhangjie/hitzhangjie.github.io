@@ -1,0 +1,57 @@
+{{ define "main" }}
+<div class="row justify-content-center">
+
+    <!-- tag name -->
+    <div class="col-md-12">
+        <h1 style="text-align: left;">
+            {{ .Data.Singular | humanize }}: {{ lower .Title | markdownify }}
+            {{ $pageTitle := (lower .Title | markdownify) }}
+        </h1>
+        <hr/>
+    </div>
+
+    <!-- blogs list -->
+    <div class="row justify-content-center">
+        <div class="col-md-12">
+            <article>
+
+            {{ $letters := split "ABCDEFGHIJKLMNOPQRSTUVWXYZ" "" }}
+
+
+            <!-- categories -->
+            {{ if eq $pageTitle "categories" }}
+                {{range $name, $category := .Site.Taxonomies.categories }} 
+                    {{ $cnt := .Count }}
+                    {{ with $.Site.GetPage (printf "/categories/%s" $name) }}
+                        <li style="list-style:none;">🔖&nbsp;<a href="{{ "categories/" | relLangURL }}{{ $name | urlize }}"> {{ $name }} </a><sup>{{$cnt}}</sup></li>
+                    {{end}}
+                {{ end }}
+            {{ end }}
+
+
+            <!-- tags -->
+            {{ if eq $pageTitle "tags" }}
+                {{range $name, $tag := .Site.Taxonomies.tags}} 
+                    {{ $cnt := .Count }}
+                    {{ $firstChar := substr $name 0 1 | upper }}
+    
+                    {{ if $firstChar | in $letters }}
+                        {{ $curLetter := $.Scratch.Get "curLetter" }}
+                        {{ if ne $firstChar $curLetter }}
+                            {{ $.Scratch.Set "curLetter" $firstChar }}
+                            <h3> {{ $firstChar }} </h3>
+                        {{ end }}
+    
+                        {{ with $.Site.GetPage (printf "/tags/%s" $name) }}
+                        <li style="list-style:none;">🔖&nbsp;<a href="{{ "tags/" | relLangURL }}{{ $name | urlize }}"> {{ $name }} </a><sup>{{$cnt}}</sup></li>
+                        {{end}}
+                    {{ end }}
+                {{ end }}
+            {{ end }}
+
+            </article>
+        </div>
+    </div>
+</div>
+{{ end }}
+

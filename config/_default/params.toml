@@ -44,7 +44,7 @@ alertText = "Like Doks? <a class=\"alert-link\" href=\"https://github.com/hitzha
 
 # Edit Page
 docsRepo = "https://github.com/hitzhangjie/myspace"
-editPage = false
+editPage = true
 
 [options]
   lazySizes = true

@@ -18,6 +18,9 @@ module.exports = {
         'tr',
         'th',
         'td',
+        'pagination',
+        'page-item',
+        'page-link',
         ...whitelister([
           './assets/scss/components/_doks.scss',
           './assets/scss/components/_code.scss',

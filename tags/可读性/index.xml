@@ -1,19 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-  <channel>
-    <title>可读性 on </title>
-    <link>https://www.hitzhangjie.pro/tags/%E5%8F%AF%E8%AF%BB%E6%80%A7/</link>
-    <description>Recent content in 可读性 on </description>
-    <generator>Hugo -- gohugo.io</generator>
-    <language>en-US</language>
-    <lastBuildDate>Fri, 16 Oct 2020 21:07:45 +0800</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/%E5%8F%AF%E8%AF%BB%E6%80%A7/index.xml" rel="self" type="application/rss+xml" />
-    <item>
-      <title>如何“偷懒”：从提升代码质量开始</title>
-      <link>https://www.hitzhangjie.pro/blog/2020-10-16-%E5%81%B7%E6%87%92%E4%BB%8E%E6%8F%90%E5%8D%87%E4%BB%A3%E7%A0%81%E8%B4%A8%E9%87%8F%E5%BC%80%E5%A7%8B/</link>
-      <pubDate>Fri, 16 Oct 2020 21:07:45 +0800</pubDate>
-      
-      <guid>https://www.hitzhangjie.pro/blog/2020-10-16-%E5%81%B7%E6%87%92%E4%BB%8E%E6%8F%90%E5%8D%87%E4%BB%A3%E7%A0%81%E8%B4%A8%E9%87%8F%E5%BC%80%E5%A7%8B/</guid>
-      <description>如果一件事情只需要做一次，我们可能怎么方便怎么来，但是如果一件事情要重复千百遍，怎么方便怎么来就会变成灾难。对身体，对时间，对团队。停下来想想过去做的一些事情，都是为了做好事情的同时，能让自己更好地慢下来，让身体可以偷懒。本文先从提升代码质量开始谈起。
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>可读性 on</title><link>https://www.hitzhangjie.pro/tags/%E5%8F%AF%E8%AF%BB%E6%80%A7/</link><description>Recent content in 可读性 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 16 Oct 2020 21:07:45 +0800</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/%E5%8F%AF%E8%AF%BB%E6%80%A7/index.xml" rel="self" type="application/rss+xml"/><item><title>如何“偷懒”：从提升代码质量开始</title><link>https://www.hitzhangjie.pro/blog/2020-10-16-%E5%81%B7%E6%87%92%E4%BB%8E%E6%8F%90%E5%8D%87%E4%BB%A3%E7%A0%81%E8%B4%A8%E9%87%8F%E5%BC%80%E5%A7%8B/</link><pubDate>Fri, 16 Oct 2020 21:07:45 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/2020-10-16-%E5%81%B7%E6%87%92%E4%BB%8E%E6%8F%90%E5%8D%87%E4%BB%A3%E7%A0%81%E8%B4%A8%E9%87%8F%E5%BC%80%E5%A7%8B/</guid><description>如果一件事情只需要做一次，我们可能怎么方便怎么来，但是如果一件事情要重复千百遍，怎么方便怎么来就会变成灾难。对身体，对时间，对团队。停下来想想过去做的一些事情，都是为了做好事情的同时，能让自己更好地慢下来，让身体可以偷懒。本文先从提升代码质量开始谈起。
 Linus Torvards在一次采访中，主持人贴了两个链表操作的实现，让其评价哪一种更好一点，Torvards说更喜欢消除了特殊逻辑的那种，并将这种偏好称为“taste”。每个人的taste不同，也不方便评价好与坏，但是“脑筋急转弯似”的做法一点都不“聪明”。好的思路很多都是相同的，不好的东西千差万别的厉害。
 站在巨人肩膀上 从什么时候开始，我开始思考如何在有限的时间里涉猎更多的东西，awesome、101、patterns、slideshare、best practices&amp;hellip;似乎有限的时间被延长了，我们没必要一个个坑的踩过来摸索中前进，别把别人头破血流总结出的经验教训不当回事。以前我奉行“纸上得来终觉浅、绝知此事要躬行”，很好，但是生命是有限的。
 想要更大的世界，必须懂得借力，吸收经验教训，好的坏的全部统统吸纳滋养自己。
@@ -30,8 +15,4 @@ Linus Torvards在一次采访中，主持人贴了两个链表操作的实现，
 公司代码规范 只要是规范，就有局限性、滞后性。我理解，规范不是让我们追求完美主义，而是追求better code，better practices。如果一个开发者有好的taste，他写出来的代码可能已经接近或达到规范的要求了。但是并不是每个开发者都有这样的taste，所以我们才需要规范来约束我们做一件共同的事情。
 遵守代码规范的一个明显的好处是，可读性会有比较明显的提升，这是很有意义的。可读性提升，意味着维护成本降低，意味着省下时间，意味着可以在正常工作时间做更多事情，可以早下班休息、充电。这可能不是对每个人都是个好事情，但是是对团队有意义的事情，对多数人有意义的事情，就应该坚持！
 最后 多年前翻阅Linux文档，Torvards解释为什么一个Tab非要8个空格而非通用的4个，他说，我就是要让那些爱写嵌套多层代码的人“难受”……
-省下大把自己、大家的时间，这难道不是一种很聪明的“偷懒”行为？</description>
-    </item>
-    
-  </channel>
-</rss>
+省下大把自己、大家的时间，这难道不是一种很聪明的“偷懒”行为？</description></item></channel></rss>

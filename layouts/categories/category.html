@@ -3,11 +3,17 @@
   <div class="col-md-12 col-lg-10 col-xl-8">
   {{ range .Paginator.Pages }}
     <article>
-      <h4><a href="{{ .RelPermalink }}">&#x1F4DA;&nbsp;{{ .Title }}</a></h4>
-      {{ .Description | truncate 80 | default "作者很懒，没有备注简介信息" }}
+      <div style="display:flex;">
+        <div style="padding-top:2.1rem;width:auto;">&#x1F4DA;&#x2713;&nbsp;</div>
+        <div style="width:90%;">
+          <h4><a href="{{ .RelPermalink }}">{{ .Title }}</a></h4>
+          {{ .Description | truncate 80 | default "作者很懒，没有备注简介信息" }}
+        </div>
+      </div>
     </article>
   {{ end }}
   {{ template "_internal/pagination.html" . }}
   </div>
 </div>
+<br/>
 {{ end }}

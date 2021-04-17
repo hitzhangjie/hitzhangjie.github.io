@@ -44,6 +44,7 @@
         <!-- display blog list -->
 		<table border="0">
 		{{ range .Paginator.Pages }}
+            {{ if not .Params.hide }}
 			<tr>
 				<td width="10%">
 					{{ if .Params.date | default "1970-01-01" }} 
@@ -67,6 +68,7 @@
 					{{ end }}
 				</td>
 			</tr>
+            {{ end }}
 		{{ end }}
 	    </table>
 

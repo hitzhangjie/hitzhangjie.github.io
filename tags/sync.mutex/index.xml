@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>sync.Mutex on</title><link>https://www.hitzhangjie.pro/tags/sync.mutex/</link><description>Recent content in sync.Mutex on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 17 Apr 2021 11:32:36 +0800</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/sync.mutex/index.xml" rel="self" type="application/rss+xml"/><item><title>Locks实现:背后不为人知的故事</title><link>https://www.hitzhangjie.pro/blog/2021-04-17-locks%E5%AE%9E%E7%8E%B0%E9%82%A3%E4%BA%9B%E4%B8%8D%E4%B8%BA%E4%BA%BA%E7%9F%A5%E7%9A%84%E6%95%85%E4%BA%8B/</link><pubDate>Sat, 17 Apr 2021 11:32:36 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/2021-04-17-locks%E5%AE%9E%E7%8E%B0%E9%82%A3%E4%BA%9B%E4%B8%8D%E4%B8%BA%E4%BA%BA%E7%9F%A5%E7%9A%84%E6%95%85%E4%BA%8B/</guid><description>从事软件开发多年的你，真的理解locks背后的那些故事吗？锁是如何实现的，无锁指的又是什么，无锁真的移除了任何同步操作吗？为什么大家总是谈锁色变，锁的开销真的有那么大吗，平时编码中又该注意些什么呢？本文将结合go sync.Mutex对这些问题进行讨论。
+并发：我们关心什么 并发编程，开发人员应该对原子性、指令重排有深刻的认识。
+原子性 大家都了解过数据库事务的原子性，类似地，程序中也经常有些操作也需要达到类似的效果——被某种类似事务的机制“保护”起来，要么全部执行要么全部不执行。通常我们将这样需要保护的代码段称为临界区。我们希望临界区内的代码要么全部执行要么全部不执行，达到这种原子性的效果。
+其实不只是代码段，给一个int变量赋值，也需要考虑原子性，因为在不同的操作系统、处理器平台上，可能一个简单的int变量赋值需要涉及多条机器指令，而在多条指令执行期间，则可能发生各种事件，比如被其他CPU核的赋值指令写乱了同一变量的数据。设想下一个int变量4字节，但是处理器平台只有16位mov指令。再或者执行i++（i为int类型）操作，实际上是包含了read-modify-write三个操作，这几个操作中间也可能插入其他指令执行。当然一条机器指令也可能不是原子的，比如add src, dst，src和dst都是内存地址，这里就涉及到读取src和dst、计算、写回dst的多个操作……更不用说一个包含了多个字段的struct结构体的赋值了。
+这类原子性问题，可以通过一些相当低级的原子操作来保证，如int变量i++，可以考虑lock add指令（假定操作数位宽和int变量相同），稍复杂的数据结构（如struct）也可以使用一些“高级锁”来做同步保证，如go中的sync.Mutex。
+指令重排 指令重排的根源在于CPU的设计，古老的CPU只有一条取指、译码、执行、访存、写回的功能电路。联想下假如一个单线程程序执行阻塞网络IO的时候会发生什么，整个程序全阻塞在这里干不了其他的。CPU也存在类似问题，假如一条指令执行过程中因为数据没ready的问题不能执行，或者碰到多CPU多核间cache一致性同步，那CPU会stall，后续的指令都无法执行。
+所以CPU为了提高指令吞吐，增加了多条流水线设计，可以同时执行多条指令的取指、译码、执行、访存、写回，当然这其中有些指令是有数据依赖的，现代处理器支持寄存器重命名、指令乱序执行、重排序缓冲等功能，都是保证CPU执行效率的常用手段。
+指令在CPU乱序执行，在某些并发场景下，可能会带来一些微妙的问题。比如：
+type num struct { a int b int } n := &amp;amp;num{} go func() { n.a = 1; n.b = 2; }() // g1 go func() { n.a = 2; n.b = 1; }() // g2 你们说最终n.a，n.b的结果是多少呢？不确定的，虽然go现在支持64位系统，现在处理器基本也都有64位mov指令，对a、b单独赋值都是原子的，但是对n整体的赋值不是。由于没有对n做保护，g1、g2中的赋值指令也没有什么数据一来，到时候乱序执行，g1 g2执行完成后，&amp;lt;n.a,n.b&amp;gt;的可能结果是：&amp;lt;1, 2&amp;gt; &amp;lt;1, 1&amp;gt; &amp;lt;2,1&amp;gt; &amp;lt;2,2&amp;gt;，这几种都有可能，而不只是有&amp;lt;1,2&amp;gt; &amp;lt;2,1&amp;gt;两种可能。
+这就是指令重排造成的影响，如果我们在出现了指令重排的情况下，去做一些关键的判断逻辑，可能就会带来严重的bug。
+这里重新回顾了下原子性、指令重排的含义，以及对程序正确性可能带来的影响，下面我们将尝试进一步考虑如何解决这些问题。
+内存屏障：阻止指令重排 首先，我们看如何解决指令重排序问题，解铃还须系铃人，CPU流水线乱序执行带来的问题，还需要CPU自己提供解决方案。CPU如何阻止指令重排序呢？
+内存屏障，可以用来阻止屏障前后的指令共同参与重排序，保证屏障后的指令不会出现在屏障前执行，保证屏障前的指令不会在屏障后执行。相当于屏障之前和之后确立了happens-before关系，保证了屏障之前的操作对屏障之后的操作都是可见的。
+CPU中通常提供了如下几条指令，用以建立内存屏障：
+lock：指令前缀，修饰指令保证指令执行时的排他性、原子性和完全内存屏障 lock cmpxchg：cmpxchg比较并交换，配合lock前缀实现CAS mfence：完全内存屏障（load+store） lfence：读内存屏障（load） sfence：写内存屏障（store） 一些库函数或者编程语言提供的标准库，可以选择上述某汇编指令来实现内存屏障，或者实现CAS（基本是包装下lock cmpxchg），并进一步实现各种高级锁，如spinlock、sync.</description></item></channel></rss>

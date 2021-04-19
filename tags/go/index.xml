@@ -1,4 +1,29 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>go on</title><link>https://www.hitzhangjie.pro/tags/go/</link><description>Recent content in go on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 14 Apr 2021 18:00:00 +0800</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/go/index.xml" rel="self" type="application/rss+xml"/><item><title>Go程序内存泄露问题快速定位</title><link>https://www.hitzhangjie.pro/blog/2021-04-14-go%E7%A8%8B%E5%BA%8F%E5%86%85%E5%AD%98%E6%B3%84%E9%9C%B2%E9%97%AE%E9%A2%98%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D/</link><pubDate>Wed, 14 Apr 2021 18:00:00 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/2021-04-14-go%E7%A8%8B%E5%BA%8F%E5%86%85%E5%AD%98%E6%B3%84%E9%9C%B2%E9%97%AE%E9%A2%98%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D/</guid><description>img { width: 680px; padding-bottom: 1rem; } 前几天有同学反馈了cgo内存泄露问题，自己也针对这个问题探索了一番，算是为以后解决类似问题提前攒点经验吧。也趁机整理了一下go开发过程中内存泄露问题的一些常用排查方法，也希望对新接触go的同学有所帮助。整理之余，bcc工具之丰富也让我有点惊讶，也希望对自己日后的工作有所帮助吧。
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>go on</title><link>https://www.hitzhangjie.pro/tags/go/</link><description>Recent content in go on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 17 Apr 2021 11:32:36 +0800</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/go/index.xml" rel="self" type="application/rss+xml"/><item><title>Locks实现:背后不为人知的故事</title><link>https://www.hitzhangjie.pro/blog/2021-04-17-locks%E5%AE%9E%E7%8E%B0%E9%82%A3%E4%BA%9B%E4%B8%8D%E4%B8%BA%E4%BA%BA%E7%9F%A5%E7%9A%84%E6%95%85%E4%BA%8B/</link><pubDate>Sat, 17 Apr 2021 11:32:36 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/2021-04-17-locks%E5%AE%9E%E7%8E%B0%E9%82%A3%E4%BA%9B%E4%B8%8D%E4%B8%BA%E4%BA%BA%E7%9F%A5%E7%9A%84%E6%95%85%E4%BA%8B/</guid><description>从事软件开发多年的你，真的理解locks背后的那些故事吗？锁是如何实现的，无锁指的又是什么，无锁真的移除了任何同步操作吗？为什么大家总是谈锁色变，锁的开销真的有那么大吗，平时编码中又该注意些什么呢？本文将结合go sync.Mutex对这些问题进行讨论。
+并发：我们关心什么 并发编程，开发人员应该对原子性、指令重排有深刻的认识。
+原子性 大家都了解过数据库事务的原子性，类似地，程序中也经常有些操作也需要达到类似的效果——被某种类似事务的机制“保护”起来，要么全部执行要么全部不执行。通常我们将这样需要保护的代码段称为临界区。我们希望临界区内的代码要么全部执行要么全部不执行，达到这种原子性的效果。
+其实不只是代码段，给一个int变量赋值，也需要考虑原子性，因为在不同的操作系统、处理器平台上，可能一个简单的int变量赋值需要涉及多条机器指令，而在多条指令执行期间，则可能发生各种事件，比如被其他CPU核的赋值指令写乱了同一变量的数据。设想下一个int变量4字节，但是处理器平台只有16位mov指令。再或者执行i++（i为int类型）操作，实际上是包含了read-modify-write三个操作，这几个操作中间也可能插入其他指令执行。当然一条机器指令也可能不是原子的，比如add src, dst，src和dst都是内存地址，这里就涉及到读取src和dst、计算、写回dst的多个操作……更不用说一个包含了多个字段的struct结构体的赋值了。
+这类原子性问题，可以通过一些相当低级的原子操作来保证，如int变量i++，可以考虑lock add指令（假定操作数位宽和int变量相同），稍复杂的数据结构（如struct）也可以使用一些“高级锁”来做同步保证，如go中的sync.Mutex。
+指令重排 指令重排的根源在于CPU的设计，古老的CPU只有一条取指、译码、执行、访存、写回的功能电路。联想下假如一个单线程程序执行阻塞网络IO的时候会发生什么，整个程序全阻塞在这里干不了其他的。CPU也存在类似问题，假如一条指令执行过程中因为数据没ready的问题不能执行，或者碰到多CPU多核间cache一致性同步，那CPU会stall，后续的指令都无法执行。
+所以CPU为了提高指令吞吐，增加了多条流水线设计，可以同时执行多条指令的取指、译码、执行、访存、写回，当然这其中有些指令是有数据依赖的，现代处理器支持寄存器重命名、指令乱序执行、重排序缓冲等功能，都是保证CPU执行效率的常用手段。
+指令在CPU乱序执行，在某些并发场景下，可能会带来一些微妙的问题。比如：
+type num struct { a int b int } n := &amp;amp;num{} go func() { n.a = 1; n.b = 2; }() // g1 go func() { n.a = 2; n.b = 1; }() // g2 你们说最终n.a，n.b的结果是多少呢？不确定的，虽然go现在支持64位系统，现在处理器基本也都有64位mov指令，对a、b单独赋值都是原子的，但是对n整体的赋值不是。由于没有对n做保护，g1、g2中的赋值指令也没有什么数据一来，到时候乱序执行，g1 g2执行完成后，&amp;lt;n.a,n.b&amp;gt;的可能结果是：&amp;lt;1, 2&amp;gt; &amp;lt;1, 1&amp;gt; &amp;lt;2,1&amp;gt; &amp;lt;2,2&amp;gt;，这几种都有可能，而不只是有&amp;lt;1,2&amp;gt; &amp;lt;2,1&amp;gt;两种可能。
+这就是指令重排造成的影响，如果我们在出现了指令重排的情况下，去做一些关键的判断逻辑，可能就会带来严重的bug。
+这里重新回顾了下原子性、指令重排的含义，以及对程序正确性可能带来的影响，下面我们将尝试进一步考虑如何解决这些问题。
+内存屏障：阻止指令重排 首先，我们看如何解决指令重排序问题，解铃还须系铃人，CPU流水线乱序执行带来的问题，还需要CPU自己提供解决方案。CPU如何阻止指令重排序呢？
+内存屏障，可以用来阻止屏障前后的指令共同参与重排序，保证屏障后的指令不会出现在屏障前执行，保证屏障前的指令不会在屏障后执行。相当于屏障之前和之后确立了happens-before关系，保证了屏障之前的操作对屏障之后的操作都是可见的。
+CPU中通常提供了如下几条指令，用以建立内存屏障：
+lock：指令前缀，修饰指令保证指令执行时的排他性、原子性和完全内存屏障 lock cmpxchg：cmpxchg比较并交换，配合lock前缀实现CAS mfence：完全内存屏障（load+store） lfence：读内存屏障（load） sfence：写内存屏障（store） 一些库函数或者编程语言提供的标准库，可以选择上述某汇编指令来实现内存屏障，或者实现CAS（基本是包装下lock cmpxchg），并进一步实现各种高级锁，如spinlock、sync.</description></item><item><title>如何看待gopanic及异常处理</title><link>https://www.hitzhangjie.pro/blog/2021-04-16-%E5%A6%82%E4%BD%95%E7%9C%8B%E5%BE%85gopanic%E5%8F%8A%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86/</link><pubDate>Fri, 16 Apr 2021 13:47:21 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/2021-04-16-%E5%A6%82%E4%BD%95%E7%9C%8B%E5%BE%85gopanic%E5%8F%8A%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86/</guid><description>Background 最近有同学提问，大意是：“go中什么时候用panic、什么时候用error，能不能像其他语言中的try-catch一样用panic-recover来代替层层return err，或者应不应该recover一个panic之后转换为error？”
+这个问题引起了广泛的讨论，在对这几个问题的理解上，我本以为大家应该会认识到位的，没想到很多人认识很模糊。当然，好的地方就是总有有见识的同学站出来指出大家的问题。
+对于那些有灵性的同学，勤实践勤思考的同学，他会自然而然意识到哪种error handling pattern更好，也会有意识地去区分不同pattern的定位和应用场景。这类同学虽然没有什么理论术语支撑，但是他们的“经验”是贴近更好的设计思想、最佳实践的。如果更进一步，能愿意接受一些设计思想的洗礼，则可以将“经验”上升到“模式”，以指导更多人。
+panic != exception go panic不同于其他语言中的exception，在设计、定位上是有明确的区别的，see: https://dave.cheney.net/2012/01/18/why-go-gets-exceptions-right。
+panics are always fatal to your program. In panicing you never assume that your caller can solve the problem. Hence panic is only used in exceptional circumstances, ones where it is not possible for your code, or anyone integrating your code to continue.
+go panic是用来表示程序出现了十分致命的错误，并且你不能假定这个错误能被解决。所以panic只在很少的场景下才会被用到，并且出现panic时，你的代码解决不了，引用这部分代码的其他代码也解决不了。
+所以，panic并非一般意义上的error，更不能用panic-recover代替层层向上传递error！
+对于，为了自身程序的健壮性，而在启动新的goroutine时，或者调用外部依赖的导出函数、方法时，可能选择recover一些预料之外的panic，并转换为error处理。
+有追求的开发人员，在panic的使用上应该始终遵循go设计理念，同时在程序的健壮性上也会采用些防御性编程的手段。
+panic vs exception 我们很多开发人员都接触过多门语言，比如Java、C++，等等，这类语言都有异常处理机制，遇到一些意外事件时可以抛出一个异常，异常通常由try-catch block捕获并处理。
+初学者阶段，很多同学会努力去学习异常处理的正确编码方式，甚至是异常处理的实现原理，对性能的影响，等等，但是由于实际缺乏实际的大规模工程供锻炼实践，也很少有人会去思考一些问题，比如：
+QA：我们为什么需要异常？</description></item><item><title>Go程序内存泄露问题快速定位</title><link>https://www.hitzhangjie.pro/blog/2021-04-14-go%E7%A8%8B%E5%BA%8F%E5%86%85%E5%AD%98%E6%B3%84%E9%9C%B2%E9%97%AE%E9%A2%98%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D/</link><pubDate>Wed, 14 Apr 2021 18:00:00 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/2021-04-14-go%E7%A8%8B%E5%BA%8F%E5%86%85%E5%AD%98%E6%B3%84%E9%9C%B2%E9%97%AE%E9%A2%98%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D/</guid><description>.myimg { width: 680px; padding-bottom: 1rem; } 前几天有同学反馈了cgo内存泄露问题，自己也针对这个问题探索了一番，算是为以后解决类似问题提前攒点经验吧。也趁机整理了一下go开发过程中内存泄露问题的一些常用排查方法，也希望对新接触go的同学有所帮助。整理之余，bcc工具之丰富也让我有点惊讶，也希望对自己日后的工作有所帮助吧。
 内存泄漏 内存泄露，一个老生常谈的问题，但即便是老手也会犯一些低级错误。如果没有可靠的研发流程保证在测试阶段发现问题，问题就容易被带到线上。计算资源始终是有限的，问题也不会因为资源充裕就消失不见，产生影响只是时间问题。影响有多大，就要结合场景来说了。
 内存泄漏，最可能的影响就是内存申请失败。但实际上操作系统更聪明，结合系统整体负载情况，它会为每个进程计算一个oom_score，并在内存资源紧张时选择一个合适的进程杀死并回收内存资源，see how does the oom killer decide which process to kill first。
 所以，内存泄露的最终结果，大概率会被操作系统kill，通常进程挂掉后，确认其是否是因为oom问题被kill，可以通过查看 /proc/messages 来确认是否有对应日志。有的话，那就坐实了oom killed（但是被oom killed的进程不一定意味着存在内存泄露）。
@@ -91,30 +116,4 @@ file: main.go
 package main func a() int { return 1 } func main() { print(a()) } 这个函数非常简单，monkey patching离不开汇编，所以我们先看下其对应的汇编代码，了解这个程序干了些啥。
 这里顺便推荐几个工具:
 dlv，适用于go的调试器 radare2，静态分析工具，类似的IDA、Hopper 我这里就先试用radare2（下文简称r2）来演示如何操作了。
-$ go build -gcflags=&amp;quot;all=-N -l&amp;quot; -o main main.go $ r2 ./main -- give | and &amp;gt; a try piping and redirection [0x00454330]&amp;gt; s sym.</description></item><item><title>使用awgo开发alfred.workflow</title><link>https://www.hitzhangjie.pro/blog/2020-07-31-%E4%BD%BF%E7%94%A8awgo%E5%BC%80%E5%8F%91alfred.workflow/</link><pubDate>Fri, 31 Jul 2020 14:53:15 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/2020-07-31-%E4%BD%BF%E7%94%A8awgo%E5%BC%80%E5%8F%91alfred.workflow/</guid><description>img { width: 680px; } 本文简介 该workflow主要是为了对 &amp;ldquo;时间戳&amp;rdquo; &amp;amp;&amp;amp; &amp;ldquo;格式化日期+时间字符串&amp;rdquo; 进行快速转换，方便使用。
-开发人员，经常会涉及到时间相关的转换操作，有个趁手的工具还是很有必要的。
-我平时使用alfred比较多，自然就想通过workflow的方式来实现，当然用hammerspoon、pet等其他工具也可以。
-alfred workflow和alfred本身的交互是通过管道方式进行连接的：
-alfred将用户输入的信息转发给匹配的workflow； workflow对接收到的参数进行处理，并将处理的结果按照指定格式输出到stdout； alfred读取stdout中的数据作为响应展示到用户界面； 这里主要使用了awgo来编写workflow，实现逻辑可以参考下代码，逻辑很简单。下面主要介绍下如何使用。
-如何安装？ 下载项目下 workflow/Date Formats Go.alfredworkflow，双击即可安装。
-如何使用？ 运行 datex 唤起workflow
-常用转换操作: 获取当前时间对应的Unix时间戳，以及格式化字符串
-datex now，将当前时间转换为时间戳以及格式化后的字符串(多种日期格式)。
-可以用上下键移动进行选择，当按下回车键时，会将对应的结果拷贝到剪贴板，方便粘贴使用。 常用转换操作: 将时间戳转换为对应的格式化字符串
-以时间戳1596137272为例，datex 1596137272，此时会将时间戳转换为格式化后的字符串。
-选择、复制数据操作类似。 常用转换操作: 将格式化字符串转换为时间戳，或其他格式
-以字符串2020-07-30为例，datex 2020-07-30，此时会先将其与候选的格式化字符串进行匹配。
-并转换成一个有效的时间戳。 然后再根据此时间戳，转换为其他格式对应的字符串。选择、复制数据操作类似。 这大致就是该workflow的使用方式。
-关于日期时间格式转换的workflow，github上已经有几个比较好的实现了，轮子不好用就得自己造。
-实现对timezone支持不好; 采用的时间格式不符合国人习惯; 掌握awgo开发alfred workflow以后可以写更多效率工具; 希望这个小工具能帮助到有需要的同学，也给准备开发alfred workflow或使用awgo开发workflow的同学提供一个示例。
-如何实现？ 流程图梳理下逻辑 先画个流程图，简单理下思路，思路理清楚了，写代码就快了。</description></item><item><title>如何在go二进制程序中打包静态资源文件</title><link>https://www.hitzhangjie.pro/blog/2020-07-25-%E5%A6%82%E4%BD%95%E5%9C%A8go%E4%BA%8C%E8%BF%9B%E5%88%B6%E7%A8%8B%E5%BA%8F%E4%B8%AD%E6%89%93%E5%8C%85%E9%9D%99%E6%80%81%E8%B5%84%E6%BA%90%E6%96%87%E4%BB%B6/</link><pubDate>Sat, 25 Jul 2020 17:26:01 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/2020-07-25-%E5%A6%82%E4%BD%95%E5%9C%A8go%E4%BA%8C%E8%BF%9B%E5%88%B6%E7%A8%8B%E5%BA%8F%E4%B8%AD%E6%89%93%E5%8C%85%E9%9D%99%E6%80%81%E8%B5%84%E6%BA%90%E6%96%87%E4%BB%B6/</guid><description>Why? 有时我们希望在go二进制程序中打包一些静态资源文件，目的可能有多种，比较常见的是为了简化安装。通常我们安装一个go编写的工具，更倾向于使用 go get $repo 的方式来完成，这似乎已经成为了一种共识。当然，也有些项目还依赖一些静态资源文件，这些静态资源文件是不会被自动安装的，就需要借助其他方式来完成静态资源的安装，比如通过install.sh脚本，后者Makefile构建脚本等等。
-今天，我想讨论下，如何简单快速地支持静态资源打包到二进制程序中，以及在二进制程序中对这些静态资源加以引用。
-How? github上已经有不少开发者在探索，方法其实都比较雷同，大致思路就是：
-读取静态资源文件，转换成bytes数据； 内部提供一些类似文件系统的接口，提供文件名，返回文件数据； blabla&amp;hellip; 开发者的需求，可能不完全一致，比如：
-我想像遍历本地文件系统一样遍历文件目录，不只是提供一个文件名返回一个文件； 我的代码已经写完了，我只想做最小修改，将静态资源文件打包到二进制程序中，而后还原回文件系统； 我的代码不需要支持类似文件服务器的功能，不需要那么多华丽呼哨的功能； 开发者提供了很多类似的实现，这里有篇文章可供参考：https://tech.townsourced.com/post/embedding-static-files-in-go/。能工模形，巧匠窃意。其实在大致了解了实现的方式之后，就懒得再去学如何使用这些五花八门的第三方工具了。说真的，真的没几个好用的，至少从我的角度来说。可能它设计的比较通用，但是与我来说没有用处，我追求极简。
-而且，go官方是有意来支持打包静态资源的，关于这一点，已经有issue在跟进讨论：https://github.com/golang/go/issues/35950。
-尽管现在的状态还是Proposal-Hold状态，但是我觉得这个feature的到来也不会等很久了，anyway，我不想在这些即将被淘汰的三方工具上浪费学习的时间、改写代码的时间。
-所以呢，为什么不简单一点，自己写一个当下比较适用项目本身的？写这个东西花不了二十分钟时间！
-Let&amp;rsquo;s Do it! 功能分析 我理解实现打包静态资源文件，有这么几个点需要考虑：
-提供一个小工具，通过它可以反复执行类似的静态资源打包的操作； 可以指定一个文件或者目录，将其转换成一个go文件放入项目中，允许编译时连接； go文件可以通过导出变量的形式，导出文件数据，允许在其他go代码中引用文件的内容； 静态资源文件可能有很多，希望能对文件内容进行压缩，以便减小go binary文件尺寸； 通常是本地组织好静态资源文件，写代码、测试ok、最后发布前希望将其打包到go binary，打包、解包、使用静态资源要最小化项目代码修改； 功能实现 我们先实现这个打包静态资源的工具，需要这几个参数：input、output，分别代表输入文件（or 目录）、输出文件名（go文件），gopkg代表输出go文件的包名（默认gobin）。
-package main var ( input = flag.String(&amp;quot;input&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;read data from input, which could be a regular file or directory&amp;quot;) output = flag.String(&amp;quot;output&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;write transformed data to named *.</description></item></channel></rss>
+$ go build -gcflags=&amp;quot;all=-N -l&amp;quot; -o main main.go $ r2 ./main -- give | and &amp;gt; a try piping and redirection [0x00454330]&amp;gt; s sym.</description></item></channel></rss>

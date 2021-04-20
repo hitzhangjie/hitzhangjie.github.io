@@ -9,6 +9,7 @@ rm $publishDir/main.min.*.js
 npm run build
 
 cd $publishDir
+git pull
 msg="$(date +'%F %T') rebuild site"
 git add .
 git cc -m "$msg"

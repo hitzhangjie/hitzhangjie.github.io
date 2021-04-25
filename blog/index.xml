@@ -1,4 +1,50 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blog on</title><link>https://www.hitzhangjie.pro/blog/</link><description>Recent content in Blog on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:49:55 +0000</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>08事务隔离：事务到底是隔离的还是不隔离的</title><link>https://www.hitzhangjie.pro/blog/mysql/08%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%BA%8B%E5%8A%A1%E5%88%B0%E5%BA%95%E6%98%AF%E9%9A%94%E7%A6%BB%E7%9A%84%E8%BF%98%E6%98%AF%E4%B8%8D%E9%9A%94%E7%A6%BB%E7%9A%84/</link><pubDate>Sun, 25 Apr 2021 22:30:00 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/mysql/08%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%BA%8B%E5%8A%A1%E5%88%B0%E5%BA%95%E6%98%AF%E9%9A%94%E7%A6%BB%E7%9A%84%E8%BF%98%E6%98%AF%E4%B8%8D%E9%9A%94%E7%A6%BB%E7%9A%84/</guid><description>启动事务 启动事务的方式有哪些：
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blog on</title><link>https://www.hitzhangjie.pro/blog/</link><description>Recent content in Blog on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:49:55 +0000</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>05聊聊kafka的版本号</title><link>https://www.hitzhangjie.pro/blog/kafka/05%E8%81%8A%E8%81%8Akafka%E7%9A%84%E7%89%88%E6%9C%AC%E5%8F%B7/</link><pubDate>Mon, 26 Apr 2021 02:10:00 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/kafka/05%E8%81%8A%E8%81%8Akafka%E7%9A%84%E7%89%88%E6%9C%AC%E5%8F%B7/</guid><description>了解kafka的版本演进，及各个版本的特性，更方便确定自己的业务选择合适的版本。
+kafka版本号说明：kafka-2.11-2.2.1.tgz
+kafka的服务端是用scala编写的，其中2.11表示的是scala编译器实现的，其中2.2.1才是kafka的版本号，主版本2、副版本2、修订版本1。
+了解各个版本的演进
+Kafka 目前总共演进了 7 个大版本，分别是 0.7、0.8、0.9、0.10、0.11、1.0 和 2.0，其中的小版本和 Patch 版本很多。哪些版本引入了哪些重大的功能改进？关于这个问题，我建议你最好能做到如数家珍。
+额，历史版本暂时先不深究了。
+最后还有个建议，不论你用的是哪个版本，都请尽量保持服务器端版本和客户端版本一致，否则你将损失很多 Kafka 为你提供的性能优化收益。</description></item><item><title>04我们应该选择哪种kafka</title><link>https://www.hitzhangjie.pro/blog/kafka/04%E6%88%91%E4%BB%AC%E5%BA%94%E8%AF%A5%E9%80%89%E6%8B%A9%E5%93%AA%E7%A7%8Dkafka/</link><pubDate>Mon, 26 Apr 2021 02:00:00 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/kafka/04%E6%88%91%E4%BB%AC%E5%BA%94%E8%AF%A5%E9%80%89%E6%8B%A9%E5%93%AA%E7%A7%8Dkafka/</guid><description>pk其他流处理平台 Apache Storm、Apache Spark Streaming 亦或是 Apache Flink，它们在大规模流处理领域可都是响当当的名字。
+令人高兴的是，Kafka 经过这么长时间不断的迭代，现在已经能够稍稍比肩这些框架了。我在这里使用了“稍稍”这个字眼，一方面想表达 Kafka 社区对于这些框架心存敬意；另一方面也想表达目前国内鲜有大厂将 Kafka 用于流处理的尴尬境地，毕竟 Kafka 是从消息引擎“半路出家”转型成流处理平台的，它在流处理方面的表现还需要经过时间的检验。
+kafka connect，扩展了kafka的流式处理生态
+你知道几种kafka？ apache kafka，社区版，是后续所有版本的基础 confluent kafka，提供了一些其他功能，如跨数据中心备份、集群监控工具等 cloudera/hortonworks kafka，提供的CDH和HDP是非常有名的大数据平台，里面集成了目前主流的大数据框架，现在两个公司已经合并，都集成了apache kafka。 apache kafka的优缺点 优点：
+开发人数多、活跃，版本迭代快 缺点：
+仅仅提供最基础的组件 kafka connect，仅提供一种读写文件的连接器，其他的要自己实现 没有任何监控框架或者工具，要借助第三方监控框架来监控（如kafka manager） confluent kafka、cdh/hdp kafka的优缺点就不多说了，国内大公司很少有使用的。</description></item><item><title>03kafka只是消息引擎系统吗</title><link>https://www.hitzhangjie.pro/blog/kafka/03kafka%E5%8F%AA%E6%98%AF%E6%B6%88%E6%81%AF%E5%BC%95%E6%93%8E%E7%B3%BB%E7%BB%9F%E5%90%97/</link><pubDate>Mon, 26 Apr 2021 01:50:00 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/kafka/03kafka%E5%8F%AA%E6%98%AF%E6%B6%88%E6%81%AF%E5%BC%95%E6%93%8E%E7%B3%BB%E7%BB%9F%E5%90%97/</guid><description>如果一个点一个点的学习，虽然了解了一个个点的作用，但是不能快速建立起全局的认识，也比较容易丧失学习兴趣，还是先了解全貌再深入细节，学习效果会更好一点。
+apache kafka只是一个消息引擎系统吗 apache kafka是消息引擎系统； apache kafka也是一个分布式流式处理平台（distributed streaming platform）； kafka出自linkedin，kafka 社区将其清晰地定位为一个分布式、分区化且带备份功能的提交日志（Commit Log）服务。
+Kafka 在设计之初就旨在提供三个方面的特性 提供一套 API 实现生产者和消费者； 降低网络传输和磁盘存储开销； 实现高伸缩性架构。 kafka的华丽变身 所有的数据几乎都要从一个系统流入 Kafka 然后再流向下游的另一个系统中。这样的使用方式屡见不鲜以至于引发了 Kafka 社区的思考：与其我把数据从一个系统传递到下一个系统中做处理，我为何不自己实现一套流处理框架呢？Kafka Streams诞生了！
+kafka与其他主流大数据流式计算框架相比，优势在哪里呢？
+更容易实现端到端的正确性，能够实现端到端的精确一次性处理语义。
+自己对于流式计算的定位，和其他的一些流失计算框架不同，它更轻量，不涉及集群调度等等比较重的东西，比较适合中小企业；
+ps：kafka不适合当做最终存储。</description></item><item><title>01消息引擎系统</title><link>https://www.hitzhangjie.pro/blog/kafka/01%E6%B6%88%E6%81%AF%E5%BC%95%E6%93%8E%E7%B3%BB%E7%BB%9Fabc/</link><pubDate>Mon, 26 Apr 2021 01:30:00 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/kafka/01%E6%B6%88%E6%81%AF%E5%BC%95%E6%93%8E%E7%B3%BB%E7%BB%9Fabc/</guid><description>apache kafka是什么呢？
+消息引擎系统（messaging systems）🆗 这种描述更加准确！ 消息队列（是用队列实现的？not accurately) 消息中间件（messaging middleware） 类似地，比如consensus algorithm，翻译成共识算法，比一致性算法更合适，一致性已经被用的泛滥了。
+消息编码方式： 消息编码格式，csv、xml、json、pb、thrift； kafka使用的是纯二进制的字节序列； 消息传输方式： 点对点，系统a发送的消息只能被b接受，其他人都不能接收； 发布订阅，可以有多个发送方（发布者，可能有多个），接收方（订阅方，可能有多个），这种能够实现非常灵活的系统扩展； JMS：严格来说，是一种规范，而不是一种实现。
+消息引擎的作用： 削峰填谷，避免生产者发送过量消息冲垮下游，使得下游能够平滑处理大量请求；
+为什么不对上游进行限速？限制后影响到用户体验怎么办？不现实！
+解耦，解耦生产者和消费者，容易实现灵活的扩展；
+比如量大了之后，加更多的消费者来提高处理效率就行了嘛，加的慢也没影响，不会直接对用户体验造成影响。</description></item><item><title>02快速搞定kafka术语</title><link>https://www.hitzhangjie.pro/blog/kafka/02%E5%BF%AB%E9%80%9F%E6%90%9E%E5%AE%9Akafka%E6%9C%AF%E8%AF%AD/</link><pubDate>Mon, 26 Apr 2021 01:30:00 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/kafka/02%E5%BF%AB%E9%80%9F%E6%90%9E%E5%AE%9Akafka%E6%9C%AF%E8%AF%AD/</guid><description>kafka属于分布式的消息引擎系统，主要功能是提供一套完备的消息发布与订阅解决方案：
+发布的订阅的对象是主题，topic；
+client端
+消息的生产者，producer； 消息的消费者，consumer； server端
+broker 一个broker集群有多个broker，将多个broker部署在多台机器上，当其中一个挂了，另一个broker也依然能对外提供服务，这就是kafka实现高可用的手段之一。 备份机制，replication
+副本，replica，相同的数据在被存储到多台机器上
+领导者副本（leader replica），对外提供服务（与客户端交互）
+追随者副本（follower replica），只能被动地跟随领导者副本，不与外界交互
+追随者副本请求领导者副本，把最新的更新操作发送给它，以完成同步
+可伸缩性
+将每个topic，划分成多个分区（partition），分区编号从0开始； 副本是在分区这个层级定义的，即每个分区可以定义副本的数量； topic ：每个主题可以包含多个分区
+​ \
+partition：每个分区可以配置多个副本
+​ \
+​ replica (leader/follower)：每个分区的多个副本中只能有一个为leader，对外服务
+​ \
+​ offset：消息曾，分区中包含若干条消息，每条消息的位移从0开始，依次递增
+client只能与分区的leader replica进行通信。
+消费组里面可以订阅
+kafka broker通过追加写，来实现持久化，来避免缓慢的随机IO操，利用了比较好的顺序写操作。
+再来回顾下这里的常见术语：
+消息：Record。Kafka 是消息引擎嘛，这里的消息就是指 Kafka 处理的主要对象。
+主题：Topic。主题是承载消息的逻辑容器，在实际使用中多用来区分具体的业务。
+分区：Partition。一个有序不变的消息序列。每个主题下可以有多个分区。</description></item><item><title>08事务隔离：事务到底是隔离的还是不隔离的</title><link>https://www.hitzhangjie.pro/blog/mysql/08%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%BA%8B%E5%8A%A1%E5%88%B0%E5%BA%95%E6%98%AF%E9%9A%94%E7%A6%BB%E7%9A%84%E8%BF%98%E6%98%AF%E4%B8%8D%E9%9A%94%E7%A6%BB%E7%9A%84/</link><pubDate>Sun, 25 Apr 2021 22:30:00 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/mysql/08%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%BA%8B%E5%8A%A1%E5%88%B0%E5%BA%95%E6%98%AF%E9%9A%94%E7%A6%BB%E7%9A%84%E8%BF%98%E6%98%AF%E4%B8%8D%E9%9A%94%E7%A6%BB%E7%9A%84/</guid><description>启动事务 启动事务的方式有哪些：
 autocommit=1，每条语句是一个独立的事务，比如select、update、delete； 通过begin/start transaction来启动一个事务，但是该语句并不是事务的起点，起点是在后面的第一条sql语句执行的时候； start transaction with consistent snapshot，立即启动一个新的事务，和begin/start transaction不同，该语句是一个事务的起点； 视图的概念 在mysql里，视图，有两种意思：
 一个是“view”，它是一个用查询语句定义的虚拟表，如执行create view select * from table，该语句执行的时候执行查询语句获得结果并创建视图，可以在视图上执行查询操作，查询语法与在表上的查询方式类似；
 另一个是InnoDB在实现MVCC时用到的“一致性读视图”，即consistent read view，用于支持RC（read commited，读提交）和RR（repeatable read，可重复读）隔离级别的实现；
@@ -103,71 +149,4 @@ innodb默认的pagesize是16KB，ok！
 指针6个字节，意味着可以寻址的索引地址空间很大的，256TB，哪有这么大的内存，这个东西也可以理解成磁盘上索引的偏移量，256TB的硬盘。
 但是看得出来，索引可能也很大，不一定能完全在硬盘中存储的下，也是按需加载的！
 ps：为什么要用自增id作为主键，有什么好处，主要是为了避免插入时页分裂，b+树调整导致的效率低下：https://zhuanlan.zhihu.com/p/71022670
-ps：innodb b+tree索引结构：https://www.programmersought.com/article/1411118316/</description></item><item><title>03事务隔离：为什么你改了我还看不见</title><link>https://www.hitzhangjie.pro/blog/mysql/03%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%A0%E6%94%B9%E4%BA%86%E6%88%91%E8%BF%98%E7%9C%8B%E4%B8%8D%E8%A7%81/</link><pubDate>Sat, 17 Apr 2021 15:00:00 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/mysql/03%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%A0%E6%94%B9%E4%BA%86%E6%88%91%E8%BF%98%E7%9C%8B%E4%B8%8D%E8%A7%81/</guid><description>数据库事务（刚性事务）
-事务特性：ACID
-Atomic Consistency Isolation Durability 事务隔离性及事务隔离级别：
-read uncommited read committed repeatable read serializable 在实现上，数据库里面会创建一个视图，访问的时候以视图的逻辑结果为准。
-在“可重复读”隔离级别下，这个视图是在事务启动时创建的，整个事务存在期间都用这个视图。 在“读提交”隔离级别下，这个视图是在每个SQL语句开始执行的时候创建的。 这里需要注意的是，“读未提交”隔离级别下直接返回记录上的最新值，没有视图概念； 而“串行化”隔离级别下直接用加锁（读写冲突、写写冲突）的方式来避免并行访问。 事务隔离性级别通过变量 transaction_isolation 来设置。
-MVCC：
-在执行更新操作的时候，也会对应的插入一行“回滚记录”，用于MVCC（多版本并发控制）中构建不同时间启动的事务的视图，这主要是为了维持一个可重复读的视图。
-比如现在执行操作假如现在c=1，执行update c=2, c=3, c=4的操作，那么对应的就会插入四行回滚记录，将2回滚为1，将3回滚为2，将4回滚为3。
-三个更新操作的时刻t1、t2、t3，相当于确立了三个边界，边界时间点前后可能会有不同的事务启动、结束。那些依然还未结束的事务，通过他们的启动时间与回滚记录插入时的时间做对比，就可以找到应该依次执行哪些回滚记录来恢复到启动事务时的数据库状态，通过这种方式来重建一个可重复读的视图。
-这就是MVCC的要义。
-这些回滚日志，多了之后也会占用存储空间，浪费资源，需要清除？但是假如有个事务是时刻t启动的，那么时刻t之后的回滚日志都是要保留的，如果这个事务执行时间很长，就会导致回滚日志积累很多，浪费资源。因此不建议使用长事务。
-查找执行时间超过60s的长事务：
-select * from information_schema.innodb_trx where TIME_TO_SEC(timediff(now(),trx_started))&amp;gt;60 了解下这个事务统计表几个比较有用的字段：
-mysql&amp;gt; desc innodb_trx; +----------------------------+-----------------+------+-----+---------+-------+ | Field | Type | Null | | +----------------------------+-----------------+------+-----+---------+-------+ | trx_id | bigint unsigned | NO | 事务id | | trx_state | varchar(13) | NO | 事务状态，如RUNNING | | trx_started | datetime | NO | 事务启动时间 | .</description></item><item><title>02一条SQL更新语句是如何执行的</title><link>https://www.hitzhangjie.pro/blog/mysql/02%E6%97%A5%E5%BF%97%E7%B3%BB%E7%BB%9F%E4%B8%80%E6%9D%A1sql%E6%9B%B4%E6%96%B0%E8%AF%AD%E5%8F%A5%E6%98%AF%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E7%9A%84/</link><pubDate>Sat, 17 Apr 2021 13:44:00 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/mysql/02%E6%97%A5%E5%BF%97%E7%B3%BB%E7%BB%9F%E4%B8%80%E6%9D%A1sql%E6%9B%B4%E6%96%B0%E8%AF%AD%E5%8F%A5%E6%98%AF%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E7%9A%84/</guid><description>这里涉及的日志类型：
-执行引擎层：innodb redolog
-mysql服务层：mysql binlog
-买东西赊账为例，老板通常有个账本，上面记录了所有人总的赊账情况，但是忙的时候是来不及查、计算的，可能就会在一个粉板上记录当前次的赊账情况，等打烊之后再去算，算完更新到账本上。
-mysql的设计者，采用了类似老板记账的方式，来提高更新效率。
-WAL：write ahead log，关键点就是：
-先写日志，再写磁盘 也就是先写粉板，不忙的时候再写账本； WAL log写操作基本只是追加，磁盘顺序写，效率高；写记录到磁盘还要考虑B+树特性、磁盘特性，要找到在哪里插入，涉及到多次随机读，效率是比较差的。
-所以说先写WAL这里是提高更新效率是没有问题的，当然了，也提供了崩溃后恢复的一种保证。
-具体说，就是innodb引擎会：
-先把记录写到redo log里面； 再更新内存，（这个时候就算更新完成了）； 然后比较空闲的时候再写回磁盘。 但是如果粉板写满了怎么办呢？老板只能停下手中的活，先把粉板上的赊账记录算完腾到账本上，然后擦掉粉板腾出新的空间，然后再继续赊账。
-类似地，innodb的redo log也是固定大小的（和粉板类似），从头到尾写满了，就得再从头写。redolog维护了两个指针：
-write pos，写最新赊账记录的位置，++，到头后再开始； checkpoint，表示已经将对应操作同步到磁盘数据文件的位置，相当于腾空的粉板位置，可以继续记录赊账位置。 当writepos追上checkpoint的时候，表示写满了，这时候mysql就得和老板一样停下来算账，不能接受新的更新请求，这样把checkpoint推进以下之后，再继续接受更新请求。
-这样即使数据库运行期间崩溃了，但是有了这个redolog，就可以将之前的操作全部恢复，不会丢失，这个能力称之为crash-safe。
-这里的write pos、checkpoint的作用，是为了提高更新效率，延时写入磁盘用的。
-一个更新操作是如何执行的？
-当执行一个更新操作时，执行器找到记录对应的行，请求执行引擎返回行数据，如果行数据在内存中，执行引擎就从内存直接返回，反之还需要从磁盘上读回来返回。执行器拿到行数据之后完成更新，比如某列N=N+1，并请求执行引擎更新行数据。
-执行引擎将数据更新到内存中，然后写redo log，然后返回给执行引擎成功，表示进入prepare状态，随时可提交。
-为什么不先写redolog，再写内存？
-没有实质区别吧，不都写了内存嘛。是担心数据不一致问题吗？别担心，mysql用了MVCC的，（可重复读级别）不会出现不可重复读的。
-执行器收到正常响应后，生成binlog并写入磁盘binlog文件，然后对刚才的操作继续请求置引擎发起commit操作。
-如果写binlog失败会怎样？mysql中有个选项binlog_error_action，用来控制如果binlog写失败：
-上述变量，其默认值是ABORT_SERVER，即mysqld退出。需要排除binlog写失败原因（如磁盘满、inode耗光等）后再启动起来。
-还可以将上述变量设置为IGNORE_ERROR，就是写binlog失败就失败，继续执行，此时就会导致没有生成binlog，无法同步给slave，master-slave数据就会变得不一致。而且也会影响到数据备份。一般是不太能接受的。
-重启后，innodb中有prepare阶段的redo log（未commited），这个时候binlog中又没有对应的binlog，此时就会rollback掉。</description></item><item><title>01一条SQL查询语句是如何执行的</title><link>https://www.hitzhangjie.pro/blog/mysql/01%E5%9F%BA%E7%A1%80%E6%9E%B6%E6%9E%84%E4%B8%80%E6%9D%A1sql%E6%9F%A5%E8%AF%A2%E8%AF%AD%E5%8F%A5%E6%98%AF%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E7%9A%84/</link><pubDate>Sat, 17 Apr 2021 13:08:00 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/mysql/01%E5%9F%BA%E7%A1%80%E6%9E%B6%E6%9E%84%E4%B8%80%E6%9D%A1sql%E6%9F%A5%E8%AF%A2%E8%AF%AD%E5%8F%A5%E6%98%AF%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E7%9A%84/</guid><description>MySQL基础架构
-mysql基础架构示意图，及主要流程介绍
-mysql 连接及内存管理
-mysql 8.0删除了查询缓存，为什么：https://mysqlserverteam.com/mysql-8-0-retiring-support-for-the-query-cache/
-优化器：存在多个索引，应该用哪一个？
-mysql select语句中不存在的列，是在哪个阶段分析出来的呢？分析器
-mysqld程序入口:
-main: https://sourcegraph.com/github.com/mysql/mysql-server/-/blob/sql/main.cc#L23:12 mysqld_main: https://sourcegraph.com/github.com/mysql/mysql-server/-/blob/sql/mysqld.cc#L7680:5</description></item><item><title>Locks实现:背后不为人知的故事</title><link>https://www.hitzhangjie.pro/blog/2021-04-17-locks%E5%AE%9E%E7%8E%B0%E9%82%A3%E4%BA%9B%E4%B8%8D%E4%B8%BA%E4%BA%BA%E7%9F%A5%E7%9A%84%E6%95%85%E4%BA%8B/</link><pubDate>Sat, 17 Apr 2021 11:32:36 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/2021-04-17-locks%E5%AE%9E%E7%8E%B0%E9%82%A3%E4%BA%9B%E4%B8%8D%E4%B8%BA%E4%BA%BA%E7%9F%A5%E7%9A%84%E6%95%85%E4%BA%8B/</guid><description>从事软件开发多年的你，真的理解locks背后的那些故事吗？锁是如何实现的，无锁指的又是什么，无锁真的移除了任何同步操作吗？为什么大家总是谈锁色变，锁的开销真的有那么大吗，平时编码中又该注意些什么呢？本文将结合go sync.Mutex对这些问题进行讨论。
-并发：我们关心什么 并发编程，开发人员应该对原子性、指令重排有深刻的认识。
-原子性 大家都了解过数据库事务的原子性，类似地，程序中也经常有些操作也需要达到类似的效果——被某种类似事务的机制“保护”起来，要么全部执行要么全部不执行。通常我们将这样需要保护的代码段称为临界区。我们希望临界区内的代码要么全部执行要么全部不执行，达到这种原子性的效果。
-其实不只是代码段，给一个int变量赋值，也需要考虑原子性，因为在不同的操作系统、处理器平台上，可能一个简单的int变量赋值需要涉及多条机器指令，而在多条指令执行期间，则可能发生各种事件，比如被其他CPU核的赋值指令写乱了同一变量的数据。设想下一个int变量4字节，但是处理器平台只有16位mov指令。再或者执行i++（i为int类型）操作，实际上是包含了read-modify-write三个操作，这几个操作中间也可能插入其他指令执行。当然一条机器指令也可能不是原子的，比如add src, dst，src和dst都是内存地址，这里就涉及到读取src和dst、计算、写回dst的多个操作……更不用说一个包含了多个字段的struct结构体的赋值了。
-这类原子性问题，可以通过一些相当低级的原子操作来保证，如int变量i++，可以考虑lock add指令（假定操作数位宽和int变量相同），稍复杂的数据结构（如struct）也可以使用一些“高级锁”来做同步保证，如go中的sync.Mutex。
-指令重排 指令重排的根源在于CPU的设计，古老的CPU只有一条取指、译码、执行、访存、写回的功能电路。联想下假如一个单线程程序执行阻塞网络IO的时候会发生什么，整个程序全阻塞在这里干不了其他的。CPU也存在类似问题，假如一条指令执行过程中因为数据没ready的问题不能执行，或者碰到多CPU多核间cache一致性同步，那CPU会stall，后续的指令都无法执行。
-所以CPU为了提高指令吞吐，增加了多条流水线设计，可以同时执行多条指令的取指、译码、执行、访存、写回，当然这其中有些指令是有数据依赖的，现代处理器支持寄存器重命名、指令乱序执行、重排序缓冲等功能，都是保证CPU执行效率的常用手段。如果想了解这方面的内容，see Computer Architecture: Dynamic Execution Core及系列课程Computer Architecture。这里贴一张超标量处理器的简图，方便大家理解这些优化手段所在的位置：
-为什么要指令重排：
-为什么要指令重排呢？
-因为希望提高cpu指令吞吐，就要并行执行指令，要并行执行指令，就要分析出哪些指令之间有数据依赖的，表面上一个架构寄存器RAX可能被相邻多条指令使用，但是可能是一个伪数据依赖，就需要通过分析、寄存器重命名（如RAX重命名为物理寄存器R11）来消除伪数据依赖，从而允许其在执行阶段并行执行（out-of-order）。
-一条指令的执行过程，会分为多个阶段，有些阶段是按序执行的（in-order），有些则是乱序执行的（out-of-order）。在指令乱序执行之后，可能会对程序正确性造成影响？影响究竟有多大，就需要参考硬件内存一致性模型，比如Intel x86处理器采用的是TSO模型（Total Store Order）, see x86-TSO: A Rigorous and Usable Programmer&amp;rsquo;s Model for x86 Multiprocessors。
-指令重排带来的问题：
-指令在CPU乱序执行，在某些并发场景下，可能会带来一些微妙的问题。比如：
-type num struct { a int b int } n := &amp;amp;num{} go func() { n.a = 1; n.b = 2; }() // g1 go func() { n.a = 2; n.</description></item><item><title>如何看待gopanic及异常处理</title><link>https://www.hitzhangjie.pro/blog/2021-04-16-%E5%A6%82%E4%BD%95%E7%9C%8B%E5%BE%85gopanic%E5%8F%8A%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86/</link><pubDate>Fri, 16 Apr 2021 13:47:21 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/2021-04-16-%E5%A6%82%E4%BD%95%E7%9C%8B%E5%BE%85gopanic%E5%8F%8A%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86/</guid><description>Background 最近有同学提问，大意是：“go中什么时候用panic、什么时候用error，能不能像其他语言中的try-catch一样用panic-recover来代替层层return err，或者应不应该recover一个panic之后转换为error？”
-这个问题引起了广泛的讨论，在对这几个问题的理解上，我本以为大家应该会认识到位的，没想到很多人认识很模糊。当然，好的地方就是总有有见识的同学站出来指出大家的问题。
-对于那些有灵性的同学，勤实践勤思考的同学，他会自然而然意识到哪种error handling pattern更好，也会有意识地去区分不同pattern的定位和应用场景。这类同学虽然没有什么理论术语支撑，但是他们的“经验”是贴近更好的设计思想、最佳实践的。如果更进一步，能愿意接受一些设计思想的洗礼，则可以将“经验”上升到“模式”，以指导更多人。
-panic != exception go panic不同于其他语言中的exception，在设计、定位上是有明确的区别的，see: https://dave.cheney.net/2012/01/18/why-go-gets-exceptions-right。
-panics are always fatal to your program. In panicing you never assume that your caller can solve the problem. Hence panic is only used in exceptional circumstances, ones where it is not possible for your code, or anyone integrating your code to continue.
-go panic是用来表示程序出现了十分致命的错误，并且你不能假定这个错误能被解决。所以panic只在很少的场景下才会被用到，并且出现panic时，你的代码解决不了，引用这部分代码的其他代码也解决不了。
-所以，panic并非一般意义上的error，更不能用panic-recover代替层层向上传递error！
-对于，为了自身程序的健壮性，而在启动新的goroutine时，或者调用外部依赖的导出函数、方法时，可能选择recover一些预料之外的panic，并转换为error处理。
-有追求的开发人员，在panic的使用上应该始终遵循go设计理念，同时在程序的健壮性上也会采用些防御性编程的手段。
-panic vs exception 我们很多开发人员都接触过多门语言，比如Java、C++，等等，这类语言都有异常处理机制，遇到一些意外事件时可以抛出一个异常，异常通常由try-catch block捕获并处理。
-初学者阶段，很多同学会努力去学习异常处理的正确编码方式，甚至是异常处理的实现原理，对性能的影响，等等，但是由于实际缺乏实际的大规模工程供锻炼实践，也很少有人会去思考一些问题，比如：
-QA：我们为什么需要异常？</description></item></channel></rss>
+ps：innodb b+tree索引结构：https://www.programmersought.com/article/1411118316/</description></item></channel></rss>

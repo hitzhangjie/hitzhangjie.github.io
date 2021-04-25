@@ -1,4 +1,22 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>MySQL on</title><link>https://www.hitzhangjie.pro/tags/mysql/</link><description>Recent content in MySQL on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 25 Apr 2021 16:00:00 +0800</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/mysql/index.xml" rel="self" type="application/rss+xml"/><item><title>07行锁功过：怎么减少行锁对性能的影响</title><link>https://www.hitzhangjie.pro/blog/mysql/07%E8%A1%8C%E9%94%81%E5%8A%9F%E8%BF%87%E6%80%8E%E4%B9%88%E5%87%8F%E5%B0%91%E8%A1%8C%E9%94%81%E5%AF%B9%E6%80%A7%E8%83%BD%E7%9A%84%E5%BD%B1%E5%93%8D/</link><pubDate>Sun, 25 Apr 2021 16:00:00 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/mysql/07%E8%A1%8C%E9%94%81%E5%8A%9F%E8%BF%87%E6%80%8E%E4%B9%88%E5%87%8F%E5%B0%91%E8%A1%8C%E9%94%81%E5%AF%B9%E6%80%A7%E8%83%BD%E7%9A%84%E5%BD%B1%E5%93%8D/</guid><description>行锁 行锁，顾名思义就是对表的行进行加锁，是存储引擎层来设计实现的：
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>MySQL on</title><link>https://www.hitzhangjie.pro/tags/mysql/</link><description>Recent content in MySQL on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 25 Apr 2021 22:30:00 +0800</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/mysql/index.xml" rel="self" type="application/rss+xml"/><item><title>08事务隔离：事务到底是隔离的还是不隔离的</title><link>https://www.hitzhangjie.pro/blog/mysql/08%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%BA%8B%E5%8A%A1%E5%88%B0%E5%BA%95%E6%98%AF%E9%9A%94%E7%A6%BB%E7%9A%84%E8%BF%98%E6%98%AF%E4%B8%8D%E9%9A%94%E7%A6%BB%E7%9A%84/</link><pubDate>Sun, 25 Apr 2021 22:30:00 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/mysql/08%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%BA%8B%E5%8A%A1%E5%88%B0%E5%BA%95%E6%98%AF%E9%9A%94%E7%A6%BB%E7%9A%84%E8%BF%98%E6%98%AF%E4%B8%8D%E9%9A%94%E7%A6%BB%E7%9A%84/</guid><description>启动事务 启动事务的方式有哪些：
+autocommit=1，每条语句是一个独立的事务，比如select、update、delete； 通过begin/start transaction来启动一个事务，但是该语句并不是事务的起点，起点是在后面的第一条sql语句执行的时候； start transaction with consistent snapshot，立即启动一个新的事务，和begin/start transaction不同，该语句是一个事务的起点； 视图的概念 在mysql里，视图，有两种意思：
+一个是“view”，它是一个用查询语句定义的虚拟表，如执行create view select * from table，该语句执行的时候执行查询语句获得结果并创建视图，可以在视图上执行查询操作，查询语法与在表上的查询方式类似；
+另一个是InnoDB在实现MVCC时用到的“一致性读视图”，即consistent read view，用于支持RC（read commited，读提交）和RR（repeatable read，可重复读）隔离级别的实现；
+它没有物理结构，作用是事务执行期间用来定义“当前事务能看到什么数据”。
+“快照”在MVCC里是怎么工作的 在可重复读隔离级别下，事务在启动的时候就“创建了个快照”，这个快照是基于整库的。
+但是这里的创建快照，并不是复制一份完整的数据作为只读，肯定不能这样实现，想想一下一个数据库如果数量很大，复制的存储开销也太大了。
+mysql MVCC里实现的这个快照非常聪明：
+InnoDB里每个事务都有一个唯一的事务ID，叫transaction id。它是在事务开始的时候向InnoDB的事务系统申请的，是按申请顺序严格递增的。
+每行数据也是有多个版本的，这里的版本就用transaction id来表示。哪个数据版本更加新一点旧一点，还是根据生成该版本时的顺序来决定的，每行数据的transaction id则用来维护一个一致性读视图；
+当对某行数据进行更新操作时，会申请一个新的事务id，并插入新行数据，并更新字段trx_id为事务id，此时，插入了新的数据并不会删除旧的，旧的还是保存着的。但是新版的行数据有办法能找到旧版本的数据；
+注意新生成一个版本数据时，也会插入一行undo log，一个事务可以借助其事务id，从当前数据版本开始读，然后结合每行数据的trx_id和undo log，来读取到当前事务可见的数据版本，来实现一致性读视图，也就实现了可重复读；
+就是当前事务id可能是100，现在对应行的数据当前版本是102，100这个事务就顺着数据行的当前版本开始找，直到发现一个版本&amp;lt;=100时才行，也就保证了一致性读，这里就是根据数据行102版本的undo log找到前一条数据行，重复这个过程，直到发现一个版本&amp;lt;=100。
+通过这种方式，实现了秒级快照的能力！
+当前读（current read） 如果事务中涉及到一些更新类的操作的话，这里的更新是在数据“最新版本”上进行的更新，也就是说在“当前读”的版本上进行更新。后续的读，看上去读取到的就是最新值。
+这可能会让我们觉得，与我们之前MVCC里面一致性读时说的一些有矛盾。其实没有矛盾的，只是更新操作的时候是在当前读的最新数据上进行更新。而后续读取的时候依然是按照MVCC里一致性读的方式来的。
+如果更新时不是按照当前读来更新，那么就会造成以前已经提交的事务更新操作丢失了。
+有几种办法可以实现当前读：
+更新操作肯定是当前读了； select + lock in share mod，也是当前读； select + for update，也是当前读；</description></item><item><title>07行锁功过：怎么减少行锁对性能的影响</title><link>https://www.hitzhangjie.pro/blog/mysql/07%E8%A1%8C%E9%94%81%E5%8A%9F%E8%BF%87%E6%80%8E%E4%B9%88%E5%87%8F%E5%B0%91%E8%A1%8C%E9%94%81%E5%AF%B9%E6%80%A7%E8%83%BD%E7%9A%84%E5%BD%B1%E5%93%8D/</link><pubDate>Sun, 25 Apr 2021 16:00:00 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/mysql/07%E8%A1%8C%E9%94%81%E5%8A%9F%E8%BF%87%E6%80%8E%E4%B9%88%E5%87%8F%E5%B0%91%E8%A1%8C%E9%94%81%E5%AF%B9%E6%80%A7%E8%83%BD%E7%9A%84%E5%BD%B1%E5%93%8D/</guid><description>行锁 行锁，顾名思义就是对表的行进行加锁，是存储引擎层来设计实现的：
 MyISAM没有行锁，对表执行更新时只能加表锁，并发度就比较低 InnoDB支持行锁，并发度就比MyISAM高，所以一般用InnoDB代替MyISAM ps: 减少行锁的冲突，有助于进一步提高并发处理能力。
 两阶段封锁协议 在一个事务中：
 加锁，是在需要的时候按需加锁； 释放锁，是在事务提交的时候释放锁； 知道这个后，我们可以在编码时进行一点优化。
@@ -104,25 +122,24 @@ mysql服务层：mysql binlog
 买东西赊账为例，老板通常有个账本，上面记录了所有人总的赊账情况，但是忙的时候是来不及查、计算的，可能就会在一个粉板上记录当前次的赊账情况，等打烊之后再去算，算完更新到账本上。
 mysql的设计者，采用了类似老板记账的方式，来提高更新效率。
 WAL：write ahead log，关键点就是：
-先写日志，再写磁盘
-也就是先写粉板，不忙的时候再写账本；
+先写日志，再写磁盘 也就是先写粉板，不忙的时候再写账本； WAL log写操作基本只是追加，磁盘顺序写，效率高；写记录到磁盘还要考虑B+树特性、磁盘特性，要找到在哪里插入，涉及到多次随机读，效率是比较差的。
+所以说先写WAL这里是提高更新效率是没有问题的，当然了，也提供了崩溃后恢复的一种保证。
 具体说，就是innodb引擎会：
 先把记录写到redo log里面； 再更新内存，（这个时候就算更新完成了）； 然后比较空闲的时候再写回磁盘。 但是如果粉板写满了怎么办呢？老板只能停下手中的活，先把粉板上的赊账记录算完腾到账本上，然后擦掉粉板腾出新的空间，然后再继续赊账。
 类似地，innodb的redo log也是固定大小的（和粉板类似），从头到尾写满了，就得再从头写。redolog维护了两个指针：
-write pos，写最新赊账记录的位置，++，到头后再开始； checkpoint，表示已经将对应操作同步到磁盘数据文件的位置，相当与腾空的粉板位置，可以继续记录赊账位置。 当writepos追上checkpoint的时候，表示写满了，这时候mysql就得和老板一样停下来算账，不能接受新的更新请求，这样把checkpoint推进以下之后，再继续接受更新请求。
+write pos，写最新赊账记录的位置，++，到头后再开始； checkpoint，表示已经将对应操作同步到磁盘数据文件的位置，相当于腾空的粉板位置，可以继续记录赊账位置。 当writepos追上checkpoint的时候，表示写满了，这时候mysql就得和老板一样停下来算账，不能接受新的更新请求，这样把checkpoint推进以下之后，再继续接受更新请求。
 这样即使数据库运行期间崩溃了，但是有了这个redolog，就可以将之前的操作全部恢复，不会丢失，这个能力称之为crash-safe。
 这里的write pos、checkpoint的作用，是为了提高更新效率，延时写入磁盘用的。
 一个更新操作是如何执行的？
-当执行一个更新操作时，执行器找到记录对应的行，请求执行引擎返回行数据，如果行数据在内存中，执行引擎就从内存直接返回，反之还需要从磁盘上读回来返回。执行引擎拿到行数据之后完成更新，比如某列N=N+1，并请求执行引擎更新行数据。
+当执行一个更新操作时，执行器找到记录对应的行，请求执行引擎返回行数据，如果行数据在内存中，执行引擎就从内存直接返回，反之还需要从磁盘上读回来返回。执行器拿到行数据之后完成更新，比如某列N=N+1，并请求执行引擎更新行数据。
 执行引擎将数据更新到内存中，然后写redo log，然后返回给执行引擎成功，表示进入prepare状态，随时可提交。
-为什么不先写redolog，再写内存？没有实质区别吧，不都写了内存嘛。是担心数据不一致问题吗？别担心，mysql用了MVCC的，（可重复读级别）不会出现不可重复读的。
+为什么不先写redolog，再写内存？
+没有实质区别吧，不都写了内存嘛。是担心数据不一致问题吗？别担心，mysql用了MVCC的，（可重复读级别）不会出现不可重复读的。
 执行器收到正常响应后，生成binlog并写入磁盘binlog文件，然后对刚才的操作继续请求置引擎发起commit操作。
-执行引擎把刚才写入的redolog的状态修改为commit状态，更新完成。
-万一这里执行commit之前失败了怎么办？那服务层没有收到commit成功确认，应该后面会重试的吧。
-执行引擎在合适的（通常是空闲的）时候将redolog中数据同步到磁盘数据文件。
-注意这里将 redolog 拆成两部分prepare+commit，这就是典型的两阶段提交。为什么要两阶段提交，是为了保持两份日志文件的完整性，让两份日志文件之间的逻辑一致。
-不妨从恢复数据库到半个月内任意一秒t的状态，从这个角度来思考这个问题？
-如何恢复？首先t之前的最近的一次全量备份，先恢复到临时数据库中，然后找这次全量备份之后t之前的binlog，并恢复到临时数据库中。然后将临时数据库中的数据恢复到线上。 再看为什么用两阶段提交？不用就不能保证两个日志文件的完整性（c=c+1）： 假如先写完redolog再写binlog，redolog将c=0改成了1，但是binlog写成功前挂掉了，这样本地数据是c=1，但是归档日志同步给别人后丢了一个事务操作，或者自己重启后恢复的时候也丢了一个操作c变成了0。 假如先写完binlog后再写redolog，binlog中记录了c=c+1=1，但是redolog写失败了，此时库中数据其实是0，如果binlog同步给别人，按binlog恢复出的数据是1，而不是0，也不一致。如果是挂掉之后恢复，能一致都是1。 可见如果不适用prepare-commit两阶段提交的话，日志中记录的状态和真实的存储情况就会出现不一致。</description></item><item><title>01一条SQL查询语句是如何执行的</title><link>https://www.hitzhangjie.pro/blog/mysql/01%E5%9F%BA%E7%A1%80%E6%9E%B6%E6%9E%84%E4%B8%80%E6%9D%A1sql%E6%9F%A5%E8%AF%A2%E8%AF%AD%E5%8F%A5%E6%98%AF%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E7%9A%84/</link><pubDate>Sat, 17 Apr 2021 13:08:00 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/mysql/01%E5%9F%BA%E7%A1%80%E6%9E%B6%E6%9E%84%E4%B8%80%E6%9D%A1sql%E6%9F%A5%E8%AF%A2%E8%AF%AD%E5%8F%A5%E6%98%AF%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E7%9A%84/</guid><description>MySQL基础架构
+如果写binlog失败会怎样？mysql中有个选项binlog_error_action，用来控制如果binlog写失败：
+上述变量，其默认值是ABORT_SERVER，即mysqld退出。需要排除binlog写失败原因（如磁盘满、inode耗光等）后再启动起来。
+还可以将上述变量设置为IGNORE_ERROR，就是写binlog失败就失败，继续执行，此时就会导致没有生成binlog，无法同步给slave，master-slave数据就会变得不一致。而且也会影响到数据备份。一般是不太能接受的。
+重启后，innodb中有prepare阶段的redo log（未commited），这个时候binlog中又没有对应的binlog，此时就会rollback掉。</description></item><item><title>01一条SQL查询语句是如何执行的</title><link>https://www.hitzhangjie.pro/blog/mysql/01%E5%9F%BA%E7%A1%80%E6%9E%B6%E6%9E%84%E4%B8%80%E6%9D%A1sql%E6%9F%A5%E8%AF%A2%E8%AF%AD%E5%8F%A5%E6%98%AF%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E7%9A%84/</link><pubDate>Sat, 17 Apr 2021 13:08:00 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/mysql/01%E5%9F%BA%E7%A1%80%E6%9E%B6%E6%9E%84%E4%B8%80%E6%9D%A1sql%E6%9F%A5%E8%AF%A2%E8%AF%AD%E5%8F%A5%E6%98%AF%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E7%9A%84/</guid><description>MySQL基础架构
 mysql基础架构示意图，及主要流程介绍
 mysql 连接及内存管理
 mysql 8.0删除了查询缓存，为什么：https://mysqlserverteam.com/mysql-8-0-retiring-support-for-the-query-cache/

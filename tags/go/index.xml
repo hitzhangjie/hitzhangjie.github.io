@@ -1,4 +1,21 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>go on</title><link>https://www.hitzhangjie.pro/tags/go/</link><description>Recent content in go on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 17 Apr 2021 11:32:36 +0800</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/go/index.xml" rel="self" type="application/rss+xml"/><item><title>Locks实现:背后不为人知的故事</title><link>https://www.hitzhangjie.pro/blog/2021-04-17-locks%E5%AE%9E%E7%8E%B0%E9%82%A3%E4%BA%9B%E4%B8%8D%E4%B8%BA%E4%BA%BA%E7%9F%A5%E7%9A%84%E6%95%85%E4%BA%8B/</link><pubDate>Sat, 17 Apr 2021 11:32:36 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/2021-04-17-locks%E5%AE%9E%E7%8E%B0%E9%82%A3%E4%BA%9B%E4%B8%8D%E4%B8%BA%E4%BA%BA%E7%9F%A5%E7%9A%84%E6%95%85%E4%BA%8B/</guid><description>从事软件开发多年的你，真的理解locks背后的那些故事吗？锁是如何实现的，无锁指的又是什么，无锁真的移除了任何同步操作吗？为什么大家总是谈锁色变，锁的开销真的有那么大吗，平时编码中又该注意些什么呢？本文将结合go sync.Mutex对这些问题进行讨论。
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>go on</title><link>https://www.hitzhangjie.pro/tags/go/</link><description>Recent content in go on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 24 May 2021 00:14:01 +0800</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/go/index.xml" rel="self" type="application/rss+xml"/><item><title>how goroutine created and started</title><link>https://www.hitzhangjie.pro/blog/2021-05-24-how-goroutine-created-and-started/</link><pubDate>Mon, 24 May 2021 00:14:01 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/2021-05-24-how-goroutine-created-and-started/</guid><description>goroutine创建：runtime.newproc(siz int32, fn *funcval)
+go fn()，传递给fn的参数实际上是紧跟着存在fn压栈后的地址后面，在newproc1的栈帧里面，但是不出现在签名参数列表中，因为这些参数类型、数量不一样，也无法出现在签名参数列表中； newproc1创建g； getg().m.p.ptr()拿到当前p； runqput将当前g放入p的local queue中，如果满则放到global queue中； g等待被调度器调度执行； 大致创建执行goroutine的逻辑是这样的，下面的逻辑都是切到系统栈上去执行的。
+1 newproc1逻辑
+查看源码发现，goroutine初始创建时对函数参数大小是有限制的，如果参数占内存空间很大，比如超过初始栈帧大小2KB，那么goroutine创建会失败：&amp;ldquo;fatal error: newproc: function arguments too large for new goroutine&amp;rdquo;，比如，go func(a [1024]int) {}([1024]int{})。
+每个p内部都有一个空闲goroutine队列gFree，这个就是用来执行fn的goroutine，是可以复用的，不用的时候可以丢给调度器schedt.gFree供其他p复用。这里空闲的goroutines，一部分存在于p.gFree，如果gfput(p, gp)时发现p.gFree队列太长说明过剩了，就转移一部分到调度器schedt.gFree中供其他p复用。
+goroutine执行完毕后运行时并不急于将其销毁，而是会考虑goroutine的复用，gfput，前面提过了。希望go func()通过协程执行时，也不必每次创建新的goroutine，gfget，可以复用p.gFree中的goroutine，如果p.gFree空或者过少（32）且调度器schedt.gFree中有空闲，则转移一部分过来给p复用。但是goroutine的栈有可能会被销毁，如果复用到栈被销毁的goroutine就需要stackalloc重新为其分配新栈帧。
+如果没有空闲的g可供复用，那就只能malg从头新建一个goroutine了。
+goroutine创建成功、栈空间也ok了之后，就要把goroutine要执行的函数对应的函数参数给拷贝到这个栈空间里面来，通过memmove(spArg, argp, uintptr(narg))来完成。完成后调整newg的调度上下文相关的寄存器值，等调度器调度它时，还原其中的上下文信息，pc就指向其对应的函数地址了，对应的数据也会指向其对应的栈空间。
+然后，通过gostartcallfn→gostartcall(buf, fn, ctxt)，之前已经拷贝了函数fn的参数到goroutine栈空间了，这里面再继续在栈内设置fn返回地址、gobuf.sp+gobuf.pc信息。
+上述调整完成之后，将goroutine的状态从_Gdead调整为_Grunnable，等待调度器调度。新创建的时候其状态是_Gidle，一定会将其调整为_Gdead然后再进行上述准备工作，一切就绪后才调整为_Grunnable让其参与调度。
+2 runqput(p, gp, next) 这里的逻辑是，希望将gp放到p的local queue中，但是也有头插、尾插两种方式。
+如果next为true，可以认为是头插，其实是放到p.runnext中，比p.queue中的得到优先调度。如果之前p.runnext有值，还要该值对应的g放入p.queue中； 如果next为false，则尝试将其放置到p.queue中，这里也有快慢两种情况，快的情况就是，因为p.queue这个本地队列长度最大为256，如果有空余位置放入就返回，这是快的情况。慢的情况就是如果p.queue满了就要先转移1/2到调度器全局队列schedt.queue中，然后再放入，这个过程就慢一些。 放置过程中，如果p.runqueue满了怎么办，将其放置到调度器schedt.queue这个全局队列中。
+3 wakeup()逻辑
+这个函数内部执行startm(p, spinning)，来找一个m来执行goroutine，具体是怎么做的呢？
+如果没有指定p，比如新建goroutine时，此时会尝试检查有没有空闲的p，没有的话就直接返回了，相当于当前一次没有执行成功，那么只能下次调度的时候再执行这个新建的goroutine了；
+现在有空闲的p，我们还缺什么，m！然后mget找一个空闲的m，如果没有空闲的，就newm创建一个新的，本质上是通过clone系统调用创建的新的线程。然后将这个m和这个p关联起来，m.nextp = p。值得一提的是clone出来的线程对应的线程处理函数是mstart，mstart使用汇编写的，内部实际调用的是mstart0，它内部又请求mstart1，获取当前g：
+如果g.m==&amp;amp;m0，则执行mstartm0完成信号处理注册，继续执行其他；
+获取当前m.</description></item><item><title>Locks实现:背后不为人知的故事</title><link>https://www.hitzhangjie.pro/blog/2021-04-17-locks%E5%AE%9E%E7%8E%B0%E9%82%A3%E4%BA%9B%E4%B8%8D%E4%B8%BA%E4%BA%BA%E7%9F%A5%E7%9A%84%E6%95%85%E4%BA%8B/</link><pubDate>Sat, 17 Apr 2021 11:32:36 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/2021-04-17-locks%E5%AE%9E%E7%8E%B0%E9%82%A3%E4%BA%9B%E4%B8%8D%E4%B8%BA%E4%BA%BA%E7%9F%A5%E7%9A%84%E6%95%85%E4%BA%8B/</guid><description>从事软件开发多年的你，真的理解locks背后的那些故事吗？锁是如何实现的，无锁指的又是什么，无锁真的移除了任何同步操作吗？为什么大家总是谈锁色变，锁的开销真的有那么大吗，平时编码中又该注意些什么呢？本文将结合go sync.Mutex对这些问题进行讨论。
 并发：我们关心什么 并发编程，开发人员应该对原子性、指令重排有深刻的认识。
 原子性 大家都了解过数据库事务的原子性，类似地，程序中也经常有些操作也需要达到类似的效果——被某种类似事务的机制“保护”起来，要么全部执行要么全部不执行。通常我们将这样需要保护的代码段称为临界区。我们希望临界区内的代码要么全部执行要么全部不执行，达到这种原子性的效果。
 其实不只是代码段，给一个int变量赋值，也需要考虑原子性，因为在不同的操作系统、处理器平台上，可能一个简单的int变量赋值需要涉及多条机器指令，而在多条指令执行期间，则可能发生各种事件，比如被其他CPU核的赋值指令写乱了同一变量的数据。设想下一个int变量4字节，但是处理器平台只有16位mov指令。再或者执行i++（i为int类型）操作，实际上是包含了read-modify-write三个操作，这几个操作中间也可能插入其他指令执行。当然一条机器指令也可能不是原子的，比如add src, dst，src和dst都是内存地址，这里就涉及到读取src和dst、计算、写回dst的多个操作……更不用说一个包含了多个字段的struct结构体的赋值了。
@@ -104,15 +121,4 @@ delve简介 go-delve/delve是Derekparker发起的一个调试器项目，面向g
 作为符号级调试器，要能正常实现源码级调试，有这么几个事情必须要做的：
 首先，就必须要有调试信息的支持，比如编译器、连接器在构建过程中插入DWARF相关的sections，以供后续调试器提取、解析以重建指令、地址与源码的映射关系，还有在活动记录中跳转等等。 此外，有了调试信息，还需要理解语言内部实现，比如go的类型系统、协程、运行时，这样你才能读写源码级的运行状态信息； 还没完，你还需要一些平台级实现相关的玩意，不同的语言在不同的平台上有不同的实现，调试器要理解这些差异并做针对性处理； 这些工作，在GDB里扩展插件来实现，不一定能很好地实现的，比如GDB支持的DWARF标准版本问题，和go编译器没有对齐之类的，比如GDB里面Target层（对tracee）控制层考虑的大多是进程、线程级别的，没有对goroutine类似的控制能力，诸如此类。
 Anyway，我们需要一款更理解go的调试器，delve就这么诞生了。现在大已经是go官方推荐的调试器了，也是GoLand、VSCode、vim-go中使用的调试器。能有幸了解一款调试器的实现、参与贡献还是很爽的一件事情。
-delve整体架构 delve大致实现</description></item><item><title>Monkey Patching in Go</title><link>https://www.hitzhangjie.pro/blog/2020-08-23-monkey_patching_in_go/</link><pubDate>Sun, 23 Aug 2020 15:41:28 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/2020-08-23-monkey_patching_in_go/</guid><description>前几天写了篇x64汇编开发介绍的文章，当时有提到接下来会介绍下go中如何实现monkey patching，嗯，今天就来说下这个事情。
-Monkey Patching 简介 monkey patching，一说到这个，很多熟悉go的同学可能会联想起gomonkey这个mock测试框架。该术语的定义取决于使用它的社区。在Ruby，Python 和许多其他动态编程语言中，“monkey patching”一词仅指在运行时对类或模块的动态修改，其目的是为了修补现有的第三方代码，以此作为解决方法。错误或功能无法正常运行。根据其不同的意图，在运行时修改类的其他形式也具有不同的名称。例如，在Zope和Plone中，安全补丁通常是使用动态类修改来提供的，但它们被称为热修补程序(hot fixes)。
-monkey pathcing，它常用语如下场景：
-在运行时替换方法/类/属性/函数，例如在测试过程中取消功能； 修改/扩展第三方产品的行为，而无需维护源代码的私有副本； 在运行时将补丁程序的结果应用于内存中的状态，而不是磁盘上的源代码； 分发与原始源代码一起存在的安全性或行为修复程序（例如，将其作为Ruby on Rails平台的插件分发）； 探索各种自动修复程序以提供自我修复。 Monkey Patching in Go 最近在写mock测试的时候，有些场景下用到了gomonkey，这个测试框架挺好用的，之前也简单了解过大致的实现，最近也在看些底层工具链相关的东西，就想整理下这方面的一点东西。也希望能帮助到想了解这方面内容的同学。
-那现在就就开始吧，首先我会简单介绍下go函数的实现、指令patching的概念，然后看下反汇编、指令级调试如何帮助快速定位问题，然后通过几个简单的demo来演示下如何实现指令patch，然后我们再回到go实现monkey patching。
-怎么说呢，如果不感兴趣就真的不要看了，就好像别人骑车摔破头也觉得很爽，但是你觉得骑车没什么好玩的，一个道理。
-Go函数表示 demo1 下面定义了一个简单的函数a()，然后再main函数中调用它，然后调用通过print打印出它的返回值。
-file: main.go
-package main func a() int { return 1 } func main() { print(a()) } 这个函数非常简单，monkey patching离不开汇编，所以我们先看下其对应的汇编代码，了解这个程序干了些啥。
-这里顺便推荐几个工具:
-dlv，适用于go的调试器 radare2，静态分析工具，类似的IDA、Hopper 我这里就先试用radare2（下文简称r2）来演示如何操作了。
-$ go build -gcflags=&amp;quot;all=-N -l&amp;quot; -o main main.go $ r2 ./main -- give | and &amp;gt; a try piping and redirection [0x00454330]&amp;gt; s sym.</description></item></channel></rss>
+delve整体架构 delve大致实现</description></item></channel></rss>

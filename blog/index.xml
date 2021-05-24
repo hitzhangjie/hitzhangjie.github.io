@@ -15,7 +15,16 @@ goroutine创建成功、栈空间也ok了之后，就要把goroutine要执行的
 如果没有指定p，比如新建goroutine时，此时会尝试检查有没有空闲的p，没有的话就直接返回了，相当于当前一次没有执行成功，那么只能下次调度的时候再执行这个新建的goroutine了；
 现在有空闲的p，我们还缺什么，m！然后mget找一个空闲的m，如果没有空闲的，就newm创建一个新的，本质上是通过clone系统调用创建的新的线程。然后将这个m和这个p关联起来，m.nextp = p。值得一提的是clone出来的线程对应的线程处理函数是mstart，mstart使用汇编写的，内部实际调用的是mstart0，它内部又请求mstart1，获取当前g：
 如果g.m==&amp;amp;m0，则执行mstartm0完成信号处理注册，继续执行其他；
-获取当前m.</description></item><item><title>09普通索引和唯一索引：如何选择</title><link>https://www.hitzhangjie.pro/blog/mysql/09%E6%99%AE%E9%80%9A%E7%B4%A2%E5%BC%95%E5%92%8C%E5%94%AF%E4%B8%80%E7%B4%A2%E5%BC%95%E5%A6%82%E4%BD%95%E9%80%89%E6%8B%A9/</link><pubDate>Tue, 27 Apr 2021 12:34:00 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/mysql/09%E6%99%AE%E9%80%9A%E7%B4%A2%E5%BC%95%E5%92%8C%E5%94%AF%E4%B8%80%E7%B4%A2%E5%BC%95%E5%A6%82%E4%BD%95%E9%80%89%E6%8B%A9/</guid><description>对比两种类型的索引 普通索引，允许多条记录中组成索引的字段值出现重复的情况； 唯一索引，不允许…… 两种类型索引实现 肯定都是一样的啊
+获取当前m.</description></item><item><title>GC: prioritizing low latency and simplicity</title><link>https://www.hitzhangjie.pro/blog/2021-05-01-gogc-prioritizing-low-latency-and-simplicity/</link><pubDate>Sat, 01 May 2021 11:17:56 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/2021-05-01-gogc-prioritizing-low-latency-and-simplicity/</guid><description>原文地址：https://blog.golang.org/go15gc
+介绍了当前软硬件大规模发展的趋势以及go GC需要优先解决的问题：低延迟和简单性（通过一个参数就可以控制，而非像JVM调参那样）。
+go团队的目标是设计一个面向未来十年的垃圾回收器，借鉴了十几年前发明的算法。go GC使用的是并发三色标记清除算法（concurrent, tri-color, mark-sweep collector），由Dijkstra在1978年提出。该算法与现在大多数企业级的GC实现不同，但是go团队认为该算法更适合于现代硬件的发展，也更有助于实现现代软件的GC低延迟目标。
+该GC算法中，每个对象只能是white、grey、black中的其中一种，heap可以看做是互相连接的对象构成的一个graph。GC算法流程是：
+GC开始时，所有对象都是white； GC遍历所有的roots对象（比如全局变量、栈变量）将其标记为灰色； 然后GC选择一个grey对象，将其标记为black，并扫描（scan）该对象检查它内部的指向其他对象的指针。如果发现有指针指向其他white对象，将white对象标记为grey； 该过程重复执行，直到没有任何的灰色对象； 最后，剩下的白色对象即认为是不可达对象，可以被回收再利用； GC过程和应用程序执行是并发进行的，应用程序也称为mutator，它会在GC运行期间修改一些指针的值。mutator必须遵循这样一条规则，就是不允许出现一个黑色对象指向一个白色对象，这样会导致对象被错误地回收。为了保证该规则成立，就需要引入写屏障（write barrier），它是编译阶段由编译器对mutator指针操作安插的一些特殊指令，用来跟踪对指针的修改，write barrier如果发现当前黑色对象的内部指针字段指向了外部的一个白色对象，则会将白色对象染色为grey，避免其被错误地GC掉，也保证其可以被继续扫描。
+有些GC相关的问题：
+什么时候启动GC？ 通过哪些指标来判断要启动GC？ GC应该如何与scheduler进行交互？ 如何暂停一个mutator线程足够长时间，以扫描器stack？ 如何表示white、grey和black三种颜色来实现高效地查找、扫描grey对象？ 如何知道roots对象在哪里？ 如何知道一个指向对象的指针的位置？ 如何最小化内存碎片？ 如何解决cache性能问题？ heap应该设置为多大？ 等等。 上述问题有些与内存分配有关，有些与可达对象分析有关，有些与goroutine调度有关，有些与性能有关，关于这些内容的讨论远远超出本文篇幅，可以自己参考相关的材料。
+为了解决GC性能问题，可以考虑为每一种优化加个参数来控制，开发人员可以自己调整这里的参数来达到想要的优化效果。但是这种做法时间久了之后会发现有非常多的参数，调优就会变得非常困难，比如JVM调优。go团队不想走这样的老路，力求简单高效。
+go通过GOGC这个环境变量来控制整个堆大小相对于现阶段可达对象大小的比例。GOGC默认值是100%，意味着当堆大小增长了当前可达对象大小的1倍时（2倍大小），就会触发GC；200%则意味着继续增长了当前可达对象的2倍时触发GC（3倍大小）。
+如果想降低GC花费的时间，就把这个值设置的大一点，因为这样不容易频繁触发GC； 如果愿意花费更多的GC时间来换取更少的内存占用，就把这个值设置的小一点，因为这样能够更加频繁地GC； 前面提到go团队要设计一个面向未来十年的垃圾回收器，未来十年机器内存容量可能会翻倍或者成倍增长，简单地将GOGC设置为一定倍率也可以很好地工作，也不用像JVM调优那样重新设置一堆地参数，调参大军好惨。go团队也可以倾听用户真正地诉求在运行时方面做更多的优化。</description></item><item><title>09普通索引和唯一索引：如何选择</title><link>https://www.hitzhangjie.pro/blog/mysql/09%E6%99%AE%E9%80%9A%E7%B4%A2%E5%BC%95%E5%92%8C%E5%94%AF%E4%B8%80%E7%B4%A2%E5%BC%95%E5%A6%82%E4%BD%95%E9%80%89%E6%8B%A9/</link><pubDate>Tue, 27 Apr 2021 12:34:00 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/mysql/09%E6%99%AE%E9%80%9A%E7%B4%A2%E5%BC%95%E5%92%8C%E5%94%AF%E4%B8%80%E7%B4%A2%E5%BC%95%E5%A6%82%E4%BD%95%E9%80%89%E6%8B%A9/</guid><description>对比两种类型的索引 普通索引，允许多条记录中组成索引的字段值出现重复的情况； 唯一索引，不允许…… 两种类型索引实现 肯定都是一样的啊
 两种类型索引效率 我们以表user为例：
 create table `user` ( id int auto_increment, id_card varchar(64), name varchar(32), primary key(id), [uique|index] (id_card) -- 创建索引：唯一索引或者普通索引 ) 其中id_card可能是唯一索引，也可能是普通索引。
 查询效率 以这条查询语句为例：select name from user where id_card=?
@@ -91,22 +100,4 @@ kafka broker通过追加写，来实现持久化，来避免缓慢的随机IO操
 消息引擎的作用： 削峰填谷，避免生产者发送过量消息冲垮下游，使得下游能够平滑处理大量请求；
 为什么不对上游进行限速？限制后影响到用户体验怎么办？不现实！
 解耦，解耦生产者和消费者，容易实现灵活的扩展；
-比如量大了之后，加更多的消费者来提高处理效率就行了嘛，加的慢也没影响，不会直接对用户体验造成影响。</description></item><item><title>08事务隔离：事务到底是隔离的还是不隔离的</title><link>https://www.hitzhangjie.pro/blog/mysql/08%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%BA%8B%E5%8A%A1%E5%88%B0%E5%BA%95%E6%98%AF%E9%9A%94%E7%A6%BB%E7%9A%84%E8%BF%98%E6%98%AF%E4%B8%8D%E9%9A%94%E7%A6%BB%E7%9A%84/</link><pubDate>Sun, 25 Apr 2021 22:30:00 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/mysql/08%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E4%BA%8B%E5%8A%A1%E5%88%B0%E5%BA%95%E6%98%AF%E9%9A%94%E7%A6%BB%E7%9A%84%E8%BF%98%E6%98%AF%E4%B8%8D%E9%9A%94%E7%A6%BB%E7%9A%84/</guid><description>启动事务 启动事务的方式有哪些：
-autocommit=1，每条语句是一个独立的事务，比如select、update、delete； 通过begin/start transaction来启动一个事务，但是该语句并不是事务的起点，起点是在后面的第一条sql语句执行的时候； start transaction with consistent snapshot，立即启动一个新的事务，和begin/start transaction不同，该语句是一个事务的起点； 视图的概念 在mysql里，视图，有两种意思：
-一个是“view”，它是一个用查询语句定义的虚拟表，如执行create view select * from table，该语句执行的时候执行查询语句获得结果并创建视图，可以在视图上执行查询操作，查询语法与在表上的查询方式类似；
-另一个是InnoDB在实现MVCC时用到的“一致性读视图”，即consistent read view，用于支持RC（read commited，读提交）和RR（repeatable read，可重复读）隔离级别的实现；
-它没有物理结构，作用是事务执行期间用来定义“当前事务能看到什么数据”。
-“快照”在MVCC里是怎么工作的 在可重复读隔离级别下，事务在启动的时候就“创建了个快照”，这个快照是基于整库的。
-但是这里的创建快照，并不是复制一份完整的数据作为只读，肯定不能这样实现，想想一下一个数据库如果数量很大，复制的存储开销也太大了。
-mysql MVCC里实现的这个快照非常聪明：
-InnoDB里每个事务都有一个唯一的事务ID，叫transaction id。它是在事务开始的时候向InnoDB的事务系统申请的，是按申请顺序严格递增的。
-每行数据也是有多个版本的，这里的版本就用transaction id来表示。哪个数据版本更加新一点旧一点，还是根据生成该版本时的顺序来决定的，每行数据的transaction id则用来维护一个一致性读视图；
-当对某行数据进行更新操作时，会申请一个新的事务id，并插入新行数据，并更新字段trx_id为事务id，此时，插入了新的数据并不会删除旧的，旧的还是保存着的。但是新版的行数据有办法能找到旧版本的数据；
-注意新生成一个版本数据时，也会插入一行undo log，一个事务可以借助其事务id，从当前数据版本开始读，然后结合每行数据的trx_id和undo log，来读取到当前事务可见的数据版本，来实现一致性读视图，也就实现了可重复读；
-就是当前事务id可能是100，现在对应行的数据当前版本是102，100这个事务就顺着数据行的当前版本开始找，直到发现一个版本&amp;lt;=100时才行，也就保证了一致性读，这里就是根据数据行102版本的undo log找到前一条数据行，重复这个过程，直到发现一个版本&amp;lt;=100。
-通过这种方式，实现了秒级快照的能力！
-当前读（current read） 如果事务中涉及到一些更新类的操作的话，这里的更新是在数据“最新版本”上进行的更新，也就是说在“当前读”的版本上进行更新。后续的读，看上去读取到的就是最新值。
-这可能会让我们觉得，与我们之前MVCC里面一致性读时说的一些有矛盾。其实没有矛盾的，只是更新操作的时候是在当前读的最新数据上进行更新。而后续读取的时候依然是按照MVCC里一致性读的方式来的。
-如果更新时不是按照当前读来更新，那么就会造成以前已经提交的事务更新操作丢失了。
-有几种办法可以实现当前读：
-更新操作肯定是当前读了； select + lock in share mod，也是当前读； select + for update，也是当前读；</description></item></channel></rss>
+比如量大了之后，加更多的消费者来提高处理效率就行了嘛，加的慢也没影响，不会直接对用户体验造成影响。</description></item></channel></rss>

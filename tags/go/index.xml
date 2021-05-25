@@ -1,4 +1,16 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>go on</title><link>https://www.hitzhangjie.pro/tags/go/</link><description>Recent content in go on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 24 May 2021 00:14:01 +0800</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/go/index.xml" rel="self" type="application/rss+xml"/><item><title>how goroutine created and started</title><link>https://www.hitzhangjie.pro/blog/2021-05-24-how-goroutine-created-and-started/</link><pubDate>Mon, 24 May 2021 00:14:01 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/2021-05-24-how-goroutine-created-and-started/</guid><description>goroutine创建：runtime.newproc(siz int32, fn *funcval)
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>go on</title><link>https://www.hitzhangjie.pro/tags/go/</link><description>Recent content in go on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 25 May 2021 11:32:39 +0800</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/go/index.xml" rel="self" type="application/rss+xml"/><item><title>go程序信号处理过程</title><link>https://www.hitzhangjie.pro/blog/2021-05-25-go%E7%A8%8B%E5%BA%8F%E4%BF%A1%E5%8F%B7%E5%A4%84%E7%90%86%E8%BF%87%E7%A8%8B/</link><pubDate>Tue, 25 May 2021 11:32:39 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/2021-05-25-go%E7%A8%8B%E5%BA%8F%E4%BF%A1%E5%8F%B7%E5%A4%84%E7%90%86%E8%BF%87%E7%A8%8B/</guid><description>go信号处理基础 go os.signal package对信号处理做了封装，其中信号SIGKILL、SIGSTOP是操作系统规定的不允许捕获的信号，是不受os.signal这个package影响的
+go中将信号分为两类：同步信号和异步信号。
+同步信号：指的是go程序运行时程序内部错误触发的一些问题，如SIGBUS、SIGFPE、SIGSEGV，这些信号会被转换成运行时panic信息；
+异步信号：除了上述提及的信号之外的信号，就是异步信号了。异步信号不是程序内部错误导致的，而是由操作系统或者外部其他程序发送给它的。
+有哪些异步信号？ 当程序失去对控制终端的控制时，会收到SIGHUP信号； 在控制终端中输入Ctrl+C时会收到SIGINT信号； 在控制终端中输入Ctrl+\时会受到SIGQUIT信号； ps：通常想让程序退出的话，Ctrl+C就可以了，如果想让程序退出同时打印栈转储信息，那就用Ctrl+\。
+默认的信号处理方式？ 接收到信号之后，肯定有默认的处理方式，这个在学习linux信号处理时肯定有了解过的，在go程序中可能只是默认处理方式有点不同，这个有需要的时候去了解就可以了。这里不展开了。
+值得一提的是信号SIGPROF，这个信号用于实现runtime.CPUProfile。
+自定义信号处理方式？ 自定义信号处理方式，在linux signal函数中可以指定信号及对应对应的处理函数，go中类似，它允许通过os.Notify指定一个或多个信号chan，里面可以注册感兴趣的信号，当收到这些信号时，就可以执行用户自定义的信号处理逻辑。
+SIGPIPE信号处理 当程序write broken pipe时，会收到SIGPIPE信号，比如写网络连接失败，如果不做处理默认崩溃掉那就完蛋了。go程序中对这个做了优化处理。
+write broken pipe的行为与write的file descriptor的fd有关系：
+如果fd是stdout、stderr，那么程序收到SIGPIPE信号，默认行为是程序会退出； 如果是其他fd，程序收到SIGPIPE信号，默认行为是不采取任何动作，对应的write操作返回一个EPIPE错误； ps：后者很重要，写网络连接失败是常有的事情，linux c程序如果不显示处理SIGPIPE信号，默认行为将是程序直接crash，go程序对此作了优化，让write返回error而非crash，对于go将构建高性能、稳定健壮的网络程序的初衷来说是有必要的。
+cgo程序信号处理？ 涉及到cgo就要分几种情况来讨论，这里会有点麻烦了，涉及到信号处理函数的重复注册、信号掩码设置、信号处理函数的栈等问题，在os/signal/doc.go里面有这方面的描述，这里不赘述。
+go信号处理过程 介绍了go程序内部的信号处理过程。GMP调度模型里面，每个M都有一个独立的gsignal goroutine，系统投递信号给进程时实际上是有gsignal goroutine来接受这个信号，然后检查下是否可处理。如果可处理就将其push到一个信号队列中，然后有一个专门的goroutine执行signal.loop，这个函数从上述信号队列中取信号，并转移到用户自定义的chan os.Signal中，再由我们自己写的chan read代码消费，并执行处理。</description></item><item><title>how goroutine created and started</title><link>https://www.hitzhangjie.pro/blog/2021-05-24-how-goroutine-created-and-started/</link><pubDate>Mon, 24 May 2021 00:14:01 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/2021-05-24-how-goroutine-created-and-started/</guid><description>goroutine创建：runtime.newproc(siz int32, fn *funcval)
 go fn()，传递给fn的参数实际上是紧跟着存在fn压栈后的地址后面，在newproc1的栈帧里面，但是不出现在签名参数列表中，因为这些参数类型、数量不一样，也无法出现在签名参数列表中； newproc1创建g； getg().m.p.ptr()拿到当前p； runqput将当前g放入p的local queue中，如果满则放到global queue中； g等待被调度器调度执行； 大致创建执行goroutine的逻辑是这样的，下面的逻辑都是切到系统栈上去执行的。
 1 newproc1逻辑
 查看源码发现，goroutine初始创建时对函数参数大小是有限制的，如果参数占内存空间很大，比如超过初始栈帧大小2KB，那么goroutine创建会失败：&amp;ldquo;fatal error: newproc: function arguments too large for new goroutine&amp;rdquo;，比如，go func(a [1024]int) {}([1024]int{})。
@@ -111,18 +123,4 @@ bug, start a bug report build, compile packages and dependencies clean, remove o
 庆幸地是，这些繁重的工作应被解决了，反汇编框架Capstone就是干这个事情的。Capstone其实已经是一个事实上的标准了，在各种反汇编工具中应用广泛。重新实现一个反汇编框架，其实没必要，这个过程只会是一个学习性的、枯燥的、重复的任务，我们不会介绍如何实现一个Capstone反汇编框架，只会介绍如何借助Capstone来实现反汇编的能力。在go语言中使用Capstone也简单，有一个针对go的实现gapstone。
 通过下面的代码我们可以初始化一个gapstone反汇编框架引擎，用它来执行后续的反汇编任务。
 engine, err := gapstone.New( gapstone.CS_ARCH_X86, gapstone.CS_MODE_64, ) if err != nil { log.Fatal(err) } 例如，我们可以将下面的原始指令数据传递给Capstone反汇编框架，然后该反汇编框架将会将这些原始指令数据转换为对应的x86_64下的指令。
-0x64 0x48 0x8B 0xC 0x25 0xF8 0xFF 0xFF 0xFF | mov rcx, qword ptr fs:[0xfffffffffffffff8] 把上面的操作放在一起，如下：</description></item><item><title>go程序如何实现热重启</title><link>https://www.hitzhangjie.pro/blog/2020-08-28-go%E7%A8%8B%E5%BA%8F%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%83%AD%E9%87%8D%E5%90%AF/</link><pubDate>Fri, 28 Aug 2020 03:36:59 +0800</pubDate><guid>https://www.hitzhangjie.pro/blog/2020-08-28-go%E7%A8%8B%E5%BA%8F%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%83%AD%E9%87%8D%E5%90%AF/</guid><description>最近在优化公司框架trpc时发现了一个热重启相关的问题，优化之余也总结沉淀下，对go如何实现热重启这方面的内容做一个简单的梳理。
-1.什么是热重启？ 热重启（Hot Restart），是一项保证服务可用性的手段。它允许服务重启期间，不中断已经建立的连接，老服务进程不再接受新连接请求，新连接请求将在新服务进程中受理。对于原服务进程中已经建立的连接，也可以将其设为读关闭，等待平滑处理完连接上的请求及连接空闲后再行退出。通过这种方式，可以保证已建立的连接不中断，连接上的事务（请求、处理、响应）可以正常完成，新的服务进程也可以正常接受连接、处理连接上的请求。当然，热重启期间进程平滑退出涉及到的不止是连接上的事务，也有消息服务、自定义事务需要关注。
-这是我理解的热重启的一个大致描述。热重启现在还有没有存在的必要？我的理解是看场景。
-以后台开发为例，假如运维平台有能力在服务升级、重启时自动踢掉流量，服务就绪后又自动加回流量，假如能够合理预估服务QPS、请求处理时长，那么只要配置一个合理的停止前等待时间，是可以达到类似热重启的效果的。这样的话，在后台服务里面支持热重启就显得没什么必要。但是，如果我们开发一个微服务框架，不能对将来的部署平台、环境做这种假设，也有可能使用方只是部署在一两台物理机上，也没有其他的负载均衡设施，但不希望因为重启受干扰，热重启就很有必要。当然还有一些更复杂、要求更苛刻的场景，也需要热重启的能力。
-热重启是比较重要的一项保证服务质量的手段，还是值得了解下的，这也是本文介绍的初衷。
-2.如何实现热重启？ 如何实现热重启，这里其实不能一概而论，要结合实际的场景来看（比如服务编程模型、对可用性要求的高低等）。大致的实现思路，可以先抛一下。
-一般要实现热重启，大致要包括如下步骤：
-首先，要让老进程，这里称之为父进程了，先要fork出一个子进程来代替它工作； 然后，子进程就绪之后，通知父进程，正常接受新连接请求、处理连接上收到的请求； 再然后，父进程处理完已建立连接上的请求后、连接空闲后，平滑退出。 听上去是挺简单的&amp;hellip;
-2.1.认识fork 大家都知道fork() 系统调用，父进程调用fork会创建一个进程副本，代码中还可以通过fork返回值是否为0来区分是子进程还是父进程。
-int main(char **argv, int argc) { pid_t pid = fork(); if (pid == 0) { printf(&amp;quot;i am child process&amp;quot;); } else { printf(&amp;quot;i am parent process, i have a child process named %d&amp;quot;, pid); } } 可能有些开发人员不知道fork的实现原理，或者不知道fork返回值为什么在父子进程中不同，或者不知道如何做到父子进程中返回值不同……了解这些是要有点知识积累的。
-2.2.返回值 简单概括下，ABI定义了进行函数调用时的一些规范，如何传递参数，如何返回值等等，以x86为例，如果返回值是rax寄存器能够容的一般都是通过rax寄存器返回的。
-如果rax寄存器位宽无法容纳下的返回值呢？也简单，编译器会安插些指令来完成这些神秘的操作，具体是什么指令，就跟语言编译器实现相关了。
-c语言，可能会将返回值的地址，传递到rdi或其他寄存器，被调函数内部呢，通过多条指令将返回值写入rdi代指的内存区； c语言，也可能在被调函数内部，用多个寄存器rax,rdx&amp;hellip;一起暂存返回结果，函数返回时再将多个寄存器的值赋值到变量中； 也可能会像golang这样，通过栈内存来返回； 2.3.fork返回值 fork系统调用的返回值，有点特殊，在父进程和子进程中，这个函数返回的值是不同的，如何做到的呢？
-联想下父进程调用fork的时候，操作系统内核需要干些什么呢？分配进程控制块、分配pid、分配内存空间……肯定有很多东西啦，这里注意下进程的硬件上下文信息，这些是非常重要的，在进程被调度算法选中进行调度时，是需要还原硬件上下文信息的。
-Linux fork的时候，会对子进程的硬件上下文进行一定的修改，我就是让你fork之后拿到的pid是0，怎么办呢？前面2.2节提过了，对于那些小整数，rax寄存器存下绰绰有余，fork返回时就是将操作系统分配的pid放到rax寄存器的。</description></item></channel></rss>
+0x64 0x48 0x8B 0xC 0x25 0xF8 0xFF 0xFF 0xFF | mov rcx, qword ptr fs:[0xfffffffffffffff8] 把上面的操作放在一起，如下：</description></item></channel></rss>

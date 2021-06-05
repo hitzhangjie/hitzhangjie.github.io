@@ -186,16 +186,29 @@ write-back（写回法）中非常有名的[cache一致性算法MESI](https://en
 
 ![MESI协议](/blog/assets/volatile/MESI.png)
 
-我们就先结合简单的MESI这个强一致性协议来试着理解下x86下为什么就可以保证强一致，结合多线程场景分析：
+我们就先结合简单的MESI这个强一致性协议来试着理解下“x86下为什么就可以保证可见性”，结合多线程场景分析：
 
 - 一个volatile共享变量被多个线程读取，假定这几个线程跑在不同的cpu核心上，每个核心有自己的cache，线程1跑在core1上，线程2跑在core2上。
 - 现在线程1准备修改变量值，这个时候会先修改cache中的值然后稍后某个时刻写回主存或者被其他core读取。cache同步策略“write-back”，MESI就是其中的一种。处理器所有的读写操作都能被总线观测到，snoop based cache coherency，当线程2准备读取这个变量时：
 - 假定之前没读取过，发现自己的cache里面没有，就通过总线向内存请求，为了保证cpu cache高吞吐量，总线上所有的事务都能被其他core观测到，core1发现core2要读取内存值，这个数据刚好在我的cache里面，但是处于dirty状态。core1可能灰采取两种动作，一种是将dirty数据直接丢给core2（至少是最新的），或者告知core2延迟read，等我先写回主存，然后core2再尝试read内存。
 - 假定之前读取过了，core1对变量的修改也会被core2观测到，core1应该将其cache line标记为modified，将core2 cache line标记为invalidate使其失效，下次core2读取时从core1获取或内存获取（触发core1将dirty数据写回主存）。
 
-这么看来**只要处理器的cache一致性算法支持，并且结合volatile避免寄存器相关优化，就能轻松保证线程可见行**。但是不同的处理器设计不一样，我们只是以MESI协议来粗略了解了x86的处理方式，对于其他非强一致性CPU，即便使用了volatile也不一定能保证线程可见性，但若是对volatile变量读写时安插了类似MFENCE、LOCK指令也是可以的？如何进一步判断呢？
+这么看来**只要处理器的cache一致性算法支持，并且结合volatile避免寄存器相关优化，就能轻松保证线程可见行**。真的是这样吗？并不是。
 
-还需要判断编译器（如gcc）是否有对volatile来做特殊处理，如安插MFENCE、LOCK指令之类的。上面编写的反汇编测试示例中，gcc生成的汇编没有看到lock相关的指令，但是因为我是在x86上测试的，而x86刚好是强一致CPU，我也不确定是不是因为这个原因，gcc直接图省事略掉了lock指令？所以现在要验证下，在其他非x86平台上，gcc -O2优化时做了何种处理。如果安插了类似指令，问题就解决了，我们也可以得出结论，c、c++中volatile在gcc处理下可以保证线程可见性，反之则不能得到这样的结论！
+**认为有了MESIF volatile就可以在x86平台上实现可见性，这种理解是有问题的**：
+
+- volatile只是避免了software caching，不能避免hardware caching；
+- 现在x86处理器中都引入了store buffer，volatile变量更新操作会先放入store buffer中；
+- store buffer中的更新操作会尽可能快地更新到cache，有多快不确定，反正不是立即（过段时间或者有write barrier都可以清空）；
+- store buffer中的更新落到L1 cache后会触发MESIF操作，如将当前cache的cacheline修改为Modified，并广播给其他核MESIF invalidate请求，其他核将其放入invalidate queue中，回复ack但不立即处理；
+- 等其他核下次读取时，如果还没处理完invalidate queue中的请求，就会从本地的cacheline中读取到旧值，因为此时cacheline的状态是Shared，还是可以读取的；
+- 如果已经处理完了invalidate queue中的事件（过一段时间或者有read barrier都可以清空），会将对应cacheline状态修改为Invalidated，此时会重试从总线读取该cacheline对应内存块的最新数据。其他核也会observe/snoop其它核发送到总线的内存读取事件，如果它知道该内存块对应的cacheline自己的才是最新的（Modified），就会将其最新数据作为响应并写回主存，此时两边的cacheline全部改为Shared状态。
+
+从基于对现代CPU架构、cache一致性协议的了解，我不任务x86平台下volatile就可以保证线程可见性。我甚至怀疑当时跟我提“我们用volatile之前有问题用了之后OK了”的同学是不是真的验证没问题了，还是说用的其实是atomic或者其他barriers。总之我在Intel Core i7上没有构造出合适的用例来证明volatile可以保证线程可见性，可能硬件store buffer和invalidate queue处理还是很快的，我们构造两三个线程并发读写volatile不容易复现这个问题
+
+而且，不同的处理器设计不一样，我们只是以MESI协议来粗略了解了x86的处理方式，对于其他弱一致性CPU，即便使用了volatile也不一定能保证线程可见性。
+
+但若是对volatile变量读写时安插了类似MFENCE、LOCK指令也是可以保证可见性的，如何进一步判断编译器有没有生成类似barriers指令呢？还需要判断编译器（如gcc）是否有对volatile来做特殊处理，如安插MFENCE、LOCK指令之类的。上面编写的反汇编测试示例中，gcc生成的汇编没有看到lock相关的指令，但是因为我是在x86上测试的，而x86刚好是强一致CPU，我也不确定是不是因为这个原因，gcc直接图省事略掉了lock指令？所以现在要验证下，在其他非x86平台上，gcc -O2优化时做了何种处理。如果安插了类似指令，问题就解决了，我们也可以得出结论，c、c++中volatile在gcc处理下可以保证线程可见性，反之则不能得到这样的结论！
 
 我在网站[godbolt.org](https://godbolt.org/)交叉编译测试了一下上面gcc处理的代码，换了几个不同的硬件平台也没发现有生成特定的类似MFENCE或者LOCK相关的致使处理器cache失效后重新从内存加载的指令。
 

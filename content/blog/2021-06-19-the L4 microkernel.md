@@ -8,24 +8,24 @@ reward: true
 
 ## L4简介
 
-L4是在L3基础上开发的，改进了IO和IPC等，L4致力于打造一个通用的微内核，以便允许在其基础上进一步定制化来满足场景需求，L4衍生了不少微内核实现，这里讲的L4是L4Ka。
+L4是在L3基础上开发的，改进了IO和IPC等，L4致力于打造一个通用的微内核，以便允许在其基础上进一步定制化来满足场景需求，L4衍生了不少微内核实现。
 
-现在也有些工作组致力于将Linux在L4上运行起来（L4Linux），将Windows在L4上运行起来（L4Windows），著名的GNU Hurd已经从老的mach微内核迁移到了L4微内核。
+现在也有些工作组致力于将Linux在L4上运行起来（L4Linux），将Windows在L4上运行起来（L4Windows），著名的GNU Hurd已经从老的Mach微内核迁移到了L4微内核。
 
 ## 内核划分依据
 
-微内核相比于宏内核，主要是微内核提供的核心更小，区别二者的依据并非源码多少，而是内核中提供功能的多寡。GNU Hurd中有提供宏内核、微内核、混合内核的对比示意图：https://en.wikipedia.org/wiki/GNU_Hurd#/media/File:OS-structure2.svg。注意，宏内核有时记作monolithic kernel，也记作macro kernel。
+微内核相比于宏内核，主要是微内核提供的核心更小，区别二者的依据并非源码多少，而是内核中提供功能的多寡。GNU Hurd中有提供宏内核、微内核、混合内核的对比示意图，[点击查看](https://en.wikipedia.org/wiki/GNU_Hurd#/media/File:OS-structure2.svg)。注意，宏内核有时记作monolithic kernel，也记作macro kernel。
 
 ps：通常微内核源码会比宏内核少很多，如L4::Pistachio/ia32只有1w+左右的代码，但是Linux有几百万行。
 
-微内核通常将内核功能限定在下面几个领域：
+微内核通常将内核功能限定在下面几个方面：
 - 进程管理；
 - 虚拟内存管理；
 - 进程通信、同步机制；
 
-其他宏内核中常见的文件系统、设备驱动、网络功能在微内核中都是在用户态实现，这些功能可能在single-server中全部实现，也可能在multi-server中实现，和server之间的通信雨来内核提供的IPC机制来完成。
+其他宏内核中常见的文件系统、设备驱动、网络功能在微内核中都是在用户态实现，这些功能可能在single-server中全部实现，也可能在multi-server中实现，进程通过内核IPC机制与server之间进行通信来。
 
-因为微内核中用户程序请求一些用户态的server（如文件系统、网络等服务）都需要借助IPC来完成，IPC用的非常多，改进其性能就显得尤为重要。早期的为内核实现IPC性能比较差，L4及以后的微内核设计都将提升IPC性能作为一项重要事项，L4中已经做的不错了，一起来了解下是如何实现的。
+因为微内核中用户程序请求一些用户态的server（如文件系统、网络等服务）都需要借助IPC来完成，IPC用的非常多，改进其性能就显得尤为重要。早期的微内核实现IPC性能比较差，L4及以后的微内核设计都将提升IPC性能作为一个重要方向，L4中已经做的不错了，一起来了解下是如何实现的。
 
 ## 微内核优缺点
 
@@ -41,7 +41,9 @@ ps：通常微内核源码会比宏内核少很多，如L4::Pistachio/ia32只有
 
 ### 缺点
 
-微内核的缺点就是程序之间、程序和某些系统服务之间都需要通过IPC来完成，这些进程之间不能通过共享相同内存地址空间的方式来实现IPC。如果IPC性能差则会导致整体性能差，所以有很多研究如何提高IPC性能的研究。L4Ka的研究人员可以证明，能够将IPC的开销从100ms降低到5ms及以下。
+微内核的缺点就是程序之间、程序和某些系统服务之间的通信都需要通过IPC来完成，如果IPC性能差则会导致整体性能差，所以有很多研究如何提高IPC性能的研究。L4Ka的研究人员可以证明，能够将IPC的开销从100ms降低到5ms及以下。
+
+see: https://www.youtube.com/watch?v=wCoLTnHUwEY.
 
 ## L4Ka的设计
 
@@ -83,11 +85,23 @@ ps：这里的设计实现see：https://www.youtube.com/watch?v=mRr1lCJse_I。�
 
 如果是发送小消息，拷贝数据到用户态深圳可以用寄存器来搞定，速度快；如果是发送大消息，则需要减少这里的两次拷贝到一次拷贝，怎么搞呢？让B先设置一个共享内存区，然后A将M写入后call kernel，内核直接切换到B，从共享内存区中recieve数据。
 
+Linux中的IPC涉及很多操作：数据copy、syscall、ctxt switch、blocking、waking，但是微内核L4设计中可以去掉scheduler导致的blocking、waking开销，数据拷贝也可以分为寄存区、共享内存区方式来减少往内核缓冲区的一次拷贝，系统调用中做的工作也简单，整体可以去掉不少开销。
+
+本分析中测试给出的数据（不确定一次通信传输了多少数据）：
+- Linux IPC开销~4500 cycles，约2微秒
+- L4 IPC开销~900 cycles，约0.33微秒
+
+L4 IPC性能大致是Linux的5倍，之前有个L4 fast inter-process communication的分享提到L4是L3 IPC性能的20倍。
+
+微内核IPC设计及优化，不止上面这点，详细地可以参考：[GW AdvOS: Microkernel IPC Design and Optimizationm](https://www.youtube.com/watch?v=wCoLTnHUwEY)。
+
 ### 安全性实现
 
 L4安全性机制是基于secure domains来实现的，即tasks、clans、chiefs。之前有提到过L4中进程通信不是基于channel的而是基于IPC请求的。如果是同一个clans中的task通信，那么直接用普通的IPC通信即可，但是如果是不同clans中的task通信，IPC消息必须转到发送方的clans的chief task处理后（chief可以对消息做些操作），才能发送给请求方所在clans的chief task，然后chief task转发给目标task。
 
 如果是跨越机器的通信，可以把IPC换成协议TCP/IP。
+
+ps: 至于为什么不用channels来通信的方式，简单提一下，channels通信势必要引入chan sender、receiver，sender、receiver要根据chan状态进行同步，还要考虑阻塞、唤醒问题，也不得不考虑scheduler的问题，这里的开销就上来了，会导致IPC性能很差。前面也提过了，微内核IPC设计中优化掉了部分操作来减少开销。
 
 ## 总结
 
@@ -97,3 +111,8 @@ L4安全性机制是基于secure domains来实现的，即tasks、clans、chiefs
 
 本文就算是，我迈出了认真学习微内核设计、开发的第一步吧。
 
+
+## 参考内容
+
+1. L4 and Fast Interprocess Communication, https://www.youtube.com/watch?v=mRr1lCJse_I
+2. GW AdvOS: Microkernel IPC Design and Optimizationm, https://www.youtube.com/watch?v=wCoLTnHUwEY

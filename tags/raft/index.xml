@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Raft on 介绍</title>
+    <link>https://www.hitzhangjie.pro/tags/raft/</link>
+    <description>Recent content in Raft on 介绍</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Fri, 02 Jul 2021 12:45:38 +0800</lastBuildDate><atom:link href="https://www.hitzhangjie.pro/tags/raft/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>分布式系统工程师roadmap</title>
+      <link>https://www.hitzhangjie.pro/blog/2021-07-01-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%B7%A5%E7%A8%8B%E5%B8%88roadmap/</link>
+      <pubDate>Fri, 02 Jul 2021 12:45:38 +0800</pubDate>
+      
+      <guid>https://www.hitzhangjie.pro/blog/2021-07-01-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%B7%A5%E7%A8%8B%E5%B8%88roadmap/</guid>
+      <description>如何成为一名资深的分布式系统工程师，需要补齐哪些理论基础，又需要哪些工程方面的锻炼？本文原文见 Henry Robinson 的文章 distributed systems theory for the distributed systems engineer，我觉得是一个很不错的roadmap，沿着这个脉络半年下来，还是很有收获的……继续:) 1 掌握分布式背后的相关理论 可能会有人甩出很多论文，FLP论文、Paxos论文、Raft论文、拜占庭将军相关的论文&amp;hellip;相关的论文可以摆出很多，但是论文是有一定深度的，是非常严谨的论述，对于攻读PhD的同学有帮助，但是对于一名从事分布式系统工程的同学真的有必要全部掌握吗？应该看多少论</description>
+    </item>
+    
+  </channel>
+</rss>

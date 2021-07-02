@@ -1,12 +1,317 @@
-<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><link rel=preload as=font href=https://www.hitzhangjie.pro/fonts/vendor/jost/jost-v4-latin-regular.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=https://www.hitzhangjie.pro/fonts/vendor/jost/jost-v4-latin-700.woff2 type=font/woff2 crossorigin><link rel=stylesheet href=https://www.hitzhangjie.pro/main.0f7c5dcafa79d7b3139a5ac1f24a1712d1b9f39dbf0be945913abcc1da83564b1f71833aef942be4886cfbbd9d878bc98e3e795eed6c24b48cfc2bc4f0c091c3.css integrity="sha512-D3xdyvp517MTmlrB8koXEtG5852/C+lFkTq8wdqDVksfcYM675Qr5Ihs+72dh4vJjj55Xu1sJLSM/CvE8MCRww==" crossorigin=anonymous><noscript><style>img.lazyload{display:none}</style></noscript><meta name=robots content="index, follow"><meta name=googlebot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><meta name=bingbot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><title>Coroutine-Switching - MySpace</title><meta name=description content="如今协程得到大量应用，大家对此并不陌生。本文对协程上下文切换做了一个简单的实验，以更好地认识协程切换及其开销。"><link rel=canonical href=https://www.hitzhangjie.pro/blog/2017-04-26-coroutine-switching/><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="/doks.png"><meta name=twitter:title content="Coroutine-Switching"><meta name=twitter:description content="如今协程得到大量应用，大家对此并不陌生。本文对协程上下文切换做了一个简单的实验，以更好地认识协程切换及其开销。"><meta name=twitter:site content="@hitzhangjie"><meta name=twitter:creator content="@hitzhangjie"><meta property="og:title" content="Coroutine-Switching"><meta property="og:description" content="如今协程得到大量应用，大家对此并不陌生。本文对协程上下文切换做了一个简单的实验，以更好地认识协程切换及其开销。"><meta property="og:type" content="article"><meta property="og:url" content="/blog/2017-04-26-coroutine-switching/"><meta property="og:image" content="/doks.png"><meta property="article:published_time" content="2017-04-26T16:23:49+08:00"><meta property="article:modified_time" content="2017-04-26T16:23:49+08:00"><meta property="og:site_name" content="MySpace"><meta property="article:publisher" content="https://www.facebook.com/hitzhangjie"><meta property="article:author" content="https://www.facebook.com/hitzhangjie"><meta property="og:locale" content="en_US"><script type=application/ld+json>{"@context":"https://schema.org","@type":"Article","mainEntityOfPage":{"@type":"WebPage","@id":"\/blog\/2017-04-26-coroutine-switching\/"},"headline":"Coroutine-Switching","image":[],"datePublished":"2017-04-26T16:23:49CET","dateModified":"2017-04-26T16:23:49CET","author":{"@type":"Organization","name":"MySpace"},"publisher":{"@type":"Organization","name":"MySpace","logo":{"@type":"ImageObject","url":"\/logo-doks.png"}},"description":"如今协程得到大量应用，大家对此并不陌生。本文对协程上下文切换做了一个简单的实验，以更好地认识协程切换及其开销。"}</script><script type=application/ld+json>{"@context":"http://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https:\/\/www.hitzhangjie.pro\/"},{"@type":"ListItem","position":3,"name":"Blog","item":"https:\/\/www.hitzhangjie.pro\/\/blog\/"},{"@type":"ListItem","position":4,"name":"2017 04 26 Coroutine Switching","item":"https:\/\/www.hitzhangjie.pro\/\/blog\/2017-04-26-coroutine-switching\/"}]}</script><meta name=theme-color content="#fff"><link rel=apple-touch-icon sizes=180x180 href=https://www.hitzhangjie.pro/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=https://www.hitzhangjie.pro/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=https://www.hitzhangjie.pro/favicon-16x16.png><link rel=manifest href=https://www.hitzhangjie.pro/site.webmanifest><script type=text/javascript src="https://platform-api.sharethis.com/js/sharethis.js#property=607868a58d7101001829a8df&product=sop" async></script><style>[alt~=sharing]{border:0;box-shadow:none}div#st-1{text-align:unset}div#st-1 .st-btn{height:24px;padding:0 4px}div#st-1 .st-btn>img{top:4.2px}div#st-2 .st-btn{height:24px;padding:0 4px}div#st-2 .st-btn>img{top:4.2px}</style></head><body class="blog single"><div class="header-bar fixed-top"></div><header class="navbar fixed-top navbar-expand-md navbar-light"><div class=container><input class="menu-btn order-0" type=checkbox id=menu-btn>
-<label class="menu-icon d-md-none" for=menu-btn><span class=navicon></span></label><a class="navbar-brand order-1 order-md-0 me-auto" href=https://www.hitzhangjie.pro/>MySpace</a>
-<button id=mode class="btn btn-link order-2 order-md-4" type=button aria-label="Toggle mode">
-<span class=toggle-dark><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-moon"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></span><span class=toggle-light><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sun"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span></button><ul class="navbar-nav social-nav order-3 order-md-5"><li class=nav-item><a class=nav-link href=https://twitter.com/hitzhangjie><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg><span class="ms-2 visually-hidden">Twitter</span></a></li><li class=nav-item><a class=nav-link href=https://github.com/hitzhangjie><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37.0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44.0 0020 4.77 5.07 5.07.0 0019.91 1S18.73.65 16 2.48a13.38 13.38.0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07.0 005 4.77 5.44 5.44.0 003.5 8.55c0 5.42 3.3 6.61 6.44 7A3.37 3.37.0 009 18.13V22"/></svg><span class="ms-2 visually-hidden">GitHub</span></a></li></ul><div class="collapse navbar-collapse order-4 order-md-1"><ul class="navbar-nav main-nav me-auto order-5 order-md-2"><li class="nav-item active"><a class=nav-link href=https://www.hitzhangjie.pro/blog/>Blog</a></li><li class=nav-item><a class=nav-link href=https://www.hitzhangjie.pro/books/>Books</a></li><li class=nav-item><a class=nav-link href=https://www.hitzhangjie.pro/journey/introduction>Journey</a></li></ul><div class="break order-6 d-md-none"></div><form class="navbar-form flex-grow-1 order-7 order-md-3"><input id=userinput class="form-control is-search" type=search placeholder="Search ..." aria-label="Search ..." autocomplete=off><div id=suggestions class="shadow bg-white rounded"></div></form></div></div></header><div class="wrap container" role=document><div class=content><div class="row flex-xl-nowrap"><div class="col-lg-5 col-xl-4 docs-sidebar"><nav class=docs-links aria-label="Main navigation"><h3>Tag List</h3><ol><li><a href=https://www.hitzhangjie.pro/tags/coroutine/>coroutine</a></li><li><a href=https://www.hitzhangjie.pro/tags/ucontext/>ucontext</a></li><li><a href=https://www.hitzhangjie.pro/tags/libtask/>libtask</a></li></ol></nav></div><nav class="docs-toc d-none d-xl-block col-xl-3" aria-label="Secondary navigation"><div class=page-links><h3>On this page</h3><nav id=TableOfContents><ul><li><ul><li><ul><li><a href=#1-协程coroutine>1. 协程Coroutine</a><ul><li><a href=#11-协程coroutine声明>1.1. 协程coroutine声明</a></li><li><a href=#12-协程coroutine实现>1.2. 协程Coroutine实现</a></li></ul></li><li><a href=#2-协程coroutine上下文切换>2. 协程Coroutine上下文切换</a></li><li><a href=#3-coroutine使用--测试>3. Coroutine使用 & 测试</a><ul><li><a href=#31-测试程序>3.1. 测试程序</a></li><li><a href=#32-测试程序build>3.2. 测试程序build</a></li><li><a href=#33-测试结果>3.3. 测试结果</a></li></ul></li></ul></li></ul></li></ul></nav></div></nav><main class="docs-content col-lg-11 col-xl-9"><h1>Coroutine-Switching</h1><p><small>Posted April 26, 2017 by &nbsp;&dash;&nbsp;<strong>3&nbsp;min read</strong></small><p><div style=display:flex><div>分享:&nbsp;&nbsp;</div><div><div class=sharethis-inline-share-buttons></div></div></div><hr><p class=lead></p><h3 id=1-协程coroutine>1. 协程Coroutine<a href=#1-协程coroutine class=anchor aria-hidden=true>#</a></h3><h4 id=11-协程coroutine声明>1.1. 协程coroutine声明<a href=#11-协程coroutine声明 class=anchor aria-hidden=true>#</a></h4><p>file: coroutine.h</p><pre><code class=language-c>#include &lt;stdint.h&gt;
+<!DOCTYPE html>
+<html lang="zh-cn">
+    <head>
+        
+        <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Web站点描述">
+<title>
+Coroutine-Switching - 介绍
+</title>
 
-typedef int64_t (*EntryCallback)(void*);
 
-//硬件上下文信息
-struct stRegister
+
+
+<script type="text/javascript" src="https://platform-api.sharethis.com/js/sharethis.js#property=5f24f50fc2418c0012d52ac3&product=inline-share-buttons" async="async">
+</script>
+
+<style>
+ 
+[alt~=sharing] {
+    border: 0px;
+    box-shadow: none;
+}
+div#st-1 {
+    text-align: unset;
+}
+
+ 
+div#st-1 .st-btn {
+    height: 24px;
+    padding: 0 4px;
+}
+
+div#st-1 .st-btn > img {
+    top: 4.2px;
+}
+
+div#st-2 .st-btn {
+    height: 24px;
+    padding: 0 4px;
+}
+
+div#st-2 .st-btn > img {
+    top: 4.2px;
+}
+</style>
+
+
+
+
+
+
+
+        
+        <meta property="og:title" content="Coroutine-Switching - 介绍" />
+<meta property="og:type" content="website" />
+<meta property="og:description" content="Web站点描述"/>
+<meta property="og:url" content="https://www.hitzhangjie.pro/blog/2017-04-26-coroutine-switching/"/>
+<meta property="og:site_name" content="介绍"/>
+
+
+
+
+<meta property="og:image" content="https://www.hitzhangjie.pro/home/me.jpg"/>
+
+<meta property="og:image" content="https://www.hitzhangjie.pro/home/profile.jpg"/>
+
+
+
+
+        
+<link rel="shortcut icon" href="/img/fav.ico">
+
+
+        
+
+
+
+
+
+<link rel="stylesheet" href="/css/main.min.912c712459f193c9f111a0f4fe4ba8074edafb7127a95a82109d48a8daa8d805.css" integrity="sha256-kSxxJFnxk8nxEaD0/kuoB07a&#43;3EnqVqCEJ1IqNqo2AU=" crossorigin="anonymous" media="screen">
+
+
+
+
+    <link rel="stylesheet" href="/custom.css" integrity="" crossorigin="anonymous" media="screen">
+
+        
+        
+        
+        
+    </head>
+    <body>
+        <section id="top" class="section">
+            
+            <div class="container hero  fade-in one ">
+                
+
+    <h1 class="bold-title is-1">博客</h1>
+
+
+            </div>
+            
+            <div class="section  fade-in two ">
+                
+<div class="container">
+    <hr>
+    <nav class="navbar" role="navigation" aria-label="main navigation">
+        
+        <a role="button" class="navbar-burger" data-target="navMenu" aria-label="menu" aria-expanded="false" >
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </a>
+        <div class="navbar-menu " id="navMenu">
+            
+            
+            
+            
+            <a class="navbar-item" href="/">主页</a>
+            
+
+            
+            
+
+            
+                
+            
+
+            
+                
+            
+
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://www.hitzhangjie.pro/projects/">
+                  
+                  
+                  项目
+                  
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://www.hitzhangjie.pro/blog/">
+                  
+                  返回 博客
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#about">关于</a>
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#thanks">致谢</a>
+            
+            
+            
+            
+
+            
+            
+            <a class="navbar-item" href="/#contact">联系方式</a>
+            
+            
+
+            
+            
+            
+            
+            <a class="navbar-item" href="https://www.hitzhangjie.pro/en/">English</a>
+            
+            
+
+            
+            
+        </div>
+    </nav>
+    <hr>
+</div>
+
+
+
+                
+    <div class="container">
+
+        <h2 class="title is-1 top-pad strong-post-title">
+            <a href="https://www.hitzhangjie.pro/blog/2017-04-26-coroutine-switching/">Coroutine-Switching</a>
+        </h2>
+        <div class="post-data">
+            发表时间：2017-04-26 <br> 
+            阅读时长：2 分钟 (780字)
+        </div>
+
+        
+        <div>
+            <div>
+            
+            
+            <p>
+                标签：
+                
+                <a href="/tags/coroutine">coroutine</a>,
+                
+                <a href="/tags/ucontext">ucontext</a>,
+                
+                <a href="/tags/libtask">libtask</a>
+                
+            </p>
+            
+            </div>
+
+            <div>
+            <br>
+            
+
+
+<div style="display:flex;">
+    <div>分享：</div>
+    <div>
+        <div class="sharethis-inline-share-buttons"></div>
+    </div>
+</div>
+
+
+            </div>
+
+        </div>
+
+        
+        
+
+        
+        <div> 
+            
+<aside>
+    <hr/>
+    <header>
+    <b>《Coroutine-Switching》目录：</b>
+    <br/>
+    </header>
+    <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li>
+          <ul>
+            <li><a href="#1-协程coroutine">1. 协程Coroutine</a>
+              <ul>
+                <li><a href="#11-协程coroutine声明">1.1. 协程coroutine声明</a></li>
+                <li><a href="#12-协程coroutine实现">1.2. 协程Coroutine实现</a></li>
+              </ul>
+            </li>
+            <li><a href="#2-协程coroutine上下文切换">2. 协程Coroutine上下文切换</a></li>
+            <li><a href="#3-coroutine使用--测试">3. Coroutine使用 &amp; 测试</a>
+              <ul>
+                <li><a href="#31-测试程序">3.1. 测试程序</a></li>
+                <li><a href="#32-测试程序build">3.2. 测试程序build</a></li>
+                <li><a href="#33-测试结果">3.3. 测试结果</a></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+    <hr/>
+</aside>
+
+
+        </div>
+   
+        
+        <div class="container markdown top-pad">
+            
+<h3 id="1-协程coroutine" class="anchor-link"><a href="#1-%e5%8d%8f%e7%a8%8bcoroutine">1. 协程Coroutine</a></h3>
+
+<h4 id="11-协程coroutine声明" class="anchor-link"><a href="#11-%e5%8d%8f%e7%a8%8bcoroutine%e5%a3%b0%e6%98%8e">1.1. 协程coroutine声明</a></h4>
+<p>file: coroutine.h</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdint.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span>
+<span style="color:#66d9ef">typedef</span> <span style="color:#a6e22e">int64_t</span> (<span style="color:#f92672">*</span>EntryCallback)(<span style="color:#66d9ef">void</span><span style="color:#f92672">*</span>);
+
+<span style="color:#75715e">//硬件上下文信息
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">struct</span> stRegister
 {
     uint64_t rax;
     uint64_t rbx;
@@ -31,184 +336,200 @@ struct stRegister
     uint64_t rip;
 };
 
-//协程上下文
-struct stContext
+<span style="color:#75715e">//协程上下文
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">struct</span> stContext
 {
-    struct stRegister cpu_register;
-    void *arg;
-    uint8_t *stack;
+    <span style="color:#66d9ef">struct</span> stRegister cpu_register;
+    <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>arg;
+    uint8_t <span style="color:#f92672">*</span>stack;
 };
 
-typedef struct stContext Coroutine;
+<span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span> stContext Coroutine;
 
-//创建协程
-Coroutine* CreateCoroutine(EntryCallback entry, void *arg);
+<span style="color:#75715e">//创建协程
+</span><span style="color:#75715e"></span>Coroutine<span style="color:#f92672">*</span> <span style="color:#a6e22e">CreateCoroutine</span>(EntryCallback entry, <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>arg);
 
-//删除协程
-void DeleteCoroutine(Coroutine *ptr);
+<span style="color:#75715e">//删除协程
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">DeleteCoroutine</span>(Coroutine <span style="color:#f92672">*</span>ptr);
 
-//设置协程栈尺寸
-void SetStackSize(uint32_t size);
+<span style="color:#75715e">//设置协程栈尺寸
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">SetStackSize</span>(uint32_t size);
 
-//协程切换
-void __SwitchCoroutine__(Coroutine *cur, const Coroutine *next);
-</code></pre><h4 id=12-协程coroutine实现>1.2. 协程Coroutine实现<a href=#12-协程coroutine实现 class=anchor aria-hidden=true>#</a></h4><p>file: coroutine.c</p><pre><code class=language-c>#include &quot;coroutine.h&quot;
-#include &lt;stdlib.h&gt;
+<span style="color:#75715e">//协程切换
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">__SwitchCoroutine__</span>(Coroutine <span style="color:#f92672">*</span>cur, <span style="color:#66d9ef">const</span> Coroutine <span style="color:#f92672">*</span>next);
+</code></pre></div>
+<h4 id="12-协程coroutine实现" class="anchor-link"><a href="#12-%e5%8d%8f%e7%a8%8bcoroutine%e5%ae%9e%e7%8e%b0">1.2. 协程Coroutine实现</a></h4>
+<p>file: coroutine.c</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#include</span> <span style="color:#75715e">&#34;coroutine.h&#34;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdlib.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">#define OFFSET(t, m) (&amp;(((t*)0)-&gt;m))
+</span><span style="color:#75715e"></span>
+uint32_t g_stack_size <span style="color:#f92672">=</span> <span style="color:#ae81ff">100</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">1024</span>;
 
-#define OFFSET(t, m) (&amp;(((t*)0)-&gt;m))
-
-uint32_t g_stack_size = 100 * 1024;
-
-Coroutine* CreateCoroutine(EntryCallback entry, void *arg)
+Coroutine<span style="color:#f92672">*</span> <span style="color:#a6e22e">CreateCoroutine</span>(EntryCallback entry, <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>arg)
 {
-    int size = g_stack_size + sizeof(Coroutine);
-    Coroutine *c = (Coroutine *)calloc(size, 1);
-    if (NULL == c)
+    <span style="color:#66d9ef">int</span> size <span style="color:#f92672">=</span> g_stack_size <span style="color:#f92672">+</span> <span style="color:#66d9ef">sizeof</span>(Coroutine);
+    Coroutine <span style="color:#f92672">*</span>c <span style="color:#f92672">=</span> (Coroutine <span style="color:#f92672">*</span>)calloc(size, <span style="color:#ae81ff">1</span>);
+    <span style="color:#66d9ef">if</span> (NULL <span style="color:#f92672">==</span> c)
     {
-        return NULL;
+        <span style="color:#66d9ef">return</span> NULL;
     }
     
-    uint8_t *start = (uint8_t*)c;
-    c-&gt;arg = arg;
-    //函数入口
-    c-&gt;cpu_register.rip = (uint64_t)entry;
-    //第一个参数
-    c-&gt;cpu_register.rdi = (uint64_t)arg;
-    //rbp 栈底
-    c-&gt;cpu_register.rbp = (uint64_t)(start + size);
-    //rsp 当前栈顶
-    c-&gt;cpu_register.rsp = c-&gt;cpu_register.rbp;
+    uint8_t <span style="color:#f92672">*</span>start <span style="color:#f92672">=</span> (uint8_t<span style="color:#f92672">*</span>)c;
+    c<span style="color:#f92672">-&gt;</span>arg <span style="color:#f92672">=</span> arg;
+    <span style="color:#75715e">//函数入口
+</span><span style="color:#75715e"></span>    c<span style="color:#f92672">-&gt;</span>cpu_register.rip <span style="color:#f92672">=</span> (uint64_t)entry;
+    <span style="color:#75715e">//第一个参数
+</span><span style="color:#75715e"></span>    c<span style="color:#f92672">-&gt;</span>cpu_register.rdi <span style="color:#f92672">=</span> (uint64_t)arg;
+    <span style="color:#75715e">//rbp 栈底
+</span><span style="color:#75715e"></span>    c<span style="color:#f92672">-&gt;</span>cpu_register.rbp <span style="color:#f92672">=</span> (uint64_t)(start <span style="color:#f92672">+</span> size);
+    <span style="color:#75715e">//rsp 当前栈顶
+</span><span style="color:#75715e"></span>    c<span style="color:#f92672">-&gt;</span>cpu_register.rsp <span style="color:#f92672">=</span> c<span style="color:#f92672">-&gt;</span>cpu_register.rbp;
 
-    return c;
+    <span style="color:#66d9ef">return</span> c;
 }
 
-void DeleteCoroutine(Coroutine *ptr)
+<span style="color:#66d9ef">void</span> <span style="color:#a6e22e">DeleteCoroutine</span>(Coroutine <span style="color:#f92672">*</span>ptr)
 {
     free(ptr);
 }
 
-void SetStackSize(uint32_t size) 
+<span style="color:#66d9ef">void</span> <span style="color:#a6e22e">SetStackSize</span>(uint32_t size) 
 {
-    g_stack_size = size;
+    g_stack_size <span style="color:#f92672">=</span> size;
 }
-</code></pre><h3 id=2-协程coroutine上下文切换>2. 协程Coroutine上下文切换<a href=#2-协程coroutine上下文切换 class=anchor aria-hidden=true>#</a></h3><p>file: switch.s</p><pre><code class=language-c>//这里协程库是基于有栈协程的设计来实现，协程硬件上下文信息需通过%rsp来计算访问地址
-
-//__SwitchCoroutine__(current_coroutine, next_coroutine)
-//- rdi, current_coroutine
-//- rsi, next_coroutine 
-.globl __SwitchCoroutine__
+</code></pre></div>
+<h3 id="2-协程coroutine上下文切换" class="anchor-link"><a href="#2-%e5%8d%8f%e7%a8%8bcoroutine%e4%b8%8a%e4%b8%8b%e6%96%87%e5%88%87%e6%8d%a2">2. 协程Coroutine上下文切换</a></h3>
+<p>file: switch.s</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">//这里协程库是基于有栈协程的设计来实现，协程硬件上下文信息需通过%rsp来计算访问地址
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">//__SwitchCoroutine__(current_coroutine, next_coroutine)
+</span><span style="color:#75715e">//- rdi, current_coroutine
+</span><span style="color:#75715e">//- rsi, next_coroutine 
+</span><span style="color:#75715e"></span>.globl __SwitchCoroutine__
 __SwitchCoroutine__:
-    //save rsp of calling function, here %rsp equals to return address
-    mov %rsp, %rax
-    //set rsp to end of coroutine.stRegister, to push rip, 
-	//when rdi coroutine return, it will return the rip to continue exec
-    mov %rdi, %rsp
-    add $136, %rsp
-	push (%rax)
-    //+8 to skip return address to get end address of calling function's %rsp
-    add $8, %rax
-	push %rax
-    //store the current_coroutine's state(stRegister)
-    push %rbp
-    push %r15
-    push %r14
-    push %r13
-    push %r12
-    push %r11
-    push %r10
-    push %r9
-    push %r8
-    push %rdi
-    push %rsi
-    push %rdx
-    push %rcx
-    push %rbx
-    push %rax
-    //ready switch to next_coroutine
-    mov %rsi, %rsp
-    //restore the next_coroutine's stRegister to cpu 
-    pop %rax
-    pop %rbx
-    pop %rcx
-    pop %rdx
-    pop %rsi
-    pop %rdi
-    pop %r8
-    pop %r9
-    pop %r10
-    pop %r11
-    pop %r12
-    pop %r13
-    pop %r14
-    pop %r15
-    pop %rbp
-    //move return address to %rax
-    mov 8(%rsp), %rax
-    pop %rsp
-    //jmp to next_coroutine, ram indirect access to fetch the target address
-    jmp *%rax
-</code></pre><h3 id=3-coroutine使用--测试>3. Coroutine使用 & 测试<a href=#3-coroutine使用--测试 class=anchor aria-hidden=true>#</a></h3><h4 id=31-测试程序>3.1. 测试程序<a href=#31-测试程序 class=anchor aria-hidden=true>#</a></h4><p>file: main.c</p><pre><code class=language-c>#include &lt;unistd.h&gt;
-#include &lt;stdio.h&gt;
-#include &lt;stdlib.h&gt;
-#include &lt;string.h&gt;
-#include &quot;coroutine.h&quot;
+    <span style="color:#75715e">//save rsp of calling function, here %rsp equals to return address
+</span><span style="color:#75715e"></span>    mov <span style="color:#f92672">%</span>rsp, <span style="color:#f92672">%</span>rax
+    <span style="color:#75715e">//set rsp to end of coroutine.stRegister, to push rip, 
+</span><span style="color:#75715e"></span>	<span style="color:#75715e">//when rdi coroutine return, it will return the rip to continue exec
+</span><span style="color:#75715e"></span>    mov <span style="color:#f92672">%</span>rdi, <span style="color:#f92672">%</span>rsp
+    add <span style="color:#960050;background-color:#1e0010">$</span><span style="color:#ae81ff">136</span>, <span style="color:#f92672">%</span>rsp
+	push (<span style="color:#f92672">%</span>rax)
+    <span style="color:#75715e">//+8 to skip return address to get end address of calling function&#39;s %rsp
+</span><span style="color:#75715e"></span>    add <span style="color:#960050;background-color:#1e0010">$</span><span style="color:#ae81ff">8</span>, <span style="color:#f92672">%</span>rax
+	push <span style="color:#f92672">%</span>rax
+    <span style="color:#75715e">//store the current_coroutine&#39;s state(stRegister)
+</span><span style="color:#75715e"></span>    push <span style="color:#f92672">%</span>rbp
+    push <span style="color:#f92672">%</span>r15
+    push <span style="color:#f92672">%</span>r14
+    push <span style="color:#f92672">%</span>r13
+    push <span style="color:#f92672">%</span>r12
+    push <span style="color:#f92672">%</span>r11
+    push <span style="color:#f92672">%</span>r10
+    push <span style="color:#f92672">%</span>r9
+    push <span style="color:#f92672">%</span>r8
+    push <span style="color:#f92672">%</span>rdi
+    push <span style="color:#f92672">%</span>rsi
+    push <span style="color:#f92672">%</span>rdx
+    push <span style="color:#f92672">%</span>rcx
+    push <span style="color:#f92672">%</span>rbx
+    push <span style="color:#f92672">%</span>rax
+    <span style="color:#75715e">//ready switch to next_coroutine
+</span><span style="color:#75715e"></span>    mov <span style="color:#f92672">%</span>rsi, <span style="color:#f92672">%</span>rsp
+    <span style="color:#75715e">//restore the next_coroutine&#39;s stRegister to cpu 
+</span><span style="color:#75715e"></span>    pop <span style="color:#f92672">%</span>rax
+    pop <span style="color:#f92672">%</span>rbx
+    pop <span style="color:#f92672">%</span>rcx
+    pop <span style="color:#f92672">%</span>rdx
+    pop <span style="color:#f92672">%</span>rsi
+    pop <span style="color:#f92672">%</span>rdi
+    pop <span style="color:#f92672">%</span>r8
+    pop <span style="color:#f92672">%</span>r9
+    pop <span style="color:#f92672">%</span>r10
+    pop <span style="color:#f92672">%</span>r11
+    pop <span style="color:#f92672">%</span>r12
+    pop <span style="color:#f92672">%</span>r13
+    pop <span style="color:#f92672">%</span>r14
+    pop <span style="color:#f92672">%</span>r15
+    pop <span style="color:#f92672">%</span>rbp
+    <span style="color:#75715e">//move return address to %rax
+</span><span style="color:#75715e"></span>    mov <span style="color:#ae81ff">8</span>(<span style="color:#f92672">%</span>rsp), <span style="color:#f92672">%</span>rax
+    pop <span style="color:#f92672">%</span>rsp
+    <span style="color:#75715e">//jmp to next_coroutine, ram indirect access to fetch the target address
+</span><span style="color:#75715e"></span>    jmp <span style="color:#f92672">*%</span>rax
+</code></pre></div>
+<h3 id="3-coroutine使用--测试" class="anchor-link"><a href="#3-coroutine%e4%bd%bf%e7%94%a8--%e6%b5%8b%e8%af%95">3. Coroutine使用 &amp; 测试</a></h3>
 
-Coroutine *coroutines[3];
+<h4 id="31-测试程序" class="anchor-link"><a href="#31-%e6%b5%8b%e8%af%95%e7%a8%8b%e5%ba%8f">3.1. 测试程序</a></h4>
+<p>file: main.c</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;unistd.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdlib.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;string.h&gt;</span><span style="color:#75715e">
+</span><span style="color:#75715e">#include</span> <span style="color:#75715e">&#34;coroutine.h&#34;</span><span style="color:#75715e">
+</span><span style="color:#75715e"></span>
+Coroutine <span style="color:#f92672">*</span>coroutines[<span style="color:#ae81ff">3</span>];
 
-int64_t callback(void *arg)
+int64_t <span style="color:#a6e22e">callback</span>(<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>arg)
 {
-    while(1) {
-        if(strcmp((char *)arg, &quot;coroutine-a&quot;)==0) {
-            printf(&quot;[%s] ready to switch to coroutine-b\n&quot;, (char *)arg);
-            __SwitchCoroutine__(coroutines[0], coroutines[1]);
+    <span style="color:#66d9ef">while</span>(<span style="color:#ae81ff">1</span>) {
+        <span style="color:#66d9ef">if</span>(strcmp((<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>)arg, <span style="color:#e6db74">&#34;coroutine-a&#34;</span>)<span style="color:#f92672">==</span><span style="color:#ae81ff">0</span>) {
+            printf(<span style="color:#e6db74">&#34;[%s] ready to switch to coroutine-b</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, (<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>)arg);
+            __SwitchCoroutine__(coroutines[<span style="color:#ae81ff">0</span>], coroutines[<span style="color:#ae81ff">1</span>]);
         }
-        else if(strcmp((char *)arg, &quot;coroutine-b&quot;)==0) {
-            printf(&quot;[%s] ready to switch to coroutine-c\n&quot;, (char *)arg);
-            __SwitchCoroutine__(coroutines[1], coroutines[2]);
+        <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span>(strcmp((<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>)arg, <span style="color:#e6db74">&#34;coroutine-b&#34;</span>)<span style="color:#f92672">==</span><span style="color:#ae81ff">0</span>) {
+            printf(<span style="color:#e6db74">&#34;[%s] ready to switch to coroutine-c</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, (<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>)arg);
+            __SwitchCoroutine__(coroutines[<span style="color:#ae81ff">1</span>], coroutines[<span style="color:#ae81ff">2</span>]);
         }
-        else if(strcmp((char *)arg, &quot;coroutine-c&quot;)==0) {
-            printf(&quot;[%s] ready to switch to coroutine-a\n&quot;, (char *)arg);
-            __SwitchCoroutine__(coroutines[2], coroutines[0]);
+        <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span>(strcmp((<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>)arg, <span style="color:#e6db74">&#34;coroutine-c&#34;</span>)<span style="color:#f92672">==</span><span style="color:#ae81ff">0</span>) {
+            printf(<span style="color:#e6db74">&#34;[%s] ready to switch to coroutine-a</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, (<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>)arg);
+            __SwitchCoroutine__(coroutines[<span style="color:#ae81ff">2</span>], coroutines[<span style="color:#ae81ff">0</span>]);
         }
-        sleep(1);
+        sleep(<span style="color:#ae81ff">1</span>);
     }
 
-    return 0;
+    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
 }
 
-int main()
+<span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>()
 {
-    printf(&quot;initialize coroutine's callback\n&quot;);
-    EntryCallback cb = callback;
+    printf(<span style="color:#e6db74">&#34;initialize coroutine&#39;s callback</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+    EntryCallback cb <span style="color:#f92672">=</span> callback;
 
-    printf(&quot;create 3 coroutines\n&quot;);
-    Coroutine *coo = CreateCoroutine(cb, (void *)&quot;coroutine-o&quot;);
-    Coroutine *coa = CreateCoroutine(cb, (void *)&quot;coroutine-a&quot;);
-    Coroutine *cob = CreateCoroutine(cb, (void *)&quot;coroutine-b&quot;);
-    Coroutine *coc = CreateCoroutine(cb, (void *)&quot;coroutine-c&quot;);
+    printf(<span style="color:#e6db74">&#34;create 3 coroutines</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+    Coroutine <span style="color:#f92672">*</span>coo <span style="color:#f92672">=</span> CreateCoroutine(cb, (<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)<span style="color:#e6db74">&#34;coroutine-o&#34;</span>);
+    Coroutine <span style="color:#f92672">*</span>coa <span style="color:#f92672">=</span> CreateCoroutine(cb, (<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)<span style="color:#e6db74">&#34;coroutine-a&#34;</span>);
+    Coroutine <span style="color:#f92672">*</span>cob <span style="color:#f92672">=</span> CreateCoroutine(cb, (<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)<span style="color:#e6db74">&#34;coroutine-b&#34;</span>);
+    Coroutine <span style="color:#f92672">*</span>coc <span style="color:#f92672">=</span> CreateCoroutine(cb, (<span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>)<span style="color:#e6db74">&#34;coroutine-c&#34;</span>);
 
-    coroutines[0] = coa;
-    coroutines[1] = cob;
-    coroutines[2] = coc;
+    coroutines[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">=</span> coa;
+    coroutines[<span style="color:#ae81ff">1</span>] <span style="color:#f92672">=</span> cob;
+    coroutines[<span style="color:#ae81ff">2</span>] <span style="color:#f92672">=</span> coc;
 
-    printf(&quot;ready to start coroutine switching\n&quot;);
+    printf(<span style="color:#e6db74">&#34;ready to start coroutine switching</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
     __SwitchCoroutine__(coo, coa);
 
-    printf(&quot;ready to exit\n&quot;);
+    printf(<span style="color:#e6db74">&#34;ready to exit</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
 
-    return 0;
+    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
 }
-</code></pre><h4 id=32-测试程序build>3.2. 测试程序build<a href=#32-测试程序build class=anchor aria-hidden=true>#</a></h4><p>file: Makefile</p><pre><code class=language-makefile>all: *.c *.h *.s
-	@echo &quot;==&gt; build the coroutine test module&quot;
+</code></pre></div>
+<h4 id="32-测试程序build" class="anchor-link"><a href="#32-%e6%b5%8b%e8%af%95%e7%a8%8b%e5%ba%8fbuild">3.2. 测试程序build</a></h4>
+<p>file: Makefile</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-makefile" data-lang="makefile"><span style="color:#a6e22e">all</span><span style="color:#f92672">:</span> *.c *.h *.s
+	@echo <span style="color:#e6db74">&#34;==&gt; build the coroutine test module&#34;</span>
 	gcc -g -o main *.c *.h *.s
-	@echo &quot;==&gt; build successful&quot;
-test: all
-	@echo &quot;==&gt; run the coroutine test module&quot;
+	@echo <span style="color:#e6db74">&#34;==&gt; build successful&#34;</span>
+<span style="color:#a6e22e">test</span><span style="color:#f92672">:</span> all
+	@echo <span style="color:#e6db74">&#34;==&gt; run the coroutine test module&#34;</span>
 	./main
-clean:
-	@echo &quot;==&gt; delete the build file 'main'&quot;
+<span style="color:#a6e22e">clean</span><span style="color:#f92672">:</span>
+	@echo <span style="color:#e6db74">&#34;==&gt; delete the build file &#39;main&#39;&#34;</span>
 	rm main
-</code></pre><h4 id=33-测试结果>3.3. 测试结果<a href=#33-测试结果 class=anchor aria-hidden=true>#</a></h4><pre><code>make 
+</code></pre></div>
+<h4 id="33-测试结果" class="anchor-link"><a href="#33-%e6%b5%8b%e8%af%95%e7%bb%93%e6%9e%9c">3.3. 测试结果</a></h4>
+<pre><code>make 
 make test
 
 ==&gt; build the coroutine test module
@@ -226,4 +547,112 @@ ready to start coroutine switching
 [coroutine-b] ready to switch to coroutine-c
 [coroutine-c] ready to switch to coroutine-a
 [coroutine-a] ready to switch to coroutine-b
-</code></pre><p class=edit-page><a href=https://github.com/hitzhangjie/myspace/blob/master/content/blog/2017-04-26-Coroutine-Switching.md><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2"><path d="M17 3a2.828 2.828.0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>Edit this page on GitHub</a></p><div class="docs-navigation d-flex justify-content-between"><a href=https://www.hitzhangjie.pro/blog/2017-09-23-%E5%8D%8F%E7%A8%8B%E7%9A%84%E5%8E%86%E5%8F%B2%E7%8E%B0%E5%9C%A8%E5%92%8C%E6%9C%AA%E6%9D%A5/><div class="card my-1"><div class="card-body py-2">&larr; 协程的历史、现在和未来!</div></div></a><a class=ms-auto href=https://www.hitzhangjie.pro/blog/2017-04-20-%E5%AD%A6%E4%B9%A0java-nio/><div class="card my-1"><div class="card-body py-2">Java NIO Tutorials &rarr;</div></div></a></div></main></div></div></div><footer class="footer text-muted"><div class=container><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a href=https://www.netlify.com/>Netlify</a>, <a href=https://gohugo.io/>Hugo</a>, and <a href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=https://www.hitzhangjie.pro/js/highlight.min.c32fa100fe3c432c2629ed4542b161ff95a16be545c00c12fcd3ea42ec6c5e283bcd80b1097abf4ba955f8bd0a004d19673ac0bd3ad2394677ce000abbfb4de8.js integrity="sha512-wy+hAP48QywmKe1FQrFh/5Wha+VFwAwS/NPqQuxsXig7zYCxCXq/S6lV+L0KAE0ZZzrAvTrSOUZ3zgAKu/tN6A==" crossorigin=anonymous defer></script><script src=https://www.hitzhangjie.pro/main.min.7ab523108435955765bcb88a0ee704f412ba01646b5478e84f3b9feb24f0ce750a14c3f7bd9a62408fe21e41996d361a9eb29f77e85dfe77b7e17f7623bd3a97.js integrity="sha512-erUjEIQ1lVdlvLiKDucE9BK6AWRrVHjoTzuf6yTwznUKFMP3vZpiQI/iHkGZbTYanrKfd+hd/ne34X92I706lw==" crossorigin=anonymous defer></script><script src=https://www.hitzhangjie.pro/index.min.75c12f4b6f6fd3bb31bd4eb07c44e8eb10b8adaecbb0b05170a7464c405c948c8c77b0c31c186e33d41faa753dd67b4a6aa25ec47a51c82697a21cb690755e56.js integrity="sha512-dcEvS29v07sxvU6wfETo6xC4ra7LsLBRcKdGTEBclIyMd7DDHBhuM9QfqnU91ntKaqJexHpRyCaXohy2kHVeVg==" crossorigin=anonymous defer></script></body></html>
+</code></pre>
+        </div>
+        
+
+        
+        <hr>
+        <div style="float:right;">
+        
+
+
+<div style="display:flex;">
+    <div>分享：</div>
+    <div>
+        <div class="sharethis-inline-share-buttons"></div>
+    </div>
+</div>
+
+
+        </div>
+
+        <br>
+        <br>
+
+    </div>
+
+    
+    
+    <br>
+    <br>
+    <div style="height:auto;align:center;text-align:center;"> 
+        <div>
+            <img src="/common/xiaoqi.png" style="height:238px;margin-top:10px;margin-right:5px;"/>
+            <img src="/common/qrcode.jpg" style="height:238px;margin-top:10px;"/>
+            <img src="/common/yuanbao.png" style="height:238px;margin-top:10px;margin-left:5px;"/>
+        </div>
+        <div>
+            <p>
+                感谢打赏，小七🐶、元宝🐱可以改善伙食咯 😘
+            </p>
+        </div>
+    </div>
+    
+
+    </br>
+    </br>
+    
+
+
+                
+                <div class="container">
+    <hr>
+</div>
+<div class="container has-text-centered top-pad">
+    <a href="#top">
+        <i class="fa fa-arrow-up"></i>
+    </a>
+</div>
+
+<div class="container">
+    <hr>
+</div>
+
+                <div class="section" id="footer">
+    <div class="container has-text-centered">
+    
+        <span class="footer-text">
+            <a href="https://github.com/victoriadrake/hugo-theme-introduction/"><strong>Introduction</strong></a> 主题为 <a href="http://gohugo.io/">Hugo</a> 而设。由开源社群贡献者以 <a href="https://victoria.dev"><i class="fa fa-heart"></i> 和 <i class="fa fa-coffee"></i></a> 创造。
+        </span>
+    
+    </div>
+</div>
+
+                
+            </div>
+        </section>
+        
+        
+
+
+<script src="https://www.hitzhangjie.pro/js/bundle.f1741e9868b2f697e71cf8fccfcc12166540999b3d36f8fb9edd0882ba425d55.js" integrity="sha256-8XQemGiy9pfnHPj8z8wSFmVAmZs9Nvj7nt0IgrpCXVU="></script>
+
+
+
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-168027530-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+
+
+        
+        
+        
+        
+    </body>
+</html>

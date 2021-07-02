@@ -1,109 +1,18 @@
-<!doctype html>
-<html lang="en-US">
-  <head>
-  <meta charset="utf-8">
-  <meta http-equiv="x-ua-compatible" content="ie=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <link rel="preload" as="font" href="https://www.hitzhangjie.pro/fonts/vendor/jost/jost-v4-latin-regular.woff2" type="font/woff2" crossorigin>
-<link rel="preload" as="font" href="https://www.hitzhangjie.pro/fonts/vendor/jost/jost-v4-latin-700.woff2" type="font/woff2" crossorigin>
+<!DOCTYPE html>
+<html lang="zh-cn">
+    <head>
+        
+        <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="Web站点描述">
+<title>
+Nothing, Just Linux! - 介绍
+</title>
 
-  <link rel="stylesheet" href="https://www.hitzhangjie.pro/main.e056424dfe08e33aa060cdf69a9553d81719d30b42b9fd281fd6ef53842e79ad4ff5cbcb76ebea0aff80901209173ec867f3d8fee761e08552d1ce1a49d6fdb9.css" integrity="sha512-4FZCTf4I4zqgYM32mpVT2BcZ0wtCuf0oH9bvU4Quea1P9cvLduvqCv&#43;AkBIJFz7IZ/PY/udh4IVS0c4aSdb9uQ==" crossorigin="anonymous">
-<noscript><style>img.lazyload { display: none; }</style></noscript>
-  <meta name="robots" content="index, follow">
-  <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
-  <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
-  <title>Nothing, Just Linux! - MySpace</title>
-<meta name="description" content="MySpace is a hitzhangjie&#39;s personal space, for blogs, books, journey, thinkings.">
-<link rel="canonical" href="https://www.hitzhangjie.pro/blog/2017-03-13-nothing-just-linux/">
-<meta name="twitter:card" content="summary_large_image">
-      <meta name="twitter:image" content="/doks.png">
-    <meta name="twitter:title" content="Nothing, Just Linux!">
-<meta name="twitter:description" content="1 邂逅Linux 初次接触Linux操作系统是在什么时候？想想～～
-高三毕业后买了第一台电脑，一台清华同方的台式机，随机赠送的光盘里面有一张操作系 统光盘“家电下乡Linux适农版”……那是我第一次接触并运行Linux，但那时的我并没有意识 到，放在我面前的是一个即将深深地吸引我并要在多年的职业生涯中去不断锤炼的存在。
-大一、大二这两年，我或多或少地接触到了Linux，但是并没有产生多大兴趣，直到有一 天我激怒了一个同学。当时他正在摆弄Ubuntu，错误地GRUB配置导致系统引导失败，着急 的他在QQ空间发了一条状态，意思就是大神求救之类的。当时我回了一个字“水”。他看后 很生气，系统都启动不了了能不着急吗？于是呢，就言辞激烈地“回敬”了我几句……
-事后我想，Linux有这么复杂吗？于是我开始试图取了解Linux，当然这只是个引子，后面 陆陆续续看到有不少同学都在使用各种Linux的发行版，我才决定认真去了解、学习一下 Linux，没想到这竟是一条不归路……
- LiveCD &amp; RemasterSys &amp; dump &amp; restore GRUB 2 &amp; Customize Boot Menu to bootstrap Multiple OS Plymouth Tweak KDE/GNOME/Unity Appearance (Colors &amp; Themes) Linux Commandline Techs &amp; Administration Unix/Linux Programming Linux Kernel 0.11 Linux Kernel 2.4 Keep going along the roadmap to Linux World!  上面大体上是我初识、折腾、学习、应用、研究Linux的过程，而且这个过程在相当长一 段事时间内还将一直向前延伸下去。与其说对Linux感兴趣，不如说是好奇心驱使，还有 很多疑问没有揭开，这里当然不只是Linux操作系统内核本身。
-我这个博客所要描述的东西可能就比较杂了，这里面我会穿插着记录很多东西～与其说是 博客，不如说是我自己的一个学习笔记了，但是我这个人比较喜欢分享，但有不想那么刻 意，所以我就把它丢在这，谁看见了找到点自己感兴趣的东西，也算是种缘分。
-2 LiveCD &amp; RemasterSys &amp; dump &amp; restore 2.">
-
-<meta name="twitter:site" content="@hitzhangjie">
-<meta name="twitter:creator" content="@hitzhangjie">
-
-<meta property="og:title" content="Nothing, Just Linux!">
-<meta property="og:description" content="1 邂逅Linux 初次接触Linux操作系统是在什么时候？想想～～
-高三毕业后买了第一台电脑，一台清华同方的台式机，随机赠送的光盘里面有一张操作系 统光盘“家电下乡Linux适农版”……那是我第一次接触并运行Linux，但那时的我并没有意识 到，放在我面前的是一个即将深深地吸引我并要在多年的职业生涯中去不断锤炼的存在。
-大一、大二这两年，我或多或少地接触到了Linux，但是并没有产生多大兴趣，直到有一 天我激怒了一个同学。当时他正在摆弄Ubuntu，错误地GRUB配置导致系统引导失败，着急 的他在QQ空间发了一条状态，意思就是大神求救之类的。当时我回了一个字“水”。他看后 很生气，系统都启动不了了能不着急吗？于是呢，就言辞激烈地“回敬”了我几句……
-事后我想，Linux有这么复杂吗？于是我开始试图取了解Linux，当然这只是个引子，后面 陆陆续续看到有不少同学都在使用各种Linux的发行版，我才决定认真去了解、学习一下 Linux，没想到这竟是一条不归路……
- LiveCD &amp; RemasterSys &amp; dump &amp; restore GRUB 2 &amp; Customize Boot Menu to bootstrap Multiple OS Plymouth Tweak KDE/GNOME/Unity Appearance (Colors &amp; Themes) Linux Commandline Techs &amp; Administration Unix/Linux Programming Linux Kernel 0.11 Linux Kernel 2.4 Keep going along the roadmap to Linux World!  上面大体上是我初识、折腾、学习、应用、研究Linux的过程，而且这个过程在相当长一 段事时间内还将一直向前延伸下去。与其说对Linux感兴趣，不如说是好奇心驱使，还有 很多疑问没有揭开，这里当然不只是Linux操作系统内核本身。
-我这个博客所要描述的东西可能就比较杂了，这里面我会穿插着记录很多东西～与其说是 博客，不如说是我自己的一个学习笔记了，但是我这个人比较喜欢分享，但有不想那么刻 意，所以我就把它丢在这，谁看见了找到点自己感兴趣的东西，也算是种缘分。
-2 LiveCD &amp; RemasterSys &amp; dump &amp; restore 2.">
-<meta property="og:type" content="article">
-<meta property="og:url" content="/blog/2017-03-13-nothing-just-linux/">
-
-  <meta property="og:image" content="/doks.png"/>
-    <meta property="og:site_name" content="MySpace">
-
-<meta property="article:publisher" content="https://www.facebook.com/hitzhangjie">
-<meta property="article:author" content="https://www.facebook.com/hitzhangjie">
-<meta property="og:locale" content="en_US">
-
-<script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "Article",
-      "mainEntityOfPage": {
-        "@type": "WebPage",
-        "@id": "\/blog\/2017-03-13-nothing-just-linux\/"
-      },
-      "headline": "Nothing, Just Linux!",
-      "image": [],
-      "datePublished": "0001-01-01T00:00:00CET",
-      "dateModified": "0001-01-01T00:00:00CET",
-      "author": {
-        "@type": "Organization",
-        "name": "MySpace"
-      },
-      "publisher": {
-        "@type": "Organization",
-        "name": "MySpace",
-        "logo": {
-          "@type": "ImageObject",
-          "url": "\/logo-doks.png"
-        }
-        },
-      "description": ""
-    }
-    </script>
-  <script type="application/ld+json">
-{
-  "@context": "http://schema.org",
-  "@type": "BreadcrumbList",
-  "itemListElement": [{
-        "@type": "ListItem",
-        "position":  1 ,
-        "name": "Home",
-        "item": "https:\/\/www.hitzhangjie.pro\/"
-    },{
-        "@type": "ListItem",
-        "position":  3 ,
-        "name": "Blog",
-        "item": "https:\/\/www.hitzhangjie.pro\/\/blog\/"
-    },{
-        "@type": "ListItem",
-        "position":  4 ,
-        "name": "2017 03 13 Nothing Just Linux",
-        "item": "https:\/\/www.hitzhangjie.pro\/\/blog\/2017-03-13-nothing-just-linux\/"
-    }]
-}
-</script>
-
-  <meta name="theme-color" content="#fff">
-<link rel="apple-touch-icon" sizes="180x180" href="https://www.hitzhangjie.pro/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="https://www.hitzhangjie.pro/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="https://www.hitzhangjie.pro/favicon-16x16.png">
-<link rel="manifest" href="https://www.hitzhangjie.pro/site.webmanifest">
-  
-  
 
 
 
@@ -141,74 +50,225 @@ div#st-2 .st-btn > img {
 </style>
 
 
-</head>
 
-  <body class="blog single">
-    <div class="header-bar fixed-top"></div>
-<header class="navbar fixed-top navbar-expand-md navbar-light">
-  <div class="container">
-    <input class="menu-btn order-0" type="checkbox" id="menu-btn">
-    <label class="menu-icon d-md-none" for="menu-btn"><span class="navicon"></span></label>
-    <a class="navbar-brand order-1 order-md-0 me-auto" href="https://www.hitzhangjie.pro/">MySpace</a>
-    <button id="mode" class="btn btn-link order-2 order-md-4" type="button" aria-label="Toggle mode">
-      <span class="toggle-dark"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
-      <span class="toggle-light"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sun"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg></span>
-    </button>
-    <ul class="navbar-nav social-nav order-3 order-md-5">
-      <li class="nav-item">
-          <a class="nav-link" href="https://twitter.com/hitzhangjie"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg><span class="ms-2 visually-hidden">Twitter</span></a>
-        </li>
-      <li class="nav-item">
-          <a class="nav-link" href="https://github.com/hitzhangjie"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg><span class="ms-2 visually-hidden">GitHub</span></a>
-        </li>
-      </ul>
-    <div class="collapse navbar-collapse order-4 order-md-1">
-      <ul class="navbar-nav main-nav me-auto order-5 order-md-2"><li class="nav-item active">
-            <a class="nav-link" href="https://www.hitzhangjie.pro/blog/">Blog</a>
-          </li>
-        <li class="nav-item">
-            <a class="nav-link" href="https://www.hitzhangjie.pro/books/">Books</a>
-          </li>
-        <li class="nav-item">
-            <a class="nav-link" href="https://www.hitzhangjie.pro/journey/introduction">Journey</a>
-          </li>
-        </ul>
-      <div class="break order-6 d-md-none"></div>
-      <form class="navbar-form flex-grow-1 order-7 order-md-3">
-        <input id="userinput" class="form-control is-search" type="search" placeholder="Search ..." aria-label="Search ..." autocomplete="off">
-        <div id="suggestions" class="shadow bg-white rounded"></div>
-      </form>
-      </div>
-  </div>
-</header>
 
-    <div class="wrap container" role="document">
-      <div class="content">
+
+
+
         
-<div class="row flex-xl-nowrap">
-    
-	<div class="col-lg-5 col-xl-4 docs-sidebar">
-		<nav class="docs-links" aria-label="Main navigation">
-		
-		<h3> Tag List </h3>
-		<ol>
-			
-			<li><a href="https://www.hitzhangjie.pro/tags/linux/">linux</a></li>
-			
-			<li><a href="https://www.hitzhangjie.pro/tags/grub/">grub</a></li>
-			
-			<li><a href="https://www.hitzhangjie.pro/tags/plymouth/">plymouth</a></li>
-			
-			<li><a href="https://www.hitzhangjie.pro/tags/desktop/">desktop</a></li>
-			
-		</ol>
-		
-		</nav>
-	</div>
-    
-	<nav class="docs-toc d-none d-xl-block col-xl-3" aria-label="Secondary navigation">
-		<div class="page-links">
-    <h3>On this page</h3>
+        <meta property="og:title" content="Nothing, Just Linux! - 介绍" />
+<meta property="og:type" content="website" />
+<meta property="og:description" content="Web站点描述"/>
+<meta property="og:url" content="https://www.hitzhangjie.pro/blog/2017-03-13-nothing-just-linux/"/>
+<meta property="og:site_name" content="介绍"/>
+
+
+
+
+<meta property="og:image" content="https://www.hitzhangjie.pro/home/me.jpg"/>
+
+<meta property="og:image" content="https://www.hitzhangjie.pro/home/profile.jpg"/>
+
+
+
+
+        
+<link rel="shortcut icon" href="/img/fav.ico">
+
+
+        
+
+
+
+
+
+<link rel="stylesheet" href="/css/main.min.912c712459f193c9f111a0f4fe4ba8074edafb7127a95a82109d48a8daa8d805.css" integrity="sha256-kSxxJFnxk8nxEaD0/kuoB07a&#43;3EnqVqCEJ1IqNqo2AU=" crossorigin="anonymous" media="screen">
+
+
+
+
+    <link rel="stylesheet" href="/custom.css" integrity="" crossorigin="anonymous" media="screen">
+
+        
+        
+        
+        
+    </head>
+    <body>
+        <section id="top" class="section">
+            
+            <div class="container hero  fade-in one ">
+                
+
+    <h1 class="bold-title is-1">博客</h1>
+
+
+            </div>
+            
+            <div class="section  fade-in two ">
+                
+<div class="container">
+    <hr>
+    <nav class="navbar" role="navigation" aria-label="main navigation">
+        
+        <a role="button" class="navbar-burger" data-target="navMenu" aria-label="menu" aria-expanded="false" >
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </a>
+        <div class="navbar-menu " id="navMenu">
+            
+            
+            
+            
+            <a class="navbar-item" href="/">主页</a>
+            
+
+            
+            
+
+            
+                
+            
+
+            
+                
+            
+
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://www.hitzhangjie.pro/projects/">
+                  
+                  
+                  项目
+                  
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+                
+                
+                
+                
+                  <a class="navbar-item" href="https://www.hitzhangjie.pro/blog/">
+                  
+                  返回 博客
+                  
+                  </a>
+                
+                
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#about">关于</a>
+            
+            
+            
+            
+            
+            <a class="navbar-item" href="/#thanks">致谢</a>
+            
+            
+            
+            
+
+            
+            
+            <a class="navbar-item" href="/#contact">联系方式</a>
+            
+            
+
+            
+            
+            
+            
+            <a class="navbar-item" href="https://www.hitzhangjie.pro/en/">English</a>
+            
+            
+
+            
+            
+        </div>
+    </nav>
+    <hr>
+</div>
+
+
+
+                
+    <div class="container">
+
+        <h2 class="title is-1 top-pad strong-post-title">
+            <a href="https://www.hitzhangjie.pro/blog/2017-03-13-nothing-just-linux/">Nothing, Just Linux!</a>
+        </h2>
+        <div class="post-data">
+            发表时间：
+            阅读时长：5 分钟 (2100字)
+        </div>
+
+        
+        <div>
+            <div>
+            
+            
+            <p>
+                标签：
+                
+                <a href="/tags/linux">linux</a>,
+                
+                <a href="/tags/grub">grub</a>,
+                
+                <a href="/tags/plymouth">plymouth</a>,
+                
+                <a href="/tags/desktop">desktop</a>
+                
+            </p>
+            
+            </div>
+
+            <div>
+            <br>
+            
+
+
+<div style="display:flex;">
+    <div>分享：</div>
+    <div>
+        <div class="sharethis-inline-share-buttons"></div>
+    </div>
+</div>
+
+
+            </div>
+
+        </div>
+
+        
+        
+
+        
+        <div> 
+            
+<aside>
+    <hr/>
+    <header>
+    <b>《Nothing, Just Linux!》目录：</b>
+    <br/>
+    </header>
     <nav id="TableOfContents">
   <ul>
     <li><a href="#1-邂逅linux">1 邂逅Linux</a></li>
@@ -229,15 +289,16 @@ div#st-2 .st-btn > img {
     <li><a href="#10-keep-going-along-the-roadmap-to-linux-world">10 Keep going along the roadmap to Linux World!</a></li>
   </ul>
 </nav>
-  </div>
+    <hr/>
+</aside>
 
-	</nav>
-	<main class="docs-content col-lg-11 col-xl-9">
-	
-    
-	<h1>Nothing, Just Linux!</h1>
-	<p class="lead"></p>
-	<h1 id="1-邂逅linux">1 邂逅Linux</h1>
+
+        </div>
+   
+        
+        <div class="container markdown top-pad">
+            
+<h1 id="1-邂逅linux" class="anchor-link"><a href="#1-%e9%82%82%e9%80%85linux">1 邂逅Linux</a></h1>
 <p>初次接触Linux操作系统是在什么时候？想想～～</p>
 <p>高三毕业后买了第一台电脑，一台清华同方的台式机，随机赠送的光盘里面有一张操作系
 统光盘“家电下乡Linux适农版”……那是我第一次接触并运行Linux，但那时的我并没有意识
@@ -266,73 +327,149 @@ Linux，没想到这竟是一条不归路……</p>
 <p>我这个博客所要描述的东西可能就比较杂了，这里面我会穿插着记录很多东西～与其说是
 博客，不如说是我自己的一个学习笔记了，但是我这个人比较喜欢分享，但有不想那么刻
 意，所以我就把它丢在这，谁看见了找到点自己感兴趣的东西，也算是种缘分。</p>
-<h1 id="2-livecd--remastersys--dump--restore">2 LiveCD &amp; RemasterSys &amp; dump &amp; restore</h1>
-<h2 id="21-livecd">2.1 LiveCD<a href="#21-livecd" class="anchor" aria-hidden="true">#</a> </h2>
+
+<h1 id="2-livecd--remastersys--dump--restore" class="anchor-link"><a href="#2-livecd--remastersys--dump--restore">2 LiveCD &amp; RemasterSys &amp; dump &amp; restore</a></h1>
+
+<h2 id="21-livecd" class="anchor-link"><a href="#21-livecd">2.1 LiveCD</a></h2>
 <p>在学习Linux过程中，会有体验不同Linux发行版这样的需求的，这个时候你有不想频繁地安装系统来解决。LiveCD就是发行版厂商针对用户的这种需求推出的一个玩意，用户可以插入光盘到光驱、BIOS引导从光驱启动来体验。</p>
 <p>可能吧，时间让你明白，Linux最吸引人的地方，并不是有很多的发行版供你换来换去，而是内在的自由。最后，你还是会深度使用某一个发行版并安定下来，而那些各种各样的桌面环境也会有点选择困难。Ubuntu-&gt;Debian-&gt;Fedora-&gt;OpenSuSE-&gt;RHEL-&gt;CentOS-&gt;&hellip;Fedora! Unity-&gt;GNOME3-&gt;GNOME2-&gt;KDE-&gt;&hellip;-&gt;KDE! 我已经坚守在Fedora/CentOS+KDE很多年了，适合自己的就是最好的！</p>
 <p>LiveCD不仅可以帮助我们预先体验Linux发行版，也可以用来安装Linux发行版、修复系统问题。带着一张LiveCD或者Bootable USB Installer，就好像随身携带了一个移动版的操作系统。还是很方便、很酷的一件事情。</p>
 <p>UNetBootin等类似的将USB变身成可引导的Bootable Linux Installer的工具，也是必不可少的工具。</p>
-<h2 id="22-remastersys">2.2 RemasterSys<a href="#22-remastersys" class="anchor" aria-hidden="true">#</a> </h2>
+
+<h2 id="22-remastersys" class="anchor-link"><a href="#22-remastersys">2.2 RemasterSys</a></h2>
 <p>当你深度使用了一段时间之后，会发现不管是配置文件，还是GUI，还是软件列表&hellip;都已经被自己深度定制化过了，这个时候就很自然会去想系统备份的事情，以免准备多台设备办公时能遍历地迁移备份，或者在设备系统出现问题时能够便捷地还原的问题。</p>
 <p>当你了解了Linux定制化意味着什么的时候，你就应该能体会到定制化背后意味着的工作量、投入的时间，你不会愿意再从安装开始重新定制化了，
 没有规划的人才将这种重复性劳动当做是习惯。我为什么不能将现在的完整的系统做成一个初始的可安装的系统呢？</p>
 <p>虽然这要花费的时间、存储可能会大一点，但是适当精简下软件列表、用户文件，完全可以控制在一个合理的范围内，按市面上常见的DVD存储容量来看，完全是hold得住的。而且DVD是真的便宜，存放时间也更长久。</p>
 <p>RemasterSys就是为了满足这样的需求而设计出来的，它就可以把我们当前运行的系统重新做成一个可安装的系统，安装完成后就是现在的样子。但是原作者可能很久没有再更新了吧，在我了解到这款系统工具时，它已经接近失修的边缘了。Sad</p>
-<h2 id="23-dump--restore">2.3 dump &amp; restore<a href="#23-dump--restore" class="anchor" aria-hidden="true">#</a> </h2>
+
+<h2 id="23-dump--restore" class="anchor-link"><a href="#23-dump--restore">2.3 dump &amp; restore</a></h2>
 <p>慢慢地意识到，所谓的定制都是私人潜意识里面的思想固化，总有不适合他人应用场景的时候，除非你有能力自己给自己定制。最简单的东西，就是最好用的、最靠谱的。一段时间下来，我发现dump &amp; restore就是逼近完美的选择。它专注于转储、恢复操作，非常原始。</p>
 <p>dd最原始直接读写存储设备原始数据，甚至都不理解你的文件系统，但是它缺少一点灵活性。</p>
 <p>dump允许我们在文件系统之上做一些选择，如选择备份哪些目录、文件等等，dump备份的时候会同时备份文件的属性信息，整个打包成一个文件，后续备份恢复的时候你也可以通过restore选择恢复哪些文件到文件系统。</p>
 <p>刚开始的时候，可能觉得全是命令行操作，好复杂？万一出错了怎么办？Linux强大的地方就是命令行操作，习惯了之后就真的爱上了。dump &amp; restore是目前我觉得比较好用的，虽然看上去不像macOS timemachine那样方便，但是它真的算得上最灵活的。</p>
-<h1 id="3-grub-2--customize-boot-menu-to-bootstrap-multiple-os">3 GRUB 2 &amp; Customize Boot Menu to bootstrap Multiple OS</h1>
-<h1 id="4-plymouth">4 Plymouth</h1>
-<h1 id="5-tweak-kdegnomeunity-appearance-colors--themes">5 Tweak KDE/GNOME/Unity Appearance (Colors &amp; Themes)</h1>
-<h1 id="6-linux-commandline-techs--administration">6 Linux Commandline Techs &amp; Administration</h1>
-<h1 id="7-unixlinux-programming">7 Unix/Linux Programming</h1>
-<h1 id="8-linux-kernel-011">8 Linux Kernel 0.11</h1>
-<h1 id="9-linux-kernel-24">9 Linux Kernel 2.4</h1>
-<h1 id="10-keep-going-along-the-roadmap-to-linux-world">10 Keep going along the roadmap to Linux World!</h1>
 
-	<div class="docs-navigation d-flex justify-content-between">
-	
-	<a href="https://www.hitzhangjie.pro/blog/2017-02-25-%E6%88%91%E7%9A%84%E5%85%B4%E8%B6%A3%E5%88%97%E8%A1%A8/">
-			<div class="card my-1">
-				<div class="card-body py-2">
-					&larr; 我的兴趣列表
-				</div>
-			</div>
-		</a>
-	</div>
+<h1 id="3-grub-2--customize-boot-menu-to-bootstrap-multiple-os" class="anchor-link"><a href="#3-grub-2--customize-boot-menu-to-bootstrap-multiple-os">3 GRUB 2 &amp; Customize Boot Menu to bootstrap Multiple OS</a></h1>
 
-	</main>
+<h1 id="4-plymouth" class="anchor-link"><a href="#4-plymouth">4 Plymouth</a></h1>
+
+<h1 id="5-tweak-kdegnomeunity-appearance-colors--themes" class="anchor-link"><a href="#5-tweak-kdegnomeunity-appearance-colors--themes">5 Tweak KDE/GNOME/Unity Appearance (Colors &amp; Themes)</a></h1>
+
+<h1 id="6-linux-commandline-techs--administration" class="anchor-link"><a href="#6-linux-commandline-techs--administration">6 Linux Commandline Techs &amp; Administration</a></h1>
+
+<h1 id="7-unixlinux-programming" class="anchor-link"><a href="#7-unixlinux-programming">7 Unix/Linux Programming</a></h1>
+
+<h1 id="8-linux-kernel-011" class="anchor-link"><a href="#8-linux-kernel-011">8 Linux Kernel 0.11</a></h1>
+
+<h1 id="9-linux-kernel-24" class="anchor-link"><a href="#9-linux-kernel-24">9 Linux Kernel 2.4</a></h1>
+
+<h1 id="10-keep-going-along-the-roadmap-to-linux-world" class="anchor-link"><a href="#10-keep-going-along-the-roadmap-to-linux-world">10 Keep going along the roadmap to Linux World!</a></h1>
+
+        </div>
+        
+
+        
+        <hr>
+        <div style="float:right;">
+        
+
+
+<div style="display:flex;">
+    <div>分享：</div>
+    <div>
+        <div class="sharethis-inline-share-buttons"></div>
+    </div>
 </div>
 
-      </div>
+
+        </div>
+
+        <br>
+        <br>
+
     </div>
-    
-    
-    <footer class="footer text-muted">
-  <div class="container">
-    <div class="row">
-      <div class="col-lg-8 order-last order-lg-first">
-        <ul class="list-inline">
-          <li class="list-inline-item">Powered by <a href="https://www.netlify.com/">Netlify</a>, <a href="https://gohugo.io/">Hugo</a>, and <a href="https://getdoks.org/">Doks</a></li>
-        </ul>
-      </div>
-      <div class="col-lg-8 order-first order-lg-last text-lg-end">
-        <ul class="list-inline">
-          </ul>
-      </div>
-      <div class="col-lg-8" align="right">
-        <p><font size="-1">站点构建版本：v0.2.3</font></p>
-      </div>
-    </div>
-  </div>
-</footer>
 
     
-    <script src="https://www.hitzhangjie.pro/js/highlight.min.c32fa100fe3c432c2629ed4542b161ff95a16be545c00c12fcd3ea42ec6c5e283bcd80b1097abf4ba955f8bd0a004d19673ac0bd3ad2394677ce000abbfb4de8.js" integrity="sha512-wy&#43;hAP48QywmKe1FQrFh/5Wha&#43;VFwAwS/NPqQuxsXig7zYCxCXq/S6lV&#43;L0KAE0ZZzrAvTrSOUZ3zgAKu/tN6A==" crossorigin="anonymous" defer></script>
-  <script src="https://www.hitzhangjie.pro/main.min.7ab523108435955765bcb88a0ee704f412ba01646b5478e84f3b9feb24f0ce750a14c3f7bd9a62408fe21e41996d361a9eb29f77e85dfe77b7e17f7623bd3a97.js" integrity="sha512-erUjEIQ1lVdlvLiKDucE9BK6AWRrVHjoTzuf6yTwznUKFMP3vZpiQI/iHkGZbTYanrKfd&#43;hd/ne34X92I706lw==" crossorigin="anonymous" defer></script>
-  <script src="https://www.hitzhangjie.pro/index.min.17ec74149fed14922ba0a28eff4475419af8eaab86643123f248bba048e5c15a12a453e12bd9981a36548e2aed87a4b6ffd2abe0dabca0d609dc9be46094001e.js" integrity="sha512-F&#43;x0FJ/tFJIroKKO/0R1QZr46quGZDEj8ki7oEjlwVoSpFPhK9mYGjZUjirth6S2/9Kr4Nq8oNYJ3JvkYJQAHg==" crossorigin="anonymous" defer></script>
-  
-  </body>
+    
+    <br>
+    <br>
+    <div style="height:auto;align:center;text-align:center;"> 
+        <div>
+            <img src="/common/xiaoqi.png" style="height:238px;margin-top:10px;margin-right:5px;"/>
+            <img src="/common/qrcode.jpg" style="height:238px;margin-top:10px;"/>
+            <img src="/common/yuanbao.png" style="height:238px;margin-top:10px;margin-left:5px;"/>
+        </div>
+        <div>
+            <p>
+                感谢打赏，小七🐶、元宝🐱可以改善伙食咯 😘
+            </p>
+        </div>
+    </div>
+    
+
+    </br>
+    </br>
+    
+
+
+                
+                <div class="container">
+    <hr>
+</div>
+<div class="container has-text-centered top-pad">
+    <a href="#top">
+        <i class="fa fa-arrow-up"></i>
+    </a>
+</div>
+
+<div class="container">
+    <hr>
+</div>
+
+                <div class="section" id="footer">
+    <div class="container has-text-centered">
+    
+        <span class="footer-text">
+            <a href="https://github.com/victoriadrake/hugo-theme-introduction/"><strong>Introduction</strong></a> 主题为 <a href="http://gohugo.io/">Hugo</a> 而设。由开源社群贡献者以 <a href="https://victoria.dev"><i class="fa fa-heart"></i> 和 <i class="fa fa-coffee"></i></a> 创造。
+        </span>
+    
+    </div>
+</div>
+
+                
+            </div>
+        </section>
+        
+        
+
+
+<script src="https://www.hitzhangjie.pro/js/bundle.f1741e9868b2f697e71cf8fccfcc12166540999b3d36f8fb9edd0882ba425d55.js" integrity="sha256-8XQemGiy9pfnHPj8z8wSFmVAmZs9Nvj7nt0IgrpCXVU="></script>
+
+
+
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-168027530-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+
+
+        
+        
+        
+        
+    </body>
 </html>

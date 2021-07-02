@@ -3,4 +3,4 @@
 2 First Steps 下面的4个文集很好地介绍了构建一个分布式系统要面临的挑战，它们共同概述了分布式系统工程师必须克服的一些技术上的困难，并为后面章节中更详细的说明奠定了基础。
 Distributed Systems for Fun and Profit，介绍了分布式系统的基础知识，包括时间在分布式系统中扮演的角色、不同的复制策略等； Notes on distributed systems for young bloods，不是纯理论介绍，在理论和实践中做到了一个不错的平衡，为后续更深入学习打好基础； A Note on Distributed Systems，一篇很经典的论文，解释了分布式系统中为什么不能总把远程交互对象当做本地的对象，让读者理解分布式场景中的问题和挑战； The fallacies of distributed computing，分布式计算的8个谬论，为分布式系统设计人员设计系统打下基础； 我们需要了解两个重要属性的含义，“safety”和“liveness”：
 safety，该属性表示不会有坏的事情发生，如API不会返回不一致的value、集群中不会同时选出两个leader等； liveness，该属性表示好的事情最终会发生，如API最终会返回一个结果、磁盘写操作最终会完成等； 3 Failure and Time 分布式系统工程师面对的一些困难，其实可以归结为下面2个原因：
-Processes may fail There&amp;rsquo;s no good way to tell that they have done so 即，分布式系统中的任意进程可能会出现故障，但是其他进程又没有可靠的方式来感知这个进程出现了故障。 进程掌握并共享给其他进程的时间方面的信息、可能检测到的故障场景以及可以正确实现的算法和原语之间存在非常紧密的关系。大多数情况下，我们假设两个不同的节点对于现在是什么时间或时间流逝的速度完全没有共享的信息。</description></item></channel></rss>
+Processes may fail There&amp;rsquo;s no good way to tell that they have done so 即，分布式系统中的任意进程可能会出现故障，但是其他进程又没有可靠的方式来感知这个进程出现了故障。</description></item></channel></rss>

@@ -1,622 +1,215 @@
-<!DOCTYPE html>
-<html lang="zh-cn">
-    <head>
-        
-        <meta charset="utf-8">
-<meta http-equiv="X-UA-Compatible" content="chrome=1">
-<meta name="HandheldFriendly" content="True">
-<meta name="MobileOptimized" content="320">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="referrer" content="no-referrer">
-<meta name="description" content="Web站点描述">
-<title>
-如何高效开发一个命令行工具 - 介绍
-</title>
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><link rel=preload as=font href=https://www.hitzhangjie.pro/fonts/vendor/jost/jost-v4-latin-regular.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=https://www.hitzhangjie.pro/fonts/vendor/jost/jost-v4-latin-700.woff2 type=font/woff2 crossorigin><link rel=stylesheet href=https://www.hitzhangjie.pro/main.ad767760caaa83b0e72a48aa8ae7403eff17e4d4c7c63b4691efd9307c221668c34159d9e3742f541f86278a21bb040f081dabc8e2d2476018d5d0d06fcd8902.css integrity="sha512-rXZ3YMqqg7DnKkiqiudAPv8X5NTHxjtGke/ZMHwiFmjDQVnZ43QvVB+GJ4ohuwQPCB2ryOLSR2AY1dDQb82JAg==" crossorigin=anonymous><noscript><style>img.lazyload{display:none}</style></noscript><meta name=robots content="index, follow"><meta name=googlebot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><meta name=bingbot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><title>如何高效开发一个命令行工具 - MySpace</title><meta name=description content="MySpace is a hitzhangjie's personal space, for blogs, books, journey, thinkings."><link rel=canonical href=https://www.hitzhangjie.pro/blog/2020-06-26-%E5%A6%82%E4%BD%95%E9%AB%98%E6%95%88%E5%BC%80%E5%8F%91%E4%B8%80%E4%B8%AA%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%B7%A5%E5%85%B7/><meta name=twitter:card content="summary_large_image"><meta name=twitter:image content="/doks.png"><meta name=twitter:title content="如何高效开发一个命令行工具"><meta name=twitter:description content="我经常会开发一些命令行工具来协助处理一些事情，如开发一个代码生成工具快速生成服务代码，或者开发一个工具来方便管理github上的工具，或者开发一个工具rm来替换掉不安全的rm，等等。
+命令行工具开发过程中，比较常见的一个问题就是对功能进行分组，开发多个命令不利于使用，在命令中支持子命令是一个更常见、更友好的做法，如go build，go tool，go pprof，等等。我们还希望为不同的子命令添加不同的命令行选项，如go build -gcflags=，go pprof --seconds=，等等。
+如何支持子命令字呢？ 假如我们开发一个命令行程序 gox，我们希望能为它添加一个子命令gox create来创建一个完整的服务工程，包括自动生成工程下的代码。
+那如何为命令行程序gox添加这个子命令字呢？
+gox是shell搜索路径定位到的程序，create只能是shell传递给进程的一个普通参数，在gox程序启动之后只能从os.Args来获取该参数，以及后续gox create -protofile= -protodir的参数-protofile及-protodir。
+然后呢，为了方便以后扩展其他子命令，我们最好将subcmd进行一下抽象，通过一个Command interface{}约定好一个subcmd必须要完成那些操作。接口并不是为了抽象而抽象，而是用来清晰地表明要做什么。
+// Command what does a command do type Command interface{ // PreRun run before the command logic execution PreRun() error // Run run the command logic Run() error // PostRun run after the command logic execution PostRun() error } // BaseCommand basic implemention // // this BaseCommand could be embeded into a customized subcmd type BaseCommand struct{ } func (bc *BaseCommand) PreRun() error { return nil } func (bc *BaseCommand) Run() error { panic(&#34;implement me&#34;) } func (bc *BaseCommand) PostRun() error { return nil }  Command接口定义了一个command应该干什么，然后也可以提供一个基本的Command实现BaseCommand，它提供了一些基本的操作可以供后续复用，后面我们要扩展其他子命令字的时候，通过将该BaseCommand嵌入，可以少实现几个函数，这也是go里面提倡的通过组合来实现继承。"><meta name=twitter:site content="@hitzhangjie"><meta name=twitter:creator content="@hitzhangjie"><meta property="og:title" content="如何高效开发一个命令行工具"><meta property="og:description" content="我经常会开发一些命令行工具来协助处理一些事情，如开发一个代码生成工具快速生成服务代码，或者开发一个工具来方便管理github上的工具，或者开发一个工具rm来替换掉不安全的rm，等等。
+命令行工具开发过程中，比较常见的一个问题就是对功能进行分组，开发多个命令不利于使用，在命令中支持子命令是一个更常见、更友好的做法，如go build，go tool，go pprof，等等。我们还希望为不同的子命令添加不同的命令行选项，如go build -gcflags=，go pprof --seconds=，等等。
+如何支持子命令字呢？ 假如我们开发一个命令行程序 gox，我们希望能为它添加一个子命令gox create来创建一个完整的服务工程，包括自动生成工程下的代码。
+那如何为命令行程序gox添加这个子命令字呢？
+gox是shell搜索路径定位到的程序，create只能是shell传递给进程的一个普通参数，在gox程序启动之后只能从os.Args来获取该参数，以及后续gox create -protofile= -protodir的参数-protofile及-protodir。
+然后呢，为了方便以后扩展其他子命令，我们最好将subcmd进行一下抽象，通过一个Command interface{}约定好一个subcmd必须要完成那些操作。接口并不是为了抽象而抽象，而是用来清晰地表明要做什么。
+// Command what does a command do type Command interface{ // PreRun run before the command logic execution PreRun() error // Run run the command logic Run() error // PostRun run after the command logic execution PostRun() error } // BaseCommand basic implemention // // this BaseCommand could be embeded into a customized subcmd type BaseCommand struct{ } func (bc *BaseCommand) PreRun() error { return nil } func (bc *BaseCommand) Run() error { panic(&#34;implement me&#34;) } func (bc *BaseCommand) PostRun() error { return nil }  Command接口定义了一个command应该干什么，然后也可以提供一个基本的Command实现BaseCommand，它提供了一些基本的操作可以供后续复用，后面我们要扩展其他子命令字的时候，通过将该BaseCommand嵌入，可以少实现几个函数，这也是go里面提倡的通过组合来实现继承。"><meta property="og:type" content="article"><meta property="og:url" content="/blog/2020-06-26-%E5%A6%82%E4%BD%95%E9%AB%98%E6%95%88%E5%BC%80%E5%8F%91%E4%B8%80%E4%B8%AA%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%B7%A5%E5%85%B7/"><meta property="og:image" content="/doks.png"><meta property="article:published_time" content="2020-06-26T10:38:34+08:00"><meta property="article:modified_time" content="2020-06-26T10:38:34+08:00"><meta property="og:site_name" content="MySpace"><meta property="article:publisher" content="https://www.facebook.com/hitzhangjie"><meta property="article:author" content="https://www.facebook.com/hitzhangjie"><meta property="og:locale" content="en_US"><script type=application/ld+json>{"@context":"https://schema.org","@type":"Article","mainEntityOfPage":{"@type":"WebPage","@id":"\/blog\/2020-06-26-%E5%A6%82%E4%BD%95%E9%AB%98%E6%95%88%E5%BC%80%E5%8F%91%E4%B8%80%E4%B8%AA%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%B7%A5%E5%85%B7\/"},"headline":"如何高效开发一个命令行工具","image":[],"datePublished":"2020-06-26T10:38:34CET","dateModified":"2020-06-26T10:38:34CET","author":{"@type":"Organization","name":"MySpace"},"publisher":{"@type":"Organization","name":"MySpace","logo":{"@type":"ImageObject","url":"\/logo-doks.png"}},"description":""}</script><script type=application/ld+json>{"@context":"http://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https:\/\/www.hitzhangjie.pro\/"},{"@type":"ListItem","position":3,"name":"Blog","item":"https:\/\/www.hitzhangjie.pro\/\/blog\/"},{"@type":"ListItem","position":4,"name":"2020 06 26 % E5% A6%82% E4% Bd%95% E9% Ab%98% E6%95%88% E5% Bc%80% E5%8 F%91% E4% B8%80% E4% B8% Aa% E5%91% Bd% E4% Bb% A4% E8% A1%8 C% E5% B7% A5% E5%85% B7","item":"https:\/\/www.hitzhangjie.pro\/\/blog\/2020-06-26-%E5%A6%82%E4%BD%95%E9%AB%98%E6%95%88%E5%BC%80%E5%8F%91%E4%B8%80%E4%B8%AA%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%B7%A5%E5%85%B7\/"}]}</script><meta name=theme-color content="#fff"><link rel=apple-touch-icon sizes=180x180 href=https://www.hitzhangjie.pro/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=https://www.hitzhangjie.pro/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=https://www.hitzhangjie.pro/favicon-16x16.png><link rel=manifest href=https://www.hitzhangjie.pro/site.webmanifest><script type=text/javascript src="https://platform-api.sharethis.com/js/sharethis.js#property=607868a58d7101001829a8df&product=sop" async></script><style>[alt~=sharing]{border:0;box-shadow:none}div#st-1{text-align:unset}div#st-1 .st-btn{height:24px;padding:0 4px}div#st-1 .st-btn>img{top:4.2px}div#st-2 .st-btn{height:24px;padding:0 4px}div#st-2 .st-btn>img{top:4.2px}</style></head><body class="blog single"><div class="header-bar fixed-top"></div><header class="navbar fixed-top navbar-expand-md navbar-light"><div class=container><input class="menu-btn order-0" type=checkbox id=menu-btn>
+<label class="menu-icon d-md-none" for=menu-btn><span class=navicon></span></label><a class="navbar-brand order-1 order-md-0 me-auto" href=https://www.hitzhangjie.pro/>MySpace</a>
+<button id=mode class="btn btn-link order-2 order-md-4" type=button aria-label="Toggle mode">
+<span class=toggle-dark><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-moon"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></span><span class=toggle-light><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sun"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span></button><ul class="navbar-nav social-nav order-3 order-md-5"><li class=nav-item><a class=nav-link href=https://twitter.com/hitzhangjie><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg><span class="ms-2 visually-hidden">Twitter</span></a></li><li class=nav-item><a class=nav-link href=https://github.com/hitzhangjie><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37.0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44.0 0020 4.77 5.07 5.07.0 0019.91 1S18.73.65 16 2.48a13.38 13.38.0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07.0 005 4.77 5.44 5.44.0 003.5 8.55c0 5.42 3.3 6.61 6.44 7A3.37 3.37.0 009 18.13V22"/></svg><span class="ms-2 visually-hidden">GitHub</span></a></li></ul><div class="collapse navbar-collapse order-4 order-md-1"><ul class="navbar-nav main-nav me-auto order-5 order-md-2"><li class="nav-item active"><a class=nav-link href=https://www.hitzhangjie.pro/blog/>Blog</a></li><li class=nav-item><a class=nav-link href=https://www.hitzhangjie.pro/books/>Books</a></li><li class=nav-item><a class=nav-link href=https://www.hitzhangjie.pro/journey/introduction>Journey</a></li></ul><div class="break order-6 d-md-none"></div><form class="navbar-form flex-grow-1 order-7 order-md-3"><input id=userinput class="form-control is-search" type=search placeholder="Search ..." aria-label="Search ..." autocomplete=off><div id=suggestions class="shadow bg-white rounded"></div></form></div></div></header><div class="wrap container" role=document><div class=content><div class="row flex-xl-nowrap"><div class="col-lg-5 col-xl-4 docs-sidebar"><nav class=docs-links aria-label="Main navigation"><h3>Tag List</h3><ol><li><a href=https://www.hitzhangjie.pro/tags/go/>go</a></li><li><a href=https://www.hitzhangjie.pro/tags/flag/>flag</a></li><li><a href=https://www.hitzhangjie.pro/tags/flagset/>flagset</a></li><li><a href=https://www.hitzhangjie.pro/tags/cmd/>cmd</a></li><li><a href=https://www.hitzhangjie.pro/tags/cobra/>cobra</a></li></ol></nav></div><nav class="docs-toc d-none d-xl-block col-xl-3" aria-label="Secondary navigation"><div class=page-links><h3>On this page</h3><nav id=TableOfContents><ul><li><ul><li><ul><li><a href=#如何支持子命令字呢>如何支持子命令字呢？</a></li><li><a href=#如何为子命令字添加不同的选项呢>如何为子命令字添加不同的选项呢？</a></li><li><a href=#如何显示命令帮助信息>如何显示命令帮助信息？</a></li><li><a href=#小结>小结</a></li></ul></li></ul></li></ul></nav></div></nav><main class="docs-content col-lg-11 col-xl-9 mx-xl-auto"><h1>如何高效开发一个命令行工具</h1><p><small>Posted June 26, 2020 by &nbsp;&dash;&nbsp;<strong>3&nbsp;min read</strong></small><p><div style=display:flex><div>分享:&nbsp;&nbsp;</div><div><div class=sharethis-inline-share-buttons></div></div></div><hr><p class=lead></p><p>我经常会开发一些命令行工具来协助处理一些事情，如开发一个代码生成工具快速生成服务代码，或者开发一个工具来方便管理github上的工具，或者开发一个工具rm来替换掉不安全的rm，等等。</p><p>命令行工具开发过程中，比较常见的一个问题就是对功能进行分组，开发多个命令不利于使用，在命令中支持子命令是一个更常见、更友好的做法，如go build，go tool，go pprof，等等。我们还希望为不同的子命令添加不同的命令行选项，如<code>go build -gcflags=</code>，<code>go pprof --seconds=</code>，等等。</p><h3 id=如何支持子命令字呢>如何支持子命令字呢？<a href=#如何支持子命令字呢 class=anchor aria-hidden=true>#</a></h3><p>假如我们开发一个命令行程序 <code>gox</code>，我们希望能为它添加一个子命令<code>gox create</code>来创建一个完整的服务工程，包括自动生成工程下的代码。</p><p>那如何为命令行程序<code>gox</code>添加这个子命令字呢？</p><p><code>gox</code>是shell搜索路径定位到的程序，<code>create</code>只能是shell传递给进程的一个普通参数，在<code>gox</code>程序启动之后只能从<code>os.Args</code>来获取该参数，以及后续<code>gox create -protofile= -protodir</code>的参数<code>-protofile</code>及<code>-protodir</code>。</p><p>然后呢，为了方便以后扩展其他子命令，我们最好将subcmd进行一下抽象，通过一个<code>Command interface{}</code>约定好一个subcmd必须要完成那些操作。接口并不是为了抽象而抽象，而是用来清晰地表明要做什么。</p><pre><code class=language-go>// Command what does a command do
+type Command interface{
 
+    // PreRun run before the command logic execution
+    PreRun() error
 
+    // Run run the command logic
+    Run() error
 
-
-<script type="text/javascript" src="https://platform-api.sharethis.com/js/sharethis.js#property=5f24f50fc2418c0012d52ac3&product=inline-share-buttons" async="async">
-</script>
-
-<style>
- 
-[alt~=sharing] {
-    border: 0px;
-    box-shadow: none;
-}
-div#st-1 {
-    text-align: unset;
+    // PostRun run after the command logic execution
+    PostRun() error
 }
 
- 
-div#st-1 .st-btn {
-    height: 24px;
-    padding: 0 4px;
+// BaseCommand basic implemention
+//
+// this BaseCommand could be embeded into a customized subcmd
+type BaseCommand struct{
 }
 
-div#st-1 .st-btn > img {
-    top: 4.2px;
+func (bc *BaseCommand) PreRun() error {
+    return nil
 }
 
-div#st-2 .st-btn {
-    height: 24px;
-    padding: 0 4px;
+func (bc *BaseCommand) Run() error {
+    panic(&quot;implement me&quot;)
 }
 
-div#st-2 .st-btn > img {
-    top: 4.2px;
+func (bc *BaseCommand) PostRun() error {
+    return nil
 }
-</style>
-
-
-
-
-
-
-
-        
-        <meta property="og:title" content="如何高效开发一个命令行工具 - 介绍" />
-<meta property="og:type" content="website" />
-<meta property="og:description" content="Web站点描述"/>
-<meta property="og:url" content="https://www.hitzhangjie.pro/blog/2020-06-26-%E5%A6%82%E4%BD%95%E9%AB%98%E6%95%88%E5%BC%80%E5%8F%91%E4%B8%80%E4%B8%AA%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%B7%A5%E5%85%B7/"/>
-<meta property="og:site_name" content="介绍"/>
-
-
-
-
-<meta property="og:image" content="https://www.hitzhangjie.pro/home/me.jpg"/>
-
-<meta property="og:image" content="https://www.hitzhangjie.pro/home/profile.jpg"/>
-
-
-
-
-        
-<link rel="shortcut icon" href="/img/fav.ico">
-
-
-        
-
-
-
-
-
-<link rel="stylesheet" href="/css/main.min.912c712459f193c9f111a0f4fe4ba8074edafb7127a95a82109d48a8daa8d805.css" integrity="sha256-kSxxJFnxk8nxEaD0/kuoB07a&#43;3EnqVqCEJ1IqNqo2AU=" crossorigin="anonymous" media="screen">
-
-
-
-
-    <link rel="stylesheet" href="/custom.css" integrity="" crossorigin="anonymous" media="screen">
-
-        
-        
-        
-        
-    </head>
-    <body>
-        <section id="top" class="section">
-            
-            <div class="container hero  fade-in one ">
-                
-
-    <h1 class="bold-title is-1">博客</h1>
-
-
-            </div>
-            
-            <div class="section  fade-in two ">
-                
-<div class="container">
-    <hr>
-    <nav class="navbar" role="navigation" aria-label="main navigation">
-        
-        <a role="button" class="navbar-burger" data-target="navMenu" aria-label="menu" aria-expanded="false" >
-          <span aria-hidden="true"></span>
-          <span aria-hidden="true"></span>
-          <span aria-hidden="true"></span>
-        </a>
-        <div class="navbar-menu " id="navMenu">
-            
-            
-            
-            
-            <a class="navbar-item" href="/">主页</a>
-            
-
-            
-            
-
-            
-                
-            
-
-            
-                
-            
-
-            
-            
-            
-            
-            
-                
-                
-                
-                
-                  <a class="navbar-item" href="https://www.hitzhangjie.pro/projects/">
-                  
-                  
-                  项目
-                  
-                  
-                  </a>
-                
-                
-            
-            
-            
-            
-            
-                
-                
-                
-                
-                  <a class="navbar-item" href="https://www.hitzhangjie.pro/blog/">
-                  
-                  返回 博客
-                  
-                  </a>
-                
-                
-            
-            
-            
-            
-            
-            <a class="navbar-item" href="/#about">关于</a>
-            
-            
-            
-            
-            
-            <a class="navbar-item" href="/#thanks">致谢</a>
-            
-            
-            
-            
-
-            
-            
-            <a class="navbar-item" href="/#contact">联系方式</a>
-            
-            
-
-            
-            
-            
-            
-            <a class="navbar-item" href="https://www.hitzhangjie.pro/en/">English</a>
-            
-            
-
-            
-            
-        </div>
-    </nav>
-    <hr>
-</div>
-
-
-
-                
-    <div class="container">
-
-        <h2 class="title is-1 top-pad strong-post-title">
-            <a href="https://www.hitzhangjie.pro/blog/2020-06-26-%E5%A6%82%E4%BD%95%E9%AB%98%E6%95%88%E5%BC%80%E5%8F%91%E4%B8%80%E4%B8%AA%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%B7%A5%E5%85%B7/">如何高效开发一个命令行工具</a>
-        </h2>
-        <div class="post-data">
-            发表时间：2020-06-26 <br> 
-            阅读时长：5 分钟 (2256字)
-        </div>
-
-        
-        <div>
-            <div>
-            
-            
-            <p>
-                标签：
-                
-                <a href="/tags/go">go</a>,
-                
-                <a href="/tags/flag">flag</a>,
-                
-                <a href="/tags/flagset">flagset</a>,
-                
-                <a href="/tags/cmd">cmd</a>,
-                
-                <a href="/tags/cobra">cobra</a>
-                
-            </p>
-            
-            </div>
-
-            <div>
-            <br>
-            
-
-
-<div style="display:flex;">
-    <div>分享：</div>
-    <div>
-        <div class="sharethis-inline-share-buttons"></div>
-    </div>
-</div>
-
-
-            </div>
-
-        </div>
-
-        
-        
-
-        
-        <div> 
-            
-
-        </div>
-   
-        
-        <div class="container markdown top-pad">
-            <p>我经常会开发一些命令行工具来协助处理一些事情，如开发一个代码生成工具快速生成服务代码，或者开发一个工具来方便管理github上的工具，或者开发一个工具rm来替换掉不安全的rm，等等。</p>
-<p>命令行工具开发过程中，比较常见的一个问题就是对功能进行分组，开发多个命令不利于使用，在命令中支持子命令是一个更常见、更友好的做法，如go build，go tool，go pprof，等等。我们还希望为不同的子命令添加不同的命令行选项，如<code>go build -gcflags=</code>，<code>go pprof --seconds=</code>，等等。</p>
-
-<h3 id="如何支持子命令字呢" class="anchor-link"><a href="#%e5%a6%82%e4%bd%95%e6%94%af%e6%8c%81%e5%ad%90%e5%91%bd%e4%bb%a4%e5%ad%97%e5%91%a2">如何支持子命令字呢？</a></h3>
-<p>假如我们开发一个命令行程序 <code>gox</code>，我们希望能为它添加一个子命令<code>gox create</code>来创建一个完整的服务工程，包括自动生成工程下的代码。</p>
-<p>那如何为命令行程序<code>gox</code>添加这个子命令字呢？</p>
-<p><code>gox</code>是shell搜索路径定位到的程序，<code>create</code>只能是shell传递给进程的一个普通参数，在<code>gox</code>程序启动之后只能从<code>os.Args</code>来获取该参数，以及后续<code>gox create -protofile= -protodir</code>的参数<code>-protofile</code>及<code>-protodir</code>。</p>
-<p>然后呢，为了方便以后扩展其他子命令，我们最好将subcmd进行一下抽象，通过一个<code>Command interface{}</code>约定好一个subcmd必须要完成那些操作。接口并不是为了抽象而抽象，而是用来清晰地表明要做什么。</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// Command what does a command do
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Command</span> <span style="color:#66d9ef">interface</span>{
-
-    <span style="color:#75715e">// PreRun run before the command logic execution
-</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">PreRun</span>() <span style="color:#66d9ef">error</span>
-
-    <span style="color:#75715e">// Run run the command logic
-</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">Run</span>() <span style="color:#66d9ef">error</span>
-
-    <span style="color:#75715e">// PostRun run after the command logic execution
-</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">PostRun</span>() <span style="color:#66d9ef">error</span>
+</code></pre><p>Command接口定义了一个command应该干什么，然后也可以提供一个基本的Command实现BaseCommand，它提供了一些基本的操作可以供后续复用，后面我们要扩展其他子命令字的时候，通过将该BaseCommand嵌入，可以少实现几个函数，这也是go里面提倡的通过组合来实现继承。</p><p>现在我们实现一个CreateCmd：</p><pre><code class=language-go>
+type CreateCmd struct {
+    *BaseCommand
 }
 
-<span style="color:#75715e">// BaseCommand basic implemention
-</span><span style="color:#75715e">//
-</span><span style="color:#75715e">// this BaseCommand could be embeded into a customized subcmd
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">BaseCommand</span> <span style="color:#66d9ef">struct</span>{
-}
-
-<span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">bc</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">BaseCommand</span>) <span style="color:#a6e22e">PreRun</span>() <span style="color:#66d9ef">error</span> {
-    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
-}
-
-<span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">bc</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">BaseCommand</span>) <span style="color:#a6e22e">Run</span>() <span style="color:#66d9ef">error</span> {
-    panic(<span style="color:#e6db74">&#34;implement me&#34;</span>)
-}
-
-<span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">bc</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">BaseCommand</span>) <span style="color:#a6e22e">PostRun</span>() <span style="color:#66d9ef">error</span> {
-    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
-}
-</code></pre></div><p>Command接口定义了一个command应该干什么，然后也可以提供一个基本的Command实现BaseCommand，它提供了一些基本的操作可以供后续复用，后面我们要扩展其他子命令字的时候，通过将该BaseCommand嵌入，可以少实现几个函数，这也是go里面提倡的通过组合来实现继承。</p>
-<p>现在我们实现一个CreateCmd：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">
-<span style="color:#66d9ef">type</span> <span style="color:#a6e22e">CreateCmd</span> <span style="color:#66d9ef">struct</span> {
-    <span style="color:#f92672">*</span><span style="color:#a6e22e">BaseCommand</span>
-}
-
-<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewCreateCmd</span>() <span style="color:#a6e22e">Command</span> {
-    <span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">CreateCmd</span>{
-        <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">BaseCommand</span>{},
+func NewCreateCmd() Command {
+    return &amp;CreateCmd{
+        &amp;BaseCommand{},
     }
 }
 
-<span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">CreateCmd</span>) <span style="color:#a6e22e">Run</span>() <span style="color:#66d9ef">error</span> {
+func (c *CreateCmd) Run() error {
 
-    println(<span style="color:#e6db74">&#34;create cmd running&#34;</span>)
+    println(&quot;create cmd running&quot;)
 
-    <span style="color:#75715e">// execute the logic of create cmd
-</span><span style="color:#75715e"></span>
-    println(<span style="color:#e6db74">&#34;create cmd finished&#34;</span>)
+    // execute the logic of create cmd
+
+    println(&quot;create cmd finished&quot;)
 }
-</code></pre></div><p>那我们怎么在执行<code>gox create</code>的时候运行<code>CreateCmd.Run()</code>方法呢？</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">cmds</span> <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#a6e22e">Command</span> = {
-    <span style="color:#e6db74">&#34;create&#34;</span>: <span style="color:#a6e22e">NewCreateCmd</span>,
+</code></pre><p>那我们怎么在执行<code>gox create</code>的时候运行<code>CreateCmd.Run()</code>方法呢？</p><pre><code class=language-go>var cmds map[string]Command = {
+    &quot;create&quot;: NewCreateCmd,
 }
 
-<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+func main() {
 
-    <span style="color:#a6e22e">args</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Args</span>[<span style="color:#ae81ff">1</span>:]
-    <span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">args</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
-        panic(<span style="color:#e6db74">&#34;invalid subcmd&#34;</span>)
+    args := os.Args[1:]
+    if len(args) == 0 {
+        panic(&quot;invalid subcmd&quot;)
     }
 
-    <span style="color:#a6e22e">cmd</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">cmds</span>[<span style="color:#a6e22e">args</span>[<span style="color:#ae81ff">0</span>]]
-    <span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">ok</span> {
-        panic(<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;cmd: %s not registered&#34;</span>, <span style="color:#a6e22e">args</span>[<span style="color:#ae81ff">0</span>]))
+    cmd, ok := cmds[args[0]]
+    if !ok {
+        panic(fmt.Errorf(&quot;cmd: %s not registered&quot;, args[0]))
     }
 
-    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">cmd</span>.<span style="color:#a6e22e">PreRun</span>(); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
-        panic(<span style="color:#a6e22e">err</span>)
+    if err := cmd.PreRun(); err != nil {
+        panic(err)
     }
     
-    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">cmd</span>.<span style="color:#a6e22e">Run</span>(); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
-        panic(<span style="color:#a6e22e">err</span>)
+    if err := cmd.Run(); err != nil {
+        panic(err)
     }
 
-    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">cmd</span>.<span style="color:#a6e22e">PostRun</span>(); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
-        panic(<span style="color:#a6e22e">err</span>)
+    if err := cmd.PostRun(); err != nil {
+        panic(err)
     }
 
 }
-</code></pre></div><p>是不是很简单？本来就很简单 :)</p>
+</code></pre><p>是不是很简单？本来就很简单 :)</p><h3 id=如何为子命令字添加不同的选项呢>如何为子命令字添加不同的选项呢？<a href=#如何为子命令字添加不同的选项呢 class=anchor aria-hidden=true>#</a></h3><p>那现在要给各个子命令字添加独立的命令行选项怎么办呢？比如<code>gox create</code>的命令参数和<code>gox update</code>的命令行参数是不同的，那怎么办呢？你当然可以根据os.Args[1:]来解析，想怎么解析都可以，我们这里讨论如何借助go标准库提供的flag包来解析。</p><p>大家可能都使用过<code>flag.Parse()</code>来解析命令行参数，这个函数其实是将os.Args[1:]中的参数解析完后填充到一个默认的flagset。如果要为不同的子命令添加不同的命令行选项，那么为每个子命令创建独立的flagset就可以了。各个子命令使用自己的flagset来执行<code>flagset.Parse()</code>代替<code>flag.Parse()</code>就可以了。</p><p>就这么简单，我们对前面的程序进行一点调整：</p><p>Command接口增加命令参数解析接口：</p><pre><code class=language-go>// Command what does a command do
+type Command interface{
 
-<h3 id="如何为子命令字添加不同的选项呢" class="anchor-link"><a href="#%e5%a6%82%e4%bd%95%e4%b8%ba%e5%ad%90%e5%91%bd%e4%bb%a4%e5%ad%97%e6%b7%bb%e5%8a%a0%e4%b8%8d%e5%90%8c%e7%9a%84%e9%80%89%e9%a1%b9%e5%91%a2">如何为子命令字添加不同的选项呢？</a></h3>
-<p>那现在要给各个子命令字添加独立的命令行选项怎么办呢？比如<code>gox create</code>的命令参数和<code>gox update</code>的命令行参数是不同的，那怎么办呢？你当然可以根据os.Args[1:]来解析，想怎么解析都可以，我们这里讨论如何借助go标准库提供的flag包来解析。</p>
-<p>大家可能都使用过<code>flag.Parse()</code>来解析命令行参数，这个函数其实是将os.Args[1:]中的参数解析完后填充到一个默认的flagset。如果要为不同的子命令添加不同的命令行选项，那么为每个子命令创建独立的flagset就可以了。各个子命令使用自己的flagset来执行<code>flagset.Parse()</code>代替<code>flag.Parse()</code>就可以了。</p>
-<p>就这么简单，我们对前面的程序进行一点调整：</p>
-<p>Command接口增加命令参数解析接口：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// Command what does a command do
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Command</span> <span style="color:#66d9ef">interface</span>{
+    // ParseFlags parse flags into command's own flagset
+    ParseFlags(os.Args)
 
-    <span style="color:#75715e">// ParseFlags parse flags into command&#39;s own flagset
-</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">ParseFlags</span>(<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Args</span>)
-
-    <span style="color:#f92672">...</span>
+    ...
 }
-</code></pre></div><p>BaseCommand 添加一个参数解析的方法，给自定义子命令字复用</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#75715e">// BaseCommand basic implemention
-</span><span style="color:#75715e">//
-</span><span style="color:#75715e">// this BaseCommand could be embeded into a customized subcmd
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">BaseCommand</span> <span style="color:#66d9ef">struct</span>{
-    <span style="color:#a6e22e">flagSet</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">FlagSet</span>
+</code></pre><p>BaseCommand 添加一个参数解析的方法，给自定义子命令字复用</p><pre><code class=language-go>// BaseCommand basic implemention
+//
+// this BaseCommand could be embeded into a customized subcmd
+type BaseCommand struct{
+    flagSet *flag.FlagSet
 }
 
-<span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">bc</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">BaseCommand</span>) <span style="color:#a6e22e">ParseFlags</span>(<span style="color:#a6e22e">args</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Args</span>) <span style="color:#66d9ef">error</span> {
-    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">bc</span>.<span style="color:#a6e22e">flagset</span>.<span style="color:#a6e22e">Parse</span>(<span style="color:#a6e22e">args</span>)
+func (bc *BaseCommand) ParseFlags(args os.Args) error {
+    return bc.flagset.Parse(args)
 }
 
-<span style="color:#f92672">...</span>
-</code></pre></div><p>为create子命令创建独立的flagset来解析参数</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewCreateCmd</span>() <span style="color:#66d9ef">error</span> {
+...
+</code></pre><p>为create子命令创建独立的flagset来解析参数</p><pre><code class=language-go>func NewCreateCmd() error {
 
-    <span style="color:#a6e22e">fs</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">NewFlagSet</span>(<span style="color:#e6db74">&#34;create&#34;</span>, <span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">PanicOnError</span>),
-    <span style="color:#a6e22e">fs</span>.<span style="color:#a6e22e">String</span>(<span style="color:#e6db74">&#34;protofile&#34;</span>, <span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#e6db74">&#34;protofile to process&#34;</span>)
-    <span style="color:#a6e22e">fs</span>.<span style="color:#a6e22e">String</span>(<span style="color:#e6db74">&#34;protodir&#34;</span>, <span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#e6db74">&#34;protofile to search）&#34;</span>
+    fs := flag.NewFlagSet(&quot;create&quot;, flag.PanicOnError),
+    fs.String(&quot;protofile&quot;, &quot;&quot;, &quot;protofile to process&quot;)
+    fs.String(&quot;protodir&quot;, &quot;&quot;, &quot;protofile to search）&quot;
 
-    <span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">CreateCmd</span>{
-        <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">BaseCommand</span>{
-            <span style="color:#a6e22e">flagSet</span>: <span style="color:#a6e22e">fs</span>,
+    return &amp;CreateCmd{
+        &amp;BaseCommand{
+            flagSet: fs,
         }
     }
 }
-</code></pre></div><p>程序启动的时候统一解析命令行参数：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</code></pre><p>程序启动的时候统一解析命令行参数：</p><pre><code class=language-go>func main() {
 
-    <span style="color:#f92672">...</span>
+    ...
 
-    <span style="color:#75715e">// parse the flags
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">cmd</span>.<span style="color:#a6e22e">ParseFlags</span>(<span style="color:#a6e22e">args</span>[<span style="color:#ae81ff">1</span>:]; <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
-        panic(<span style="color:#a6e22e">err</span>)
+    // parse the flags
+    if err := cmd.ParseFlags(args[1:]; err != nil {
+        panic(err)
     }
 
-    <span style="color:#f92672">...</span>
+    ...
 }
-</code></pre></div><p>这样就完成了，是不是很简单，本来就很简单。</p>
+</code></pre><p>这样就完成了，是不是很简单，本来就很简单。</p><h3 id=如何显示命令帮助信息>如何显示命令帮助信息？<a href=#如何显示命令帮助信息 class=anchor aria-hidden=true>#</a></h3><p>当然了，只能运行命令还不行，有多少注册的子命令可执行？每个子命令有什么命令行参数呢？我们还需要能够显示命令行的帮助信息。</p><p>这个怎么实现呢？各个子命令需要能够指明命令的使用帮助：</p><ul><li>一个简单的表述，以供我们显示<code>gox</code>包含的各个子命令字的使用信息；</li><li>一个详细的描述，以供我们显示<code>gox help create</code>时的各个选项的帮助信息；</li></ul><p>我们的代码简单做下调整就可以支持到。</p><p>添加Usage、UsageLong方法：</p><pre><code class=language-go>type Command interface{
 
-<h3 id="如何显示命令帮助信息" class="anchor-link"><a href="#%e5%a6%82%e4%bd%95%e6%98%be%e7%a4%ba%e5%91%bd%e4%bb%a4%e5%b8%ae%e5%8a%a9%e4%bf%a1%e6%81%af">如何显示命令帮助信息？</a></h3>
-<p>当然了，只能运行命令还不行，有多少注册的子命令可执行？每个子命令有什么命令行参数呢？我们还需要能够显示命令行的帮助信息。</p>
-<p>这个怎么实现呢？各个子命令需要能够指明命令的使用帮助：</p>
-<ul>
-<li>一个简单的表述，以供我们显示<code>gox</code>包含的各个子命令字的使用信息；</li>
-<li>一个详细的描述，以供我们显示<code>gox help create</code>时的各个选项的帮助信息；</li>
-</ul>
-<p>我们的代码简单做下调整就可以支持到。</p>
-<p>添加Usage、UsageLong方法：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Command</span> <span style="color:#66d9ef">interface</span>{
+    ...
 
-    <span style="color:#f92672">...</span>
-
-    <span style="color:#75715e">// 返回简单的帮助信息
-</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">Usage</span>() <span style="color:#66d9ef">string</span>
+    // 返回简单的帮助信息
+    Usage() string
     
-    <span style="color:#75715e">// 返回详细的帮助信息
-</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">UsageLong</span>() <span style="color:#66d9ef">string</span>
+    // 返回详细的帮助信息
+    UsageLong() string
 }
-</code></pre></div><p>然后为BaseCommand添加两个字段：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">BaseCommand</span> <span style="color:#66d9ef">struct</span>{
-    <span style="color:#f92672">...</span>
-    <span style="color:#a6e22e">Usage</span> <span style="color:#66d9ef">string</span>
-    <span style="color:#a6e22e">UsageLong</span> <span style="color:#66d9ef">string</span>
-}
-
-<span style="color:#f92672">...</span>
-
-<span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">bc</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">BaseCommand</span>) <span style="color:#a6e22e">Usage</span>() <span style="color:#66d9ef">string</span> {
-    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">bc</span>.<span style="color:#a6e22e">Usage</span>
+</code></pre><p>然后为BaseCommand添加两个字段：</p><pre><code class=language-go>type BaseCommand struct{
+    ...
+    Usage string
+    UsageLong string
 }
 
-<span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">bc</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">BaseCommand</span>) <span style="color:#a6e22e">UsageLong</span>() <span style="color:#66d9ef">string</span> {
-    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">bc</span>.<span style="color:#a6e22e">UsageLong</span>
+...
+
+func (bc *BaseCommand) Usage() string {
+    return bc.Usage
 }
-</code></pre></div><p>为createCmd添加帮助信息：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewCreateCmd</span>() <span style="color:#a6e22e">Command</span> {
 
-    <span style="color:#a6e22e">fs</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">NewFlagSet</span>(<span style="color:#e6db74">&#34;create&#34;</span>, <span style="color:#a6e22e">flag</span>.<span style="color:#a6e22e">PanicOnError</span>),
-    <span style="color:#a6e22e">fs</span>.<span style="color:#a6e22e">String</span>(<span style="color:#e6db74">&#34;protofile&#34;</span>, <span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#e6db74">&#34;protofile to process&#34;</span>)
-    <span style="color:#a6e22e">fs</span>.<span style="color:#a6e22e">String</span>(<span style="color:#e6db74">&#34;protodir&#34;</span>, <span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#e6db74">&#34;protofile to search）&#34;</span>
+func (bc *BaseCommand) UsageLong() string {
+    return bc.UsageLong
+}
+</code></pre><p>为createCmd添加帮助信息：</p><pre><code class=language-go>func NewCreateCmd() Command {
 
-    <span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">CreateCmd</span>{
-        <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">BaseCommand</span>{
-            <span style="color:#a6e22e">flagSet</span>: <span style="color:#a6e22e">fs</span>,
-            <span style="color:#a6e22e">Usage</span>: <span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#a6e22e">create</span> <span style="color:#a6e22e">a</span> <span style="color:#a6e22e">project</span><span style="color:#960050;background-color:#1e0010">&#39;</span>,
-            <span style="color:#a6e22e">UsageLong</span>: <span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#a6e22e">create</span> <span style="color:#a6e22e">a</span> <span style="color:#a6e22e">project</span> <span style="color:#a6e22e">quickly</span>.<span style="color:#960050;background-color:#1e0010">\</span><span style="color:#a6e22e">n</span><span style="color:#960050;background-color:#1e0010">\</span><span style="color:#a6e22e">n</span><span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#f92672">+</span> <span style="color:#a6e22e">fs</span>.<span style="color:#a6e22e">FlagUsages</span>(),
+    fs := flag.NewFlagSet(&quot;create&quot;, flag.PanicOnError),
+    fs.String(&quot;protofile&quot;, &quot;&quot;, &quot;protofile to process&quot;)
+    fs.String(&quot;protodir&quot;, &quot;&quot;, &quot;protofile to search）&quot;
+
+    return &amp;CreateCmd{
+        &amp;BaseCommand{
+            flagSet: fs,
+            Usage: 'create a project',
+            UsageLong: 'create a project quickly.\n\n'+ fs.FlagUsages(),
         }
     }
 
 }
-</code></pre></div><p>然后呢，为了能够使用帮助信息，我们需要添加一个help命令字：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">HelpCmd</span> <span style="color:#66d9ef">struct</span>{
-    <span style="color:#a6e22e">cmd</span> <span style="color:#66d9ef">string</span>
+</code></pre><p>然后呢，为了能够使用帮助信息，我们需要添加一个help命令字：</p><pre><code class=language-go>type HelpCmd struct{
+    cmd string
 }
 
-<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewHelpCmd</span>() <span style="color:#a6e22e">Command</span> {
-    <span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">HelpCmd</span>{
-        <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">BaseCommand</span>{},
+func NewHelpCmd() Command {
+    return &amp;HelpCmd{
+        &amp;BaseCommand{},
     }
 }
 
-<span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">HelpCmd</span>) <span style="color:#a6e22e">ParseFlags</span>(<span style="color:#a6e22e">args</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Args</span>) <span style="color:#66d9ef">error</span> {
-    <span style="color:#a6e22e">cmd</span> = <span style="color:#a6e22e">args</span>[<span style="color:#ae81ff">1</span>:]
+func (c *HelpCmd) ParseFlags(args os.Args) error {
+    cmd = args[1:]
 }
 
-<span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">HelpCmd</span>) <span style="color:#a6e22e">Run</span>() <span style="color:#66d9ef">error</span> {
+func (c *HelpCmd) Run() error {
 
-    <span style="color:#75715e">// help specific subcmd
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">cmd</span>) <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span> {
-        <span style="color:#a6e22e">v</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">cmds</span>[<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">cmd</span>]
-        <span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">ok</span> {
-            <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;cmd: %s not registered&#34;</span>, <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">cmd</span>)
+    // help specific subcmd
+    if len(c.cmd) != 0 {
+        v, ok := cmds[c.cmd]
+        if !ok {
+            return fmt.Errorf(&quot;cmd: %s not registered&quot;, c.cmd)
         }
-        println(<span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">UsageLong</span>())
+        println(v.UsageLong())
     }
 
-    <span style="color:#75715e">// help all subcmds
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">v</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">cmds</span> {
-        println(<span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">Usage</span>())
+    // help all subcmds
+    for _, v := range cmds {
+        println(v.Usage())
     }
 }
-</code></pre></div><p>然后呢，我们主程序启动的时候执行<code>gox</code> 或 <code>gox help</code>都执行help命令：</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</code></pre><p>然后呢，我们主程序启动的时候执行<code>gox</code> 或 <code>gox help</code>都执行help命令：</p><pre><code class=language-go>func main() {
 
-    <span style="color:#a6e22e">args</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Args</span>[<span style="color:#ae81ff">1</span>:]
-    <span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">args</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
-        <span style="color:#a6e22e">cmds</span>[<span style="color:#e6db74">&#34;help&#34;</span>].<span style="color:#a6e22e">Run</span>()
+    args := os.Args[1:]
+    if len(args) == 0 {
+        cmds[&quot;help&quot;].Run()
     }
-    <span style="color:#f92672">...</span>
+    ...
 }
-</code></pre></div><p>嗯，就这些了，是不是很简单？本来就很简单。</p>
-
-<h3 id="小结" class="anchor-link"><a href="#%e5%b0%8f%e7%bb%93">小结</a></h3>
-<p>当然，除了这些，我们可能还希望为命令行工具添加shell auto-completion输入补全功能，提示信息的国际化、本地化，命令字扩展时的便利程度等，还是有些问题需要进一步考虑的。</p>
-<p>我这里只是介绍下实现的一个大致思路，具体实践的时候倒并不一定要这么去实现，可以考虑下cobra，通过cobra来实现posix风格的命令行是很方便的。这些内容感兴趣的话可以自己了解下。</p>
-<p>和本文内容接近的，可以参考我的一个工具<a href="https://github.com/hitzhangjie/rm">rm-safe</a>，希望对读者朋友有帮助！</p>
-
-        </div>
-        
-
-        
-        <hr>
-        <div style="float:right;">
-        
-
-
-<div style="display:flex;">
-    <div>分享：</div>
-    <div>
-        <div class="sharethis-inline-share-buttons"></div>
-    </div>
-</div>
-
-
-        </div>
-
-        <br>
-        <br>
-
-    </div>
-
-    
-    
-    <br>
-    <br>
-    <div style="height:auto;align:center;text-align:center;"> 
-        <div>
-            <img src="/common/xiaoqi.png" style="height:238px;margin-top:10px;margin-right:5px;"/>
-            <img src="/common/qrcode.jpg" style="height:238px;margin-top:10px;"/>
-            <img src="/common/yuanbao.png" style="height:238px;margin-top:10px;margin-left:5px;"/>
-        </div>
-        <div>
-            <p>
-                感谢打赏，小七🐶、元宝🐱可以改善伙食咯 😘
-            </p>
-        </div>
-    </div>
-    
-
-    </br>
-    </br>
-    
-
-
-                
-                <div class="container">
-    <hr>
-</div>
-<div class="container has-text-centered top-pad">
-    <a href="#top">
-        <i class="fa fa-arrow-up"></i>
-    </a>
-</div>
-
-<div class="container">
-    <hr>
-</div>
-
-                <div class="section" id="footer">
-    <div class="container has-text-centered">
-    
-        <span class="footer-text">
-            <a href="https://github.com/victoriadrake/hugo-theme-introduction/"><strong>Introduction</strong></a> 主题为 <a href="http://gohugo.io/">Hugo</a> 而设。由开源社群贡献者以 <a href="https://victoria.dev"><i class="fa fa-heart"></i> 和 <i class="fa fa-coffee"></i></a> 创造。
-        </span>
-    
-    </div>
-</div>
-
-                
-            </div>
-        </section>
-        
-        
-
-
-<script src="https://www.hitzhangjie.pro/js/bundle.f1741e9868b2f697e71cf8fccfcc12166540999b3d36f8fb9edd0882ba425d55.js" integrity="sha256-8XQemGiy9pfnHPj8z8wSFmVAmZs9Nvj7nt0IgrpCXVU="></script>
-
-
-
-
-
-<script type="application/javascript">
-var doNotTrack = false;
-if (!doNotTrack) {
-	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
-	ga('create', 'UA-168027530-1', 'auto');
-	
-	ga('send', 'pageview');
-}
-</script>
-<script async src='https://www.google-analytics.com/analytics.js'></script>
-
-
-
-
-
-
-
-
-        
-        
-        
-        
-    </body>
-</html>
+</code></pre><p>嗯，就这些了，是不是很简单？本来就很简单。</p><h3 id=小结>小结<a href=#小结 class=anchor aria-hidden=true>#</a></h3><p>当然，除了这些，我们可能还希望为命令行工具添加shell auto-completion输入补全功能，提示信息的国际化、本地化，命令字扩展时的便利程度等，还是有些问题需要进一步考虑的。</p><p>我这里只是介绍下实现的一个大致思路，具体实践的时候倒并不一定要这么去实现，可以考虑下cobra，通过cobra来实现posix风格的命令行是很方便的。这些内容感兴趣的话可以自己了解下。</p><p>和本文内容接近的，可以参考我的一个工具<a href=https://github.com/hitzhangjie/rm>rm-safe</a>，希望对读者朋友有帮助！</p><p class=edit-page><a href=https://github.com/hitzhangjie/myspace/blob/master/content/blog/2020-06-26-%e5%a6%82%e4%bd%95%e9%ab%98%e6%95%88%e5%bc%80%e5%8f%91%e4%b8%80%e4%b8%aa%e5%91%bd%e4%bb%a4%e8%a1%8c%e5%b7%a5%e5%85%b7.md><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2"><path d="M17 3a2.828 2.828.0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>Edit this page on GitHub</a></p><div class="docs-navigation d-flex justify-content-between"><a href=https://www.hitzhangjie.pro/blog/2020-06-27-%E4%B8%AD%E5%9B%BD%E4%BA%BA%E8%A6%81%E5%AD%A6%E7%9D%80%E5%8B%87%E6%95%A2%E8%AE%B2%E7%9C%9F%E8%AF%9D/><div class="card my-1"><div class="card-body py-2">&larr; 中国人要学着勇敢讲真话</div></div></a><a class=ms-auto href=https://www.hitzhangjie.pro/blog/2020-06-21-%E7%88%B6%E4%BA%B2%E8%8A%82%E4%BA%8E%E6%88%91%E5%B7%B2%E6%98%AF%E7%A7%8D%E5%A5%A2%E4%BE%88/><div class="card my-1"><div class="card-body py-2">父亲节，于我已是种奢侈 &rarr;</div></div></a></div></main></div></div></div><footer class="footer text-muted"><div class=container><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a href=https://www.netlify.com/>Netlify</a>, <a href=https://gohugo.io/>Hugo</a>, and <a href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=https://www.hitzhangjie.pro/js/highlight.min.c32fa100fe3c432c2629ed4542b161ff95a16be545c00c12fcd3ea42ec6c5e283bcd80b1097abf4ba955f8bd0a004d19673ac0bd3ad2394677ce000abbfb4de8.js integrity="sha512-wy+hAP48QywmKe1FQrFh/5Wha+VFwAwS/NPqQuxsXig7zYCxCXq/S6lV+L0KAE0ZZzrAvTrSOUZ3zgAKu/tN6A==" crossorigin=anonymous defer></script><script src=https://www.hitzhangjie.pro/main.min.7ab523108435955765bcb88a0ee704f412ba01646b5478e84f3b9feb24f0ce750a14c3f7bd9a62408fe21e41996d361a9eb29f77e85dfe77b7e17f7623bd3a97.js integrity="sha512-erUjEIQ1lVdlvLiKDucE9BK6AWRrVHjoTzuf6yTwznUKFMP3vZpiQI/iHkGZbTYanrKfd+hd/ne34X92I706lw==" crossorigin=anonymous defer></script><script src=https://www.hitzhangjie.pro/index.min.78ad535ab5cea50897bc4b5dcc7f40a4b23895ae446dbef14c78acde6d0349e47de30a82b99b9680336a83f4dbadbc14d43acb16a36fa10db5d848c1a6a4a355.js integrity="sha512-eK1TWrXOpQiXvEtdzH9ApLI4la5Ebb7xTHis3m0DSeR94wqCuZuWgDNqg/TbrbwU1DrLFqNvoQ212EjBpqSjVQ==" crossorigin=anonymous defer></script></body></html>

@@ -254,4 +254,14 @@ write-back（写回法）中非常有名的[cache一致性算法MESI](https://en
 
 那x86+volatile没有应用内存屏障，又是怎么能实现可见性的呢？
 
-首先上述理解及质疑都是正确的思考路径，我们需要考虑的是x86体系结构里面是否有我们所不知道的东西，这篇论文能解答我们的问题：[x86 tso model](https://paulcavallaro.com/blog/x86-tso-a-programmers-model-for-x86-multiprocessors/)。
+首先上述理解及质疑都是正确的思考路径，我们需要考虑的是x86体系结构里面是否有我们所不知道的东西，这篇论文也许能解答我们的问题：[x86 tso model](https://www.cl.cam.ac.uk/~pes20/weakmemory/cacm.pdf)：
+
+>   Moreover, different processors or hardware threads do not observably share store buffers. This is in sharp contrast to x86-CC, where each processor has a separate view order of its memory accesses and other processors' writes. 
+
+意思大概就是说x86的设计，每个处理器核心不仅有自己的内存访问视图，还有一个其他处理器的write操作的视图，这样它就能感知到谁有真正的最新的数据。所以x86上面只要c程序加了volatile避免寄存器优化就可以保证线程可见性。
+
+## 参考资料
+
+1.   Memory Barrier: A Hardware View for Software Hackers
+2.   x86 TSO: A Programmer's Model for x86 Multiprocessors
+3.   x86-TSO: A Rigorous and Usable Programmer’s Model for x86 Multiprocessors

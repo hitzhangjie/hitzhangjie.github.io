@@ -6,6 +6,13 @@ tags: ["todo", "todolist", "macOS", "iCal", "calendar"]
 toc: true
 ---
 
+<style>
+img {
+    width: 680px;
+    padding-bottom: 1rem;
+}
+</style>
+
 # 高效 “Todo”
 
 Apple设备上有一个非常好的效率工具“**Calendar.app（日历）**”，在日历中可以添加待办事项，并且支持按天、周、月、年视图进行快速浏览，是工作、学习的好帮手。工作中，自己的想法、他人的反馈、问题要点等需要快速记录下来，每次唤醒日历进行手动添加还是有点低效，能不能实现更高效地“Todo”呢？

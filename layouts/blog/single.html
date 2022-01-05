@@ -1,57 +1,70 @@
 {{ define "main" }}
 <div class="row flex-xl-nowrap">
+    <!-- check whether we need to maximize the article body : IF YES -->
+    {{ if ne .Params.fullscreen true }}
+
     <!-- display tags in left sidebar -->
-	<div class="col-lg-5 col-xl-4 docs-sidebar">
-		<nav class="docs-links" aria-label="Main navigation">
-		{{ if .Params.Tags }}
-		<h3> Tag List </h3>
-		<ol>
-			{{ range .Params.Tags }}
-			<li><a href="/tags/{{.}}/">{{.}}</a></li>
-			{{ end }}
-		</ol>
-		{{ end }}
-		</nav>
-	</div>
+    <div class="col-lg-5 col-xl-4 docs-sidebar">
+        <nav class="docs-links" aria-label="Main navigation">
+        {{ if .Params.Tags }}
+        <h3> Tag List </h3>
+        <ol>
+            {{ range .Params.Tags }}
+            <li><a href="/tags/{{.}}/">{{.}}</a></li>
+            {{ end }}
+        </ol>
+        {{ end }}
+        </nav>
+    </div>
+
     <!-- display toc in right sidebar -->
-	{{ if ne .Params.toc false -}}
-	<nav class="docs-toc d-none d-xl-block col-xl-3" aria-label="Secondary navigation">
-		{{ partial "sidebar/docs-toc.html" . }}
-	</nav>
-	{{ end -}}
+    {{ if ne .Params.toc false -}}
+    <nav class="docs-toc d-none d-xl-block col-xl-3" aria-label="Secondary navigation">
+        {{ partial "sidebar/docs-toc.html" . }}
+    </nav>
+    {{ end -}}
 
-	{{ if .Params.toc -}}
-	<main class="docs-content col-lg-11 col-xl-9">
-	{{ else -}}
-	<main class="docs-content col-lg-11 col-xl-9 mx-xl-auto">
-	{{ end -}}
+    <!-- display main article body -->
+    {{ if ne .Params.toc false -}}
+    <main class="docs-content col-lg-11 col-xl-9">
+    {{ else -}}
+    <main class="docs-content col-lg-11 col-xl-9 mx-xl-auto">
+    {{ end -}}
 
-	{{ if .Site.Params.options.breadCrumb -}}
-		<!-- https://discourse.gohugo.io/t/breadcrumb-navigation-for-highly-nested-content/27359/6 -->
-		<nav aria-label="breadcrumb">
-			<ol class="breadcrumb">
-				{{ partial "main/breadcrumb" . -}}
-				<li class="breadcrumb-item active" aria-current="page">{{ .Title }}</li>
-			</ol>
-		</nav>
-	{{ end }}
+    {{ if .Site.Params.options.breadCrumb -}}
+        <!-- https://discourse.gohugo.io/t/breadcrumb-navigation-for-highly-nested-content/27359/6 -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                {{ partial "main/breadcrumb" . -}}
+                <li class="breadcrumb-item active" aria-current="page">{{ .Title }}</li>
+            </ol>
+        </nav>
+    {{ end }}
+
+    <!-- check whether we need to maximize the article body : IF NO -->
+    {{ else }}
+
+    <main style="docs-content">
+
+    <!-- check whether we need to maximize the article body : IF END -->
+    {{ end }}
 
     <!-- display the title and content -->
-	<h1>{{ .Title }}</h1>
+    <h1>{{ .Title }}</h1>
 
     {{ partial "main/blog-meta.html" . -}}
     {{ partial "common/share.html" }}
     <hr>
 
-	<p class="lead">{{ .Params.lead | safeHTML }}</p>
-	{{ partial "main/headline-hash.html" (replace .Content "src=\"assets/" "src=\"/blog/assets/") }}
+    <p class="lead">{{ .Params.lead | safeHTML }}</p>
+    {{ partial "main/headline-hash.html" (replace .Content "src=\"assets/" "src=\"/blog/assets/") }}
 
-	{{ if .Site.Params.editPage -}}
-		{{ partial "main/edit-page.html" . }}
-	{{ end -}}
+    {{ if .Site.Params.editPage -}}
+        {{ partial "main/edit-page.html" . }}
+    {{ end -}}
 
-	<!-- display the navigation at bottom -->
-	{{ partial "main/docs-navigation.html" . }}
-	</main>
+    <!-- display the navigation at bottom -->
+    {{ partial "main/docs-navigation.html" . }}
+    </main>
 </div>
 {{ end }}

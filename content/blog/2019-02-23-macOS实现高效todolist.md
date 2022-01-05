@@ -1,7 +1,7 @@
 ---
 layout: post
 title: macOS实现高效todolist
-date: 2022-01-06 00:13:00 +0800
+date: 2019-02-23 00:13:00 +0800
 tags: ["todo", "todolist", "macOS", "iCal", "calendar"]
 toc: true
 ---

@@ -7,6 +7,13 @@ tags: ["bazelbuild", "monorepo", "multirepo", "hermetic"]
 toc: true
 ---
 
+<style>
+img {
+    width: 680px;
+    padding-bottom: 1rem;
+}
+</style>
+
 # **1 前言**
 
 关于monorepo、multirepo的争论不绝于耳，至于采用哪种方式进行管理，要因地制宜地选择最合适的方案，要看到其优势，也要看到工具建设和迁移的成本。这里重点谈下各自的优势及什么时候适用Bazel构建。

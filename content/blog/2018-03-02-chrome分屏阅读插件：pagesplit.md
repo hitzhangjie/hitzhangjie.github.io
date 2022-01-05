@@ -7,6 +7,13 @@ tags: ["chrome", "extension", "pagesplit", "vsplit", "hsplit"]
 toc: true
 ---
 
+<style>
+img {
+    width: 680px;
+    padding-bottom: 1rem;
+}
+</style>
+
 # 前言
 
 这几天在钻研golang，经常在网上看些源码分析的文章，既然是源码分析就少不了code和分析的各种穿插描述，文章篇幅一长或者code block块比较长，经常需要滚动鼠标上下翻页，这种阅读体验好差劲。心想要是能够将web页面进行类似于vim的vsplit或者lsplit就好了。于是就有了这个chrome扩展。

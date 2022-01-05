@@ -33,23 +33,23 @@ alfred workflow和alfred本身的交互是通过管道方式进行连接的：
 # 如何使用？
 
 1. 运行 `datex` 唤起workflow  
-<img alt="运行datex换起workflow" src="/blog/assets/alfred/1.jpg"/>
+<img alt="运行datex换起workflow" src="assets/alfred/1.jpg"/>
 
 
 2. 常用转换操作: 获取当前时间对应的Unix时间戳，以及格式化字符串  
 `datex now`，将当前时间转换为时间戳以及格式化后的字符串(多种日期格式)。  
 可以用上下键移动进行选择，当按下回车键时，会将对应的结果拷贝到剪贴板，方便粘贴使用。
-<img alt="获取当前时间" src="/blog/assets/alfred/2.jpg"/>
+<img alt="获取当前时间" src="assets/alfred/2.jpg"/>
 
 3. 常用转换操作: 将时间戳转换为对应的格式化字符串  
 以时间戳1596137272为例，`datex 1596137272`，此时会将时间戳转换为格式化后的字符串。  
 选择、复制数据操作类似。
-<img alt="转换时间戳" src="/blog/assets/alfred/3.jpg"/>
+<img alt="转换时间戳" src="assets/alfred/3.jpg"/>
 
 4. 常用转换操作: 将格式化字符串转换为时间戳，或其他格式  
 以字符串`2020-07-30`为例，`datex 2020-07-30`，此时会先将其与候选的格式化字符串进行匹配。  
 并转换成一个有效的时间戳。 然后再根据此时间戳，转换为其他格式对应的字符串。选择、复制数据操作类似。
-<img alt="转换字符串" src="/blog/assets/alfred/4.jpg"/>
+<img alt="转换字符串" src="assets/alfred/4.jpg"/>
 
 这大致就是该workflow的使用方式。
 
@@ -66,17 +66,17 @@ alfred workflow和alfred本身的交互是通过管道方式进行连接的：
 
 先画个流程图，简单理下思路，思路理清楚了，写代码就快了。
 
-<img alt="流程图" src="/blog/assets/alfred/0.png"/>
+<img alt="流程图" src="assets/alfred/0.png"/>
 
 ## alfred.workflow编排
 
 好，理清楚思路之后，我们开始尝试对worklow进行编排，如下所示：
 
-<img alt="workflow编排" src="/blog/assets/alfred/5.jpg"/>
+<img alt="workflow编排" src="assets/alfred/5.jpg"/>
 
 workflow中包含2个节点：
 - 节点1，是一个script filter，我们可以配置一个关键字datex来激活它，当然还可以继续输入参数。激活该script filter之后，它将调用我们编写的时间转换程序alfred-datetime-workflow，程序返回的结果将在alfred界面上进行展示，展示的样式是列表。如我们输入datex now，将显示现在的时间戳以及其他格式的datetime字符串。      
-<img alt="script filter配置" src="/blog/assets/alfred/8.jpg"/>
+<img alt="script filter配置" src="assets/alfred/8.jpg"/>
 
 - 节点2，是Copy to Clipboard，它干什么呢？节点1中显示了列表之后，用户选择一个列表项+回车之后，选中的列表项对应的参数值将被传递给该节点作为参数，Copy to Clipboard就是将参数拷贝到剪贴板；
 

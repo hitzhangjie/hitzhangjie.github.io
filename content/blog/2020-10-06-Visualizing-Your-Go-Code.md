@@ -115,7 +115,7 @@ ps: 推荐前者，实现了类似chrome inspect element时选中区域查看对
 
 比如现在我们选中了import相关的部分，对应右边展示出了import声明对应的AST中的部分子树，对应的就是一个GenDecl结构。函数声明也有对应的FuncDecl，类型也有对应的...
 
-<img alt="goast example" src="/blog/assets/goast/goast.png" width="680px"/>
+<img alt="goast example" src="assets/goast/goast.png" width="680px"/>
 
 ps: AST展示形式竟然不是一棵树？它确实是一棵树，只不过，AST是非常庞大的，如果通过树的形式来展示，篇幅太大，反而不方便查看。
 

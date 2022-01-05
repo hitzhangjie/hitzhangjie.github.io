@@ -108,10 +108,10 @@ CC++ volatile语义“不可优化型”、“顺序性”、“易变性”，�
     // 应为 volatile unsigned int *p = ....
     unsigned int *p = GetMagicAddress();
     unsigned int a, b;
-
+    
     a = *p;
     b = *p;
-
+    
     *p = a;
     *p = b;
     ```
@@ -242,4 +242,16 @@ write-back（写回法）中非常有名的[cache一致性算法MESI](https://en
 
 >本文撰写于 2019-01-07, 现在拿出来分享给感兴趣的技术同行，一起学习交流。
 
+关于对volatile的理解，会引出对内存模型的理解，即便看完一些针对内存模型的描述之后，还是会有一些开发者提出更深入细微的问题，比如lock, lock cmpxchg如何实现的，mfence、lfence、sfence如何实现的。陷入细节是可怕的，它会让我们感觉无法适可而止。
 
+补充一篇文章，我觉得挺不错的，Memory Barrier: A Hardware View for Software Hackers。
+
+它介绍了现在处理器的cache结构设计（包括指令cache、数据cache、cacheline、store buffer、多级cache）、cache一致性协议MESI，以及所谓的内存屏障与cache设计中cache一致性协议、store buffer、invalidate queue之间的关系。理解下这篇文章，大致搞明白硬件的工作过程，非常有助于加深这部分的理解。
+
+>   本文最后更新于 2020-12-15, 补充了上述内存屏障相关的描述及参考资料。
+
+这里还少了一层，在cpu执行更新操作时，为了避免cpu stall提高指令吞吐，写更新其实是落store buffer中的，cache中并没有立即体现出更新，cache一致性协议也还没工作……所以这个时候还需要内存屏障来讲storebuffer中的更新刷到cache，读的核上还需要通过内存屏障处理invalidate queue才能观察到新值。
+
+那x86+volatile没有应用内存屏障，又是怎么能实现可见性的呢？
+
+首先上述理解及质疑都是正确的思考路径，我们需要考虑的是x86体系结构里面是否有我们所不知道的东西，这篇论文能解答我们的问题：[x86 tso model](https://paulcavallaro.com/blog/x86-tso-a-programmers-model-for-x86-multiprocessors/)。

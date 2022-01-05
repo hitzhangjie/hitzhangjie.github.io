@@ -44,7 +44,7 @@
     <hr>
 
 	<p class="lead">{{ .Params.lead | safeHTML }}</p>
-	{{ partial "main/headline-hash.html" .Content }}
+	{{ partial "main/headline-hash.html" (replace .Content "src=\"assets/" "src=\"/blog/assets/") }}
 
 	{{ if .Site.Params.editPage -}}
 		{{ partial "main/edit-page.html" . }}

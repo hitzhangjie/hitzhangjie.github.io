@@ -8,9 +8,10 @@ enableRobotsTXT = true
 languageCode = "en-US"
 paginate = 16
 rssLimit = 10
+publishDir = "hitzhangjie.github.io"
 
 # FIXME
-ignoreErrors = ["image-not-found"]
+#ignoreErrors = ["image-not-found"]
 
 # Multilingual
 #defaultContentLanguage = "en"

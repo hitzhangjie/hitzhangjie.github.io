@@ -1,2 +1,1 @@
-baseurl = "https://www.hitzhangjie.pro/"
-canonifyURLs = true
+canonifyURLs = false

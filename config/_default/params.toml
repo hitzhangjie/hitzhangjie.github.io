@@ -6,17 +6,38 @@ titleSeparator = "-"
 titleAddition = "Modern Documentation Theme"
 description = "MySpace is a hitzhangjie's personal space, for blogs, books, journey, thinkings."
 
-## Open Graph + Twitter Cards
+## Documentation
+# docsVersion = "0.3"
+
+## Open Graph 
 images = ["doks.png"]
-twitterSite = "hitzhangjie"
-twitterCreator = "hitzhangjie"
+ogLocale = "en_US"
+#domainTLD = "doks.netlify.app"
+#titleHome = "Doks Theme"
+
+## Twitter Cards
+twitterSite = "@hitzhangjie"
+twitterCreator = "@hitzhangjie"
+
+## Facebook Cards
 facebookAuthor = "hitzhangjie"
 facebookPublisher = "hitzhangjie"
-ogLocale = "en_US"
 
 ## JSON-LD
-schemaType = "Organization"
+schemaType = "Person"
+#schemaType = "Organization"
+#schemaName = "Doks"
+#schemaAuthor = "Henk Verlinde"
+#schemaAuthorTwitter = "https://twitter.com/henkverlinde"
+#schemaAuthorLinkedIn = "https://www.linkedin.com/in/henkverlinde/"
+#schemaAuthorGitHub = "https://github.com/h-enk"
+#schemaLocale = "en-US"
 schemaLogo = "logo-doks.png"
+#schemaLogoWidth = 512
+#schemaLogoHeight = 512
+#schemaImage = "doks.png"
+#schemaImageWidth = 1280
+#schemaImageHeight = 640
 schemaTwitter = "https://twitter.com/hitzhangjie"
 schemaLinkedIn = "https://www.linkedin.com/in/hitzhangjie/"
 schemaGitHub = "https://github.com/hitzhangjie"
@@ -34,17 +55,23 @@ bgColor = "#fff"
 landscapePhotoWidths = [900, 800, 700, 600, 500]
 portraitPhotoWidths = [800, 700, 600, 500]
 lqipWidth = "20x"
+smallLimit = "300"
 
 # Footer
-footer = "Powered by <a href=\"https://www.netlify.com/\">Netlify</a>, <a href=\"https://gohugo.io/\">Hugo</a>, and <a href=\"https://getdoks.org/\">Doks</a>"
+footer = "Powered by <a class=\"text-muted\" href=\"https://www.netlify.com/\">Netlify</a>, <a class=\"text-muted\" href=\"https://gohugo.io/\">Hugo</a>, and <a class=\"text-muted\" href=\"https://getdoks.org/\">Doks</a>"
 
 # Alert
 alert = false
-alertText = "Like Doks? <a class=\"alert-link\" href=\"https://github.com/hitzhangjie/myspace/stargazers\">Star on GitHub</a>. Thanks!</a>"
+alertDismissable = true
+alertText = "Introducing the Doks child theme, several DX + UX updates, and more! <a class=\"alert-link stretched-link\" href=\"https://getdoks.org/blog/doks-v0.2/\">Check out Doks v0.2</a>"
 
 # Edit Page
+repoHost = "GitHub"
 docsRepo = "https://github.com/hitzhangjie/myspace"
+docsRepoBranch = "master"
+docsRepoSubPath = ""
 editPage = true
+lastMod = false
 
 [options]
   lazySizes = true
@@ -52,11 +79,20 @@ editPage = true
   instantPage = true
   flexSearch = true
   darkMode = true
-  bootStrapJs = false
+  bootStrapJs = true
   breadCrumb = false
   highLight = true
   kaTex = false
+  multilingualMode = false
+  docsVersioning = false
+  fullWidth = false
+  navbarSticky = true
 
 [blog]
   # render blog list in style: card-list/simple-list
   style = "simple-list" 
+
+[menu]
+  [menu.section]
+    auto = true
+    collapsibleSidebar = true

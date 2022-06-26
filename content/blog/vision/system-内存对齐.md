@@ -2,7 +2,7 @@
 title: "为什么需要内存对齐，以及如何控制对齐"
 date: 2022-06-26 23:57:00.299 +0800
 categories: ["技术视野"]
-tags: ["内存对齐","alignment","padding","packed","__attribute__"]
+tags: ["内存对齐","alignment","padding","packed"]
 toc: true
 hide: true
 ---

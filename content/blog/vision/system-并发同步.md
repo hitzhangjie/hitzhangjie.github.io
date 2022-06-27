@@ -41,5 +41,9 @@ ok，那么假设我们在当前进程全局变量中初始化了一个mutex变�
 
 
 
-reference: [Synchronization Across Process Boundaries](https://docs.oracle.com/cd/E19455-01/806-5257/6je9h032v/index.html)
+reference:
+
+1: 多进程并发同步控制, [Synchronization Across Process Boundaries](https://docs.oracle.com/cd/E19455-01/806-5257/6je9h032v/index.html)
+
+2: 支持优先级继承的锁, [Priority Inheritance Mutex](https://sourcegraph.com/github.com/torvalds/linux/-/blob/Documentation/locking/rt-mutex.rst)
 

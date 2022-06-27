@@ -1,5 +1,6 @@
 ---
 title: "为什么需要内存对齐，以及如何控制对齐"
+description: "介绍下内存对齐访问（aligned access）的重要性，以及不对齐访问的情况下不同处理器的不同的行为，以及如何规避这些问题，比如编译期层面可能有哪些措施。也描述了下如何通过GCC扩展来控制aligned boundary或者packed。"
 date: 2022-06-26 23:57:00.299 +0800
 categories: ["技术视野"]
 tags: ["内存对齐","alignment","padding","packed"]

@@ -33,6 +33,7 @@ TODO:
 #### 1.硬件实现原理
 
 下图是Intel 82575硬件逻辑图，有四个硬件队列。当收到报文时，通过hash包头的SIP、Sport、DIP、Dport四元组，将一条流总是收到相同的队列。同时触发与该队列绑定的中断。 
+
 ![](assets/system-irq-balancing/nic-with-multiqueues.png)
 
 #### 2.单队列驱动原理

@@ -57,7 +57,9 @@
     <hr>
 
     <p class="lead">{{ .Params.lead | safeHTML }}</p>
-    {{ partial "main/headline-hash.html" (replace .Content "src=\"assets/" "src=\"/blog/assets/") }}
+    {{ $prefix := strings.TrimPrefix "blog/" $.File.Dir }}
+    {{ $prefix = print "src=\"/blog/" $prefix "assets" }}
+    {{ partial "main/headline-hash.html" (replace .Content "src=\"assets" $prefix) }}
 
     {{ if .Site.Params.editPage -}}
         {{ partial "main/edit-page.html" . }}

@@ -2,7 +2,7 @@
 title: 中断请求亲和性
 description: "计算机硬件设备，有些通过中断的方式通知CPU有数据到达进而可以对其进行处理。那么这里设备的中断请求是如何发送到各个处理器的呢，是发送到所有的处理器，还是选择一个发送，有没有可能指定响应中断的CPU列表，即本文提到的中断请求的亲和性问题。Linux内核文档中irq-affinity.rst对此进行了描述，本文参照着文档对irq affinity进行设置、测试，加深理解。"
 date: 2022-06-29 20:48:50 +0800
-categories: ["技术视野"]
+categories: ["linux内核"]
 tags: ["irq", "affinity", "interrupt"]
 toc: true
 hide: true

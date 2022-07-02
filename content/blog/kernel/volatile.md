@@ -2,7 +2,7 @@
 title: "对volatile的认识"
 description: "介绍了为什么c/c++需要volatile，关于volatile不能保证线程可见性的说明，以及为什么在x86上似乎可以做到线程可见性的释疑，最后简单提了下mesif来说明线程可见性是要依附于cache一致性协议的。"
 date: 2022-06-26 23:57:00.299 +0800
-categories: ["技术视野"]
+categories: ["linux内核"]
 tags: ["volatile","mesi","mesif","cache consistency","thread visibility"]
 toc: true
 hide: true

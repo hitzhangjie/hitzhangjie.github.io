@@ -4,7 +4,7 @@ title: 中断请求负载均衡
 description: "在多CPU系统上，如何对设备的中断请求进行负载均衡，以提升中断处理效率。本文以多队列、单队列网卡为例介绍了中断的负载均衡方法。"
 date: 2022-06-30 07:45:47 +0800
 tags: ["irq","balancing","nic"]
-categories: ["技术视野"]
+categories: ["linux内核"]
 toc: true
 hide: true
 ---
@@ -34,13 +34,13 @@ TODO:
 
 下图是Intel 82575硬件逻辑图，有四个硬件队列。当收到报文时，通过hash包头的SIP、Sport、DIP、Dport四元组，将一条流总是收到相同的队列。同时触发与该队列绑定的中断。 
 
-![](assets/system-irq-balancing/nic-with-multiqueues.png)
+![](assets/irq-balancing/nic-with-multiqueues.png)
 
 #### 2.单队列驱动原理
 
 kernel从2.6.21版本之前不支持多队列特性，一个网卡只能申请一个中断号，因此同一个时刻只有一个核在处理网卡收到的包。如图2.1，协议栈通过NAPI轮询收取各个硬件queue中的报文到图2.2的net_device数据结构中，通过QDisc队列将报文发送到网卡。
 
-![img](assets/system-irq-balancing/nic-irq-balance.png)
+![img](assets/irq-balancing/nic-irq-balance.png)
 
 #### 2.多队列驱动原理
 

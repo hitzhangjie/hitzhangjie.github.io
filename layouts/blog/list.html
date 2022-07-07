@@ -43,7 +43,8 @@
 
         <!-- display blog list -->
 		<table border="0">
-		{{ range (.Paginate (where .Data.Pages "Params.hide" "!=" "true" )).Pages }}
+        {{ $paginator := .Paginate (.Data.Pages) -}}
+        {{ range $paginator.Pages -}}
             {{ if not .Params.hide }}
 			<tr>
 				<td width="10%">

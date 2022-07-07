@@ -4,7 +4,9 @@ title: kref引用计数与kobject对象管理
 description: "看完kref/kobject这几篇文档，更深地明白了一个道理，“能工模型，巧匠窃意”、“无招胜有招”，编程思想和编程工具是相辅相成的，前者帮助完善后者，后者便于更简单地推广前者。纵使是c语言这样的过程式编程语言，在牛人手里也可以提炼面向对象的精髓来建构更复杂的软件世界。"
 date: 2022-07-07 22:20:07 +0800
 tags: ["kref","kobject","refcount","destructor","smartpointer"]
+categories: ["linux内核"]
 toc: true
+hide: false
 ---
 
 ## kref

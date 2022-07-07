@@ -5,7 +5,7 @@ date: 2022-06-29 20:48:50 +0800
 categories: ["linux内核"]
 tags: ["irq", "affinity", "interrupt"]
 toc: true
-hide: true
+hide: false
 ---
 
 SMP IRQ affinity，指的是对称多处理器中的中断请求绑定。

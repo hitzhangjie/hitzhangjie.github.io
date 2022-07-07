@@ -6,7 +6,7 @@ date: 2022-06-30 07:45:47 +0800
 tags: ["irq","balancing","nic"]
 categories: ["linux内核"]
 toc: true
-hide: true
+hide: false
 ---
 
 如果网卡NIC支持多队列，可以直接设置NIC多个队列的irq affinity到不同的CPU来实现负载均衡；

@@ -9,4 +9,4 @@ npm install
 npm run start
 ```
 
-run `./deploy.sh` to build and publish.
+When pushing, the .github/workflows/master.yml will build and deploy the pages.

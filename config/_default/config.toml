@@ -8,7 +8,7 @@ enableRobotsTXT = true
 languageCode = "en-US"
 paginate = 16
 rssLimit = 10
-publishDir = "hitzhangjie.github.io"
+publishDir = "public"
 
 # FIXME
 #ignoreErrors = ["image-not-found"]

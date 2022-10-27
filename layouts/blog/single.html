@@ -10,7 +10,6 @@
         <h3> Tag List </h3>
         <ol>
             {{ range .Params.Tags }}
-            replace (lower $tag) " " "-"
             <li><a href="/tags/{{replace (lower .) " " "-"}}/">{{.}}</a></li>
             {{ end }}
         </ol>

@@ -1,4 +1,18 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blog on</title><link>/blog/</link><description>Recent content in Blog on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:49:55 +0000</lastBuildDate><atom:link href="/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>裁员带给我的思考</title><link>/blog/2022-10-01-%E8%A3%81%E5%91%98%E5%B8%A6%E7%BB%99%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/</link><pubDate>Sat, 01 Oct 2022 22:03:43 +0800</pubDate><guid>/blog/2022-10-01-%E8%A3%81%E5%91%98%E5%B8%A6%E7%BB%99%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/</guid><description>本文简介 # 今天是国庆节，没抢到合适的高铁票去武汉，今天索性在深圳休息一天再走。回头看今年各互联网大厂大范围裁员的事情，看法也更全面了许多，就不讨论那些企业家有没有责任感的事情，就从家庭、个体工作生活角度谈下自己的一点看法。
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blog on</title><link>/blog/</link><description>Recent content in Blog on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:49:55 +0000</lastBuildDate><atom:link href="/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>go垃圾回收调优</title><link>/blog/2022-11-10-go%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E8%B0%83%E4%BC%98/</link><pubDate>Thu, 10 Nov 2022 10:54:26 +0800</pubDate><guid>/blog/2022-11-10-go%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E8%B0%83%E4%BC%98/</guid><description>相关背景 # 在go1.19之前，go程序内存调优的方式主要是通过环境变量GOGC（或者debug.SetGCPercent(?)）来控制，
+它的效果是影响go runtime计算nextGC heapGoal的大小：
+较早的版本计算方式为：heapGoal = heapMarked + (heapMarked) * GOGC / 100， 后续go迭代时发现非堆内存也是有影响的，于是完善了下 heapGoal = heapMarked + (heapMarked + GCROOTs) * GOGC/100，这里的GCROOTS=(gstacks+globals) GC pacer的目的就是为了根据上述公式计算下次GC的heapGoal，然后在必要时（比如malloc时）决定是否要GC。
+默认初始heapGoal大小为4MB，如果靠GOGC来控制的话，会比较频繁触发GC，对绝大多数server程序而言频繁GC占比较多CPU，程序整体吞吐、响应延迟会受一定影响。
+所以业界一般会通过两种方式来调优：
+ballast，利用一块不用的大内存（比如1GB），来推高下次GC的heapGoal，通过这种方式来降低GC频率 GC tuner，动态设置GOGC，就是结合一些机器负载信息来动态设置，这个是uber搞的但是没开源，具体怎么调的未知。 项目以前的方案 # 项目以前使用的是go1.16.5，这个版本中也只有GOGC一个控制GC的选项，使用的是ballast的方案：
+在服务初始化阶段去初始化一个大内存而推高下次GC时的heapGoal 不同程序可能对内存需求不同，配置文件中允许自定义ballast大小，默认为1GB 包括业界在内都是介绍了ballast如何使用，有的是全局变量声明，有的是在main函数中声明…好像只看到了一派祥和，但是我们使用时却遇到了问题。
+问题1：ballast占物理内存 # 在测试环境（很多套测试环境）都有比较大概率发现服务在几乎空闲时，物理内存占用竟然高达1.1g…这很不符合常理。
+通过pprof跟踪内存分配，发现内存分配比较大的路径就是这个压舱石（pprof mem采样是看的虚拟内存）。
+然后top、pmap等跟踪可疑进程发现其确实存在1GB左右的anon区域，且该区域为dirty**（其实gdb把内存dump一看全是0，就很容易联想到类似对象分配后memset的操作）**。
+根据了解的go GC、内存分配器相关的知识，了解到go向操作系统申请内存时通过mmap的方式，释放内存是通过madvise+MADV_DONTNEED/MADV_FREE的方式。
+go1.12的时候改成了FREE默认代替DONTNEED，这两个选项是有区别的，详细的可以看下man手册（man 2 madvise），FREE的效率更好一点，但是也有一些不好的副作用。
+go1.16之后linux下又恢复成了DONTNEED，因为FREE不会立即让进程的RSS降下来，会误导很多监控、开发运维人员
+内存分配器为了提高分配效率、GC效率会进行一定的组织，这些概念大家应该有听说过，mheap、spanClass、mcentral、mspan、markbits、allocbits，还有p.mcache。
+smallSize&amp;lt;=32K的分配，走mcache（tinySize的更特殊一点，略） largeSize&amp;gt;32K对分配，走mheap 这些对象不管是从mcache来的还是从mheap直接分配的，最终都是建立在从操作系统申请来的page里的，而这些page是由page allocator申请的。即使是很大的对象，最终也是以存在span描述的区域里的。</description></item><item><title>裁员带给我的思考</title><link>/blog/2022-10-01-%E8%A3%81%E5%91%98%E5%B8%A6%E7%BB%99%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/</link><pubDate>Sat, 01 Oct 2022 22:03:43 +0800</pubDate><guid>/blog/2022-10-01-%E8%A3%81%E5%91%98%E5%B8%A6%E7%BB%99%E6%88%91%E7%9A%84%E6%80%9D%E8%80%83/</guid><description>本文简介 # 今天是国庆节，没抢到合适的高铁票去武汉，今天索性在深圳休息一天再走。回头看今年各互联网大厂大范围裁员的事情，看法也更全面了许多，就不讨论那些企业家有没有责任感的事情，就从家庭、个体工作生活角度谈下自己的一点看法。
 裁员事件 # 听到一点风声 # 从2019.7之后，我一直在从事PCG微服务框架的支持工作，我们会每两周开一次PMC迭代例会同步下规划及进展，有一次会议上，我们评估各语言版本微服务框架今年可能新增的实例数的时候，大家按照过去21年的新增趋势评估，结果有个领导说我们太乐观了，说今年PCG有很多业务要面临下线。
 开始看到瞄头 # 这是我当时听到的最早的“小道消息”了，但是没有当回事。后面过了一阵子，突然听说各大厂开始裁员了，但是各种消息、公关消息夹杂在一起，事情没发生在自己身边，也没觉得有多大影响。后面就听说同“幸福线（信服线）”隔壁几个中心开始裁员了，后面还是开例会的时候，有个子项目trpc-dart负责人说他们那边人员变动比较大，暂时没人力支持需求开发了。我当时开始想这么严重么，后面陆续开始关注这方面消息，涉及到的人是比较多。
 我也难逃此劫 # 再后面，就直接裁到我们这边了，先是组里面的工作年限短的收到毕业通知，裁完一波后，据说裁了很多人没降什么成本，于是开始裁高T、裁组长…后面就到我头上了。
@@ -80,15 +94,4 @@ RPS（Receive Packet Steering）是把一个rx队列的软中断分发到多个C
 网卡向cpu发中断请求44，下面我们对这个中断请求与cpu的绑定关系进行设置，并通过 ping命令进行测试，网卡会将接收到的icmp请求，以中断44的形式发送到绑定的cpu，通 过查看cpu接收到的中断请求数量，我们可以判断，这个44这个中断请求与cpu的绑定关系 。
 [root@moon 44]# cd /proc/irq/44 [root@moon 44]# cat smp_affinity ffffffff 首先，查看到44这个中断请求的默认绑定掩码为0xffffffff，说明，所有的cpu都可以接 收该中断请求。
 [root@moon 44]# echo 0f &amp;gt; smp_affinity [root@moon 44]# cat smp_affinity 0000000f 然后我们设置smp_affinity的值为0x0000000f，即使得编号为0-3的cpu允许接收该44这个 中断请求，其他的cpu都不会接收44这个中断请求。
-[root@moon 44]# ping -f h PING hell (195.4.7.3): 56 data bytes ... --- hell ping statistics --- 6029 packets transmitted, 6027 packets received, 0% packet loss round-trip min/avg/max = 0.</description></item><item><title>mac/win下linux c/c++开发</title><link>/blog/2022-06-28-linux-cc-%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E8%AE%BE%E7%BD%AE/</link><pubDate>Tue, 28 Jun 2022 23:08:51 +0800</pubDate><guid>/blog/2022-06-28-linux-cc-%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E8%AE%BE%E7%BD%AE/</guid><description>问题背景 # 我们很多人主力操作系统是macOS或者Windows，用Linux作为主力操作系统的少吧，不过之前确实有连续7年多是用Fedora作为主力操作系统 :)
-现在很多人开发人员使用MacBook Pro作为自己的开发机，大厂标配，我们很多后台呢，开发的程序一般最后还是要跑在Linux系统上的，尤其是c/c++开发涉及到这里的跨平台开发的问题，很多开发人员用着非常原始的方式在开发，开发体验比较差。
-借这个契机，我调研了下现在比较好的一些开发方式，总结分享下。
-先定一个要实现的小目标：
-能基于IDE进行开发，比如VSCode; 另外，编译构建必须能够 vscode: add dockerfile to workspace # 在vscode中cmd+p，输入add dockerfile to workspace并执行，此时会选择基础镜像，如面向c++开发的基础镜像，此时会生成默认的dockerfile。 然后在dockerfile选中后点击右键，选择build image，此时就完成镜像构建了，该默认dockerfile默认是一个编译镜像，里面包含了编译构建产物。 直接运行上述镜像默认就是运行程序，运行的方式可以在docker explorer里面找到镜像，右键菜单中选择Run，或者命令行执行。 这个镜像只是用来编译构建、测试运行的，还不能满足我们开发阶段的需求，因为开发阶段需要考虑头文件、库的搜索问题。
-解决思路：
-至少要构建一个支持开发的镜像，如c/c++镜像； 启动这个镜像，并将当前工程以volume的形式挂在到容器中，或者在容器中clone下来这个项目。提交代码要注意随时提交； 开发通过vscode remote连接到vscode server进行开发，其实是本地vscode通过ssh连接传输vscode server软件包到容器中并安装启动； 如果开发镜像支持类似WebIDE的方式进行开发，也可以代替3这种方式，只是一些本地vscode的快捷配置等可能不是很好同步。 docker desktop: New Dev environment # Docker Desktop的这种实现方式，就是上面提到的2\3这几步的组合，基本满足我们希望实现的目标了（支持开发容器Mount local directory或者容器中Clone git repository）。
-这种方式也有不足，就是假设后续有人要接手这个项目，或者有人和你协作，你怎么办呢？ 我们可以直接提交一个镜像push到registry，他只要能拉代码，又能拉镜像就基本能还原之前的开发环境。
-但是我为什么非要push一个镜像上去呢（包括自定义的基础镜像、开发阶段的分享镜像）？ 如果不push镜像而docker destop默认的开发镜像调整了或者我希望定制一个统一的怎么办？
-Docker Desktop创建新的开发镜像的时候有一种方式，允许指定一个基础镜像，但是这个基础镜像要push到远程registry。代码会被clone到这个 容器内部，我们就通过vscode remote进行开发即可。
-尽管vscode鼓励非Linux用户尽量通过这种方式，因为fs操作更快，但是还是有点不方便，因为这数据卷相当于额外浪费一份存储，考虑到之前已经克隆过的情况下。 有没有办法既能自定义基础镜像，又能挂载本地磁盘目录为数据卷的方式来解决呢？可以，请看方式3。
-vscode: Remote-Containers # vscode中Command Pallete中Remote-Containers: Add Development Container Configuration Files，执行这个我们可以为工程指定一个配置文件.</description></item></channel></rss>
+[root@moon 44]# ping -f h PING hell (195.4.7.3): 56 data bytes ... --- hell ping statistics --- 6029 packets transmitted, 6027 packets received, 0% packet loss round-trip min/avg/max = 0.</description></item></channel></rss>

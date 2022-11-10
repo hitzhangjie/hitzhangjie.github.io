@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>GOMEMLIMIT on</title><link>/tags/gomemlimit/</link><description>Recent content in GOMEMLIMIT on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 10 Nov 2022 10:54:26 +0800</lastBuildDate><atom:link href="/tags/gomemlimit/index.xml" rel="self" type="application/rss+xml"/><item><title>go垃圾回收调优</title><link>/blog/2022-11-10-go%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E8%B0%83%E4%BC%98/</link><pubDate>Thu, 10 Nov 2022 10:54:26 +0800</pubDate><guid>/blog/2022-11-10-go%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E8%B0%83%E4%BC%98/</guid><description>相关背景 # 在go1.19之前，go程序内存调优的方式主要是通过环境变量GOGC（或者debug.SetGCPercent(?)）来控制，
+它的效果是影响go runtime计算nextGC heapGoal的大小：
+较早的版本计算方式为：heapGoal = heapMarked + (heapMarked) * GOGC / 100， 后续go迭代时发现非堆内存也是有影响的，于是完善了下 heapGoal = heapMarked + (heapMarked + GCROOTs) * GOGC/100，这里的GCROOTS=(gstacks+globals) GC pacer的目的就是为了根据上述公式计算下次GC的heapGoal，然后在必要时（比如malloc时）决定是否要GC。
+默认初始heapGoal大小为4MB，如果靠GOGC来控制的话，会比较频繁触发GC，对绝大多数server程序而言频繁GC占比较多CPU，程序整体吞吐、响应延迟会受一定影响。
+所以业界一般会通过两种方式来调优：
+ballast，利用一块不用的大内存（比如1GB），来推高下次GC的heapGoal，通过这种方式来降低GC频率 GC tuner，动态设置GOGC，就是结合一些机器负载信息来动态设置，这个是uber搞的但是没开源，具体怎么调的未知。 项目以前的方案 # 项目以前使用的是go1.16.5，这个版本中也只有GOGC一个控制GC的选项，使用的是ballast的方案：
+在服务初始化阶段去初始化一个大内存而推高下次GC时的heapGoal 不同程序可能对内存需求不同，配置文件中允许自定义ballast大小，默认为1GB 包括业界在内都是介绍了ballast如何使用，有的是全局变量声明，有的是在main函数中声明…好像只看到了一派祥和，但是我们使用时却遇到了问题。
+问题1：ballast占物理内存 # 在测试环境（很多套测试环境）都有比较大概率发现服务在几乎空闲时，物理内存占用竟然高达1.1g…这很不符合常理。
+通过pprof跟踪内存分配，发现内存分配比较大的路径就是这个压舱石（pprof mem采样是看的虚拟内存）。
+然后top、pmap等跟踪可疑进程发现其确实存在1GB左右的anon区域，且该区域为dirty**（其实gdb把内存dump一看全是0，就很容易联想到类似对象分配后memset的操作）**。
+根据了解的go GC、内存分配器相关的知识，了解到go向操作系统申请内存时通过mmap的方式，释放内存是通过madvise+MADV_DONTNEED/MADV_FREE的方式。
+go1.12的时候改成了FREE默认代替DONTNEED，这两个选项是有区别的，详细的可以看下man手册（man 2 madvise），FREE的效率更好一点，但是也有一些不好的副作用。
+go1.16之后linux下又恢复成了DONTNEED，因为FREE不会立即让进程的RSS降下来，会误导很多监控、开发运维人员
+内存分配器为了提高分配效率、GC效率会进行一定的组织，这些概念大家应该有听说过，mheap、spanClass、mcentral、mspan、markbits、allocbits，还有p.mcache。
+smallSize&amp;lt;=32K的分配，走mcache（tinySize的更特殊一点，略） largeSize&amp;gt;32K对分配，走mheap 这些对象不管是从mcache来的还是从mheap直接分配的，最终都是建立在从操作系统申请来的page里的，而这些page是由page allocator申请的。即使是很大的对象，最终也是以存在span描述的区域里的。</description></item></channel></rss>

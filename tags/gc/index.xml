@@ -3,16 +3,15 @@
 较早的版本计算方式为：heapGoal = heapMarked + (heapMarked) * GOGC / 100， 后续go迭代时发现非堆内存也是有影响的，于是go1.18完善了下 heapGoal = heapMarked + (heapMarked + GCROOTs) * GOGC/100，这里的GCROOTS=(gstacks+globals) GC pacer的目的就是为了根据上述公式计算下次GC的heapGoal，然后在必要时（比如malloc时）决定是否要GC。
 默认初始heapGoal大小为4MB，如果靠GOGC来控制的话，会比较频繁触发GC，对绝大多数server程序而言频繁GC占比较多CPU，程序整体吞吐、响应延迟会受一定影响。
 所以业界一般会通过两种方式来调优：
-ballast，利用一块不用的大内存（比如1GB），来推高下次GC的heapGoal，通过这种方式来降低GC频率 GC tuner，动态设置GOGC，就是结合一些机器负载信息来动态设置，这个是uber搞的但是没开源，具体怎么调的未知。 项目以前的方案 # 项目以前使用的是go1.16.5，这个版本中也只有GOGC一个控制GC的选项，使用的是ballast的方案：
-在服务初始化阶段去初始化一个大内存而推高下次GC时的heapGoal 不同程序可能对内存需求不同，配置文件中允许自定义ballast大小，默认为1GB 包括业界在内都是介绍了ballast如何使用，有的是全局变量声明，有的是在main函数中声明…好像只看到了一派祥和，但是我们使用时却遇到了问题。
+ballast，利用一块不用的大内存（比如1GB），来推高下次GC的heapGoal，通过这种方式来降低GC频率 GC tuner，动态设置GOGC，定义一个对象为其设置finalizer，每轮GC结束时触发它并检查当前进程当前的内存占用情况，并与允许的最大内存占用进行比较，并计算出达到最大内存占用才触发GC时GOGC应该设定的值（其思路和go1.19 GOMEMLIMIT类似） 项目以前的方案 # 项目以前使用的是go1.16.5，这个版本中也只有GOGC一个控制GC的选项，使用的是ballast的方案：
+在服务初始化阶段去初始化一个大内存而推高下次GC时的heapGoal 不同程序可能对内存需求不同，配置文件中允许自定义ballast大小，默认为1GB 包括业界在内都是介绍了ballast如何使用：
+全局变量声明，垃圾回收器会认为其在整个进程生命周期内reachable 局部变量声明，通过runtime.KeepAlive(&amp;hellip;)来欺骗垃圾回收器这之前对象reachable 但是，好像只看到了一派祥和，我们使用时却遇到了Rss占用问题。
 问题1：ballast占物理内存 # 在测试环境（很多套测试环境）都有比较大概率发现服务在几乎空闲时，物理内存占用竟然高达1.1g…这很不符合常理。
 通过pprof跟踪内存分配，发现内存分配比较大的路径就是这个压舱石（pprof mem采样是看的虚拟内存）。
 然后top、pmap等跟踪可疑进程发现其确实存在1GB左右的anon区域，且该区域为dirty**（其实gdb把内存dump一看全是0，就很容易联想到类似对象分配后memset的操作）**。
 根据了解的go GC、内存分配器相关的知识，了解到go向操作系统申请内存时通过mmap的方式，释放内存是通过madvise+MADV_DONTNEED/MADV_FREE的方式。
 go1.12的时候改成了FREE默认代替DONTNEED，这两个选项是有区别的，详细的可以看下man手册（man 2 madvise），FREE的效率更好一点，但是也有一些不好的副作用。
-go1.16之后linux下又恢复成了DONTNEED，因为FREE不会立即让进程的RSS降下来，会误导很多监控、开发运维人员
-内存分配器为了提高分配效率、GC效率会进行一定的组织，这些概念大家应该有听说过，mheap、spanClass、mcentral、mspan、markbits、allocbits，还有p.mcache。
-smallSize&amp;lt;=32K的分配，走mcache（tinySize的更特殊一点，略） largeSize&amp;gt;32K对分配，走mheap 这些对象不管是从mcache来的还是从mheap直接分配的，最终都是建立在从操作系统申请来的page里的，而这些page是由page allocator申请的。即使是很大的对象，最终也是以存在span描述的区域里的。</description></item><item><title>GC: prioritizing low latency and simplicity</title><link>/blog/2021-05-01-gogc-prioritizing-low-latency-and-simplicity/</link><pubDate>Sat, 01 May 2021 11:17:56 +0800</pubDate><guid>/blog/2021-05-01-gogc-prioritizing-low-latency-and-simplicity/</guid><description>原文地址：https://blog.golang.org/go15gc
+go1.</description></item><item><title>GC: prioritizing low latency and simplicity</title><link>/blog/2021-05-01-gogc-prioritizing-low-latency-and-simplicity/</link><pubDate>Sat, 01 May 2021 11:17:56 +0800</pubDate><guid>/blog/2021-05-01-gogc-prioritizing-low-latency-and-simplicity/</guid><description>原文地址：https://blog.golang.org/go15gc
 介绍了当前软硬件大规模发展的趋势以及go GC需要优先解决的问题：低延迟和简单性（通过一个参数就可以控制，而非像JVM调参那样）。
 go团队的目标是设计一个面向未来十年的垃圾回收器，借鉴了十几年前发明的算法。go GC使用的是并发三色标记清除算法（concurrent, tri-color, mark-sweep collector），由Dijkstra在1978年提出。该算法与现在大多数企业级的GC实现不同，但是go团队认为该算法更适合于现代硬件的发展，也更有助于实现现代软件的GC低延迟目标。
 该GC算法中，每个对象只能是white、grey、black中的其中一种，heap可以看做是互相连接的对象构成的一个graph。GC算法流程是：

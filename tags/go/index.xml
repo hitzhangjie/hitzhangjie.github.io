@@ -1,4 +1,17 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>go on</title><link>/tags/go/</link><description>Recent content in go on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 20 Nov 2022 20:39:22 +0800</lastBuildDate><atom:link href="/tags/go/index.xml" rel="self" type="application/rss+xml"/><item><title>go如何触发垃圾回收的</title><link>/blog/2022-11-20-go%E5%A6%82%E4%BD%95%E8%A7%A6%E5%8F%91%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</link><pubDate>Sun, 20 Nov 2022 20:39:22 +0800</pubDate><guid>/blog/2022-11-20-go%E5%A6%82%E4%BD%95%E8%A7%A6%E5%8F%91%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</guid><description>前言 # go触发GC有这么几个时机，内存分配时触发mallogc，定时触发sysmon，手动触发runtime.GC、debug.FreeOSMemory，其中内存分配时触发是go是重中之重，go runtime以此来平衡好内存分配、内存回收的节奏以让内存占用维持在一个合适的水准。本文对内存分配过程中触发GC的一些设计考量进行了总结梳理。
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>go on</title><link>/tags/go/</link><description>Recent content in go on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 24 Nov 2022 15:31:49 +0800</lastBuildDate><atom:link href="/tags/go/index.xml" rel="self" type="application/rss+xml"/><item><title>how go.mod works?</title><link>/blog/2022-11-24-how-go.mod-works/</link><pubDate>Thu, 24 Nov 2022 15:31:49 +0800</pubDate><guid>/blog/2022-11-24-how-go.mod-works/</guid><description>go.mod/go.sum内容 # go.mod里面包含的信息包括：
+当前module构建要求的最小go版本 依赖的module及校验和信息 为了方便本地开发测试的一些replace信息 这里不讨论vendor相关的modules.txt中的内容。
+最小go版本号 # 我们举个例子来描述下。
+如果当前module的go.mod是go 1.16，等价于编译的时候go build -gcflags &amp;lsquo;-lang=1.16&amp;rsquo; / go tool compile -lang=1.16。
+假设我们现在安装的go版本是go1.19。
+这种情况下执行编译测试：
+如果我们用了范型（go1.18开始支持），go编译器编译时会检查， 本来go1.19肯定能编译1.18的范型代码，但是它会报错出来，因为go.mod里声明的go版本，是当前项目支持的最小go版本，有可能别人不是1.19而是1.15,1.17，所以要报错提示下
+我们还没有用那些1.16.5以后的新特性非得要新版本的go来编，所以之前能正常编。
+如果我们安装的go1.15，go.mod里面的1.16高了，也会先尝试编译，编过了就编过了，编不过就报错最小版本是1.16.5 比如机器上现在是1.19，可以go.mod改成1.20正常编过
+如果因为-lang编译导致的编不过，如果go.mod里面的版本比当前安装的版本高，还会打印出来 module requires go 1.21，提示安装新版本
+依赖信息 # 依赖的module，除了指明importPath，还要指明version，才能完整指明一个依赖。这个应该没什么疑问，所以大家都会提交go.mod文件。
+再说下校验和，有什么用呢？防止包内容被篡改。有些同学因为什么原因导致校验和经常冲突，需要解决冲突，所以直接不提交go.sum文件了，这是十分错误的。
+有同学可能会觉得这些繁琐的步骤很荒唐，其实并不是，可重复的制品构建，是一门非常重要的工程上的保证手段，为了达到此目的，甚至还有封闭构建、构建容器等其他方法来提供进一步的保证。
+本文小结 # 本文简单记录了下go.mod/go.sum相关的知识点，可能对刚接触这块的同学比较有价值 :)</description></item><item><title>go如何触发垃圾回收的</title><link>/blog/2022-11-20-go%E5%A6%82%E4%BD%95%E8%A7%A6%E5%8F%91%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</link><pubDate>Sun, 20 Nov 2022 20:39:22 +0800</pubDate><guid>/blog/2022-11-20-go%E5%A6%82%E4%BD%95%E8%A7%A6%E5%8F%91%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</guid><description>前言 # go触发GC有这么几个时机，内存分配时触发mallogc，定时触发sysmon，手动触发runtime.GC、debug.FreeOSMemory，其中内存分配时触发是go是重中之重，go runtime以此来平衡好内存分配、内存回收的节奏以让内存占用维持在一个合适的水准。本文对内存分配过程中触发GC的一些设计考量进行了总结梳理。
 应该听过“mark assist” # gc过程中mutator分配内存时可能会被搞去做assistg,去辅助扫描标记一些对象是否该回收的工作,当我的辅助标记内存数量减去要申请的内存数,如果为负数时,相当于我申请的比辅助标记的多,相当于欠债了,这个时候我就得去做些辅助标记的工作 gcAssistBytes:
 然后根据当前内存使用情况\扫描情况\下次GC的heapgoal,计算出我应该辅助标记多少,才能保证达到堆大小时GC标记工作恰好能完成,让我去干活 这个时候干活之前会先检查下bgMarkWorker因为扫描工作贡献的信用分,然后我可以借用这个信用分来偿还债务,以减少扫描工作,或者完全避免扫描工作 如果依旧欠债,那就干活呗,后面会执行到gcDrainN,去执行一些标记类的工作 这些标记类的工作从何而来呢,比如写屏障记录下来的一些需要去扫描的对象 执行完了这个扫描之后,这个assistG.gcAssistBytes就会加上扫描的字节数,相当于攒的一点信用分 干完这些之后,才允许你申请内存\分配对象,哈哈哈! goroutine可以去做些mark assist之类的工作的前提是，GC已经进入了GCMark阶段，那内存分配期间GC是什么如何被触发的呢？
 GC什么情况下被触发的 # 关于什么时候触发GC，严谨一点，内存分配期间何时触发的GC，这里不考虑sysmon触发、手动runtime.GC()触发，ok。
@@ -86,13 +99,4 @@ goroutine创建成功、栈空间也ok了之后，就要把goroutine要执行的
 如果没有指定p，比如新建goroutine时，此时会尝试检查有没有空闲的p，没有的话就直接返回了，相当于当前一次没有执行成功，那么只能下次调度的时候再执行这个新建的goroutine了；
 现在有空闲的p，我们还缺什么，m！然后mget找一个空闲的m，如果没有空闲的，就newm创建一个新的，本质上是通过clone系统调用创建的新的线程。然后将这个m和这个p关联起来，m.nextp = p。值得一提的是clone出来的线程对应的线程处理函数是mstart，mstart使用汇编写的，内部实际调用的是mstart0，它内部又请求mstart1，获取当前g：
 如果g.m==&amp;amp;m0，则执行mstartm0完成信号处理注册，继续执行其他；
-获取当前m.</description></item><item><title>GC: prioritizing low latency and simplicity</title><link>/blog/2021-05-01-gogc-prioritizing-low-latency-and-simplicity/</link><pubDate>Sat, 01 May 2021 11:17:56 +0800</pubDate><guid>/blog/2021-05-01-gogc-prioritizing-low-latency-and-simplicity/</guid><description>原文地址：https://blog.golang.org/go15gc
-介绍了当前软硬件大规模发展的趋势以及go GC需要优先解决的问题：低延迟和简单性（通过一个参数就可以控制，而非像JVM调参那样）。
-go团队的目标是设计一个面向未来十年的垃圾回收器，借鉴了十几年前发明的算法。go GC使用的是并发三色标记清除算法（concurrent, tri-color, mark-sweep collector），由Dijkstra在1978年提出。该算法与现在大多数企业级的GC实现不同，但是go团队认为该算法更适合于现代硬件的发展，也更有助于实现现代软件的GC低延迟目标。
-该GC算法中，每个对象只能是white、grey、black中的其中一种，heap可以看做是互相连接的对象构成的一个graph。GC算法流程是：
-GC开始时，所有对象都是white； GC遍历所有的roots对象（比如全局变量、栈变量）将其标记为灰色； 然后GC选择一个grey对象，将其标记为black，并扫描（scan）该对象检查它内部的指向其他对象的指针。如果发现有指针指向其他white对象，将white对象标记为grey； 该过程重复执行，直到没有任何的灰色对象； 最后，剩下的白色对象即认为是不可达对象，可以被回收再利用； GC过程和应用程序执行是并发进行的，应用程序也称为mutator，它会在GC运行期间修改一些指针的值。mutator必须遵循这样一条规则，就是不允许出现一个黑色对象指向一个白色对象，这样会导致对象被错误地回收。为了保证该规则成立，就需要引入写屏障（write barrier），它是编译阶段由编译器对mutator指针操作安插的一些特殊指令，用来跟踪对指针的修改，write barrier如果发现当前黑色对象的内部指针字段指向了外部的一个白色对象，则会将白色对象染色为grey，避免其被错误地GC掉，也保证其可以被继续扫描。
-有些GC相关的问题：
-什么时候启动GC？ 通过哪些指标来判断要启动GC？ GC应该如何与scheduler进行交互？ 如何暂停一个mutator线程足够长时间，以扫描器stack？ 如何表示white、grey和black三种颜色来实现高效地查找、扫描grey对象？ 如何知道roots对象在哪里？ 如何知道一个指向对象的指针的位置？ 如何最小化内存碎片？ 如何解决cache性能问题？ heap应该设置为多大？ 等等。 上述问题有些与内存分配有关，有些与可达对象分析有关，有些与goroutine调度有关，有些与性能有关，关于这些内容的讨论远远超出本文篇幅，可以自己参考相关的材料。
-为了解决GC性能问题，可以考虑为每一种优化加个参数来控制，开发人员可以自己调整这里的参数来达到想要的优化效果。但是这种做法时间久了之后会发现有非常多的参数，调优就会变得非常困难，比如JVM调优。go团队不想走这样的老路，力求简单高效。
-go通过GOGC这个环境变量来控制整个堆大小相对于现阶段可达对象大小的比例。GOGC默认值是100%，意味着当堆大小增长了当前可达对象大小的1倍时（2倍大小），就会触发GC；200%则意味着继续增长了当前可达对象的2倍时触发GC（3倍大小）。
-如果想降低GC花费的时间，就把这个值设置的大一点，因为这样不容易频繁触发GC； 如果愿意花费更多的GC时间来换取更少的内存占用，就把这个值设置的小一点，因为这样能够更加频繁地GC； 前面提到go团队要设计一个面向未来十年的垃圾回收器，未来十年机器内存容量可能会翻倍或者成倍增长，简单地将GOGC设置为一定倍率也可以很好地工作，也不用像JVM调优那样重新设置一堆地参数，调参大军好惨。go团队也可以倾听用户真正地诉求在运行时方面做更多的优化。</description></item></channel></rss>
+获取当前m.</description></item></channel></rss>

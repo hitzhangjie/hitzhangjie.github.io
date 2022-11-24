@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>-lang on</title><link>/tags/lang/</link><description>Recent content in -lang on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 24 Nov 2022 15:31:49 +0800</lastBuildDate><atom:link href="/tags/lang/index.xml" rel="self" type="application/rss+xml"/><item><title>how go.mod works?</title><link>/blog/2022-11-24-how-go.mod-works/</link><pubDate>Thu, 24 Nov 2022 15:31:49 +0800</pubDate><guid>/blog/2022-11-24-how-go.mod-works/</guid><description>go.mod/go.sum内容 # go.mod里面包含的信息包括：
+当前module构建要求的最小go版本 依赖的module及校验和信息 为了方便本地开发测试的一些replace信息 这里不讨论vendor相关的modules.txt中的内容。
+最小go版本号 # 我们举个例子来描述下。
+如果当前module的go.mod是go 1.16，等价于编译的时候go build -gcflags &amp;lsquo;-lang=1.16&amp;rsquo; / go tool compile -lang=1.16。
+假设我们现在安装的go版本是go1.19。
+这种情况下执行编译测试：
+如果我们用了范型（go1.18开始支持），go编译器编译时会检查， 本来go1.19肯定能编译1.18的范型代码，但是它会报错出来，因为go.mod里声明的go版本，是当前项目支持的最小go版本，有可能别人不是1.19而是1.15,1.17，所以要报错提示下
+我们还没有用那些1.16.5以后的新特性非得要新版本的go来编，所以之前能正常编。
+如果我们安装的go1.15，go.mod里面的1.16高了，也会先尝试编译，编过了就编过了，编不过就报错最小版本是1.16.5 比如机器上现在是1.19，可以go.mod改成1.20正常编过
+如果因为-lang编译导致的编不过，如果go.mod里面的版本比当前安装的版本高，还会打印出来 module requires go 1.21，提示安装新版本
+依赖信息 # 依赖的module，除了指明importPath，还要指明version，才能完整指明一个依赖。这个应该没什么疑问，所以大家都会提交go.mod文件。
+再说下校验和，有什么用呢？防止包内容被篡改。有些同学因为什么原因导致校验和经常冲突，需要解决冲突，所以直接不提交go.sum文件了，这是十分错误的。
+有同学可能会觉得这些繁琐的步骤很荒唐，其实并不是，可重复的制品构建，是一门非常重要的工程上的保证手段，为了达到此目的，甚至还有封闭构建、构建容器等其他方法来提供进一步的保证。
+本文小结 # 本文简单记录了下go.mod/go.sum相关的知识点，可能对刚接触这块的同学比较有价值 :)</description></item></channel></rss>

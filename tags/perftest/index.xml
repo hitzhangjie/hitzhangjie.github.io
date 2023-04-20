@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>perftest on</title><link>/tags/perftest/</link><description>Recent content in perftest on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><atom:link href="/tags/perftest/index.xml" rel="self" type="application/rss+xml"/><item><title>压测之taskset的妙用</title><link>/blog/2023-04-13-%E5%8E%8B%E6%B5%8B%E4%B9%8Btaskset%E7%9A%84%E5%A6%99%E7%94%A8/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/blog/2023-04-13-%E5%8E%8B%E6%B5%8B%E4%B9%8Btaskset%E7%9A%84%E5%A6%99%E7%94%A8/</guid><description>问题背景 # 想测试下gRPC框架的性能，设计了如下服务拓扑来对gRPC框架各组件、特性、参数配置下的性能进行探索。
+压力源程序 perfclient ---请求-&amp;gt; perfserver1 ---请求-&amp;gt; perfserver2 压力源程序perfclient会并发发送请求给服务perfserver1，perfserver1则会继续请求perfserver2，然后perfserver2回包给perfserver1，perfserver1收到响应后内部完成处理逻辑后继续回包给perfclient。
+perfclient每隔一段时间会打印下请求的请求量、成功量、失败量，以及qps、耗时信息。需要注意的事，这里再统计耗时信息的时候，除了avg、min、max耗时，还需要percentile(or quantile）百分位耗时，后者更具有说服力。
+现在呢？遇到点问题，正常我需要将上述压力源程序、被压测服务perfserver1、perfserver2尽力部署到不同的机器上，让它们之间避免相互影响，同时部署的机器上也应该注意没有其他负载会干扰到我们的测试，但是问题来了：
+可能有机器，但是部署起来太麻烦了，可能每调整下测试点就要要操作多台机器 可能有机器，但是云平台存在超卖的情况，母机负载大影响到了虚拟机负载稳定性 可能有机器，但是ci/cd流水线执行耗时太久了 可能没机器，只有一台本地开发机 有没有什么其他简单好用的办法呢？我觉得有，资源隔离下啊。
+认识taskset # taskset，是linux下用来进行绑核设置的一个工具，我们可以借助它对上述不同的3个进程的cpu资源进行限定，如压力源程序perfclient需要能多生成些请求，我们给它分配7~10 4个cpu core，perfserver1负载会稍微比perfserver2高点，但如果是纯echo的话也多不了读少，给perfserver1分配2个cpu core，给perfserver2也分2个。
+taskset -a -p 7,8,9,10 `pidof perfclient` taskset -a -p 3,4 `pidof perfserver1` taskset -a -p 5,6 `pidof perfserver2` 这样上述几个进程就被分别设置到了不同的cpu cores上执行，意味着当他们把cpu跑满时，他们能抗的负载大致就是这个比例。
+解释下选项-a：
+taskset如果不指定选项-a，则知会对当前进程名对应的主进程进行绑核设置，不会对进程中的其他线程进行设置，当然也不会对后续新创建的线程进行设置。
+加了-a，taskset就会对执行命令时，该进程pid下的所有线程进行统一的绑核设置，但是如果后续创建了新线程，新线程不会被绑核。
+那么如果一个程序是多线程程序，且线程数不是固定的，会在以后新创建、销毁动态变化的，这种该怎么解决呢？
+go天然多线程 # go程序天然是多线程程序，那应该如何进行绑核设置呢？如果只是为了限制进程使用的cpu资源，直接使用runtime.GOMAXPROC(x)进行设置不行吗？不行！
+该函数只是说限制同时在运行的线程数，并没有像taskset那样将线程绑到核上，这意味着这些go程序线程的执行有可能会在cpu core上迁移，这样的话通过top命令查看cpu core负载情况，就不好判断哪个core的负载是因为哪个进程引起的…对吧。
+另一个问题，go程序的GMP调度模型会在必要时自动创建新的线程出来，用来执行goroutines，这里问题就来了，我需要动态感知当前进程下的所有线程。go语言或者标准库都没有提供线程层面的东西来获取，那我们怎么获取呢？
+go如何绑核 # Linux下面每个进程都有一个pid，对应的虚拟文件系统/proc//tasks下面就是该进程pid下的所有线程信息。理论上可以定时获取里面的pid，然后再去taskset -p绑核，或者说go启动一个协程定时调用下taskset -a -p &amp;lt;pid&amp;gt;，可以简洁明了搞定。</description></item></channel></rss>

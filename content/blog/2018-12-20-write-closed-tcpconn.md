@@ -1,9 +1,11 @@
 ---
 layout: post
 title: write closed tcpconn
+description: "TCP连接管理向来是高性能服务器开发所需要掌握的内容，服务器通常会检测客户端连接是否空闲，为了节省资源会在连接空闲一段时间后主动清理空闲的连接。在TCPServer主动close连接时，会发生什么呢？与其是TCPClient使用了连接池时会发生什么呢？在维护RPC框架过程中遇到不少类似的反馈，优化框架之余，于是有此文来解释下。"
 date: 2018-12-20 23:11:29 +0800
 tags: ["tcp", "half closed", "eof", "fin"]
 toc: true
+reward: true
 ---
 
 # 问题背景
@@ -377,7 +379,7 @@ int main(int argc, char *argv[])
     }
     
     // sleep 3 seconds, before wakeup let the server close connection!
-    // nc -kl 5555 -w 1
+    // run `nc -kl 5555 -w 1` to start a tcp server.
     sleep(3);
 
     char sendbuf[512] = { 0 };

@@ -1,6 +1,7 @@
 ---
 layout: post  
 title: 使用awgo开发alfred.workflow
+description: "Alfred是macOS下非常方便的一款效率工具，它集成了很多功能，包括websearch、snippets、workflow等等，本文讲述的就是如何借助开发workflow来提效。本文以一个简单的datex命令实现时间戳、字符串之间的转换功能为例，介绍下如何开发workflow。"
 date: 2020-07-31 14:53:15 +0800
 tags: ["go","awgo","alfred","workflow"]
 toc: true

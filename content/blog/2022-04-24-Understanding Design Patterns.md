@@ -5,6 +5,7 @@ description: "The design patterns is a blueprint about how to solve a commonly-r
 date: 2022-04-25 00:23:51 +0800
 tags: ["pattern"]
 toc: true
+reward: true
 ---
 
 The design patterns is a blueprint about how to solve a commonly-reoccuring prolem in specific occasions.According to scale and complexity, the patterns could be categorized as Architecture Patterns, Design Patterns and Idioms.

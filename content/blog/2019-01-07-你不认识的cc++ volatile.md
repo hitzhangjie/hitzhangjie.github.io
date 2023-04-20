@@ -1,9 +1,11 @@
 ---
 layout: post  
 title: 你不认识的cc++ volatile
+description: "学习c语言时初始volatile，学习java时认识了不一样的volatile，但是对它们的理解还是没那么详细。后台来有次学习Linux内核时读到了torvalds关于使用volatile可能潜藏了隐患的评论，开始重视并深入学习了这个问题……有一次参加中心的技术分享听到大佬降到volatile可以解决线程可见性问题，我顿时感觉不太对吧，但是作为一个新人……后面几番求证之后，终于发现大佬们认识也不到位啊，这个问题其实要把别人真的讲明白牵扯的知识还挺多挺细的，希望对感兴趣同学有帮助。"
 date: 2020-07-24 19:46:11 +0800
 tags: ["volatile","cc++","cache","mesi"]
 toc: true
+reward: true
 ---
 
 <style>

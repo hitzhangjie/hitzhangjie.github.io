@@ -5,6 +5,8 @@ description: "golang中方法为什么receiver-type不能为指针类型、接�
 categories: go设计实现
 date: 2018-05-21 12:33:23 +0800
 tags: ["go", "method", "receiver"]
+toc: true
+reward: true
 ---
 
 这里来聊聊method receiver type为什么不能是pointer和interface类型。

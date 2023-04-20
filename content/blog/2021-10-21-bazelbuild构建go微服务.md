@@ -5,6 +5,7 @@ description: "关于monorepo、multirepo的争论不绝于耳，至于采用哪�
 date: 2021-10-21 01:48:05 +0800
 tags: ["bazelbuild", "monorepo", "multirepo", "hermetic"]
 toc: true
+reward: true
 ---
 
 <style>

@@ -6,6 +6,7 @@ date: 2017-12-03 16:49:09 +0800
 tags: ["libmill","coroutine","goroutine","go"]
 draft: true
 toc: true
+reward: true
 ---
 
 <style>
@@ -90,7 +91,7 @@ libmill协程库是基于goroutine移植的，libmill的api友好，与golang中
 - 在libmill里面所有的协程调度都是在当前线程中的
 也就是说一个单线程程序使用了libmill实现的协程，并且协程执行过程中使用了阻塞的系统调用，这样会阻塞整个进程。
 - goroutine中创建的协程会被分摊到多个物理线程上去执行
-goroutine中创建的协程，一个协程中使用了阻塞的系统调用只会阻塞当前线程，并不会阻塞进程中的其他线程运行。
+  goroutine中创建的协程，一个协程中使用了阻塞的系统调用只会阻塞当前线程，并不会阻塞进程中的其他线程运行。
 
     >备注：这里需要注意下，linux下的线程库有两个，比较早的是LinuxThreads线程库，现在用的一般都是Native POSIX Threads Library（nptl），也就是pthread线程库。其中LinuxThreads是用户级线程库，创建的线程内核无感知，调度也是用户态线程调度器自己实现的；而pthread线程库创建的线程都是一个LWP进程，它使用sys_clone()并传递CLONE_THREAD选项来创建一个线程（本质上还是LWP）并且线程所属进程id相同。
 

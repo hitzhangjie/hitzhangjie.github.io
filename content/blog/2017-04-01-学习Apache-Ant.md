@@ -5,6 +5,7 @@ description: "Apache Ant是Java工程中比较常用的一个依赖管理、构�
 date: 2017-04-01 17:45:40 +0800
 tags: ["ant", "java"]
 toc: true
+reward: true
 ---
 
 Apache Ant是由Apache开发的基于Java的构建工具，本文对tutorialspoint上面的Apache Ant教程进行简要总结。

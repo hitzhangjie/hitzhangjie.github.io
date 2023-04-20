@@ -6,6 +6,7 @@ date:   2018-05-19 19:21:11 +0800
 categories: go设计实现
 tags: ["go","chann"]
 toc: true
+reward: true
 ---
 
 # 1 chan操作规则

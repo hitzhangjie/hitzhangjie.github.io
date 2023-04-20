@@ -1,6 +1,7 @@
 ---
 layout: post  
 title: Monkey Patching in Go
+description: "很多go开发者使用gomonkey来写mock测试，但是很多连原理都没搞明白，本文从0开始介绍如何实现monkey patching，希望读者能了解这里的实现原理，以及从原理认识到gomonkey的优缺点。"
 date: 2020-08-23 15:41:28 +0800
 tags: ["go","monkey-patching","mock"]
 toc: true
@@ -688,5 +689,4 @@ gomonkey写mock测试，对函数的处理大致就是这个这么实现的，�
 3.monkey patching, https://en.wikipedia.org/wiki/Monkey_patch
 
 4.radare2 book, https://radare.gitbooks.io/radare2book/content/tools/rasm2/assemble.html
-
 

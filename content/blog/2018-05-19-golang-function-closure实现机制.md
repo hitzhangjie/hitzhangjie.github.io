@@ -1,11 +1,12 @@
 ---
 layout: post
 title:  "golang function-closure 实现机制"
-description: "go函数闭包设计实现"
+description: "理解了go闭包的设计实现细节之后，就更容易明白闭包的工作原理，也更容易在编码时绕过一些最佳实践所没有展开讨论的神坑，比如for循环变量被闭包引用问题，比如是值捕获还是引用捕获问题。"
 date:   2018-05-19 19:55:15 +0800
 categories: go设计实现
 tags: ["go", "golang", "closure"]
 toc: true
+reward: true
 ---
 
 golang里面函数时first-class citizen，可以作为值进行参数传递，不管是普通函数“func abc()”，还是成员方法“func (x X) xxx()”，还是一个闭包“func () { return func(){....}}”……看上去很方便，不禁要问，golang里面funciton和closure是如何实现的呢？扒拉了下源码，这里简单总结下。

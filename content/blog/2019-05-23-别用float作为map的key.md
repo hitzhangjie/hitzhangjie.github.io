@@ -1,6 +1,7 @@
 ---
 layout: post
 title: 别用float作为map的key
+description: "使用float作为map的key，非常容易留坑"
 date: 2019-05-23 00:16:36 +0800
 tags: ["go", "map", "float"]
 toc: true

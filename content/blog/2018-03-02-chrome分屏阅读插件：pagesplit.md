@@ -5,6 +5,7 @@ Description: "chrome优秀的扩展性使得它成为很多开发人员的首选
 date: 2018-03-02 22:21:32 +0800
 tags: ["chrome", "extension", "pagesplit", "vsplit", "hsplit"]
 toc: true
+reward: true
 ---
 
 <style>

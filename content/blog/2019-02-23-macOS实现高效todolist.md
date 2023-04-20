@@ -1,9 +1,11 @@
 ---
 layout: post
 title: macOS实现高效todolist
+description: "macOS的日历其实做的挺方便的，可以纵览所有的日程安排，还可以生成提醒，如果能很方便的通过alfred添加待办事项到日历中，岂不是妙哉？那么如何写一个alfred workflow来实现此功能呢？"
 date: 2019-02-23 00:13:00 +0800
 tags: ["todo", "todolist", "macOS", "iCal", "calendar"]
 toc: true
+reward: true
 ---
 
 <style>

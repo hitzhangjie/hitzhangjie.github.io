@@ -9,23 +9,25 @@
 			<h1 class="text-center">{{ .Title }}</h1>
 			<div class="text-center">{{ .Content }}</div>
 
-            <!-- display blog list -->
+			<!-- display blog list -->
 			<div class="card-list">
-				{{ range .Data.Pages -}}
-					<div class="card">
-						<div class="card-body">
-							<h2 class="h3"><a href="{{ .RelPermalink }}">{{ .Params.title }}</a></h2>
-							<p>{{ .Params.lead | safeHTML }}</p>
-							{{ partial "main/blog-meta.html" . -}}
-							{{ if .Params.Tags }}
-							<p>🔖&nbsp;
-								{{ range .Params.Tags }}
-								<a href="/tags/{{.}}/">{{.}}</a>&nbsp;
-								{{ end }}
-							</p>
+				{{ $allPages := .Data.Pages }}
+				{{ $visiblePages := where $allPages "Params.hide" "!=" true }}
+				{{ range $visiblePages -}}
+				<div class="card">
+					<div class="card-body">
+						<h2 class="h3"><a href="{{ .RelPermalink }}">{{ .Params.title }}</a></h2>
+						<p>{{ .Params.lead | safeHTML }}</p>
+						{{ partial "main/blog-meta.html" . -}}
+						{{ if .Params.Tags }}
+						<p>🔖&nbsp;
+							{{ range .Params.Tags }}
+							<a href="/tags/{{.}}/">{{.}}</a>&nbsp;
 							{{ end }}
-						</div>
+						</p>
+						{{ end }}
 					</div>
+				</div>
 				{{ end -}}
 			</div>
 		</article>
@@ -41,15 +43,16 @@
 		<h1 class="text-center">{{ .Title }}</h1>
 		<div class="text-center">{{ .Content }}</div>
 
-        <!-- display blog list -->
+		<!-- display blog list -->
 		<table border="0">
-        {{ $paginator := .Paginate (.Data.Pages) -}}
-        {{ range $paginator.Pages -}}
-            {{ if not .Params.hide }}
+			{{ $allPages := .Data.Pages }}
+			{{ $visiblePages := where $allPages "Params.hide" "!=" true }}
+			{{ $paginator := .Paginate $visiblePages }}
+			{{ range $paginator.Pages -}}
 			<tr>
 				<td width="10%">
-					{{ if .Params.date | default "1970-01-01" }} 
-						<span>{{ .Date.Format (.Site.Params.dateFormat | default "2006/01/02") }}</span>
+					{{ if .Params.date | default "1970-01-01" }}
+					<span>{{ .Date.Format (.Site.Params.dateFormat | default "2006/01/02") }}</span>
 					{{ end }}
 				</td>
 				<td width="45%">
@@ -58,29 +61,28 @@
 				<td width="45%">
 					{{ if .Params.tags }}
 					{{ $len := (len .Params.tags) }}
-						🔖{{ if gt $len 1 }}{{ end }}
-						{{ range $index, $tag := .Params.tags }}
-                        <font size="3">
-						<a href="{{ "tags/" | relLangURL }}{{ . | urlize }}">
-                            {{ . }}
-                        </a>{{ if ne (add $index 1) $len }},{{ end }}
+					🔖{{ if gt $len 1 }}{{ end }}
+					{{ range $index, $tag := .Params.tags }}
+					<font size="3">
+						<a href="{{ " tags/" | relLangURL }}{{ . | urlize }}">
+							{{ . }}
+						</a>{{ if ne (add $index 1) $len }},{{ end }}
 						{{ end }}
-                        </font>
+					</font>
 					{{ end }}
 				</td>
 			</tr>
-            {{ end }}
-		{{ end }}
-	    </table>
+			{{ end }}
+		</table>
 
 		<!-- pagination -->
-        <table border="0"> 
-		    <tr>
-                <td width="10%" style="visibility:hidden;">1234567890</td>
-                <td width="45%" style="border-bottom-width:0;">{{ template "_internal/pagination.html" . }}</td>
-                <td width="45%" style="border-bottom-width:0;"></td>
-            </tr>
-        </table>
+		<table border="0">
+			<tr>
+				<td width="10%" style="visibility:hidden;">1234567890</td>
+				<td width="45%" style="border-bottom-width:0;">{{ template "_internal/pagination.html" . }}</td>
+				<td width="45%" style="border-bottom-width:0;"></td>
+			</tr>
+		</table>
 	</div>
 </div>
 {{ end }}

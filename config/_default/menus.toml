@@ -11,22 +11,22 @@
   weight = 20
 
 # 3.显示我的经历
-[[main]]
-  name = "Journey"
-  url = "/journey/introduction"
-  weight = 30
-
-[[journey]]
-  name = "Introduction"
-  identifier = "introduction"
-  url = "/journey/introduction"
-  weight = 10
-
-[[journey]]
-  name = "Education"
-  identifier = "education"
-  url = "/journey/education/"
-  weight = 20
+#[[main]]
+#  name = "Journey"
+#  url = "/journey/introduction"
+#  weight = 30
+#
+#[[journey]]
+#  name = "Introduction"
+#  identifier = "introduction"
+#  url = "/journey/introduction"
+#  weight = 10
+#
+#[[journey]]
+#  name = "Education"
+#  identifier = "education"
+#  url = "/journey/education/"
+#  weight = 20
 
 # 4.显示为社交信息
 [[social]]

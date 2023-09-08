@@ -5,4 +5,4 @@ kprobe工作原理 # 联想下调试器中断点的工作方式，kprobe可以�
 我感兴趣的就是，内核里面的kprobe和调试器中的大致跟踪tracee执行过程，很类似。
 相同点：都是通过指令patch的方式
 不同点：
-kprobe是利用了int3指令触发trap服务程序走到了kprobe的处理逻辑去执行pre_handler/post_handler， 而调试器是tracee执行到断点时区通过trap服务程序走到了通知tracer继续控制tracee这个逻辑。 总结 # 简要总结了下kprobe这种内核探针的工作原理。</description></item></channel></rss>
+kprobe是利用了int3指令触发trap服务程序走到了kprobe的处理逻辑去执行pre_handler/post_handler， 而调试器是tracee执行到断点时触发trap服务程序走到了通知tracer继续控制tracee这个逻辑。 总结 # 简要总结了下kprobe这种内核探针的工作原理。</description></item></channel></rss>

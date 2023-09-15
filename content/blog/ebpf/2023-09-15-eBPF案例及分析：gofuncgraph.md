@@ -11,7 +11,7 @@ toc: true
 
 可观测性（observability）是这几年开始被频繁提及的一个词，特别是在微服务领域可观测性已经成为了微服务治理的一项关键的平台化技术手段，在CNCF孵化的项目中我们看到Opentelemetry如火如荼的发展背后也逐渐出现了一些成熟的解决方案。在腾讯内部也有类似天机阁、蓝鲸、wxg等不同的解决方案。这些往往配合框架解决了微服务RPC层面 的可观测性问题，实际上借助eBPF这项革命性技术，我们还可以做更多。
 
-## 故事背景
+## 背景
 
 不久前，在做一个关于序列化方面的优化工作，先说下项目情况：项目中使用的go框架采用了pb+protoc-gen-gogofast来生成桩代码，RPC通信的时候使用pb序列化。另外呢，为了方便开发人员查看pb message对应的log信息，项目的日志库使用了pbjson将pb message格式化为json后输出到log，RPC interceptor也会使用相同的方式序列化req、rsp后将其上报到链路跟踪系统。
 
@@ -28,9 +28,100 @@ toc: true
 
 ![gofuncgraph](assets/2023-09-15-eBPF案例及分析：gofuncgraph/image-20230915232356599.png)
 
-## gofuncgraph
+## 工具介绍
 
+gofuncgraph是借鉴了Linux内核函数图工具ftrace（function tracer）的功能，然后为go程序开发的一个函数图工具，如上图所示，你可以指定要跟踪的函数的匹配模式，然后该工具会将程序中匹配的函数名全部作为uprobe去注册，并注册上对应的回调处理函数。
 
+处理函数中会根据是进入函数、退出函数来生成一些这样的events，每个event都有时间，这样就可以准确统计出函数的执行耗时了。然后利用调用栈信息，也可以绘制出函数调用图。最终输出上述函数图。
 
-## 函数图跟踪
+> 一个小插曲，[help: how to use gofuncgraph](https://github.com/jschwinger233/gofuncgraph/issues/2)，最开始我以为是要用这个工具去启动个程序才可以执行测试，是我理解有误。和作者沟通过程中，作者提到之前阅读过我写的调试器相关的电子书，并说质量很高。大家互相分享互相学习，挺好的。现在我也来学习作者的gofuncgraph，除了学习ebpf程序的写法外，我也想了解下为什么调试器的知识会用在这个程序里。
+
+## 剖析实现
+
+本节先介绍该工具的用户界面设计实现，然后再介绍其内部的工作逻辑，工作逻辑中会层层深入把必要的DWARF、eBPF、编译链接加载等相关的关键内容都逐一介绍下。
+
+为了后续方便自己学习、维护、定制，我fork了作者的项目并做了一些优化、重构，如使用spf13/cobra来代替了原先的命令行框架，spf13/cobra支持长、短选项，对用户更友好。另外也对项目代码进行了一些可读性方面的优化。后续介绍将继续我修改的这个版本介绍 [hitzhangjie/gofuncgraph (dev)](https://github.com/hitzhangjie/gofuncgraph/tree/dev)。
+
+### 命令行界面
+
+执行 `gofuncgraph help` 查看帮助信息，简要介绍了它的用途，你可以执行`gofuncgraph --help`来查看更完整的帮助信息。
+
+简要帮助信息：
+
+```bash
+$ ./gofuncgraph
+bpf(2)-based ftrace(1)-like function graph tracer for Go! 
+
+for now, only support following cases:
+- OS: Linux (always little endian)
+- arch: x86-64
+- binary: go ELF executable built with non-stripped non-PIE mode
+
+Usage:
+  gofuncgraph [-u wildcards|-x|-d] <binary> [fetch] [flags]
+
+Flags:
+  -d, --debug                      enable debug logging
+  -x, --exclude-vendor             exclude vendor (default true)
+  -h, --help                       help for gofuncgraph
+  -t, --toggle                     Help message for toggle
+  -u, --uprobe-wildcards strings   wildcards for code to add uprobes
+```
+
+详细帮助信息：
+
+```bash
+$ ./gofuncgraph --help
+gofuncgraph is a bpf(2)-based ftrace(1)-like function graph tracer for Go!
+
+here're some tracing examples:
+
+1 trace a specific function in etcd client "go.etcd.io/etcd/client/v3/concurrency.(*Mutex).tryAcquire"
+  gofuncgraph --uprobe-wildcards 'go.etcd.io/etcd/client/v3/concurrency.(*Mutex).tryAcquire' ./binary
+
+2 trace all functions in etcd client
+  gofuncgraph --uprobe-wildcards 'go.etcd.io/etcd/client/v3/*' ./binary 
+
+3 trace a specific function and include runtime.chan* builtins
+  gofuncgraph -u 'go.etcd.io/etcd/client/v3/concurrency.(*Mutex).tryAcquire' -u 'runtime.chan*' ./binary 
+
+4 trace a specific function with some arguemnts
+  gofuncgraph -u 'go.etcd.io/etcd/client/v3/concurrency.(*Mutex).tryAcquire(pfx=+0(+8(%ax)):c512, n_pfx=+16(%ax):u64, m.s.id=16(0(%ax)):u64 )' ./binary
+
+Usage:
+  gofuncgraph [-u wildcards|-x|-d] <binary> [fetch] [flags]
+
+Flags:
+  -d, --debug                      enable debug logging
+  -x, --exclude-vendor             exclude vendor (default true)
+  -h, --help                       help for gofuncgraph
+  -t, --toggle                     Help message for toggle
+  -u, --uprobe-wildcards strings   wildcards for code to add uprobes
+```
+
+这里使用spf13/cobra来组织程序cmd、选项管理、帮助信息查看，说下参数设计吧：
+
+- -d，主要是为了gofuncgraph执行时打印更多的调试信息
+- -x，主要是为了将vendor包中定义的函数给排除掉
+- -h，查看详细帮助信息
+- -u，指定要添加uprobe探针的用户态函数名的匹配模式，支持多个，支持同时获取函数参数信息，-u是必填选项。
+
+如何自定义帮助信息，可以改写rootCmd.Short和rootCmd.Long，这样就可以了。
+
+如果提前熟悉spf13/cobra的话，要实现上述功能就很简单、敲一会键盘就搞定。
+
+### 查找匹配函数
+
+- 加载elf文件构造elf.File对象
+- 遍历elf.symtab中的每个sym
+- 检查sym中 ST_TYPE为函数一类的sym
+- 检查函数名是否满足 `--uprobe-wildcards|-u`来判定是否被过滤掉了
+- 检查函数名中的参数列表部分，生成参数值提取的一些列规则，执行后可以取出参数值
+- 将筛选出来的函数名等其他信息进一步封装为uprobe
+
+咦，怎么没有显示像BCC那样显示注册handler呢？这里的写法比较特殊，是通过类似注解的方式来实现的。
+
+### 查找
+
+## 本文小结
 

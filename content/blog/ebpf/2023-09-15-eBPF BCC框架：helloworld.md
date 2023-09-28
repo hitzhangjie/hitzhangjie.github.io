@@ -3,6 +3,7 @@ layout: post
 title: "eBPF BCC框架：helloworld"
 description: "目前写eBPF程序的话，一般要通过C语言来写，python、golang写的都是用户态的部分，涉及到内核部分的操作都是要借助C语言来写，然后通过编译器将C部分编译成字节码，用户态部分只是借助bpf()系统调用将字节码程序提交给了eBPF子系统去运行。本文就结合BCC框架+Python来写一个简单的helloworld，来熟悉下ebpf程序的写法。"
 date: 2023-09-15 16:36:33 +0800
+categories: ["ebpf原理及实践"]
 tags: ["ebpf", "bcc"]
 toc: true
 ---

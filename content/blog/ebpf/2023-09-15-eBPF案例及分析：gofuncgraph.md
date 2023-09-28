@@ -3,6 +3,7 @@ layout: post
 title: "eBPF案例及分析：gofuncgraph"
 description: "可观测性（observability）是这几年开始被频繁提及的一个词，特别是在微服务领域可观测性已经成为了微服务治理的一项关键的平台化技术手段，在CNCF孵化的项目中我们看到Opentelemetry如火如荼的发展背后也逐渐出现了一些成熟的解决方案。在腾讯内部也有类似天机阁、蓝鲸、wxg等不同的解决方案。这些往往配合框架解决了微服务RPC层面 的可观测性问题，实际上借助eBPF这项革命性技术，我们还可以做更多。"
 date: 2023-09-15 23:00:22 +0800
+categories: ["ebpf原理及实践"]
 tags: ["ebpf","observability","ftrace","gofuncgraph"]
 toc: true
 ---

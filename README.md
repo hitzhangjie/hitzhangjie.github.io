@@ -41,3 +41,32 @@ the datasource of gh pages instead of hitzhangjie/myspace.
 If using hitzhangjie.github.io to maintain directly, the issues, PRs will be messy.
 
 This way gives much more flexibility in maintaining.
+
+## deploy locally
+
+you should pay attention to this:
+
+1. run `npm install`, you may encounter some errors, like:
+    ```
+    This version of npm is compatible with lockfileVersion@1, but package-lock.json was generated for lockfileVersion@2
+    ```
+    it means your nodejs version may be too old, you could use `nvm` to manage your 
+    node.js versions.
+2. install `nvm` on rhel
+    ```
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | bash
+    ```
+3. install newer version of node.js
+    ```
+    nvm install v19.8.1
+    ```
+4. then install the required packages
+    ```
+    npm install
+    ```
+5. finally, run `hugo serve`
+    well, if you haven't installed hugo before, install it first:
+    ```
+    go install --tags=extended -v github.com/gohugoio/hugo@latest
+    ```
+

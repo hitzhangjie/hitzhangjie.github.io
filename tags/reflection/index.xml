@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>reflection on</title><link>/tags/reflection/</link><description>Recent content in reflection on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 09 Oct 2023 16:01:42 +0800</lastBuildDate><atom:link href="/tags/reflection/index.xml" rel="self" type="application/rss+xml"/><item><title>json库性能对比及实现探究</title><link>/blog/2023-08-23-json%E5%BA%93%E6%80%A7%E8%83%BD%E5%AF%B9%E6%AF%94%E5%8F%8A%E5%AE%9E%E7%8E%B0%E6%8E%A2%E7%A9%B6/</link><pubDate>Mon, 09 Oct 2023 16:01:42 +0800</pubDate><guid>/blog/2023-08-23-json%E5%BA%93%E6%80%A7%E8%83%BD%E5%AF%B9%E6%AF%94%E5%8F%8A%E5%AE%9E%E7%8E%B0%E6%8E%A2%E7%A9%B6/</guid><description>本文背景 # JSON是一种轻量级的数据交换格式，易于阅读、解析、生成，应用十分广泛。如今在微服务通信中，JSON也是一种常见的序列化手段，比如json-rpc或者gRPC json、pb互转。因为读写场景的不同，对JSON序列化、反序列化（或者解析）的关注点也不一样，一个通用的JSON库不一定能满足性能要求，可以看到有非常多的JSON第三方库频频向标准库发起挑战。本文将从JSON解析的不同场景入手，来说明这些场景下对JSON生成、解析的一些诉求，以及对性能方面的考量，进一步介绍下业界在这方面一些优秀的实践。
+回顾JSON标准 # rfc8259是目前JSON事实上的标准https://datatracker.ietf.org/doc/html/rfc8259，一个合法的JSON value必须是一个object、array、number、string，或者以下字面量false、true、null。该规范定义了JSON grammar来说明如何表示上述数据。
+rfc8259标准明确提出，如果JSON数据不是在一个封闭系统中使用，在不同系统中进行交换时，字符集应该明确使用UTF-8编码。旧的JSON标准并没有指出这点，但是为了保证不同系统的正常交互，大多数系统使用的正是UTF-8编码。标准还指出在编码时不应该在头部添加BOM字符（Byte Order Mark，U+FEFE），一些JSON解析器为了尽可能保证互操作性可能会忽略被错误添加的BOM字符，而不是报错。
+ps：rfc8259中还提及使用Unicode字符，Unicode是一种字符编码标准，定义了字符的唯一码点，而UTF-8是Unicode的一种可变长的具体编码方案，以对ASCII进行向后兼容。
+JSON 解析器（parser）将JSON文本转换为另一种表示形式，比如go结构体struct。JSON 解析器必须接受所有符合 JSON grammar的文本，可以接受非 JSON 形式或其他扩展（比如vscode .devcontainer定义中支持注释）。解析器实现可能会对其文本的长度进行限制，也可以对数据的最大嵌套深度进行限制，也可以对数值的范围、精度进行限制。
+ps：&amp;ldquo;A JSON parser MAY accept non-JSON forms or extensions.&amp;rdquo; 这句话的意思是，JSON解析器可以接受非JSON形式或扩展。也就是说，解析器可以容忍一些不符合严格JSON语法的文本，或者支持一些扩展的语法或功能。这给了解析器一定的灵活性，使其能够处理一些非标准的JSON文本或具有扩展功能的JSON文本。这样做是为了在实际应用中提供更大的灵活性和兼容性，以满足不同的需求和场景。
+JSON生成器（generator）用于生成JSON文本，生成的文本必须严格符合JSON grammar。比如json.Marshal(v)将v这个数据类型序列化成JSON文本，当然还有json.MarshalIndent(v, &amp;quot;&amp;quot;, &amp;quot;\\t&amp;quot;)，会在name前面增加一些缩进，tab、空格等空白字符在标准中也是允许的。
+**小结：通过rfc8259我们了解了JSON是用来做什么的，有效的JSON数据是什么样的，为了互操作性、灵活性JSON的解析器、生成器又可以怎么做。**下面我们将介绍一些应用场景，从一般到特殊，对应的也会对标准库实现提出一些挑战，然后进一步介绍一些业界的实践、优化。
+从标准库开始 # go标准库中提供了对JSON编码、解析的支持，最常用的两个函数就是json.Marshal、json.Unmarshal。标准库的设计实现，对大多数数据类型、普通的编码解析场景、易用性方面提供了很不错的支持。
+在指出标准库在哪些场景下会表现欠佳之前，需要先了解下标准库在编码、解析过程中的一些实现策略、细节。
+这里简单总结一下：
+标准库json.Marshal的过程，使用了大量的反射操作，比如确定map k、v的类型信息，struct字段的类型信息，匿名嵌套及字段的可见性分析，struct jsontag规则处理，而且是通过反射递归展开json.Marshal(v)中v的类型信息，才能知道如何encode，最后才是根据v及其内部各个组成部分对应的typeEncoder来完成encode输出。encode的过程中虽然它使用了一些caching（缓存）、pooling（池化）技术，但是前面的反射开销确实是比较大的，尤其是数据类型复杂、数据量比较大的时候。
+想了解详细过程的话，可以参考这篇总结，会对这个过程中的开销有更清晰的认识：https://www.notion.so/hitzhangjie/JSON-d278399b8092470985cbc423830115fb?pvs=4
+标准库json.Unmarshal的过程，和json.Marshal的过程相比，其中涉及到的一些要点大差不差，这里就不展开了。
+see: https://sourcegraph.com/github.com/golang/go@go1.19.10/-/tree/src/encoding/json
+ps：反射的开销主要在哪里？
+reflection trades performance for very dynamic and flexible code by pushing work from compile time to runtime.</description></item></channel></rss>

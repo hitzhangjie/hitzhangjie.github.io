@@ -22,7 +22,7 @@ ps：如果你是用Rust的话，那么确实可以直接写eBPF程序，不用�
 
 我们可以先看下，如果手把手从0开始写eBPF程序，大致需要经历哪些操作，看图：
 
-![Go](assets/2023-09-15-eBPF BCC框架：helloworld/go.png)
+![BCC框架](assets/2023-09-15-eBPF_BCC框架：helloworld/go.png)
 
 需要被简化的一些操作：
 

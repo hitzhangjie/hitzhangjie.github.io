@@ -1,4 +1,25 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>linux内核 on</title><link>/categories/linux%E5%86%85%E6%A0%B8/</link><description>Recent content in linux内核 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 14 Nov 2023 12:59:05 +0800</lastBuildDate><atom:link href="/categories/linux%E5%86%85%E6%A0%B8/index.xml" rel="self" type="application/rss+xml"/><item><title>Linux任务调度(2)</title><link>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A62/</link><pubDate>Tue, 14 Nov 2023 12:59:05 +0800</pubDate><guid>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A62/</guid><description>演进过程 # 首先，简要描述下Linux进程调度器的一个发展历史：
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>linux内核 on</title><link>/categories/linux%E5%86%85%E6%A0%B8/</link><description>Recent content in linux内核 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 16 Nov 2023 18:59:05 +0800</lastBuildDate><atom:link href="/categories/linux%E5%86%85%E6%A0%B8/index.xml" rel="self" type="application/rss+xml"/><item><title>Linux任务调度(3)</title><link>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A63/</link><pubDate>Thu, 16 Nov 2023 18:59:05 +0800</pubDate><guid>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A63/</guid><description>演进过程 # 首先，再次回顾下下Linux进程调度器的一个发展历史：
+v0.01~v2.4.x: the very first scheduler，复杂度O(n) v2.6.0~v2.6.22: O(1) scheduler，复杂度O(1) v2.6.23~: Completely Fair Scheduler (CFS)，复杂度O(log(n)) 前一篇文章中我们介绍了v0.01版本中的调度器实现，复杂度为O(n)，在v0.01内核实现中写死了最多可调度的任务数量，只能算作是一个toy！随着从v0.01~v2.4.x版本中的优化，能调度的任务数量也上来了，但是复杂度还是O(n)。
+O(1)调度器简介 # 为了解决此前调度器调度一个进程复杂度为O(n)的问题，O(1)调度器就这么来了。
+O(1)调度器，也被称为“常数时间调度器”，是为了解决Linux中早期调度算法的局限性而引入的。其目标是提高调度器的效率和可扩展性，特别是对于具有大量进程的系统。
+传统的调度算法，如轮转调度（roundrobin）或基于优先级的调度器，其时间复杂度随着进程数量的增加呈线性增长。这意味着随着进程数量的增加，调度开销也会增加，导致性能下降。
+O(1)调度器旨在提供常数时间的调度，无论进程数量如何。O(1)调度器显著减少了调度开销，并提高了整体系统性能。它成为Linux内核的默认调度器多年，直到后续版本中被完全公平调度器（CFS）取代。
+重点攻坚问题 # O(1)调度器并不只是解决从O(n)到O(1)这一个问题，它还涉及到其他一些很有价值和挑战的问题：
+实现完全的O(1)调度：新调度器中的每个算法都能在常数时间内完成，无论运行的进程数量如何。
+实现完美的SMP可扩展性：每个处理器都有自己的锁和独立的运行队列。
+实现改进的SMP亲和性：尝试将任务分组到特定的CPU上，并继续在那里运行它们。只有在运行队列大小不平衡时才将任务从一个CPU迁移到另一个CPU。
+提供良好的交互性能：即使在系统负载较大的情况下，系统也应立即响应并调度交互式任务。
+提供公平性：任何进程都不应在合理的时间内被剥夺时间片。同样，任何进程都不应获得不公平的高时间片。
+针对只有一个或两个可运行进程的常见情况进行优化，同时能够很好地适应具有多个处理器且每个处理器上有许多进程的情况。
+The Big Picture # 下图简要展示了O(1)调度器的核心数据结构，以及调度一个任务执行时大致的工作过程。
+1）本质上O(1)调度器也是一个支持多优先级的多级反馈队列，结构组织上也是从高优先级到低优先级，每个优先级都有一个队列，其中保存该优先级的任务。2）调度时从高优先级到低优先级队列逐个检查，优先调度高优先级进程来执行，保证公平性。3）同时通过优先级确定其时间片，时间片执行完后就继续调度其他低优先级进程继续执行，避免饿死。4）不同进程的交互性不一样，调度器会给予不同的奖励和惩罚，表现就是动态优先级的差异，根据动态优先级计算出的时间片长短的差异。
+工作原理剖析 # 如何调度1个任务 # 1、O(1)调度器会为每个CPU创建一个运行队列（分active和expired）和单独的spinlock（尽量减少操作时锁竞争）。
+2、每个运行队列都会根据优先级组织成多级队列的形式，每个优先级从高到低都有对应的一个保存任务的queue，保存属于该优先级级别的进程。
+3、而进程启动时都有设置静态优先级（nice值），调度器将其放入对应优先级的队列中。在运行过程中调度器也会根据进程优先级、是否是交互程序、执行时间、睡眠时间等计算其动态优先级。调整优先级后将其放入对应优先级的任务队列中。
+4、当一个进程的状态发生变化时，如开始执行IO操作从Task_RUNNING变为TASK_UNINTERRUPTIBLE状态时，或者说它的优先级发生变化时，调度器会根据其优先级将其放入相应的运行队列中。
+5、调度器寻找下一个可执行的进程时，始终首先从高优先级队列开始检查是否有可运行的进程，从而体现公平性。为了高效地识别出可运行的最高优先级的可运行进程，O(1)调度器使用位图（bitmap）来跟踪每个优先级对应的任务队列的状态。位图bitmap[priorityLevel]==true指示运行队列中某个特定优先级级别的任务列表中是否包含任何可运行的进程。这使得调度器能够快速识别出哪个高级别的队列中具有可运行的进程。
+ps：对位图进行查找从而找到对应的最高优先级的队列的这个操作，可以通过一些特殊的指令来加速，比如：x86 bsfl, PPC cntlzw，其他架构下也有对应的指令。
+6、确定了最高优先级运行队列后，调度器选择该运行队列中的第一个进程，并安排其执行。每个队列都有一个指向第一个进程的队首指针，可以迅速确定可运行的第一个进程。被调度的进程，会从运行队列中移除，并且调度器更新位图以反映运行队列状态的变化。</description></item><item><title>Linux任务调度(2)</title><link>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A62/</link><pubDate>Tue, 14 Nov 2023 12:59:05 +0800</pubDate><guid>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A62/</guid><description>演进过程 # 首先，简要描述下Linux进程调度器的一个发展历史：
 v0.01~v2.4.x: the very first scheduler，复杂度O(n) v2.6.0~v2.6.22: O(1) scheduler，复杂度O(1) v2.6.23~: Completely Fair Scheduler (CFS)，复杂度O(log(n)) 可能会有点好奇，只有这么几种吗？这是出现在内核源码树中的实现方案，研究探索过程中，涌现出的实现方案多的多，前一篇文章任务调度(1)中就提到过很多种方案，感兴趣可以了解下。本文只重点介绍内核源码树中真实出现过的调度器实现方案。
 最早的版本 v0.01 # v0.01是最早的Linux内核版本。它的进程调度器只有20行代码，非常简单。作为对比，最新的Linux内核由数万行代码组成。
 在v0.01中，所有的任务都由一个数组表示。这个数组不仅是所有任务的列表，还是运行队列。这个数组的长度是64。这意味着这个版本中的任务数最多为64个。在这个数组中，空的条目用NULL表示。
@@ -80,9 +101,4 @@ typedef struct { char sex; int age; } Person; Person p; printf(&amp;quot;sizeof(
 person address: 0x16fdbac44 person.sex address: 0x16fdbac44 person.age address: 0x16fdbac48 struct的首地址跟第一个成员的首地址是相同的，低位的44表示01000100，说明这个结构体本身以及内部成员sex都是4字节对齐的，然后age地址低位是01001000，在0x16fdbac44+4=0x16fdbac48，其实是4字节对齐的。这么看下来这个结构体中各个字段都是4字节对齐的。在sex和age之间padding了3个char。
 这就是内存对齐了，至少直观地知道是什么了。
 简单地说，当我们希望读取的数据字节数是N，该数据起始地址是addr，假设 addr % N == 0 就是aligned access，反之就是unaligned access。
-即便是基本类型也会对齐，对于结构体各个field都会对齐，当我们说一个struct是多少字节对齐时，指的是struct中field对齐用的字节数最大的一个。 不妨了解下go语言中的内存对齐规则，see: https://go.</description></item><item><title>对volatile的认识</title><link>/blog/volatile/</link><pubDate>Sun, 26 Jun 2022 23:57:00 +0800</pubDate><guid>/blog/volatile/</guid><description>关于这个我有一篇非常不错的总结，估计是全网最好的总结：你不认识的c/c++ volatile，虽然标题有点“博眼球”，但是内容绝对是很多高T都可能不知道的。
-今天翻之前整理的Linux内核文档笔记时，又看到了当时volatile相关的笔记，也是因为这个事情几年前听中心的高T分享时觉得他搞错了，才写的这篇总结。
-这里也放个简单的文档，系统性的强调下，认识正确了对于并发编程还是很重要的。
-see also linux volatile considered harmful，linus torvalds大佬亲笔。
-简单总结下的话就是：
-volatile，需要volatile，尤其是对于涉及到外设访问的情况，有些外设的设备端口是通过统一编址来的，使用某些访存指令而非专用的in/out指令的话，有可能读的数据会做优化，比如放到寄存器中，硬件cpu还可能放到cache中。对于这些设备的读操作，需要避免优化才能正常工作，所以需要volatile。这在c/c++设备驱动中应该比较有用。 volatile，在c/c++语言设计层面，没有保证线程可见性的任何保证，切记！它只是告知编译器不要做软件级别的寄存器优化而已，对于硬件级别的cache缓存没有任何控制。 volatile，不能保证线程可见性，但是在不同的处理器平台上却是会有不同的表现，比如在x86平台上，加了volatile修饰的变量就能够保证线程可见性。为什么呢？首先加了volatile修饰后避免了寄存器优化，现在还有cache的顾虑对吧，但是x86平台比较特殊，它使用了一种称作 tso的memory model，x86多核能够看到其他核对某个cacheline的修改，因此能感知到最新写的数据，能做到线程可见性。 volatile在其他平台内存模型不同，不一定能和x86一样实现线程可见性。 要想实现线程可见性，编译器一般是结合语言本身的特性，为止生成一些内存屏障指令，这些屏障指令最终会触发cache的MESIF协议来使得当前核上的修改对其他核可见。</description></item></channel></rss>
+即便是基本类型也会对齐，对于结构体各个field都会对齐，当我们说一个struct是多少字节对齐时，指的是struct中field对齐用的字节数最大的一个。 不妨了解下go语言中的内存对齐规则，see: https://go.</description></item></channel></rss>

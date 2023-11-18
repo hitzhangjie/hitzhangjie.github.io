@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>rsdl on</title><link>/tags/rsdl/</link><description>Recent content in rsdl on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 16 Nov 2023 18:59:05 +0800</lastBuildDate><atom:link href="/tags/rsdl/index.xml" rel="self" type="application/rss+xml"/><item><title>Linux任务调度(4)</title><link>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A64/</link><pubDate>Thu, 16 Nov 2023 18:59:05 +0800</pubDate><guid>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A64/</guid><description>演进过程 # 首先，再次回顾下下Linux进程调度器的一个发展历史：
+v0.01~v2.4.x: the very first scheduler，复杂度O(n) v2.6.0~v2.6.22: O(1) scheduler，复杂度O(1) v2.6.23~: Completely Fair Scheduler (CFS)，复杂度O(log(n)) 前一篇文章中我们介绍了v0.01版本中的调度器实现，复杂度为O(n)，在v0.01内核实现中写死了最多可调度的任务数量，只能算作是一个toy！随着从v0.01~v2.4.x版本中的优化，能调度的任务数量也上来了，但是复杂度还是O(n)。
+O(1)调度器的问题 # 随着 2.6.0 版本的临近，一些开发人员担心 CPU 调度程序的问题会让这个稳定版本系列垮台。交互性能差、NUMA 系统支持不佳等等的抱怨很常见。随着时间的推移，大部分问题都已得到解决，大量的交互工作和域调度程序已经解决了大部分问题。近年来，有关调度程序的投诉相对较少。
+然而，2.6 调度程序的复杂性仍然困扰着一些人。尤其是交互性工作，添加了大量非常晦涩的代码。调度程序竭尽全力尝试识别交互式任务并相应地提高其优先级。这个过程涉及到许多奇怪的计算，很难理解，更不用说改进了。
+比CFS更早的探索 # 楼梯调度器 # 内核开发人员 Con Kolivas 于2004年提出了 “楼梯调度算法(Starecase Deadline Scheduler)”，简称。Con Kolivas 参与了大部分交互工作，他发布了“楼梯调度程序”补丁的新版本，该补丁旨在大大简化调度程序，同时提高交互响应；它删除了 498 行代码，同时添加了不到 200 行代码。删除的大部分内容是“黑魔法”交互计算；它全部被一个相对简单的、基于等级的方案所取代。
+楼梯调度程序为每个 CPU 设置一个多优先级运行队列。最初，每个进程按照其基本优先级确定的等级进入运行队列；然后调度程序可以以常见的方式找到并运行最高优先级的进程。到目前为止，与O(1)相比没有太大变化。
+在当前的O(1)调度程序中，用完其时间片的进程将被移至单独的“过期”运行队列（expire runqueue）；它们在那里一直等待，直到活跃运行队列（active runqueue）中的其余进程也用完它们的时间片（或被阻塞），此时二者交换后才能被调度。
+而楼梯调度程序中删除了expired runqueue这个设计，时间片用光的进程，其优先级将被调低，并据此重新计算一个时间片，然后将其放回到新优先级对应的队列中。因此，它可以继续运行，但优先级较低。当它耗尽这个时间片时，它再次向下移动，一直这样重复。
+当其从最低优先级队列掉出来时，它的优先级、时间片可以被重置并重新放入runqueue，但是其优先级比原来初始优先级低一级、时间片+1。
+ps：当时内核社区还不愿意在稳定系列中进行另一次重大调度程序更改，很多人希望看到 2.6 真正稳定下来。然而，这个补丁似乎值得考虑，因为它简化了内核的复杂部分。
+旋转楼梯调度器 # 2007年，Con Kolivas继续提出了 “旋转楼梯截止时间调度器(Rotating Staircase Deadline Scheduler, RSDL)”，旋转楼梯调度器，是对楼梯调度器的增强，为什么呢？我个人认为，旋转楼梯调度器更好的建模了优先级、公平性、响应性、解决饿死等的问题，它更好理解和维护。
+简而言之，CPU调度似乎是一项无法完美解决的工作。尽管开发者不断优化调度算法，但总会有某些类型的工作负载得不到很好的调度服务，特别是对交互型任务要求响应迅速的用户。现在的调度器为了提高交互式进程的响应,已经发展出了非常复杂的优化手段。但复杂的代码也带来维护困难，而用户对响应时间的抱怨仍未止息。CPU调度需要持续改进，才能更好平衡不同类型任务的需要。</description></item></channel></rss>

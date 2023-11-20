@@ -14,4 +14,15 @@ cpu分配 # 对于计算密集型任务，如果涉及到混部，为了分配CP
 其实这些问题，都属于调度器层面对于“公平性”的考虑范畴，只是它们有不同的层次：线程级别，用户级别，组级别。
 CFS调度器随着第一个patch以及后续的很多次优化，可以解决上述不同层级的“公平性”问题，这就是“组调度(CFS group scheduling)”，我们在后面介绍。
 CFS调度器 # 在学习RSDL调度器中我们也了解了它是如何保证和体现调度的公平性的，那么CFS调度器又是如何做的呢？一起来看下。
-公平性建模 # 抽象vruntime # 在我看来，抛开道德、协作争议等问题不谈，我认为CFS调度器比Con Kolivas提出的RSDL调度器对公平性的建模上更胜一筹，因为它非常容易理解、容易实现，能够比较简单地论证这个算法能否比较好的工作。</description></item></channel></rss>
+公平性建模 # 抽象vruntime # 在我看来，抛开道德、协作争议等问题不谈，我认为CFS调度器比Con Kolivas提出的RSDL调度器对公平性的建模上更胜一筹，因为它非常容易理解、容易实现，能够比较简单地论证这个算法能否比较好的工作。</description></item><item><title>Linux任务调度(6)</title><link>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A66/</link><pubDate>Sun, 19 Nov 2023 21:59:05 +0800</pubDate><guid>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A66/</guid><description>演进过程 # 首先，再次回顾下下Linux进程调度器的一个发展历史：
+v0.01~v2.4.x: the very first scheduler，复杂度O(n) v2.6.0~v2.6.22: O(1) scheduler，复杂度O(1) v2.6.23~: Completely Fair Scheduler (CFS)，复杂度O(log(n)) 前一篇文章中我们介绍了v0.01版本中的调度器实现，复杂度为O(n)，在v0.01内核实现中写死了最多可调度的任务数量，只能算作是一个toy！随着从v0.01~v2.4.x版本中的优化，能调度的任务数量也上来了，但是复杂度还是O(n)。O(1)调度器对其进行了优化，但是其启发式算法来识别、奖惩交互性的逻辑难以建模、理解、维护、优化。RSDL调度器相比O(1)调度器有了很大的改进，但是Con Kolivas和Torvalds、Ingo等人有不同看法，最终迟迟未能合入内核主线。Ingo吸收了部分RSDL调度器中的经验，开发了CFS调度器作为了一个通用的调度器实现，一直到今天。
+没有银弹 # 尽管Torvalds、Ingo等人坚持希望在内核中维护一个通用的调度器实现，来支撑不同的场景。这个理想很丰满，但是从实践上来看，确实在某些领域CFS表现并不是很令人满意.
+比如在个人桌面场景下，也不需要NUMA、也不要求在4096个处理器上具有良好扩展性，有没有比CFS更合适的调度器实现方案呢？那么在移动设备中呢？在其他更广泛的应用场景下呢？我们真的需要一个以一当十的CFS scheduler吗？还是需要一个个更适应各自领域的专用的scheduler？
+BFS调度器 # 2009年，Con Kolivas 又带着他的新版本调度器实现方案BFS回归了内核开发社区，BFS是Brain Fucker Scheduler的简称，挑衅意味浓厚，这与其主张的希望为Linux kernel在不同场景下允许提供多样化的scheduler方案相关，而Torvalds、Ingo等人主张用一个通用的scheduler统领各种场景。
+有些开发者进行了测试，在桌面场景下，BFS比CFS的效果好很多，但是因为理念的问题，BFS当时也被认为不会被合入内核，但是确实引发了广泛的关于scheduler的讨论。如今已经是2023年，Linux kernel仍然是采用CFS作为调度器，内核主线代码并没有BFS的身影。
+关于BFS scheduler的设计，您可以通过阅读这篇文章来了解：BFS cpu scheduler v0.304 stable release。
+TODO 这部分设计实现的内容，有时间我再继续补充下吧 :(
+ps：如果有人愿意补充下，让我多点休息时间，最好不过了。
+本文小结 # 本文简单提了下BFS调度器，目前没有详细描述其设计实现，但是基本观点和Con Kolivas可能比较接近，内核应该有这种机制来支持用户选择对应的调度器实现以适应不同场景。
+在论文BFS vs. CFS - scheduler comparison的摘要部分，作者也清晰表达了这种看法：
+Our results indicate that scheduler performance varies dramatically according to hardware and workload, and as a result we strongly encourage Linux distributions to take an increased level of responsibility for selecting appropriate default schedulers that best suit the intended usage of the system.</description></item></channel></rss>

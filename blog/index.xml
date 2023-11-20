@@ -14,7 +14,18 @@ cpu分配 # 对于计算密集型任务，如果涉及到混部，为了分配CP
 其实这些问题，都属于调度器层面对于“公平性”的考虑范畴，只是它们有不同的层次：线程级别，用户级别，组级别。
 CFS调度器随着第一个patch以及后续的很多次优化，可以解决上述不同层级的“公平性”问题，这就是“组调度(CFS group scheduling)”，我们在后面介绍。
 CFS调度器 # 在学习RSDL调度器中我们也了解了它是如何保证和体现调度的公平性的，那么CFS调度器又是如何做的呢？一起来看下。
-公平性建模 # 抽象vruntime # 在我看来，抛开道德、协作争议等问题不谈，我认为CFS调度器比Con Kolivas提出的RSDL调度器对公平性的建模上更胜一筹，因为它非常容易理解、容易实现，能够比较简单地论证这个算法能否比较好的工作。</description></item><item><title>Linux任务调度(3)</title><link>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A63/</link><pubDate>Thu, 16 Nov 2023 18:59:05 +0800</pubDate><guid>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A63/</guid><description>演进过程 # 首先，再次回顾下下Linux进程调度器的一个发展历史：
+公平性建模 # 抽象vruntime # 在我看来，抛开道德、协作争议等问题不谈，我认为CFS调度器比Con Kolivas提出的RSDL调度器对公平性的建模上更胜一筹，因为它非常容易理解、容易实现，能够比较简单地论证这个算法能否比较好的工作。</description></item><item><title>Linux任务调度(6)</title><link>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A66/</link><pubDate>Sun, 19 Nov 2023 21:59:05 +0800</pubDate><guid>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A66/</guid><description>演进过程 # 首先，再次回顾下下Linux进程调度器的一个发展历史：
+v0.01~v2.4.x: the very first scheduler，复杂度O(n) v2.6.0~v2.6.22: O(1) scheduler，复杂度O(1) v2.6.23~: Completely Fair Scheduler (CFS)，复杂度O(log(n)) 前一篇文章中我们介绍了v0.01版本中的调度器实现，复杂度为O(n)，在v0.01内核实现中写死了最多可调度的任务数量，只能算作是一个toy！随着从v0.01~v2.4.x版本中的优化，能调度的任务数量也上来了，但是复杂度还是O(n)。O(1)调度器对其进行了优化，但是其启发式算法来识别、奖惩交互性的逻辑难以建模、理解、维护、优化。RSDL调度器相比O(1)调度器有了很大的改进，但是Con Kolivas和Torvalds、Ingo等人有不同看法，最终迟迟未能合入内核主线。Ingo吸收了部分RSDL调度器中的经验，开发了CFS调度器作为了一个通用的调度器实现，一直到今天。
+没有银弹 # 尽管Torvalds、Ingo等人坚持希望在内核中维护一个通用的调度器实现，来支撑不同的场景。这个理想很丰满，但是从实践上来看，确实在某些领域CFS表现并不是很令人满意.
+比如在个人桌面场景下，也不需要NUMA、也不要求在4096个处理器上具有良好扩展性，有没有比CFS更合适的调度器实现方案呢？那么在移动设备中呢？在其他更广泛的应用场景下呢？我们真的需要一个以一当十的CFS scheduler吗？还是需要一个个更适应各自领域的专用的scheduler？
+BFS调度器 # 2009年，Con Kolivas 又带着他的新版本调度器实现方案BFS回归了内核开发社区，BFS是Brain Fucker Scheduler的简称，挑衅意味浓厚，这与其主张的希望为Linux kernel在不同场景下允许提供多样化的scheduler方案相关，而Torvalds、Ingo等人主张用一个通用的scheduler统领各种场景。
+有些开发者进行了测试，在桌面场景下，BFS比CFS的效果好很多，但是因为理念的问题，BFS当时也被认为不会被合入内核，但是确实引发了广泛的关于scheduler的讨论。如今已经是2023年，Linux kernel仍然是采用CFS作为调度器，内核主线代码并没有BFS的身影。
+关于BFS scheduler的设计，您可以通过阅读这篇文章来了解：BFS cpu scheduler v0.304 stable release。
+TODO 这部分设计实现的内容，有时间我再继续补充下吧 :(
+ps：如果有人愿意补充下，让我多点休息时间，最好不过了。
+本文小结 # 本文简单提了下BFS调度器，目前没有详细描述其设计实现，但是基本观点和Con Kolivas可能比较接近，内核应该有这种机制来支持用户选择对应的调度器实现以适应不同场景。
+在论文BFS vs. CFS - scheduler comparison的摘要部分，作者也清晰表达了这种看法：
+Our results indicate that scheduler performance varies dramatically according to hardware and workload, and as a result we strongly encourage Linux distributions to take an increased level of responsibility for selecting appropriate default schedulers that best suit the intended usage of the system.</description></item><item><title>Linux任务调度(3)</title><link>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A63/</link><pubDate>Thu, 16 Nov 2023 18:59:05 +0800</pubDate><guid>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A63/</guid><description>演进过程 # 首先，再次回顾下下Linux进程调度器的一个发展历史：
 v0.01~v2.4.x: the very first scheduler，复杂度O(n) v2.6.0~v2.6.22: O(1) scheduler，复杂度O(1) v2.6.23~: Completely Fair Scheduler (CFS)，复杂度O(log(n)) 前一篇文章中我们介绍了v0.01版本中的调度器实现，复杂度为O(n)，在v0.01内核实现中写死了最多可调度的任务数量，只能算作是一个toy！随着从v0.01~v2.4.x版本中的优化，能调度的任务数量也上来了，但是复杂度还是O(n)。
 O(1)调度器简介 # 为了解决此前调度器调度一个进程复杂度为O(n)的问题，O(1)调度器就这么来了。
 O(1)调度器，也被称为“常数时间调度器”，是为了解决Linux中早期调度算法的局限性而引入的。其目标是提高调度器的效率和可扩展性，特别是对于具有大量进程的系统。
@@ -117,11 +128,4 @@ ps：如果你是用Rust的话，那么确实可以直接写eBPF程序，不用�
 file: helloworld.py
 #!/usr/bin/python3 from bcc import BPF program = r&amp;quot;&amp;quot;&amp;quot; int hello(void *ctx) { bpf_trace_printk(&amp;quot;Hello World!&amp;quot;); return 0; } &amp;quot;&amp;quot;&amp;quot; b = BPF(text=program) syscall = b.get_syscall_fnname(&amp;quot;execve&amp;quot;) b.attach_kprobe(event=syscall, fn_name=&amp;quot;hello&amp;quot;) b.trace_print() 分析下其结构：
 导入bcc中的bpf program是一段c语言程序，b = BPF(text=program)，我们执行这个脚本时bcc框架会自动将其编译为字节码 它定义了一个hello函数，bpf_trace_printk会向ebpf子系统中的一个临时文件或者什么数据结构中打印hello world字符串 syscall = b.get_syscall_fnname是获得exeve函数调用的一个hook point b.attach_kprobe是在execve这个系统调用入口处通过kprobe系统调用创建一个探针，当执行到这里时会触发trap，内核会回调函数hello去执行，这里的hello就是上面C语言中定义的函数 b.trace_print会从取出前面打印的hello world字符串取出来打印出来。 这就是一个极简的helloworld的示例，当我们执行它时，它就会跟踪所有的execve的系统调用，每次触发这个系统调用时，就会打印上述helloworld字符串信息。
-ps：执行ebpf程序时，需要使用root权限。</description></item><item><title>eBPF原理及实践：什么是eBPF</title><link>/blog/2023-09-15-ebpf%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E8%B7%B5%E4%BB%80%E4%B9%88%E6%98%AFebpf/</link><pubDate>Fri, 15 Sep 2023 11:57:13 +0800</pubDate><guid>/blog/2023-09-15-ebpf%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E8%B7%B5%E4%BB%80%E4%B9%88%E6%98%AFebpf/</guid><description>eBPF是一项革命性的内核技术，它允许开发人员编写自定义的代码，然后被内核动态加载后执行，以此来改变内核的执行行为。它的这个特点能够帮助实现高性能网络、更好的可观测性、更细致的安全分析工具。
-eBPF的前身：bpf # 1、eBPF的前身是bpf（BSD Packet Filter），最早它在1993年论文中有Lawrence Berkeley National Laboratory的Steven McCanne和Van Jacobson提出，它是一种类似字节码虚拟机的东西，有自己的指令集，你可以通过它来编写程序然后交给这个小的虚拟机去执行，这个指令集非常像汇编。比如你可以用它来写包过滤的逻辑（接受或者拒绝一个网络分组）。在这篇论文中可以找到其他一些更加复杂的示例程序，论文名：The BSD Packet Filter: A New Architecture for User-level Packet Capture。
-2、1997年，Linux内核版本2.1.75首次引入了BPF，BPF也就开始成为了Berkeley Packet Filter的简称，主要用在tcpdump这些工具中来实现高效的网络包的跟踪。
-3、时间快进到2012年，Linux内核版本3.5中引入了seccomp-bpf，它能够控制是否允许用户态应用程序执行系统调用，举个例子，我们启动一个docker容器，如果不添加特殊的选项控制，在docker容器内部去调试程序的时候是执行不了的，因为Linux系统中程序调试需要利用系统调用ptrace，但是ptrace往往都是被默认不允许的，发挥作用的就是seccomp-bpf，这里有一篇文章介绍了seccomp+ptrace调试原理的文章：https://zhuanlan.zhihu.com/p/606317619。seccomp-bpf是首次开始将bpf从包过滤这个范畴开始向其他范畴扩展。到今天发展到eBPF这个阶段，其实与最早的“包过滤”已经没有多大关系了。
-从BPF到eBPF # 随着BPF在Linux内核中的演进，到了2014年，从版本3.18开始可以使用eBPF将来称呼这项技术，全程就是extended BPF，这包含了几个比较明显的改变：
-BPF指令级对64位机器做了高度的优化，解释器也基本上重写了； eBPF中增加了maps，BPF程序执行时可以访问它记录一些数据，这些数据可以在BPF程序间共享，也可以允许用户态程序访问它获取结果； 增加了bpf()系统调用，用户态程序通过它可以和eBPF程序进行交互，比如加载到内核、从内核卸载、访问maps数据等； 增加了bpf_这样的一些helper函数； 增加了eBPF程序验证器，验证安全的程序才可以被执行； 这是eBPF首次正式放出，但是不是结束，此后就开始了它的快速发展之路。
-eBPF到生产系统 # 这里介绍下eBPF技术演进过程中的一些关键事件：
-2005年Linux中就引入了特性kprobe，它允许在任意指令地址处设置trap，当执行到此处时允许回调用户自定义的函数。开发人员可以编写内核模块，将其中的函数设置为kprobe的回调以执行调试。 ps: 调试器一般也是使用这种指令patch的方式，区别在于kprobe回调函数是内核处理的，而调试器tracee执行时触发断点是内核通过信号通知tracer由tracer来执行的。 2015年的时候允许将eBPF程序连接到kprobe，kprobe可以回调eBPF程序了，这使得在Linux中tracing变得简单，为了更好的追踪Linux内核网络栈的各类事件，Linux中开始增加各种hooks允许eBPF程序进行更细致的观测。 2016年，Netflix的工程师Gregg大佬公开了他和团队在eBPF基础上的大量性能观测工具及实践，让基础设施、运维领域认识到了eBPF在这方面的巨大潜力。 2017年，Facebook开源了Katran这个基于eBPF的高性能L4负载均衡器，也是这一年，Liz Rice这位女强人对此也产生了浓厚的兴趣，并开始研究。 ps: Liz Rice 经常做些技术方面的分享，目前是 the chief open source officer with eBPF specialists at Isovalent, 也是 the Cilium cloud native networking, security and observability project 的创建者.</description></item></channel></rss>
+ps：执行ebpf程序时，需要使用root权限。</description></item></channel></rss>

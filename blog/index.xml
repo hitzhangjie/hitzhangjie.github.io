@@ -1,4 +1,19 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blog on</title><link>/blog/</link><description>Recent content in Blog on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:49:55 +0000</lastBuildDate><atom:link href="/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>Linux任务调度(6)</title><link>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A66/</link><pubDate>Mon, 20 Nov 2023 12:59:05 +0800</pubDate><guid>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A66/</guid><description>演进过程 # 首先，再次回顾下下Linux进程调度器的一个发展历史：
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blog on</title><link>/blog/</link><description>Recent content in Blog on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:49:55 +0000</lastBuildDate><atom:link href="/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>eBPF开发环境搭建</title><link>/blog/2023-11-22-ebpf%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/</link><pubDate>Wed, 22 Nov 2023 01:57:47 +0800</pubDate><guid>/blog/2023-11-22-ebpf%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/</guid><description>问题背景 # 如果读者朋友使用的是Linux机器，而且系统是Ubuntu这些社区比较活跃的发行版，那么你遇到问题的时候，一般可以比较快地解决，或者很少遇到这种被他人反复才坑已经修复的问题。所以本篇文章并不一定适合你，不过看看也说不定有其他方面收获。
+我使用的开发环境如下：
+处理器：i9 13900K (x86_64) 操作系统：Windows 11 WSL版本：v2 Linux发行版：RedHat 8.5 Linux内核版本：5.15.90.1-microsoft-standard-WSL2+ 2023年9月份已经在阅读lizrice的learning-ebpf一书了，并且自己还跑了下书中的用例，并对测试时遇到的环境设置问题进行了解决，但是隔了一段时间，因为执行了 yum update吧，clang、llvm、kernel-headers、bcc相关包，它们之间的依赖没有明显问题，但是整合到一起编译构建、运行ebpf程序的时候，开始报错。
+于是2023.11.21日这天花费了大量时间来重新解决eBPF的开发环境设置问题，先记录下，供大家以及自己日后参考。
+环境设置 # 内核配置 # 1、git clone https://github.com/kernel-newbies/WSL2-Linux-Kernel
+2、cd WSL2-Linux-Kernel &amp;amp;&amp;amp; git checkout linux-msft-wsl-5.15.90.1
+​ 选择版本5.15.90.1，与lizrice/learning-ebpf中推荐版本5.15.x.y尽可能对齐
+3、执行 make config 配置编译构建选项
+​ 直接使用这里的.config ，这个已经是配置好了必要的ebpf选项的配置了
+4、执行 make -j8 进行内核构建，内核输出到了vmlinuz文件
+5、执行 sudo make headers_install 进行内核头文件安装
+工具链配置 # 1、sudo yum install clang clang-devel llvm llvm-devel
+​ 注意llvm不同版本兼容性有些问题，可能在低版本上编译ok升级后反而失败了，
+​ 我就是遇到的这样的坑，原本bcc 0.26可以在llvm 16上编过，升级到llvm 17失败
+2、不使用yum源中的bcc 0.25.0，有bug未修复，直接从源码安装
+​ git clone https://github.</description></item><item><title>Linux任务调度(6)</title><link>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A66/</link><pubDate>Mon, 20 Nov 2023 12:59:05 +0800</pubDate><guid>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A66/</guid><description>演进过程 # 首先，再次回顾下下Linux进程调度器的一个发展历史：
 v0.01~v2.4.x: the very first scheduler，复杂度O(n) v2.6.0~v2.6.22: O(1) scheduler，复杂度O(1) v2.6.23~: Completely Fair Scheduler (CFS)，复杂度O(log(n)) 前一篇文章中我们介绍了v0.01版本中的调度器实现，复杂度为O(n)，在v0.01内核实现中写死了最多可调度的任务数量，只能算作是一个toy！随着从v0.01~v2.4.x版本中的优化，能调度的任务数量也上来了，但是复杂度还是O(n)。O(1)调度器对其进行了优化，但是其启发式算法来识别、奖惩交互性的逻辑难以建模、理解、维护、优化。RSDL调度器相比O(1)调度器有了很大的改进，但是Con Kolivas和Torvalds、Ingo等人有不同看法，最终迟迟未能合入内核主线。Ingo吸收了部分RSDL调度器中的经验，开发了CFS调度器作为了一个通用的调度器实现，一直到今天。
 没有银弹 # 尽管Torvalds、Ingo等人坚持希望在内核中维护一个通用的调度器实现，来支撑不同的场景。这个理想很丰满，但是从实践上来看，确实在某些领域CFS表现并不是很令人满意.
 比如在个人桌面场景下，也不需要NUMA、也不要求在4096个处理器上具有良好扩展性，有没有比CFS更合适的调度器实现方案呢？那么在移动设备中呢？在其他更广泛的应用场景下呢？我们真的需要一个以一当十的CFS scheduler吗？还是需要一个个更适应各自领域的专用的scheduler？
@@ -117,15 +132,4 @@ Linux内核：支持 bpf(2) 和 uprobe 的Linux内核 处理器架构: x86-64架
 为了后续方便自己学习、维护、定制，我fork了作者的项目并做了一些优化、重构，如使用spf13/cobra来代替了原先的命令行框架，spf13/cobra支持长、短选项，对用户更友好。另外也对项目代码进行了一些可读性方面的优化。后续介绍将继续我修改的这个版本介绍 hitzhangjie/gofuncgraph (dev)。
 命令行界面 # 执行 gofuncgraph help 查看帮助信息，简要介绍了它的用途，你可以执行gofuncgraph --help来查看更完整的帮助信息。
 简要帮助信息：
-$ ./gofuncgraph bpf(2)-based ftrace(1)-like function graph tracer for Go! for now, only support following cases: - OS: Linux (always little endian) - arch: x86-64 - binary: go ELF executable built with non-stripped non-PIE mode Usage: gofuncgraph [-u wildcards|-x|-d] &amp;lt;binary&amp;gt; [fetch] [flags] Flags: -d, --debug enable debug logging -x, --exclude-vendor exclude vendor (default true) -h, --help help for gofuncgraph -t, --toggle Help message for toggle -u, --uprobe-wildcards strings wildcards for code to add uprobes 详细帮助信息：</description></item><item><title>eBPF BCC框架：helloworld</title><link>/blog/2023-09-15-ebpf_bcc%E6%A1%86%E6%9E%B6helloworld/</link><pubDate>Fri, 15 Sep 2023 16:36:33 +0800</pubDate><guid>/blog/2023-09-15-ebpf_bcc%E6%A1%86%E6%9E%B6helloworld/</guid><description>怎么写eBPF程序 # 目前写eBPF程序的话，一般要通过C语言来写，python、golang写的都是用户态的部分，涉及到内核部分的操作都是要借助C语言来写，然后通过编译器将C部分编译成字节码，用户态部分只是借助bpf()系统调用将字节码程序提交给了eBPF子系统去运行。
-实际上任何高级语言都可以写用户态部分，但是写内核态部分的eBPF程序需要写C语言，编译器会将C语言部分编译成target=ebpf的字节码，所以现在有很多框架比如BCC+python以及Cilium+golang等，都是对eBPF字节码操作、系统调用操作的一些封装。
-ps：如果你是用Rust的话，那么确实可以直接写eBPF程序，不用依靠C，一般常用的是Rust aya这个框架。
-从0开始写eBPF程序 # 前面多次提到了eBPF程序编写、执行的大致过程，但是介绍的还是太粗略了，也不打算在这么几个简单的总结性文档中，把细节都介绍清楚。
-我们可以先看下，如果手把手从0开始写eBPF程序，大致需要经历哪些操作，看图：
-需要被简化的一些操作：
-用C语言先写eBPF程序，然后使用编译器（如clang）将其编译为target为bpf的字节码程序，然后通过系统调用将其提交给eBPF子系统执行。这一步如果没有BCC这样的框架封装下的话，那么操作起来就有一点啰嗦。 还有你编译eBPF程序时要用到的很多头文件之类的设置，可能就比较麻烦。 还有eBPF程序执行时，那些结果存储到不同的数据结构，和不同语言的类型系统如何对接，如何方便的读取，全部自己从0开始搞也很麻烦。 其他的； 所以现在有BCC、Cilium、Aya这样的一些eBPF框架来简化这一些工作，我们可以先从BCC开始，这个项目比较早、成熟，用的人也多，也被集成到了Linux YUM源中，可以直接安装bcc、bcc-tools包来尝鲜。
-从helloworld开始 # 现在就开始使用BCC来写几个helloworld，让大家了解下一个简单的eBPF程序大致是如何写的，熟悉下其结构，后面虽然不一定自己写，但是了解已有的这些工具的实现细节，以及如何调整来满足自己需要，还是有帮助的。
-file: helloworld.py
-#!/usr/bin/python3 from bcc import BPF program = r&amp;quot;&amp;quot;&amp;quot; int hello(void *ctx) { bpf_trace_printk(&amp;quot;Hello World!&amp;quot;); return 0; } &amp;quot;&amp;quot;&amp;quot; b = BPF(text=program) syscall = b.get_syscall_fnname(&amp;quot;execve&amp;quot;) b.attach_kprobe(event=syscall, fn_name=&amp;quot;hello&amp;quot;) b.trace_print() 分析下其结构：
-导入bcc中的bpf program是一段c语言程序，b = BPF(text=program)，我们执行这个脚本时bcc框架会自动将其编译为字节码 它定义了一个hello函数，bpf_trace_printk会向ebpf子系统中的一个临时文件或者什么数据结构中打印hello world字符串 syscall = b.get_syscall_fnname是获得exeve函数调用的一个hook point b.attach_kprobe是在execve这个系统调用入口处通过kprobe系统调用创建一个探针，当执行到这里时会触发trap，内核会回调函数hello去执行，这里的hello就是上面C语言中定义的函数 b.trace_print会从取出前面打印的hello world字符串取出来打印出来。 这就是一个极简的helloworld的示例，当我们执行它时，它就会跟踪所有的execve的系统调用，每次触发这个系统调用时，就会打印上述helloworld字符串信息。
-ps：执行ebpf程序时，需要使用root权限。</description></item></channel></rss>
+$ ./gofuncgraph bpf(2)-based ftrace(1)-like function graph tracer for Go! for now, only support following cases: - OS: Linux (always little endian) - arch: x86-64 - binary: go ELF executable built with non-stripped non-PIE mode Usage: gofuncgraph [-u wildcards|-x|-d] &amp;lt;binary&amp;gt; [fetch] [flags] Flags: -d, --debug enable debug logging -x, --exclude-vendor exclude vendor (default true) -h, --help help for gofuncgraph -t, --toggle Help message for toggle -u, --uprobe-wildcards strings wildcards for code to add uprobes 详细帮助信息：</description></item></channel></rss>

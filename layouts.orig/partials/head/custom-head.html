@@ -1,0 +1,48 @@
+<!-- Custom head -->
+
+<!-- RSS -->
+{{ with .OutputFormats.Get "RSS" }}<link href="{{ .RelPermalink }}" rel="alternate" type="application/rss+xml" title="{{ $.Site.Title }}" />{{ end }}
+
+<!-- sharethis -->
+<script type='text/javascript' src='https://platform-api.sharethis.com/js/sharethis.js#property=607868a58d7101001829a8df&product=sop' async='async'></script>
+
+<style>
+/* sharethis分享链接按钮居左显示，去掉按钮边框、阴影 */
+[alt~=sharing] {
+    border: 0px;
+    box-shadow: none;
+}
+div#st-1 {
+    text-align: unset;
+}
+
+/* sharethis调整分享按钮大小，稍微调小点显得清爽些 */
+div#st-1 .st-btn {
+    height: 24px;
+    padding: 0 4px;
+}
+
+div#st-1 .st-btn > img {
+    top: 4.2px;
+}
+
+div#st-2 .st-btn {
+    height: 24px;
+    padding: 0 4px;
+}
+
+div#st-2 .st-btn > img {
+    top: 4.2px;
+}
+</style>
+
+<!-- Google Analytics, i.e. Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-168027530-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-168027530-1');
+</script>
+

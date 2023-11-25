@@ -1,0 +1,31 @@
+{{ define "main" }}
+<div class="row justify-content-center">
+  <div class="col-md-12 col-lg-10">
+    <article>
+      <h1 class="text-center">{{ .Title }}</h1>
+      <div class="text-center">{{ .Content }}</div>
+            <div class="card-list">
+                {{ $currentSection := .CurrentSection }}
+                {{ range .Site.RegularPages }}
+                    {{ if in (.RelPermalink | string) $currentSection.RelPermalink }}
+                        <div class="card my-3">
+                            <div class="card-body">
+                                <!-- drop <a class="stretched-link"> here -->
+                                <h2><a href="{{ .Params.book }}">{{ .Params.title | title }}</a></h1>
+                                <div align="center">
+                                    <img src="{{ .Params.Cover }}" style="width:360px;height:160px;"/>
+                                </div>
+                                <br/>
+                                <div>
+                                    <b><font size="-1">{{ .Params.Description | truncate 158 }}</font></b>
+                                    <b><font size="-1"><a href="/books/{{ .File.BaseFileName }}">阅读了解更多></a></font></b>
+                                </div>
+                            </div>
+                        </div>
+                    {{ end }}
+                {{ end }}
+            </div>
+    </article>
+  </div>
+</div>
+{{ end }}

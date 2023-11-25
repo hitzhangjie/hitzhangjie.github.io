@@ -2,7 +2,7 @@
 title: "本科教育"
 date: 2020-10-06T08:49:31+00:00
 lastmod: 2020-10-06T08:49:31+00:00
-draft: false
+draft: true
 images: []
 menu:
   journey:
@@ -11,5 +11,15 @@ weight: 200
 toc: true
 ---
 
-## xxx.md
+## 远离家乡
+
+## 泡图书馆
+
+## 爱上骑行
+
+## 审视自我
+
+## 解放思想
+
+## 一个HITer
 

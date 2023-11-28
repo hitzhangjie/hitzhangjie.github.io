@@ -8,19 +8,28 @@ draft: false
 images: []
 ---
 
-<!--<iframe-->
-  <!--src="https://9exvjgq3o1920m.embednotionpage.com/landscape-4d2884a4c54642948e5a8f1b944916b1"-->
-  <!--style="width: 100%; height: 500px; border: none !important; padding: 0;"-->
-<!--</iframe>-->
-
-<iframe src="https://v2-embednotion.com/landscape-4d2884a4c54642948e5a8f1b944916b1?pvs=4"></iframe>  
-
 <style>  
     iframe { 
         width: 100%; 
-        height: 800px; 
-        border: 2px solid #ccc; 
-        border-radius: 10px; 
-        padding: none; 
+        height: 100%; 
     }  
+
+    .iframe-container {
+        position: relative;
+        height: 100vh;
+        overflow: hidden;
+    }
+    .iframe-container iframe {
+        position: absolute;
+        top: -100px;
+        left: 0;
+        border: none;
+        width: 100%;
+        height: 90%;
+    }
 </style>
+
+<div class="iframe-container">
+    <iframe src="https://docs.qq.com/sheet/DYkFNaHV5Qm9UakNr?tab=BB08J2"/>
+</div>
+

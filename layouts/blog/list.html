@@ -55,21 +55,27 @@
 					<span>{{ .Date.Format (.Site.Params.dateFormat | default "2006/01/02") }}</span>
 					{{ end }}
 				</td>
-				<td width="45%">
+				<td width="40%">
 					<span><a href="{{ .Permalink }}">{{ .Title }}</a></span>
 				</td>
-				<td width="45%">
+				<td width="50%">
 					{{ if .Params.tags }}
 					{{ $len := (len .Params.tags) }}
-					🔖{{ if gt $len 1 }}{{ end }}
-					{{ range $index, $tag := .Params.tags }}
-					<font size="3">
-						<a href="{{ " tags/" | relLangURL }}{{ . | urlize }}">
-							{{ . }}
-						</a>{{ if ne (add $index 1) $len }},{{ end }}
+					{{ if ge $len 1 }}
+                        <div style="display:flex;">
+                        <div>🔖</div>
+                        <div>
+                        {{ range $index, $tag := .Params.tags }}
+						<font size="3">
+							<a href="{{ "tags/" | relLangURL }}{{ . | urlize }}">
+								{{ . }}
+							</a>{{ if ne (add $index 1) $len }},{{ end }}
+							{{ end }}
+						</font>
 						{{ end }}
-					</font>
-					{{ end }}
+                        </div>
+                        </div>
+                    {{ end }}
 				</td>
 			</tr>
 			{{ end }}

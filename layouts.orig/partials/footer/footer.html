@@ -1,4 +1,4 @@
-<footer class="footer text-muted mt-auto">
+<footer class="footer text-muted">
   <div class="container-{{ if .Site.Params.options.fullWidth }}fluid{{ else }}xxl{{ end }}">
     <div class="row">
       <div class="col-lg-8 order-last order-lg-first">
@@ -12,9 +12,6 @@
             <li class="list-inline-item"><a href="{{ .URL | relURL }}">{{ .Name }}</a></li>
           {{ end -}}
         </ul>
-      </div>
-      <div class="col-lg-8" align="right">
-        <p><font size="-1">站点构建版本：v{{ .Site.Data.doks.version }}</font></p>
       </div>
     </div>
   </div>

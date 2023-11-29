@@ -1,89 +1,24 @@
 {{ define "main" }}
-
-<!-- display blogs in card-list manner, see config/_default/params.toml -->
-{{ if eq .Site.Params.blog.Style "card-list" }}
 <div class="row justify-content-center">
-	<div class="col-md-12 col-lg-10 col-xl-8">
-		<article>
-			<!-- display article -->
-			<h1 class="text-center">{{ .Title }}</h1>
-			<div class="text-center">{{ .Content }}</div>
-
-			<!-- display blog list -->
+  <div class="col-md-12 col-lg-10 col-xl-8">
+    <article>
+      <h1 class="text-center">{{ .Title }}</h1>
+      <div class="text-center">{{ .Content }}</div>
 			<div class="card-list">
-				{{ $allPages := .Data.Pages }}
-				{{ $visiblePages := where $allPages "Params.hide" "!=" true }}
-				{{ range $visiblePages -}}
-				<div class="card">
-					<div class="card-body">
-						<h2 class="h3"><a href="{{ .RelPermalink }}">{{ .Params.title }}</a></h2>
-						<p>{{ .Params.lead | safeHTML }}</p>
-						{{ partial "main/blog-meta.html" . -}}
-						{{ if .Params.Tags }}
-						<p>🔖&nbsp;
-							{{ range .Params.Tags }}
-							<a href="/tags/{{.}}/">{{.}}</a>&nbsp;
-							{{ end }}
-						</p>
-						{{ end }}
+				{{ $paginator := .Paginate (.Data.Pages) -}}
+				{{ range $paginator.Pages -}}
+					<div class="card">
+						<div class="card-body">
+							<h2 class="h3"><a class="stretched-link text-body" href="{{ .RelPermalink }}">{{ .Params.title }}</a></h2>
+							<p>{{ .Params.lead | safeHTML }}</p>
+							{{ partial "main/blog-meta.html" . -}}
+						</div>
 					</div>
-				</div>
 				{{ end -}}
+				{{ $.Scratch.Set "paginator" true }}
+				{{ template "_internal/pagination.html" . }}
 			</div>
-		</article>
-	</div>
+    </article>
+  </div>
 </div>
-{{ end }}
-
-<!-- display blogs in simple-list manner, see config/_default/params.toml -->
-{{ if eq .Site.Params.blog.Style "simple-list" }}
-<div class="row justify-content-center">
-	<div class="col-md-12">
-		<!-- display article -->
-		<h1 class="text-center">{{ .Title }}</h1>
-		<div class="text-center">{{ .Content }}</div>
-
-		<!-- display blog list -->
-		<table border="0">
-			{{ $allPages := .Data.Pages }}
-			{{ $visiblePages := where $allPages "Params.hide" "!=" true }}
-			{{ $paginator := .Paginate $visiblePages }}
-			{{ range $paginator.Pages -}}
-			<tr>
-				<td width="10%">
-					{{ if .Params.date | default "1970-01-01" }}
-					<span>{{ .Date.Format (.Site.Params.dateFormat | default "2006/01/02") }}</span>
-					{{ end }}
-				</td>
-				<td width="45%">
-					<span><a href="{{ .Permalink }}">{{ .Title }}</a></span>
-				</td>
-				<td width="45%">
-					{{ if .Params.tags }}
-					{{ $len := (len .Params.tags) }}
-					🔖{{ if gt $len 1 }}{{ end }}
-					{{ range $index, $tag := .Params.tags }}
-					<font size="3">
-						<a href="{{ " tags/" | relLangURL }}{{ . | urlize }}">
-							{{ . }}
-						</a>{{ if ne (add $index 1) $len }},{{ end }}
-						{{ end }}
-					</font>
-					{{ end }}
-				</td>
-			</tr>
-			{{ end }}
-		</table>
-
-		<!-- pagination -->
-		<table border="0">
-			<tr>
-				<td width="10%" style="visibility:hidden;">1234567890</td>
-				<td width="45%" style="border-bottom-width:0;">{{ template "_internal/pagination.html" . }}</td>
-				<td width="45%" style="border-bottom-width:0;"></td>
-			</tr>
-		</table>
-	</div>
-</div>
-{{ end }}
 {{ end }}

@@ -10,8 +10,8 @@ paginate = 16
 rssLimit = 10
 publishDir = "public"
 
-# FIXME
-#ignoreErrors = ["image-not-found"]
+# FIXME: which images not found?
+ignoreErrors = ["image-not-found"]
 
 # Multilingual
 #defaultContentLanguage = "en"

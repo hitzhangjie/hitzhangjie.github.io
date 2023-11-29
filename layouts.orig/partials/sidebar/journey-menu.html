@@ -1,18 +1,12 @@
 {{ $currentPage := . -}}
 {{ range .Site.Menus.journey -}}
-  {{ $draftCount := len (where .Children "Draft" "==" true) }}
-  {{ if gt $draftCount 0 }}
   <h3>{{ .Name }}</h3>
-  {{ end }}
-
   {{ if .HasChildren -}}
   <ul class="list-unstyled">
     {{ range .Children -}}
-     {{ if not $currentPage.Draft }}
       {{- $active := or ($currentPage.IsMenuCurrent "journey" .) ($currentPage.HasMenuCurrent "journey" .) -}}
       {{- $active = or $active (eq $currentPage.Section .Identifier) -}}
       <li><a class="docs-link{{ if $active }} active{{ end }}" href="{{ .URL | relURL }}">{{ .Name }}</a></li>
-      {{ end }}
     {{ end -}}
   </ul>
   {{ end -}}

@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "观测Go应用函数调用：go-ftrace"
-description: "go-ftrace 是一个基于Linux bpf(2) 的类似内核工具 ftrace(1) 的函数调用跟踪、耗时统计工具，它主要是面向go应用程序的。"
+description: "go-ftrace 是一个基于Linux bpf(2) 实现的函数调用跟踪、耗时统计工具，功能类似内核工具 ftrace(1) 。go-ftrace主要解决的是如何无侵入式地实现对go程序用户态代码的跟踪、耗时分析。本文介绍下go-trace的使用。"
 date: 2023-09-28 12:42:47 +0800
 categories: ["ebpf原理及实践"]
 tags: ["ebpf","bpf","trace","ftrace","uftrace","gofuncgraph"]

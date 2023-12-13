@@ -8,13 +8,20 @@ tags: ["ebpf","bpf","trace","ftrace","uftrace","gofuncgraph","dwarf"]
 toc: true
 ---
 
-## 基础知识
+<style>
+img {
+    width: 680px;
+    padding-bottom: 1rem;
+}
+</style>
+
+## 前言
 
 不久前在团队内部做了点eBPF相关的技术分享，过程中介绍了下eBPF的诞生以及在安全、高性能网络、可观测性、tracing&profiling等领域的实践以及巨大潜力。另外，在我们项目开发测试过程中，也希望对go程序的性能有更好的把控，所以对“上帝视角”的追求是会上瘾的，所以我们也探索了下如何基于eBPF技术对go程序进行无侵入式地观测。
 
 分享过程中也演示了下我现阶段开发的go函数调用可观测性工具。下面是我的分享PPT，感兴趣的话可以打开阅读：https://docs.qq.com/slide/DYlhHZ25rSHdRbWd0，欢迎一起学习交流。
 
-## 本文简介
+## 基础知识
 
 本文重点不在于eBPF扫盲，但是如果有eBPF的基础知识的话，再看本文对go-ftrace的介绍会事半功倍。所以如果对eBPF没什么了解，建议可以先看看我的分享PPT，或者其他资料，知道个大概。
 
@@ -22,7 +29,7 @@ go-ftrace主要是对go程序中的函数调用进行跟踪并统计其耗时信
 
 我们在前一篇文章里介绍了如何使用go-ftrace来跟踪go程序中的某些函数，甚至获取其执行过程中的函数参数信息。本文来详细介绍下go-ftrace的设计实现。
 
-## 内核视角
+### 内核视角
 
 自打1993年bpf（berkeley packet filter）技术出现以来，这种CFG-based（control flow graph）的字节码指令集+虚拟机的方案就取代了当时的Tree-based cspf （cmu/standford packet filter）技术，而后几年在Linux内核中引入了bpf，定位是用来做些tcpdump之类的包过滤分析，在后来Linux内核中引入了kprobe技术，允许用户在内核模块中通过kprobe跟踪内核中的一些函数来进行观测、分析，此后的很多年，bpf技术一直在改进，逐渐演化成一个独立的eBPF子系统，kprobe、uprobe也可以直接回调eBPF程序，使得整个Linux内核变得可编程，而且是安全的。
 
@@ -36,7 +43,7 @@ go-ftrace主要是对go程序中的函数调用进行跟踪并统计其耗时信
 - 对于注册kprobe你只需要告诉内核一个符号即可，比如一个系统调用名，内核会自己计算出这个符号对应的指令地址；
 - 而注册一个uprobe的话，举个例子过程需中的main.main函数，内核是不认识这个符号的，它也不知道main.main的地址改如何计算出来，就需要我们自己先算出来它的地址，然后再传给内核；
 
-## 调试知识
+### 调试知识
 
 那么针对不同的编程语言写的程序，如果指定一个符号来计算出对应的指令地址呢？这就是挑战点之一，不过在调试领域这早就是已经解决的问题了，我们可以借鉴调试领域相关的知识来解决如何计算main.main对应的指令地址的问题。
 
@@ -69,3 +76,84 @@ go-ftrace主要是对go程序中的函数调用进行跟踪并统计其耗时信
 - .debug_str, 存储.debug_info中引用的字符串表，也是通过偏移量来引用；
 
 - .debug_types, 存储描述数据类型相关的DIEs；
+
+以我们的go-ftrace为例，我们想跟踪某个函数的执行，就得先通过函数名找到对应的地址，怎么找呢？就是借助前面提到的这些.debug_ sections。简单说就是我们可以通过这些不同的调试信息构建起对go源码层面的全局视图，并且能在源码和内存中表示（包括指令地址）之间建立起一种映射关系。
+
+这样我们就可以知道每个函数的第一条指令地址是多少，然后告诉内核分别在函数进入、退出的位置给设置uprobes，然后我们为这两个uprobe分别编写对应的eBPF回调函数，在进入的时候记录下此时的时间戳，在退出的时候也记录下时间戳，然后就可以计算耗时信息。
+
+当然在实现过程中，有很多细节是需要考虑的，绝对不是轻描淡写一笔可以带过的。篇幅原因，本文就不展开了。
+
+尽管对DWARF一点也不了解也不妨碍阅读理解本文的大意，但是想能定制化go-ftrace这样的工具，不了解DWARF是基本不可能做到的。如果你想了解这方面内容，建议阅读[DWARF文档](https://dwarfstd.org/doc/DWARF5.pdf)，或者阅读我的电子书[golang-debugger-book 里关于DWARF的相关章节](https://www.hitzhangjie.pro/debugger101.io/8-dwarf/)。目前DWARF v5出来不久，v5的特性使用还没有那么广泛，v4应用最广泛。
+
+## 设计目标
+
+假定存在如下go代码，逻辑很简单，循环doSomething。为了演示trace跟踪时也能跟踪目标函数内部对其他函数的调用，示例代码中添加了add、add1、add2、add3，为了展示对函数执行耗时的统计，在不同函数内部加了sleep来模拟各函数的执行耗时。为了避免内联优化对DWARF分析函数位置的影响，我们在上述函数前面加了`//go:inline`，随着go编译工具链对内联函数生成的DWARF信息的优化，后续应该也可以去掉内联。不过现在加上最稳妥。
+
+```go
+func main() {
+        for {
+                doSomething()
+        }
+}
+
+func doSomething() {
+        add(1, 2)
+				...
+        time.Sleep(time.Second)
+}
+
+//go:noinline
+func add(a, b int) int {
+        fmt.Printf("add: %d + %d\n", a, b)
+        return add1(a, b)
+}
+
+//go:noinline
+func add1(a, b int) int {
+        fmt.Printf("add1: %d + %d\n", a, b)
+        time.Sleep(time.Millisecond * 100)
+        return add2(a, b)
+}
+
+//go:noinline
+func add2(a, b int) int {
+        time.Sleep(time.Millisecond * 200)
+        return add3(a, b)
+}
+
+//go:noinline
+func add3(a, b int) int {
+        fmt.Printf("add3: %d + %d\n", a, b)
+        time.Sleep(time.Millisecond * 300)
+        return a + b
+}
+```
+
+然后希望执行 `ftrace -u main.add* ./main`时，函数调用跟踪及耗时统计可以达到这样的效果，能展示函数执行进入、退出的时间戳、耗时，函数调用发生的位置，甚至函数实参信息。
+
+![trace_addall](assets/2023-12-12-观测Go函数调用：go-ftrace 设计实现/trace_addall.png)
+
+## 实现过程
+
+下面按照程序执行流程，对流程中涉及到的技术细节进行下详细介绍。
+
+### 解析启动参数
+
+为了更方便使用POSIX风格的命令行选项参数（长选项、短选项），这里还是使用的spf13/cobra来开发这个程序，原作者用的另外一个库，但是我使用起来感觉不太方便，所以这部分进行了重写，也方便我后续扩展其他功能。
+
+
+
+### 函数地址转换
+
+### 参数寻址规则
+
+### 获取协程goid
+
+### 加载BPF程序
+
+### 注册uprobes
+
+### 轮询事件信息
+
+### 打印函数耗时
+

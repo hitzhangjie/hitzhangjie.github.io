@@ -141,7 +141,31 @@ func add3(a, b int) int {
 
 为了更方便使用POSIX风格的命令行选项参数（长选项、短选项），这里还是使用的spf13/cobra来开发这个程序，原作者用的另外一个库，但是我使用起来感觉不太方便，所以这部分进行了重写，也方便我后续扩展其他功能。
 
+主要参数有这几个：
 
+```go
+// 是否排除vendor/定义的函数
+rootCmd.Flags().BoolP("exclude-vendor", "x", true, "exclude vendor")
+// 指定要跟踪的函数名匹配模式
+rootCmd.Flags().StringSliceP("uprobe-wildcards", "u", nil, "wildcards for code to add uprobes")
+// 将参数-u设置为必填参数
+rootCmd.MarkFlagRequired("uprobe-wildcards")
+```
+
+当我们执行命令时就可以像下面这样使用：
+
+```bash
+# 跟踪binary中main包下所有的函数、方法，而且可以多次使用-u指定多个匹配模式
+ftrace [-u|--uprobe-wildcards] main.* <binary>
+
+# 也可以指定-x来排除vendor下定义的函数、方法
+ftrace -u github.com/* [-x|--exclude-vendor] <binary> 
+
+# 也可以自定参数来描述如何获取指定函数的参数信息
+ftrace -u main.Add <binary> 'main.Add(p1=expr1:type1, p2=expr2:type2)'
+```
+
+spf13/cobra是一个很好用的命令行工具开发框架，感兴趣的可以了解不再赘述。大致知道为什么我们选择它就可以：支持POSIX风格选项解析（长选项、短选项）、方便扩展命令、选项、自动生成help信息、自动生成shell补全脚本。
 
 ### 函数地址转换
 

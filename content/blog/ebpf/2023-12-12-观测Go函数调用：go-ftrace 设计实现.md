@@ -167,7 +167,158 @@ ftrace -u main.Add <binary> 'main.Add(p1=expr1:type1, p2=expr2:type2)'
 
 spf13/cobra是一个很好用的命令行工具开发框架，感兴趣的可以了解不再赘述。大致知道为什么我们选择它就可以：支持POSIX风格选项解析（长选项、短选项）、方便扩展命令、选项、自动生成help信息、自动生成shell补全脚本。
 
+### 匹配函数获取
+
+以我们指定的`main.*`这个匹配表达式为例，我们如何找到所有匹配的函数名呢？我们是拿不到源代码信息的，我们能拿到的只有已经编译构件号的go二进制程序。其实编译器、链接器已经生成了一些.symtab, .strtab，我们的函数名就存在于这些section中，并且对于一个Symbol，除了名字，还记录了这个符号表示的对象类型，比如“函数”。
+
+看下下面的示例代码：获取所有函数命名形如 `main.*`的函数。
+
+```go
+// 首先打开一个elf文件，其中的.symtab, .strtab没有被stripped
+f, err := elf.Open("testdata/helloworld")
+
+// 取出所有的symbols
+syms, err := f.Symbols()
+var funcs []string
+for _, s := range syms {
+  // 如果不是函数类型跳过
+  if elf.ST_TYPE(s.Info) == elf.STT_FUNC {
+    continue
+  }
+  // 如果命名不匹配main.*跳过
+  if !strings.Contains(s.Name, "main.") {
+    continue
+  }
+  // 记录下函数名
+  funcs.append(funcs, s.Name)
+}
+```
+
+在go-ftrace里面，为了实现方便组合使用了go-delve/delve下的DWARF相关package，以及标准库debug/elf，原理和上面是一致的。这样下来我们就获得了所有匹配模式`main.*`的待跟踪函数列表。
+
 ### 函数地址转换
+
+有了这些带跟踪的函数名列表之后，我们希望程序执行时进入、退出函数时能生成一个事件并回调自定义的回调函数，回调函数里我们分别统计开始执行时间、介绍执行时间，这样就能计算出这个函数的耗时信息。
+
+要想在函数进入、退出时产生回调特定函数，就要利用到eBPF+uprobe了，我们用eBPF写uprobe的回调函数，再通过bpf系统调用通知内核将某个uprobe和eBPF程序attach起来之前，我们得先创建uprobe。在创建uprobe之前，我们得先知道每个待跟踪函数的入口指令的地址，以及返回指令的地址，这里的地址后面用pc(程序计数器)代替。
+
+ps: 学过组成原理的话，应该了解到pc=cs:ip，其实就是下条待执行指令的地址，但是我们这里用pc代指了函数入口指令地址、返回指令地址。
+
+#### 函数入口添加uprobe
+
+获得函数入口指令地址，也并不困难，下面是获取入口指令地址、offset（相对于.text section）的示例代码
+
+```go
+sym, err := elf.ResolveSymbol(funcname)
+if err != nil {
+    return nil, err
+}
+
+// 函数入口偏移量
+entOffset, err := elf.FuncOffset(funcname)
+if err != nil {
+    return nil, err
+}
+
+uprobes = append(uprobes, Uprobe{
+    Funcname:  funcname,
+    Location:  AtEntry,
+    Address:   sym.Value, // 指令地址
+    AbsOffset: entOffset, // 相对偏移量
+    RelOffset: 0,		  // 相对入口指令偏移量，当然是0
+})
+```
+
+#### 函数返回前添加uprobe
+
+函数返回时比较特殊，它可能存在多个返回语句，这个也比较好理解。多个返回语句，也就是多条返回指令，每个返回指令地址处都应该添加uprobe。
+
+```go
+// 函数返回指令偏移量
+retOffsets, err := elf.FuncRetOffsets(funcname)
+
+for _, retOffset := range retOffsets {
+    uprobes = append(uprobes, Uprobe{
+        Funcname:  funcname,
+        Location:  AtRet,
+        //Address: 
+        AbsOffset: retOffset,             // 返回指令的偏移量
+        RelOffset: retOffset - entOffset, // 返回指令相对入口指令的偏移量
+    })
+}
+```
+
+这里没有显示设置Address，why？这里没设置，不代表程序中其他地方没设置。咦，最终程序走到cilium/ebpf/link.Uprobe/Uretprobe的时候也是允许指定symbol的？那我们前面计算这些地址有啥作用呢？是这样的，Uprobe、Uretprobe只能处理非共享库、且语言是C之类的场景吧，如果是共享库或者是其他语言的，需要通过`UprobeOptions{Offset: ...}`来进行设置，所以你看我们前面计算了很多AbsOffset偏移量（相对于.text section）的信息，所以实质上最终我们是利用偏移量来设置的。比如系统调用perf_event_open参数attr中会让指定uprobe的偏移量（相对.text section）。
+
+```go
+xswitch typ {
+    case kprobeType:
+    ...
+    case uprobeType:
+    sp, err = unsafeStringPtr(args.path)
+    if err != nil {
+        return nil, err
+    }
+
+    if args.refCtrOffset != 0 {
+        config |= args.refCtrOffset << uprobeRefCtrOffsetShift
+    }
+
+    attr = unix.PerfEventAttr{
+        // The minimum size required for PMU uprobes is PERF_ATTR_SIZE_VER1,
+        // since it added the config2 (Ext2) field. The Size field controls the
+        // size of the internal buffer the kernel allocates for reading the
+        // perf_event_attr argument from userspace.
+        Size:   unix.PERF_ATTR_SIZE_VER1,
+        Type:   uint32(et),          // PMU event type read from sysfs
+        Ext1:   uint64(uintptr(sp)), // Uprobe path
+        Ext2:   args.offset,         // Uprobe offset
+        Config: config,              // RefCtrOffset, Retprobe flag
+    }
+}
+
+rawFd, err := unix.PerfEventOpen(&attr, args.pid, 0, -1, unix.PERF_FLAG_FD_CLOEXEC)
+```
+
+ps: see also `man perf_event_open`中的attr结构体定义，Ext2实际上对应的uprobe的话对应的是`__u64 probe_offset`
+
+此外，难道只是用来设置maps吗？设置哪个函数处是否应该跟踪？是有此用途的。回头再说为什么ret的时候为什么没有设置uprobe的Address，就是因为设置eBPF参数的时候只需要用到入口地址来区分当前函数是否需要跟踪参数之类的，所以不需要设置，系统调用时也只是需要用到偏移量。
+
+那么看下下面的函数是如何定义的：
+
+```go
+// 返回函数定义在ELF文件中的偏移量
+func (e *ELF) FuncOffset(name string) (offset uint64, err error) {
+    sym, err := e.ResolveSymbol(name)
+    if err != nil {
+        return
+    }
+    section := e.Section(".text")
+    return sym.Value - section.Addr + section.Offset, nil
+}
+
+// FuncRetOffsets returns the offsets of RET instructions of function `name` in ELF file
+//
+// Note: there may be multiple RET instructions in a function, so we return a slice of offsets
+func (e *ELF) FuncRetOffsets(name string) (offsets []uint64, err error) {
+	insts, _, offset, err := e.FuncInstructions(name)
+	if err != nil {
+		return
+	}
+
+	for _, inst := range insts {
+		if inst.Op == x86asm.RET {
+			offsets = append(offsets, offset)
+		}
+		offset += uint64(inst.Len)
+	}
+	return
+}
+```
+
+DWARF中函数的lowpc、highpc的指令地址，这个地址是指令的虚拟内存地址，还是相对ELF文件的偏移量呢？另外设置uprobe时，使用probe_offset，这里的probe_offset真实含义是什么呢？对于entry probe、retprobe有区别吗？
+
+ps：理论上应该没区别，难道都是相对于ELF文件的偏移量？
 
 ### 参数寻址规则
 

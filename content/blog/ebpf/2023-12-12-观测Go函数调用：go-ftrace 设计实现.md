@@ -206,7 +206,7 @@ ps: 学过组成原理的话，应该了解到pc=cs:ip，其实就是下条待�
 
 #### 函数入口添加uprobe
 
-获得函数入口指令地址，也并不困难，下面是获取入口指令地址、offset（相对于.text section）的示例代码
+获得函数入口指令地址，也并不困难，下面是获取入口指令地址、offset（相对于ELF文件开始位置）的示例代码：
 
 ```go
 sym, err := elf.ResolveSymbol(funcname)
@@ -229,6 +229,85 @@ uprobes = append(uprobes, Uprobe{
 })
 ```
 
+那`elf.FuncOffset(funcname)`是如何实现的呢？
+
+```go
+// 返回函数定义在ELF文件中的偏移量
+func (e *ELF) FuncOffset(name string) (offset uint64, err error) {
+    sym, err := e.ResolveSymbol(name)
+    if err != nil {
+        return
+    }
+    section := e.Section(".text")
+    return sym.Value - section.Addr + section.Offset, nil
+}
+```
+
+有几个地方要说明下：
+
+- symbol.Value：符号表示的对象（变量、类型、函数等）在进程虚地址空间中的地址；
+- section.Addr：如果不为0表示会被加载到内存，它表示该section第一字节在进程虚地址空间中的地址；
+- section.Offset：表示该section第一字节在ELF文件中的偏移量；
+
+所以 `sym.Value - section.Addr + section.Offset`表示该符号在ELF文件中的偏移量。这可能和我们预期的“虚拟内存地址pc”有点偏差。或者说，当执行系统bpf系统调用设置uprobe时，我们实际传入的位置信息：
+
+- 是一个相对于ELF文件开头的偏移量呢？
+- 还是一个相对于.text section开头的偏移量呢？
+- 还是一个虚拟内存地址呢？
+
+go-ftrace执行bpf操作是利用了cilium/bpf工程提供的封装，``github.com/cilium/ebpf/link.Uprobe|Uretprobe()`，这几个函数也是允许指定symbol，那前面获取这些符号地址有啥作用呢？是这样的，Uprobe、Uretprobe只能处理非共享库、且语言是CC++之类的场景，如果是共享库或者是其他语言的，需通过`UprobeOptions{Offset: ...}`来说明uprobe位置（ELF文件中指令相对于文件开头的偏移量）。
+
+所以你看我前面计算了很多AbsOffset偏移量（相对于ELF文件开头），最终就是利用这些偏移量来设置的。如果进一步了解下cilium使用的系统调用perf_event_open，会了解的更清楚。perf_event_open，该系统调用允许接受一个perf_event_attr的参数来设置kprobe、uprobe。
+
+>$ man 2 perf_event_open
+>
+>...
+>
+>kprobe_func, uprobe_path, kprobe_addr, and probe_offset
+>
+>These fields describe the kprobe/uprobe for dynamic PMUs kprobe and uprobe.  
+>
+>- For kprobe: use kprobe_func and probe_offset, or use  kprobe_addr and leave kprobe_func as NULL. 
+>- For uprobe: use uprobe_path and probe_offset.
+
+再看cilium中对此系统调用的使用过程，看下它是怎么设置perf_event_attr参数的：
+
+```go
+func pmuProbe(typ probeType, args probeArgs) (*perfEvent, error) {
+	...
+	var (
+		attr unix.PerfEventAttr
+		sp   unsafe.Pointer
+	)
+	switch typ {
+	case kprobeType:
+		...
+	case uprobeType:
+		sp, err = unsafeStringPtr(args.path)
+		if err != nil {
+			return nil, err
+		}
+		...
+		attr = unix.PerfEventAttr{
+			Size:   unix.PERF_ATTR_SIZE_VER1,
+			Type:   uint32(et),          // PMU event type read from sysfs
+			Ext1:   uint64(uintptr(sp)), // Uprobe path（二进制文件）
+			Ext2:   args.offset,         // Uprobe offset （相对于ELF文件）
+			...
+		}
+	}
+
+	rawFd, err := unix.PerfEventOpen(&attr, args.pid, 0, -1, unix.PERF_FLAG_FD_CLOEXEC)
+    ...
+}
+```
+
+通过`man perf_event_open`查看attr结构体定义，实际上上述代码中Ext1、Ext2分别对应uprobe_path和probe_offset，刚好对上。uprobe_path实际上就是我们的二进制程序的路径信息，而probe_offset就是要设置uprobe的指令处在ELF文件中的偏移量信息。
+
+之后，内核会读取并解析uprobe_path对应ELF文件的headers信息，计算probe_offset处指令对应的uprobe地址，然后注册uprobe。
+
+> ps：不禁要问，内核为什么不直接要一个逻辑地址来描述uprobe的位置呢？考虑下来可能就是为了一致性、简单性、可理解性。用逻辑地址可以吗？实现肯定能实现，但是看到这种参数开发者要去理解地址映射逻辑、加载逻辑，至少会去“仔细”确认这些信息吧。内核中其他系统调用在处理类似场景时可能也是更倾向于使用offset，应该也有一致性的考虑。先知道这个就行了。
+
 #### 函数返回前添加uprobe
 
 函数返回时比较特殊，它可能存在多个返回语句，这个也比较好理解。多个返回语句，也就是多条返回指令，每个返回指令地址处都应该添加uprobe。
@@ -242,59 +321,9 @@ for _, retOffset := range retOffsets {
         Funcname:  funcname,
         Location:  AtRet,
         //Address: 
-        AbsOffset: retOffset,             // 返回指令的偏移量
-        RelOffset: retOffset - entOffset, // 返回指令相对入口指令的偏移量
+        AbsOffset: retOffset,             // 返回指令的偏移量（相对于ELF文件）
+        RelOffset: retOffset - entOffset, // 返回指令的偏移量（相对函数入口）
     })
-}
-```
-
-这里没有显示设置Address，why？这里没设置，不代表程序中其他地方没设置。咦，最终程序走到cilium/ebpf/link.Uprobe/Uretprobe的时候也是允许指定symbol的？那我们前面计算这些地址有啥作用呢？是这样的，Uprobe、Uretprobe只能处理非共享库、且语言是C之类的场景吧，如果是共享库或者是其他语言的，需要通过`UprobeOptions{Offset: ...}`来进行设置，所以你看我们前面计算了很多AbsOffset偏移量（相对于.text section）的信息，所以实质上最终我们是利用偏移量来设置的。比如系统调用perf_event_open参数attr中会让指定uprobe的偏移量（相对.text section）。
-
-```go
-xswitch typ {
-    case kprobeType:
-    ...
-    case uprobeType:
-    sp, err = unsafeStringPtr(args.path)
-    if err != nil {
-        return nil, err
-    }
-
-    if args.refCtrOffset != 0 {
-        config |= args.refCtrOffset << uprobeRefCtrOffsetShift
-    }
-
-    attr = unix.PerfEventAttr{
-        // The minimum size required for PMU uprobes is PERF_ATTR_SIZE_VER1,
-        // since it added the config2 (Ext2) field. The Size field controls the
-        // size of the internal buffer the kernel allocates for reading the
-        // perf_event_attr argument from userspace.
-        Size:   unix.PERF_ATTR_SIZE_VER1,
-        Type:   uint32(et),          // PMU event type read from sysfs
-        Ext1:   uint64(uintptr(sp)), // Uprobe path
-        Ext2:   args.offset,         // Uprobe offset
-        Config: config,              // RefCtrOffset, Retprobe flag
-    }
-}
-
-rawFd, err := unix.PerfEventOpen(&attr, args.pid, 0, -1, unix.PERF_FLAG_FD_CLOEXEC)
-```
-
-ps: see also `man perf_event_open`中的attr结构体定义，Ext2实际上对应的uprobe的话对应的是`__u64 probe_offset`
-
-此外，难道只是用来设置maps吗？设置哪个函数处是否应该跟踪？是有此用途的。回头再说为什么ret的时候为什么没有设置uprobe的Address，就是因为设置eBPF参数的时候只需要用到入口地址来区分当前函数是否需要跟踪参数之类的，所以不需要设置，系统调用时也只是需要用到偏移量。
-
-那么看下下面的函数是如何定义的：
-
-```go
-// 返回函数定义在ELF文件中的偏移量
-func (e *ELF) FuncOffset(name string) (offset uint64, err error) {
-    sym, err := e.ResolveSymbol(name)
-    if err != nil {
-        return
-    }
-    section := e.Section(".text")
-    return sym.Value - section.Addr + section.Offset, nil
 }
 
 // FuncRetOffsets returns the offsets of RET instructions of function `name` in ELF file
@@ -316,9 +345,12 @@ func (e *ELF) FuncRetOffsets(name string) (offsets []uint64, err error) {
 }
 ```
 
-DWARF中函数的lowpc、highpc的指令地址，这个地址是指令的虚拟内存地址，还是相对ELF文件的偏移量呢？另外设置uprobe时，使用probe_offset，这里的probe_offset真实含义是什么呢？对于entry probe、retprobe有区别吗？
+注意到，在设置函数入口的uprobe时，我们是设置了Uprobe.Address字段的，但是设置函数退出的uprobe时却没有，为什么呢？
 
-ps：理论上应该没区别，难道都是相对于ELF文件的偏移量？
+- 在注册uprobe时，确实只需要指令地址相对于ELF文件的偏移量（前面已解释过）；
+- 在设置函数入口Uprobe.Address，主要是为了用来设置eBPF maps中的配置信息，如我们跟踪的某个函数是否需要获取参数之类的，而这之需要设置函数入口处的uprobe就够了，函数返回处的uprobe就不需要再计算并设置其地址信息了。
+
+> ps：DWARF中函数的lowpc、highpc的指令地址，这个地址是指令的逻辑地址，上述实现FuncRetOffset(name string)中做了从逻辑地址向ELF文件开头的偏移量的转换。
 
 ### 参数寻址规则
 

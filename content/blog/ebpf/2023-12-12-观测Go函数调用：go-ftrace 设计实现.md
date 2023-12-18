@@ -350,7 +350,9 @@ func (e *ELF) FuncRetOffsets(name string) (offsets []uint64, err error) {
 - 在注册uprobe时，确实只需要指令地址相对于ELF文件的偏移量（前面已解释过）；
 - 在设置函数入口Uprobe.Address，主要是为了用来设置eBPF maps中的配置信息，如我们跟踪的某个函数是否需要获取参数之类的，而这之需要设置函数入口处的uprobe就够了，函数返回处的uprobe就不需要再计算并设置其地址信息了。
 
-> ps：DWARF中函数的lowpc、highpc的指令地址，这个地址是指令的逻辑地址，上述实现FuncRetOffset(name string)中做了从逻辑地址向ELF文件开头的偏移量的转换。
+DWARF中函数的lowpc、highpc的指令地址，这个地址是指令的逻辑地址，上述实现FuncRetOffset(name string)中做了从逻辑地址向ELF文件开头的偏移量的转换。
+
+> ps：函数的lowpc实际上是函数被编译后第一条指令的逻辑地址，highpc是最后一条指令的逻辑地址。函数定义在DWARF中是以DIE（Debugging Information Entry）的形式存储在.[z]debug_info中的，对于描述函数的DIE，其Tag会表明它是一个TagSubprogram（函数），同时它会包含相关的AttrLowpc、AttrHighpc来描述函数包含的指令集合的逻辑地址范围。了解这写些就可以了，不再继续展开。
 
 ### 参数寻址规则
 

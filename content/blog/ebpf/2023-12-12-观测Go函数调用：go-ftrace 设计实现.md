@@ -206,7 +206,7 @@ ps: 学过组成原理的话，应该了解到pc=cs:ip，其实就是下条待�
 
 #### 函数入口添加uprobe
 
-获得函数入口指令地址，也并不困难，下面是获取入口指令地址、offset（相对于ELF文件开始位置）的示例代码：
+获得函数入口指令地址，也并不困难，下面是获取入口指令地址、offset（**相对于ELF文件开始位置**）的示例代码：
 
 ```go
 sym, err := elf.ResolveSymbol(funcname)
@@ -255,9 +255,9 @@ func (e *ELF) FuncOffset(name string) (offset uint64, err error) {
 - 还是一个相对于.text section开头的偏移量呢？
 - 还是一个虚拟内存地址呢？
 
-go-ftrace执行bpf操作是利用了cilium/bpf工程提供的封装，``github.com/cilium/ebpf/link.Uprobe|Uretprobe()`，这几个函数也是允许指定symbol，那前面获取这些符号地址有啥作用呢？是这样的，Uprobe、Uretprobe只能处理非共享库、且语言是CC++之类的场景，如果是共享库或者是其他语言的，需通过`UprobeOptions{Offset: ...}`来说明uprobe位置（ELF文件中指令相对于文件开头的偏移量）。
+go-ftrace执行bpf操作是利用了cilium/bpf工程提供的封装，``github.com/cilium/ebpf/link.Uprobe|Uretprobe()`，这几个函数也是允许指定symbol，那前面获取这些符号地址有啥作用呢？是这样的，`link.Uprobe|Uretprobe`函数可以使用symbol作为参数，但是只能处理非共享库、且语言是CC++之类的场景，其他情况则需通过`UprobeOptions{Offset: ...}`来说明uprobe位置（ELF文件中指令相对于文件开头的偏移量）。
 
-所以你看我前面计算了很多AbsOffset偏移量（相对于ELF文件开头），最终就是利用这些偏移量来设置的。如果进一步了解下cilium使用的系统调用perf_event_open，会了解的更清楚。perf_event_open，该系统调用允许接受一个perf_event_attr的参数来设置kprobe、uprobe。
+所以你看我前面计算了很多AbsOffset偏移量（相对于ELF文件开头），最终就是利用这些偏移量来设置的。如果进一步了解下cilium使用的系统调用`perf_event_open`，会了解的更清楚。perf_event_open，该系统调用允许接受一个`perf_event_attr`的参数来设置kprobe、uprobe。
 
 >$ man 2 perf_event_open
 >
@@ -302,9 +302,9 @@ func pmuProbe(typ probeType, args probeArgs) (*perfEvent, error) {
 }
 ```
 
-通过`man perf_event_open`查看attr结构体定义，实际上上述代码中Ext1、Ext2分别对应uprobe_path和probe_offset，刚好对上。uprobe_path实际上就是我们的二进制程序的路径信息，而probe_offset就是要设置uprobe的指令处在ELF文件中的偏移量信息。
+通过`man perf_event_open`查看attr结构体定义，实际上上述代码中Ext1、Ext2分别对应uprobe_path和probe_offset（内核数据结构perf_event_attr中对应的是一个union字段），刚好对上。uprobe_path实际上就是我们的二进制程序的路径信息，而probe_offset就是要设置uprobe的指令处在ELF文件中的偏移量信息。
 
-之后，内核会读取并解析uprobe_path对应ELF文件的headers信息，计算probe_offset处指令对应的uprobe地址，然后注册uprobe。
+之后，内核会读取并解析uprobe_path对应ELF文件的文件头信息，计算probe_offset处指令对应的uprobe地址，然后注册uprobe。
 
 > ps：不禁要问，内核为什么不直接要一个逻辑地址来描述uprobe的位置呢？考虑下来可能就是为了一致性、简单性、可理解性。用逻辑地址可以吗？实现肯定能实现，但是看到这种参数开发者要去理解地址映射逻辑、加载逻辑，至少会去“仔细”确认这些信息吧。内核中其他系统调用在处理类似场景时可能也是更倾向于使用offset，应该也有一致性的考虑。先知道这个就行了。
 
@@ -348,13 +348,15 @@ func (e *ELF) FuncRetOffsets(name string) (offsets []uint64, err error) {
 注意到，在设置函数入口的uprobe时，我们是设置了Uprobe.Address字段的，但是设置函数退出的uprobe时却没有，为什么呢？
 
 - 在注册uprobe时，确实只需要指令地址相对于ELF文件的偏移量（前面已解释过）；
-- 在设置函数入口Uprobe.Address，主要是为了用来设置eBPF maps中的配置信息，如我们跟踪的某个函数是否需要获取参数之类的，而这之需要设置函数入口处的uprobe就够了，函数返回处的uprobe就不需要再计算并设置其地址信息了。
+- 在设置函数入口Uprobe.Address，主要是为了用来设置eBPF maps中的配置信息，如我们跟踪的某个函数是否需要获取参数之类的，而这只需要设置函数入口处的uprobe就够了，函数返回处的uprobe就不需要再计算并设置其地址信息了。
 
-DWARF中函数的lowpc、highpc的指令地址，这个地址是指令的逻辑地址，上述实现FuncRetOffset(name string)中做了从逻辑地址向ELF文件开头的偏移量的转换。
+DWARF中函数的lowpc、highpc的指令地址，这个地址是指令的逻辑地址，上述实现FuncRetOffset(name string)中显示做了从逻辑地址向ELF文件开头的偏移量的转换。
 
-> ps：函数的lowpc实际上是函数被编译后第一条指令的逻辑地址，highpc是最后一条指令的逻辑地址。函数定义在DWARF中是以DIE（Debugging Information Entry）的形式存储在.[z]debug_info中的，对于描述函数的DIE，其Tag会表明它是一个TagSubprogram（函数），同时它会包含相关的AttrLowpc、AttrHighpc来描述函数包含的指令集合的逻辑地址范围。了解这写些就可以了，不再继续展开。
+> ps：函数的lowpc实际上是函数被编译后第一条指令的逻辑地址，highpc是最后一条指令的逻辑地址。函数定义在DWARF中是以DIE（Debugging Information Entry）的形式存储在.[z]debug_info中的，对于描述函数的DIE，其Tag会表明它是一个TagSubprogram（函数），同时它会包含相关的AttrLowpc、AttrHighpc来描述函数包含的指令集合的逻辑地址范围。了解这些就可以了，不再继续展开。
 
 ### 参数寻址规则
+
+TODO
 
 ### 获取协程goid
 

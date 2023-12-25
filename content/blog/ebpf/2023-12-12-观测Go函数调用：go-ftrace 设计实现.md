@@ -463,7 +463,101 @@ timestamp6 timecost3 } main.main end
 
 ### 获取协程goid
 
-TODO 从TLS中获取goid
+先说事实，goid是存储在runtime.g这个结构体中的成员，而runtime.g的地址是存储在线程局部存储（Thread Local Storage，TLS）中的。
+
+那么，如果我们知道TLS在虚拟内存空间中的存储位置，并且知道runtime.g在TLS block中的偏移量信息，那么我们就能读取出runtime.g的地址。如果我们再知道goid相对于包含它的结构体runtime.g的offset，那么我们也就可以继续读取出goid的值。
+
+#### 如何获取TLS地址
+
+TLS地址在现代处理器中一般是有专门的寄存器来存的，比如FS寄存器。以Linux为例，这个寄存器的数据会存储在`task_struct->thread (thread_struct) -> fsbase`字段中：
+
+- 获取指定任务task_struct在eBPF程序中是很简单的事情，仅需要调用函数`bpf_get_current_task`即可；
+- 然后通过offsetof，我们可以轻易获取到thread成员相对于task_struct的偏移量，这里的thread_task是个结构体；
+- 然后继续获取fsbase相对于thread_task的偏移量，这样就可以获取出fsbase的值；
+
+简言之最终的fsbase相对于task_struct的偏移量就是这样：
+
+```c
+// offset of `task_struct->thread_struct->fsbase`, `fsbase` contains the TLS
+// offset. On Linux register `FS` is used to load the TLS base address.
+#define fsbase_off (offsetof(struct task_struct, thread) + offsetof(struct thread_struct, fsbase))
+```
+
+然后这样就可以读取到TLS的地址了：
+
+```c
+__u64 tls_base, g_addr, goid;
+struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+bpf_probe_read_kernel(&tls_base, sizeof(tls_base), (void *)task + fsbase_off);
+```
+
+#### 如何获取runtime.g在TLS中偏移量
+
+要想准确获取runtime.g在TLS block中的offset，还是有一点复杂的，因为这里牵扯到了不同链接方式、不同平台的差异性，对于纯go程序而言就比较简单，runtime.g相对于TLS块的偏移量是-8。
+
+ps：您可以阅读下面代码了解下在非纯go等情景下，偏移量是如何计算的。
+
+```go
+// FindGOffset returns the runtime.g offset
+//
+// see: github.com/go-delve/delve/proc/bininfo.go:setGStructOffsetElf,
+//
+// it summarizes how to get the runtime.g offset:
+// This is a bit arcane. Essentially:
+//   - If the program is pure Go, it can do whatever it wants, and puts the G
+//     pointer at %fs-8 on 64 bit.
+//   - %Gs is the index of private storage in GDT on 32 bit, and puts the G
+//     pointer at -4(tls).
+//   - Otherwise, Go asks the external linker to place the G pointer by
+//     emitting runtime.tlsg, a TLS symbol, which is relocated to the chosen
+//     offset in libc's TLS block.
+//   - On ARM64 (but really, any architecture other than i386 and x86_64) the
+//     offset is calculated using runtime.tls_g and the formula is different.
+//
+// well, this is a bit hard to master all this kind of history.
+// but, we can show respect to the contributors.
+func (e *ELF) FindGOffset() (offset int64, err error) {
+	_, symnames, err := e.Symbols()
+	if err != nil {
+		return
+	}
+	// When external linking, runtime.tlsg stores offsets of TLS base address
+	// to the thread base address.
+	tlsg, ok := symnames["runtime.tlsg"]
+	tls := e.Prog(elf.PT_TLS)
+	if ok && tls != nil {
+		// runtime.tlsg is a symbol, its symbol.Value is the offset to the
+		// beginning of the that TLS block.
+		//
+		// FS register is the offsets which points to the end of the TLS block,
+		// this block's size is memsz long.
+		//
+		// so, offsets where runtime.g stored = FS + runtime.tlsg.Value - memsz
+		memsz := tls.Memsz + (-tls.Vaddr-tls.Memsz)&(tls.Align-1)
+		return int64(^(memsz) + 1 + tlsg.Value), nil
+	}
+	// While inner linking, it's a fixed value -8 ... at least on x86+linux.
+	return -8, nil
+}
+```
+
+这样，我们就可以进一步读取到runtime.g的地址信息：
+
+```c
+bpf_probe_read_user(&g_addr, sizeof(g_addr), (void *)(tls_base + CONFIG.g_offset));
+```
+
+#### 获取goid的偏移量
+
+因为runtime.g的源码是公开的，要确定goid的偏移量的话，易如反掌，也可以通过前面介绍的pahole工具自动分析下。假定这个偏移量是goid_offset的话。
+
+最终我们就可以读取出goid的值：
+
+```c
+bpf_probe_read_user(&goid, sizeof(goid), (void *)(g_addr + CONFIG.goid_offset));
+```
+
+有了goid之后，我们就可以用它做eBPF maps中的goroutine的key，来记录每个协程关联的一些事件统计数据。
 
 ### 加载BPF程序
 

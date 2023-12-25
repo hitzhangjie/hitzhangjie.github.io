@@ -567,15 +567,16 @@ bpf_probe_read_user(&goid, sizeof(goid), (void *)(g_addr + CONFIG.goid_offset));
 
 接下来，我们就看下go-ftrace里面是如何加载eBPF程序的，它没有直接调用bpf系统调用，而是使用了cilium/bpf中对该系统调用的封装。
 
+TODO
 
+### 关联BPF程序
 
-### 注册uprobes
-
-
-
-
+TODO
 
 ### 轮询事件信息
 
+TODO
+
 ### 打印函数耗时
 
+TODO

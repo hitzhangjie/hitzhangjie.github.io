@@ -425,9 +425,45 @@ string本身就是一个struct来表述的，它底层数组的起始地址，�
 
 ps：有时候传参是通过寄存器传递的立即数，这种规则就更简单了，比如`your_arg=(%si):u64`。这里些的比较简短，如果你想详细了解，可以阅读这里的[FetchArgRule 获取参数的规则](https://github.com/hitzhangjie/go-ftrace/blob/master/docs/FetchArgRule.zh_CN.md)。
 
+### 协程执行过程
+
+OK，读到这里的都是技术细节控 :) 现在我们知道怎么在函数入口、退出时设置uprobe了，也知道怎么通过寻址规则来获取任意参数的信息了。我们先把任务做的简单点，假设我们只统计函数耗时信息，我们应该怎么做呢？
+
+```go
+func main() {
+	add()
+}
+
+func add() {
+	add1()
+}
+```
+
+上述函数在执行时，我们希望统计成这样：
+
+```go
+timestamp1           main.main { args...
+timestamp2             main.add { args...
+timestamp3               main.add1 args...
+timestamp4 timecost1     } main.add1 end
+timestamp5 timecost2   } main.add end
+timestamp6 timecost3 } main.main end
+```
+
+要知道，main.add、main.add1 函数可能在任意goroutine中被调用，那么我们汇总上述函数调用过程中的耗时时就必须意识到，我们要针对每个goroutine单独统计它执行过程中的函数栈帧的expand、shrink问题：
+
+- 函数调用进入，新建一个栈帧
+- 函数调用返回、栈帧销毁
+
+比如我们分析一个函数main.main，我们就会将main.main这个位置作为一个根，在其下发起的新的函数调用、返回都伴随着在根下新建节点、移除节点的过程，当每个节点新建、移除时我们就收集到了一连串的事件（uprobe、uretprobe事件被触发，对应的时间戳被记录下来），然后最后连根main.main也返回时，就意味着我们观测的对象已经执行结束了，我们已经收集全了所有的信息，现在是时候打印出上述收集到的执行信息了。
+
+所以，其实我们可以用一个栈（stack）来记录每个goroutine上的信息函数调用、函数返回的事件信息，当栈空时就可以打印收集到的执行信息，并清空这些信息。后续goroutine仍然有可能再次执行这个函数，这个栈又会增长、缩减、被打印执行信息，直到这个goroutine退出时，我们就可以从eBPF maps中删除这个goroutine对应的栈数据结构。
+
+大致实现过程就是这样的，那很重要的一点就是，我们必须获取到goroutine的唯一标志goid，这样我们才能在eBPF maps中为每个goroutine创建与之关联的stack。
+
 ### 获取协程goid
 
-TODO
+TODO 从TLS中获取goid
 
 ### 加载BPF程序
 

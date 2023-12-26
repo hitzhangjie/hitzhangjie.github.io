@@ -567,16 +567,135 @@ bpf_probe_read_user(&goid, sizeof(goid), (void *)(g_addr + CONFIG.goid_offset));
 
 接下来，我们就看下go-ftrace里面是如何加载eBPF程序的，它没有直接调用bpf系统调用，而是使用了cilium/bpf中对该系统调用的封装。
 
-TODO
+```go
+// load bpf programme and setup bpf programme config
+if err = t.bpf.Load(uprobes, bpf.LoadOptions{
+    GoidOffset: goidOffset,
+    GOffset:    gOffset,
+}); err != nil {
+    return
+}
+```
+
+这个过程中具体做了哪些事情呢？
+
+```go
+// Load 加载这个bpf程序
+func (b *BPF) Load(uprobes []uprobe.Uprobe, opts LoadOptions) (err error) {
+    // 加载bpf程序，这部分是用C语言写的，然后clang编译成-target bpf的字节码程序，扩展名为*.o，
+    // 这个*.o文件也是ELF文件头的
+	spec, err := LoadGoftrace()
+	if err != nil {
+		return err
+	}
+
+	b.objs = &GoftraceObjects{}
+	...
+
+    // 是否要获取参数：遍历所有uprobes，检查有没有要获取参数的，有就更新为true
+	fetchArgs := false
+
+    // 返回一个bpf配置
+	cfg := b.BpfConfig(fetchArgs, opts.GoidOffset, opts.GOffset)
+    
+    // 
+	if err = spec.RewriteConstants(map[string]interface{}{"CONFIG": cfg}); err != nil {
+		return
+	}
+	if err = spec.LoadAndAssign(b.objs, &ebpf.CollectionOptions{
+		Programs: ebpf.ProgramOptions{LogSize: ebpf.DefaultVerifierLogSize * 4},
+	}); err != nil {
+		return
+	}
+
+    // 遍历所有uprobes中的参数获取规则，将其写入bpf maps配置中，
+    // - key就是函数入口地址，
+    // - val就是该函数的多个参数获取的规则描述配置
+	for _, uprobe := range uprobes {
+		if len(uprobe.FetchArgs) > 0 {
+			if err = b.setArgRules(uprobe.Address, uprobe.FetchArgs); err != nil {
+				return
+			}
+		}
+		...
+	}
+	return
+}
+
+```
+
+主要是这里的Load函数，我们用C写的bpf程序部分是运行在内核态中的，它被clang编译为-target bpf的字节码程序，在C程序中通过一些特定的编译器扩展允许指定编译器、链接器将特定的函数编译后写入特定的ELF section中。
+
+```c
+SEC("uprobe/ent")
+int ent(struct pt_regs *ctx)
+{
+	__u32 key = 0;
+	struct event *e = bpf_map_lookup_elem(&event_stack, &key);
+	if (!e)
+		return 0;
+	__builtin_memset(e, 0, sizeof(*e));
+
+	...
+}
+
+SEC("uprobe/ret")
+int ret(struct pt_regs *ctx)
+{
+	__u32 key = 0;
+	struct event *e = bpf_map_lookup_elem(&event_stack, &key);
+	if (!e)
+		return 0;
+	__builtin_memset(e, 0, sizeof(*e));
+    ...
+}
+```
+
+```c
+#define SEC(name) \
+	_Pragma("GCC diagnostic push")					    \
+	_Pragma("GCC diagnostic ignored \"-Wignored-attributes\"")	    \
+	__attribute__((section(name), used))				    \
+	_Pragma("GCC diagnostic pop")	
+```
+
+比如上面的程序在被clang -target bpf编译为*.o文件后，尝试用readelf读取sections定义：
+
+```bash
+$ readelf -S goftrace_bpfel_x86.o
+
+There are 31 section headers, starting at offset 0xc0a90:
+
+Section Headers:
+  [Nr] Name              Type             Address           Offset
+       Size              EntSize          Flags  Link  Info  Align
+  ...
+  [ 3] uprobe/ent        PROGBITS         0000000000000000  00000040
+       0000000000000c48  0000000000000000  AX       0     0     8
+  [ 5] uprobe/ret        PROGBITS         0000000000000000  00000c88
+       0000000000000200  0000000000000000  AX       0     0     8
+  ...
+```
+
+Load过程中就会遍历并记录下上述特殊的sections的内容，每一个section的内容都是一个*ebpf.Program，也就是Sec(name)这里的name函数期望的eBPF回调程序。
 
 ### 关联BPF程序
 
-TODO
+attach eBPF程序，这里翻译为了“关联”，可能不太贴切……关联的过程就简单了，只需要通过系统调用来将函数入口地址、返回地址，与对应的eBPF程序关联起来即可。
+
+```go
+up, err := ex.Uprobe("", prog, &link.UprobeOptions{Offset: up.AbsOffset})
+if err != nil {
+    return err
+}
+```
+
+其中prog就是section中的回调程序，然后后面的link.UprobeOptions.Offset就是函数入口地址相对ELF文件开头的偏移量，这几个参数传给系统调用，就可以完成uprobe和eBPF程序的关联。
 
 ### 轮询事件信息
 
-TODO
+TODO 接下来我们就需要看看每个回调函数是如何写的，它们怎么记录事件的，然后用户态程序部分怎么轮询事件的
 
 ### 打印函数耗时
 
-TODO
+TODO 这里描述下怎么将事件信息打印出来的，同一个函数可能在多个goroutine中调用，如何避免输出混乱，以及如果要实现drilldown的话该怎么做？

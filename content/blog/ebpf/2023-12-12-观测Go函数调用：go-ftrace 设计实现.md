@@ -561,9 +561,9 @@ bpf_probe_read_user(&goid, sizeof(goid), (void *)(g_addr + CONFIG.goid_offset));
 
 ### 加载BPF程序
 
-前面讲了如何获取函数定义入口的指令地址、返回指令的指令地址相对ELF文件的偏移量问题。并且也提到了Linux系统调用perf_event_open的参数perf_event_attr如何来设置uprobe的位置信息（uprobe需要通过uprobe_path、probe_offset）。但是在注册uprobe时，我们不光要指定待跟踪的位置信息，还需要指定当程序执行到这个位置时，应该如何反应。所以我们前面又描述了一些自定义的uprobe的回调函数的内容，也就是我们eBPF程序。
+前面讲了如何获取函数定义入口的指令地址、返回指令的指令地址相对ELF文件的偏移量问题。并且也提到了Linux系统调用perf_event_open的参数perf_event_attr如何来设置uprobe的位置信息（uprobe需要通过uprobe_path、probe_offset）。但是在注册uprobe时，我们不光要指定待跟踪的位置信息，还需要指定当程序执行到这个位置时，应该如何反应。所以在本小节之后我们还要描述下自定义的uprobe的回调函数的内容，也就是我们eBPF程序。
 
-这里我们描述下eBPF程序的加载，加载过程归根究底是利用了系统调用bpf(2)来完成，此时只是提交给内核一个eBPF程序，该程序已经通过`clang -target=bpf`编译成了bpf字节码指令，提交给内核后eBPF子系统中的验证器开始工作，它会检查该eBPF程序是否符合要求，比如是否很复杂、是否有无穷或者次数很多的循环、是否有内存越界等行为，只有符合要求的程序才会通过验证并加载。eBPF子系统还会调用JIT编译期将bpf字节码指令进一步转换为native指令，使其执行效率接近原生指令效率。
+这里我们先不管eBPF程序怎么写，先描述下eBPF程序的加载，加载过程归根究底是利用了系统调用bpf(2)来完成，此时只是提交给内核一个eBPF程序，该程序已经通过`clang -target=bpf`编译成了bpf字节码指令，提交给内核后eBPF子系统中的验证器开始工作，它会检查该eBPF程序是否符合要求，比如是否很复杂、是否有无穷或者次数很多的循环、是否有内存越界等行为，只有符合要求的程序才会通过验证并加载。eBPF子系统还会调用JIT编译期将bpf字节码指令进一步转换为native指令，使其执行效率接近原生指令效率。
 
 接下来，我们就看下go-ftrace里面是如何加载eBPF程序的，它没有直接调用bpf系统调用，而是使用了cilium/bpf中对该系统调用的封装。
 
@@ -595,20 +595,20 @@ func (b *BPF) Load(uprobes []uprobe.Uprobe, opts LoadOptions) (err error) {
     // 是否要获取参数：遍历所有uprobes，检查有没有要获取参数的，有就更新为true
 	fetchArgs := false
 
-    // 返回一个bpf配置
+    // 返回一个bpf配置，并将cfg写入eBPF maps，作为运行在内核态的bpf程序要读取的配置
 	cfg := b.BpfConfig(fetchArgs, opts.GoidOffset, opts.GOffset)
-    
-    // 
 	if err = spec.RewriteConstants(map[string]interface{}{"CONFIG": cfg}); err != nil {
 		return
 	}
+    
+    // 继续加载*.o中的bpf程序和maps
 	if err = spec.LoadAndAssign(b.objs, &ebpf.CollectionOptions{
 		Programs: ebpf.ProgramOptions{LogSize: ebpf.DefaultVerifierLogSize * 4},
 	}); err != nil {
 		return
 	}
 
-    // 遍历所有uprobes中的参数获取规则，将其写入bpf maps配置中，
+    // 遍历所有uprobes中的参数获取规则，将其写入bpf maps配置arg_rules_map中，
     // - key就是函数入口地址，
     // - val就是该函数的多个参数获取的规则描述配置
 	for _, uprobe := range uprobes {
@@ -624,7 +624,7 @@ func (b *BPF) Load(uprobes []uprobe.Uprobe, opts LoadOptions) (err error) {
 
 ```
 
-主要是这里的Load函数，我们用C写的bpf程序部分是运行在内核态中的，它被clang编译为-target bpf的字节码程序，在C程序中通过一些特定的编译器扩展允许指定编译器、链接器将特定的函数编译后写入特定的ELF section中。
+主要是这里的`LoadAndAssign`函数，我们用C写的bpf程序部分是运行在内核态中的，它被clang编译为-target bpf的字节码程序，在C程序中通过一些特定的编译器扩展允许指定编译器、链接器将特定的函数编译后写入特定的ELF section中。
 
 ```c
 SEC("uprobe/ent")
@@ -677,7 +677,20 @@ Section Headers:
   ...
 ```
 
-Load过程中就会遍历并记录下上述特殊的sections的内容，每一个section的内容都是一个*ebpf.Program，也就是Sec(name)这里的name函数期望的eBPF回调程序。
+Load过程中就会遍历并记录下上述特殊的sections的内容，每一个section的内容都是一个*ebpf.Program，也就是SEC(name)这里的name函数期望的eBPF回调程序。
+
+ps：除了加载这些bpf程序到内核，它也会加载定义的一些bpf maps数据结构，如用到的hash、queue、stack、array，这些数据结构可能会用来充当配置，也可能用来存储执行结果，实现用户态、内核态的数据交互。这些maps数据结构定义，编译后会统一放在maps这个ELF section中。
+
+以函数参数的获取规则为例，arg_rules_map 是一个hash，kv存储结构，k就是函数入口地址，v就是对一个函数的参数获取规则。arg_rules_map通过SEC("maps")来修饰，编译后会记录在ELF maps section中，这里的加载逻辑就是告诉内核给创建一个这样的结构备用。然后通过`b.setArgRules(uprobe.Address, uprobe.FetchArgs)`来填充数据。
+
+```c
+struct bpf_map_def SEC("maps") arg_rules_map = {
+	.type = BPF_MAP_TYPE_HASH,
+	.key_size = sizeof(__u64),
+	.value_size = sizeof(struct arg_rules),
+	.max_entries = 100,
+};
+```
 
 ### 关联BPF程序
 
@@ -698,7 +711,7 @@ if err != nil {
 
 ![BCC框架](assets/2023-09-15-eBPF_BCC框架：helloworld/go.png)
 
-我们还没有将内核态部分的逻辑是怎么实现的？接下来我们就需要看看每个回调函数是如何写的，它们怎么记录事件的，然后用户态程序部分怎么轮询事件的。
+我们还没有讲内核态部分的逻辑是怎么实现的？接下来我们就需要看看每个回调函数是如何写的，它们怎么记录事件的，然后用户态程序部分怎么轮询事件的。
 
 截止到目前为止，大部分的eBPF程序内核态部分都是通过C语言来写的，当然Rust可以使用Aya来写，其他语言只能用C写完内核态部分后再使用编译器编译为eBPF字节码，然后通过系统调用load、attach。我们这里也是使用C语言来写。
 
@@ -801,7 +814,7 @@ int ret(struct pt_regs *ctx)
 
 #### 协程退出事件
 
-当1个协程退出时，就从是否应该跟踪的配置should_trace_goid里删除当前goid，这意味着后续该goid上发生的事件也不会被跟踪了。
+当1个协程退出时，就从是否应该跟踪的配置should_trace_goid里删除当前goid，goroutine有自己的生命周期，要及时清理资源，内核对bpf程序要求很苛刻。
 
 ```c
 SEC("uprobe/goroutine_exit")
@@ -837,7 +850,7 @@ if (!bpf_map_lookup_elem(&should_trace_rip, &e->ip))
 
 - bpf_probe_read_user，读取内存信息
 
-如果你对调试器中读取进程内存信息有过了解的话，一定对ptrace系统调用的类似操作不陌生，那么理解这里的操作就很容易。无非就是内核提供的工具函数，帮助读取进程上下文中的特定寄存器的值，读取进程地址空间中特定内存位置的信息，仅此而已。
+如果你对调试器中读取进程内存信息有过了解的话，一定对syscall ptrace的类似操作（PTRACE_PEEK_DATA/PTRACE_POKE_DATA）不陌生，那么理解这里的操作就很容易。无非就是内核提供的工具函数，帮助读取进程上下文中的特定寄存器的值，读取进程地址空间中特定内存位置的信息，仅此而已。
 
 其他的就是对上述寻址规则的利用，我们的有效地址最终会被拆解为一系列的操作：寄存器操作、内存操作1、内存操作2、……，每一步操作都是通过上面的两个工具函数之一来完成，最终读取到想要的参数。
 
@@ -927,18 +940,83 @@ static __always_inline void read_reg(struct pt_regs *ctx, __u8 reg, __u64 *regva
 
 ### 打印函数耗时
 
-这里描述下怎么将事件信息打印出来的，同一个函数可能在多个goroutine中调用，如何避免输出混乱？
+怎么将事件信息打印出来，同一个函数可能在多个goroutine中调用，我们记录goroutine上的函数调用、退出时，是每个goroutine（goid唯一标识）单独有一个events stack，需要一个合适的时机将goroutine上的完整events stack打印出来。
 
 当轮询到新事件时，要么是函数调用的进入事件，要么是函数调用的退出事件：
 
-- 如果是函数进入事件，无需特殊处理
-- 如果是函数退出事件，就需要判断下，当前goroutine跟踪到的所有函数级联调用，这个event的到来是不是表示topmost的函数调用已经执行结束了？如果是，那就可以考虑将当前goid对应的events全部打印出来，并清空events等着后续收集、打印。
+- 如果是函数进入事件，无需特殊处理；
+- 如果是函数退出事件，就需要判断下，当前goroutine跟踪到的所有函数级联调用，这个event的到来是不是表示topmost的函数调用已经执行结束了？如果是，那就可以考虑将当前goid对应的events全部打印出来，并清空events stack等着后续收集、打印。
 
-如果要实现drilldown的话该怎么做？比如main.main->main.add->main.add1，uprobes指定了main.main, main.add, main.add1，假设此时主协程执行main.main->main.add->main.add1，但是另一个协程执行main.add1，这种情况下如果要实现只输出main.main->main.add->main.add1的路径，而忽略掉只执行main.add1的路径，该怎么做呢？
+```go
+for event := range t.bpf.PollEvents(ctx) {
+    if err = eventManager.Handle(event); err != nil {
+        return
+    }
+}
+```
 
-其实可以在打印过程中做文章，如果上面的条件也成立（topmost函数执行结束了），只要额外再判断当前events stack的栈底元素是不是--drilldown指定的函数就可以了，是的话就打印。
+```go
+// Handle handles the event
+func (m *EventManager) Handle(event bpf.GoftraceEvent) (err error) {
+	m.Add(event)
+	log.Debugf("added event: %+v", event)
+    // CloseStack判断当前event是否是topmost函数调用的返回事件
+	if m.CloseStack(event) {
+        // 打印整个调用栈信息，这个就是根据event中记录的信息，打印源码层面的函数名、文件位置、时间戳、耗时信息
+		if err = m.PrintStack(event.Goid); err != nil {
+			return err
+		}
+		m.ClearStack(event)
+	}
+	return
+}
+
+// PrintStack print the callstack of a traced function
+func (m *EventManager) PrintStack(goid uint64) (err error) {
+	...
+	for _, event := range m.goEvents[goid] {
+		syms, offset, err := m.elf.ResolveAddress(event.Ip)
+
+		switch event.Location {
+		case 0: // entpoint
+			startTimeStack = append(startTimeStack, event.TimeNs)
+			callChain, err := m.SprintCallChain(event)
+			...
+			if filename, line, err := m.elf.LineInfoForPc(event.CallerIp); err == nil {
+				lineInfo = fmt.Sprintf("%s:%d", filename, line)
+			}
+
+			fmt.Printf("%s %s %s %s(%s) { %s %s\n",
+				color.YellowString(t),
+				placeholder,
+				indent,
+				color.RedString(event.uprobe.Funcname),
+				color.MagentaString(event.argString),
+				color.GreenString(callChain),
+				color.CyanString(lineInfo))
+
+		case 1: // retpoint
+			...
+			if filename, line, err := m.elf.LineInfoForPc(event.Ip); err == nil {
+				lineInfo = fmt.Sprintf("%s:%d", filename, line)
+			}
+			elapsed := event.TimeNs - startTimeStack[len(startTimeStack)-1]
+			...
+		}
+	}
+	return
+}
+```
 
 ### 更好地下钻分析
+
+#### 简单实现
+
+比如main.main->main.add->main.add1，uprobes指定了main.main, main.add, main.add1，假设此时主协程执行main.main->main.add->main.add1，但是另一个协程执行main.add1，这种情况下如果要实现只输出main.main->main.add->main.add1的路径，而忽略掉只执行main.add1的路径，该怎么做呢？
+
+其实可以在打印过程中做文章，如果上面的条件也成立（topmost函数执行结束了），只要额外再判断当前events stack的栈底元素是不是`--drilldown funcname`指定的函数就可以了，是的话就打印。
+
+#### 一点展望
 
 如果要实现源码层面的更好的下钻分析，离不开对源代码的理解，可行的方案是，借助go build中写入二进制程序中的版本控制信息，去拉取对应的源代码，然后进一步通过AST分析去分析出有哪些函数调用，然后让用户去勾选，勾选上的自动完成对其uprobe的注册、attach，这样就能实现更好地下钻分析。
 

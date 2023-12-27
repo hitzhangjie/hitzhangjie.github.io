@@ -906,8 +906,41 @@ static __always_inline void read_reg(struct pt_regs *ctx, __u8 reg, __u64 *regva
 
 ### 轮询事件信息
 
-TODO 接下来了解下用户态部分如何读取上面内核态部分记录下来的events信息
+接下来了解下用户态部分如何读取上面内核态部分记录下来的events信息，这个就很简单了，bpf提供了对应的函数来轮询ebpf maps中的events，读取到之后决定打印还是不打印就可以了。这个地方没有什么特别要注意的，感兴趣可以看下这部分代码。
+
+```go
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	// create eventmanager to poll events, prepare the callstack and print
+	eventManager, err := eventmanager.New(uprobes, t.drilldown, t.elf, t.bpf.PollArg(ctx))
+	if err != nil {
+		return
+	}
+	for event := range t.bpf.PollEvents(ctx) {
+		if err = eventManager.Handle(event); err != nil {
+			return
+		}
+	}
+	return eventManager.PrintRemaining()
+```
 
 ### 打印函数耗时
 
-TODO 这里描述下怎么将事件信息打印出来的，同一个函数可能在多个goroutine中调用，如何避免输出混乱，以及如果要实现drilldown的话该怎么做？
+这里描述下怎么将事件信息打印出来的，同一个函数可能在多个goroutine中调用，如何避免输出混乱？
+
+当轮询到新事件时，要么是函数调用的进入事件，要么是函数调用的退出事件：
+
+- 如果是函数进入事件，无需特殊处理
+- 如果是函数退出事件，就需要判断下，当前goroutine跟踪到的所有函数级联调用，这个event的到来是不是表示topmost的函数调用已经执行结束了？如果是，那就可以考虑将当前goid对应的events全部打印出来，并清空events等着后续收集、打印。
+
+如果要实现drilldown的话该怎么做？比如main.main->main.add->main.add1，uprobes指定了main.main, main.add, main.add1，假设此时主协程执行main.main->main.add->main.add1，但是另一个协程执行main.add1，这种情况下如果要实现只输出main.main->main.add->main.add1的路径，而忽略掉只执行main.add1的路径，该怎么做呢？
+
+其实可以在打印过程中做文章，如果上面的条件也成立（topmost函数执行结束了），只要额外再判断当前events stack的栈底元素是不是--drilldown指定的函数就可以了，是的话就打印。
+
+### 更好地下钻分析
+
+如果要实现源码层面的更好的下钻分析，离不开对源代码的理解，可行的方案是，借助go build中写入二进制程序中的版本控制信息，去拉取对应的源代码，然后进一步通过AST分析去分析出有哪些函数调用，然后让用户去勾选，勾选上的自动完成对其uprobe的注册、attach，这样就能实现更好地下钻分析。
+
+后续有时间时，将继续在这方面做一点尝试。
+

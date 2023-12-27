@@ -692,9 +692,221 @@ if err != nil {
 
 其中prog就是section中的回调程序，然后后面的link.UprobeOptions.Offset就是函数入口地址相对ELF文件开头的偏移量，这几个参数传给系统调用，就可以完成uprobe和eBPF程序的关联。
 
+### 生成事件信息
+
+还记得这张图吗，我们前面讲的都是ftrace工具的用户态部分，包括如何确定要跟踪的函数、确定函数进入退出的uprobes、将内核态部分加载到内核，并将uprobes与bpf程序关联起来。
+
+![BCC框架](assets/2023-09-15-eBPF_BCC框架：helloworld/go.png)
+
+我们还没有将内核态部分的逻辑是怎么实现的？接下来我们就需要看看每个回调函数是如何写的，它们怎么记录事件的，然后用户态程序部分怎么轮询事件的。
+
+截止到目前为止，大部分的eBPF程序内核态部分都是通过C语言来写的，当然Rust可以使用Aya来写，其他语言只能用C写完内核态部分后再使用编译器编译为eBPF字节码，然后通过系统调用load、attach。我们这里也是使用C语言来写。
+
+这部分的设计实现，参考了go调试器go-delve/delve中的设计实现，为什么调试器也会用到eBPF呢？因为调试器中也有tracepoint之类的设计，当执行到某个地方时打印一下，eBPF就很合适。部分代码也是摘取自go-delve/delve，言归正传说下这里的实现。
+
+#### 函数入口事件
+
+当一个函数调用发生时，首先触发的是uprobe/ent，对应的函数定义如下，这个函数最终编译后会存储在ELF文件的section uprobe/ent中，然后Load、Attach的时候将uprobe的ip和这段prog attach起来。等函数调用发生时，就会回调这里的函数。
+
+看下这个函数的逻辑，大致逻辑就是，生成一个新的事件event，其中记录下来goid、ip、类型、时间戳，这样就能描述谁（goid）在什么时间（time_ns）调用（ENTRY）了什么函数（ip）。bp、caller bp、caller ip可以帮助我们进一步确定一些其他信息，后面再解释。
+
+```c
+SEC("uprobe/ent")
+int ent(struct pt_regs *ctx)
+{
+    // event_stack是一个BPF_MAP_TYPE_PERCPU_ARRAY，每个CPU都有一个独立的数组来记录其事件信息，
+    // event_stack用来传递每个CPU上的事件信息，这里的key==0，因为event_stack是一个栈，对于任意
+    // key对应的元素总是存在，这意味着它会创建一个新的event。
+	__u32 key = 0;
+	struct event *e = bpf_map_lookup_elem(&event_stack, &key);
+	if (!e)
+		return 0;
+	__builtin_memset(e, 0, sizeof(*e));
+
+    // 获取当前cpu上的线程正在执行的协程的goid，并将该goid与事件e关联起来，表示事件e是由goid标识
+    // 的协程触发的，同时也将当前的ip（函数入口地址）与事件e关联起来。
+    // ... 这里可能有点好奇，这里的事件e到底是个什么东西？
+	e->goid = get_goid();
+	e->ip = ctx->ip;
+    // ip表示触发uprobe对应的函数入口地址，这里通过hash结构should_trace_rip查询该函数是否应该被
+    // 跟踪，这个hash的写入是在bpf.(*BPF).Load(urpobes, opts)方法中设置的，根据uprobe来设置某
+    // 个rip是否应该被跟踪 ... 这一步疑似有些多余，因为不跟踪压根不会走到这里
+    //
+    // 如果当前函数不该被跟踪，并且当前goid也没有过记录，就返回
+	if (!bpf_map_lookup_elem(&should_trace_rip, &e->ip))
+	{
+		if (!bpf_map_lookup_elem(&should_trace_goid, &e->goid))
+			return 0;
+	}
+    // 如果当前函数要被跟踪，但是当前goid没被跟踪过，则应该追踪它
+	else if (!bpf_map_lookup_elem(&should_trace_goid, &e->goid))
+	{
+		__u64 should_trace = true;
+		bpf_map_update_elem(&should_trace_goid, &e->goid, &should_trace, BPF_ANY);
+	}
+	// 记录下当前事件的信息：是进入函数类型、进入事件戳ns、栈基址、调用方栈基址
+	e->location = ENTPOINT;
+	e->time_ns = bpf_ktime_get_ns();
+	e->bp = ctx->sp - 8;
+	e->caller_bp = ctx->bp;
+	// 记录发起当前函数调用位置的ip，此时sp指向的位置是caller的返回地址（不了解可以看下函数调用过程
+    // 中的栈增长过程，压参数、压返回地址、压caller bp、减小rsp分配栈空间）
+    // see: https://hitzhangjie.gitbook.io/libmill/basics/stack-memory
+	void *ra;
+	ra = (void *)ctx->sp;
+	bpf_probe_read_user(&e->caller_ip, sizeof(e->caller_ip), ra);
+
+    // 按需获取参数信息
+	if (!CONFIG.fetch_args)
+		goto cont;
+
+	fetch_args(ctx, e->goid, e->ip);
+
+cont:
+    // 将上述事件放到栈 event_queue 中，BPF_EXIST表示如果栈慢了则移除最老的元素腾空间
+	return bpf_map_push_elem(&event_queue, e, BPF_EXIST);
+}
+
+```
+
+#### 函数返回事件
+
+与函数调用进入相对应的就是函数返回事件，其对应的eBPF处理程序如下：
+
+```c
+SEC("uprobe/ret")
+int ret(struct pt_regs *ctx)
+{
+    // 生成1个新的事件，用来记录当前函数退出的信息
+	__u32 key = 0;
+	struct event *e = bpf_map_lookup_elem(&event_stack, &key);
+	if (!e)
+		return 0;
+	__builtin_memset(e, 0, sizeof(*e));
+
+    // 记录执行该函数的goid
+	e->goid = get_goid();
+	if (!bpf_map_lookup_elem(&should_trace_goid, &e->goid))
+		return 0;
+
+    // 记录：事件类型（函数退出）、当前ret指令的指令地址、此时的时间戳ns
+	e->location = RETPOINT;
+	e->ip = ctx->ip;
+	e->time_ns = bpf_ktime_get_ns();
+
+    // 将当前事件记录到栈中，如果栈满则移除最旧的元素腾空间
+	return bpf_map_push_elem(&event_queue, e, BPF_EXIST);
+}
+```
+
+#### 协程退出事件
+
+当1个协程退出时，就从是否应该跟踪的配置should_trace_goid里删除当前goid，这意味着后续该goid上发生的事件也不会被跟踪了。
+
+```c
+SEC("uprobe/goroutine_exit")
+int goroutine_exit(struct pt_regs *ctx)
+{
+	__u64 goid = get_goid();
+	bpf_map_delete_elem(&should_trace_goid, &goid);
+	return 0;
+}
+```
+
+如果一个goroutine退出了，意味着其过去记录的所有函数调用都正常返回了，events栈也是空的，没啥要特殊处理的，这里仅需要从map里删掉这个goid对应的key、value即可，节省空间。
+
+#### 其他考虑
+
+为什么uprobe/ent会有这么奇葩的判断呢？如果当前函数没被跟踪，为什么不直接返回呢？却去判断当前goid应不应该被追踪？可能会有这种极端情况，当我们准备取消跟踪时，此时会更新map里的配置告诉我们的eBPF程序这些函数不要继续追踪了。
+
+那么这里的判断就有意义，它可以避免之前某个goroutine上记录的函数调用链不完整的问题。
+
+```c
+if (!bpf_map_lookup_elem(&should_trace_rip, &e->ip))
+{
+    if (!bpf_map_lookup_elem(&should_trace_goid, &e->goid))
+        return 0;
+}
+```
+
+#### 如何获取参数
+
+前面描述了如何描述一个参数的寻址规则，根据具体的EA（Effective Address）或者寄存器中的立即数去读取对应的数据并解析成对应数据类型的工作，其实也是在这个内核态部分去完成的，主要就是靠这两个函数调用：
+
+- bpf_probe_read_kernel，读取寄存器信息
+
+- bpf_probe_read_user，读取内存信息
+
+如果你对调试器中读取进程内存信息有过了解的话，一定对ptrace系统调用的类似操作不陌生，那么理解这里的操作就很容易。无非就是内核提供的工具函数，帮助读取进程上下文中的特定寄存器的值，读取进程地址空间中特定内存位置的信息，仅此而已。
+
+其他的就是对上述寻址规则的利用，我们的有效地址最终会被拆解为一系列的操作：寄存器操作、内存操作1、内存操作2、……，每一步操作都是通过上面的两个工具函数之一来完成，最终读取到想要的参数。
+
+详细实现如下，读取到的函数参数信息，将被记录到对应的参数队列中，等着后续打印过程中去读取、展示。
+
+```c
+// 从寄存器中读取参数信息
+static __always_inline void fetch_args_from_reg(struct pt_regs *ctx, struct arg_data *data, struct arg_rule *rule)
+{
+	read_reg(ctx, rule->reg, (__u64 *)&data->data);
+	bpf_map_push_elem(&arg_queue, data, BPF_EXIST);
+	return;
+}
+
+// 从内存中读取参数信息
+static __always_inline void fetch_args_from_memory(struct pt_regs *ctx, struct arg_data *data, struct arg_rule *rule)
+{
+	// first read the address from register (well, it maybe a immediate value)
+	__u64 addr = 0;
+	read_reg(ctx, rule->reg, &addr);
+
+	// then do other addressing rules
+	for (int i = 0; i < 8 && i < rule->length; i++)
+	{
+		// if expr = *+8(+2(%eax)), for *+8 part, we need to dereference the address
+		if (rule->dereference[i] == 1)
+		{
+			bpf_probe_read_user(&addr, sizeof(addr), (void *)addr + rule->offsets[i]);
+		}
+		// if the rule is +2 part, then we just add the offset to the address
+		else
+		{
+			addr += rule->offsets[i];
+		}
+	}
+
+	// finally, we got the EA (effective address), then read the data from it,
+	// make sure the data size is not larger than MAX_DATA_SIZE
+	bpf_probe_read_user(&data->data,
+						rule->size < MAX_DATA_SIZE ? rule->size : MAX_DATA_SIZE,
+						(void *)addr);
+	// put the read data into the queue
+	bpf_map_push_elem(&arg_queue, data, BPF_EXIST);
+	return;
+}
+
+// read register `reg` data from `ctx` into `regval`
+static __always_inline void read_reg(struct pt_regs *ctx, __u8 reg, __u64 *regval)
+{
+	switch (reg)
+	{
+	case 0:
+		bpf_probe_read_kernel(regval, sizeof(ctx->ax), &ctx->ax);
+		break;
+	case 1:
+		bpf_probe_read_kernel(regval, sizeof(ctx->dx), &ctx->dx);
+		break;
+	...
+	case 15:
+		bpf_probe_read_kernel(regval, sizeof(ctx->r15), &ctx->r15);
+		break;
+	}
+	return;
+}
+```
+
 ### 轮询事件信息
 
-TODO 接下来我们就需要看看每个回调函数是如何写的，它们怎么记录事件的，然后用户态程序部分怎么轮询事件的
+TODO 接下来了解下用户态部分如何读取上面内核态部分记录下来的events信息
 
 ### 打印函数耗时
 

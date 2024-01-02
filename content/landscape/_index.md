@@ -21,11 +21,11 @@ images: []
     }
     .iframe-container iframe {
         position: absolute;
-        top: -100px;
-        left: 0;
+        top: -170px;
+        left: -40px;
         border: none;
         width: 100%;
-        height: 90%;
+        height: 98%;
     }
 </style>
 

@@ -131,7 +131,7 @@ func add3(a, b int) int {
 
 然后希望执行 `ftrace -u main.add* ./main`时，函数调用跟踪及耗时统计可以达到这样的效果，能展示函数执行进入、退出的时间戳、耗时，函数调用发生的位置，甚至函数实参信息。
 
-![trace_addall](assets/2023-12-12-观测Go函数调用：go-ftrace 设计实现/trace_addall.png)
+![trace_addall](assets/2023-12-12-观测Go函数调用：go-ftrace设计实现/trace_addall.png)
 
 ## 实现过程
 

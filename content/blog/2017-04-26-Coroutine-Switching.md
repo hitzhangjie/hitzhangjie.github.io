@@ -8,8 +8,13 @@ toc: true
 reward: true
 ---
 
-
 ### 1. 协程Coroutine
+
+本文提供了一个模拟协程上下文切换过程的测试程序，基本思路是每当希望创建一个coroutine时，就在堆里申请一块内存，然后对内存进行整理，在其中保存预设的硬件上下文等信息（重点设置rbp、rsp、rip（callback）、rdi（callback-arg））。启动协程并进行切换时，通过__SwitchCoroutine__(cur,next)来完成cur向next的切换，切换过程中保存当前上下文信息到cur对应的堆内存中，并提取next对应的堆内存信息还原上下文完成切换。 测试程序中创建了4个coroutine，第1个coroutine只是为了用来启动其他3个，其他3个没有继续调度第一个，原因是第一个coroutine中rip保存的是main.c中__SwitchCoroutine__之后的指令地址，如果让第一个coroutine参与context-switch的话会使得进程结束执行。
+
+在看下面的程序之前，需要先了解栈帧的构成、栈帧创建之前caller的动作&创建之后callee的动作、函数返回之前callee的动作&函数返回之后caller的动作，之前看过一篇整理的很不错的文章以供参考C Function Call Conventions and the Stack。
+
+ps: 实际上直接使用linux下的ucontext_t实现会更简单，在我的介绍libmill的电子书中有详细介绍。
 
 #### 1.1. 协程coroutine声明
 

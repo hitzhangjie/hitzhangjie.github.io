@@ -9,7 +9,7 @@
 如下图所示，应用程序前几次read系统调用时都没有数据可供返回，此时内核立即返回一个EAGAIN错误代码，程序并不睡眠而是继续调用read，当第四次调用read时数据准备好了，于是执行数据从内核到用户空间的复制操作并成功返回，应用程序接着处理数据。这种对一个非阻塞IO端口反复调用read进行数据读取的动作称为轮询，即应用程序持续轮询内核数据是否准备好。这里的持续轮询操作将导致耗费大量的CPU时间，因此该模型并不推荐使用。
 3. IO多路复用模型 # 前面介绍了非阻塞IO模型的问题在于，尽管应用程序可以在当前IO操作不能完成的时候迫使系统调用立刻返回而不至于睡眠，但是却无法知道什么时候再次请求IO操作可以顺利完成，只能周期性地做很多无谓的轮询，每隔一段时间就要重新请求一次系统调用，这种轮询策略极大浪费了CPU时间。
 IO多路复用模型就是在此之上的改进，它的好处在于使得应用程序可以同时对多个IO端口进行监控以判断其上的操作是否可以顺利（无阻塞地）完成，达到时间复用的目的。进程阻塞在类似于select、poll或epoll这样的系统调用上，而不是阻塞在真正的IO系统调用上，意思也就是说在这些select、poll或者epoll函数内部会代替我们做非阻塞地轮询，那么它的轮询策略是怎样地呢？稍后会进行介绍。
-select、poll或epoll使得进程可以在多个IO端口上等待IO事件（可读、可写、网络连接请求等）的发生，当有事件发生时再根据发生事件的类型进行适当的IO处理。不过进程在等待IO事件发生时仍然在代码执行序上处于“阻塞”状态，应用程序“阻塞”在这里照样还是无法做其他的工作（尽管可以指定轮询时等待时间的长短）。因此如果希望进程在没有IO事件要处理时还能做其他的工作，这种模型是不可行的。
+select、poll或epoll使得进程可以在多个IO端口上等待IO事件（可读、可写、网络连接请求等）的发生，当有事件发生时再根据发生事件的类型进行适当的IO处理。不过进程在等待IO事件发生时仍然在代码执行序上处于“阻塞”状态，应用程序“阻塞”在这里照样还是无法做其他的工作（尽管可以指定轮询时等待时间的长短）。如果希望进程在没有IO事件要处理时还能做其他的工作，可以考虑分派任务给其他线程、进程，当然也可以在当前线程做，但是不宜过久以免影响处理IO事件。
 下图是IO多路复用模型的示例。
 IO多路复用模型主要有3种实现形式，select、poll、epoll。
 3.1. select # #include &amp;lt;sys/select.h&amp;gt; //返回值：readfds、writefds、exceptfds中事件就绪的fd的数量 int select(int nfds, // 最大文件描述符fd+1 fd_set *restrict readfds, // 等待读取的fds fd_set *restrict writefds, // 等待写入的fds fd_set *restrict exceptfds, // 异常fds struct timeval *restrict timeout); // 超时时间 //返回值：readfds、writefds、exceptfds中事件就绪的fd的数量 int pselect(int nfds, // 最大文件描述符fd+1 fd_set *restrict readfds, // 等待读取的fds fd_set *restrict writefds, // 等待写入的fds fd_set *restrict exceptfds, // 异常fds const struct timespec *restrict timeout, // 超时时间 const sigset_t *restrict sigmask); // 信号掩码 备注：</description></item></channel></rss>

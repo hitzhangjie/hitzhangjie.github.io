@@ -1,0 +1,533 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-regular.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-500.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-700.woff2 type=font/woff2 crossorigin><link rel=stylesheet href=/main.919d32897099d0335611840e8de8126598e04dec08600b11dc58a2217f4a8223a0719340de3efeedf96217230bed172fe5d3b4dc7b9b6b5065e74c49a2539323.css integrity="sha512-kZ0yiXCZ0DNWEYQOjegSZZjgTewIYAsR3FiiIX9KgiOgcZNA3j7+7fliFyML7Rcv5dO03Huba1Bl50xJolOTIw==" crossorigin=anonymous><noscript><style>img.lazyload{display:none}</style></noscript><meta name=robots content="index, follow"><meta name=googlebot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><meta name=bingbot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><title>Linux系统最佳实践 - 命令行技术 - MySpace</title><meta name=description content="迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是《Linux系统最佳实践工具-命令行技术》里的一些知识要点。
+# 《Linux系统最佳实践》学习笔记 &amp;gt; 参考书目： 《Linux 系统最佳实践工具 —— 命令行技术 》 &amp;gt; 本文撰写： 张 杰 &amp;gt; 截至日期： 2012-6-21 &amp;gt; 总结	： &amp;gt; 这是我在学习linux过程中，对本书重点内容的一点总结。谈不上心得，只是一点总结，便于以后查阅。在理解/实践的基础上，回头看这些总结的内容会轻松许多。 &amp;gt; 如果你想从本文中获取到丁点帮助，恐怕你必须付出实践，必须肯花时间。 &amp;gt; 有句话叫做“纸上得来终觉浅，绝知此事要躬行”。如果想进步，想获得实质性的进步，必须付出实践。 &amp;gt; linux系统的强大之处不在于它的桌面环境，可能linux现在众多的发行版本中没有任何一款可以与微软抗衡。也许你觉得linux很酷，是的，它的确很酷。 &amp;gt; 它给予了你无穷尽的自由，从内核到桌面，每一个使用linux的人都从中尝到了甜头。但是说真的，linux的“酷”不是靠桌面打下的口碑，这是我们都深知的。 &amp;gt; 当你学习过linux的命令行之后，也许，你才会大彻大悟，linux真是非一般的强悍。而这是windows望尘莫及的。 &amp;gt; 如果你渴望自由，如果你渴望高效，如果…… &amp;gt; 欢迎你加入linux大家庭中来！ # 第一章 Linux简介 ## 1.查看内核版本 uname -r，主版本号/次版本号/修订次数/编译次数 # 第二章 Linux文件系统及其相关处理命令 ## 1.file system - /:文件系统根目录 - /bin:最小系统所需要的命令，其中的文件都是可执行的 - /boot:包含一些启动文件 - /dev:接口设备文件目录 - /etc:系统配置文件所在目录,Editable Text Configuration - /home:用户的主目录 - /lib:库文件目录，例如在执行/bin，/sbin目录下的二进制命令文件时可能会调用的库文件 - /mnt:各项装置的文件系统挂载点，如/mnt/cdrom是光驱的挂载点 - /opt:可以在这里安装自定义软件包（较大的且固定的） - /proc:系统运行时，进程信息以及内核信息（cpu/disk/memory等）都存放在这里。它是一个伪文件系统，存在于内存中，而非硬盘中，通过这个虚拟的文件系统可以在系统运行时调整内核参数，改变内核行为。不用重新启动查看cmos，即可查看系统信息。 - /root:管理员的主目录 - /sbin:目录sbin下的程序都是root权限才可以执行的 - /tmp:存放暂存盘的目录 - /usr:这是系统存放程序的目录，比如命令/配置文件等。当我们安装一个linux发行版提供提供的软件包时，大多安装在这里。这个目录下包含字体文件目录/usr/share/fonts,帮助目录/usr/share/man,/usr/share/doc，普通用户可执行目录/usr/bin,/usr/local/bin,/usr/X11R6/bin,超级用户可执行命令目录/usr/sbin,usr/X11R6/sbin,/usr/local/sbin等。还包含程序的头文件目录/usr/include。 ## 2."><link rel=canonical href=/blog/2012-06-21-linux%E7%B3%BB%E7%BB%9F%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5-%E5%91%BD%E4%BB%A4%E8%A1%8C%E6%8A%80%E6%9C%AF/><meta property="og:locale" content="en_US"><meta property="og:type" content="article"><meta property="og:title" content="Linux系统最佳实践 - 命令行技术"><meta property="og:description" content="迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是《Linux系统最佳实践工具-命令行技术》里的一些知识要点。
+# 《Linux系统最佳实践》学习笔记 > 参考书目： 《Linux 系统最佳实践工具 —— 命令行技术 》 > 本文撰写： 张 杰 > 截至日期： 2012-6-21 > 总结	： > 这是我在学习linux过程中，对本书重点内容的一点总结。谈不上心得，只是一点总结，便于以后查阅。在理解/实践的基础上，回头看这些总结的内容会轻松许多。 > 如果你想从本文中获取到丁点帮助，恐怕你必须付出实践，必须肯花时间。 > 有句话叫做“纸上得来终觉浅，绝知此事要躬行”。如果想进步，想获得实质性的进步，必须付出实践。 > linux系统的强大之处不在于它的桌面环境，可能linux现在众多的发行版本中没有任何一款可以与微软抗衡。也许你觉得linux很酷，是的，它的确很酷。 > 它给予了你无穷尽的自由，从内核到桌面，每一个使用linux的人都从中尝到了甜头。但是说真的，linux的“酷”不是靠桌面打下的口碑，这是我们都深知的。 > 当你学习过linux的命令行之后，也许，你才会大彻大悟，linux真是非一般的强悍。而这是windows望尘莫及的。 > 如果你渴望自由，如果你渴望高效，如果…… > 欢迎你加入linux大家庭中来！ # 第一章 Linux简介 ## 1.查看内核版本 uname -r，主版本号/次版本号/修订次数/编译次数 # 第二章 Linux文件系统及其相关处理命令 ## 1.file system - /:文件系统根目录 - /bin:最小系统所需要的命令，其中的文件都是可执行的 - /boot:包含一些启动文件 - /dev:接口设备文件目录 - /etc:系统配置文件所在目录,Editable Text Configuration - /home:用户的主目录 - /lib:库文件目录，例如在执行/bin，/sbin目录下的二进制命令文件时可能会调用的库文件 - /mnt:各项装置的文件系统挂载点，如/mnt/cdrom是光驱的挂载点 - /opt:可以在这里安装自定义软件包（较大的且固定的） - /proc:系统运行时，进程信息以及内核信息（cpu/disk/memory等）都存放在这里。它是一个伪文件系统，存在于内存中，而非硬盘中，通过这个虚拟的文件系统可以在系统运行时调整内核参数，改变内核行为。不用重新启动查看cmos，即可查看系统信息。 - /root:管理员的主目录 - /sbin:目录sbin下的程序都是root权限才可以执行的 - /tmp:存放暂存盘的目录 - /usr:这是系统存放程序的目录，比如命令/配置文件等。当我们安装一个linux发行版提供提供的软件包时，大多安装在这里。这个目录下包含字体文件目录/usr/share/fonts,帮助目录/usr/share/man,/usr/share/doc，普通用户可执行目录/usr/bin,/usr/local/bin,/usr/X11R6/bin,超级用户可执行命令目录/usr/sbin,usr/X11R6/sbin,/usr/local/sbin等。还包含程序的头文件目录/usr/include。 ## 2."><meta property="og:url" content="/blog/2012-06-21-linux%E7%B3%BB%E7%BB%9F%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5-%E5%91%BD%E4%BB%A4%E8%A1%8C%E6%8A%80%E6%9C%AF/"><meta property="og:site_name" content="MySpace"><meta property="article:published_time" content="2012-06-21T08:00:00+08:00"><meta property="article:modified_time" content="2012-06-21T08:00:00+08:00"><meta property="og:image" content="/doks.png"><meta property="og:image:alt" content="MySpace"><meta name=twitter:card content="summary_large_image"><meta name=twitter:site content="@hitzhangjie"><meta name=twitter:creator content="@hitzhangjie"><meta name=twitter:title content="Linux系统最佳实践 - 命令行技术"><meta name=twitter:description content><meta name=twitter:image content="/doks.png"><meta name=twitter:image:alt content="Linux系统最佳实践 - 命令行技术"><script type=application/ld+json>{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/1","name":"","url":"/","sameAs":["https://twitter.com/hitzhangjie","https://www.linkedin.com/in/hitzhangjie/","https://github.com/hitzhangjie"],"image":{"@type":"ImageObject","@id":"/#/schema/image/1","url":"/\u003cnil\u003e","width":null,"height":null,"caption":""}},{"@type":"WebSite","@id":"/#/schema/website/1","url":"/","name":"MySpace","description":"MySpace is a hitzhangjie\u0027s personal space, for blogs, books, journey, thinkings.","publisher":{"@id":"/#/schema/person/1"}},{"@type":"WebPage","@id":"/blog/2012-06-21-linux%E7%B3%BB%E7%BB%9F%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5-%E5%91%BD%E4%BB%A4%E8%A1%8C%E6%8A%80%E6%9C%AF/","url":"/blog/2012-06-21-linux%E7%B3%BB%E7%BB%9F%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5-%E5%91%BD%E4%BB%A4%E8%A1%8C%E6%8A%80%E6%9C%AF/","name":"Linux系统最佳实践 - 命令行技术","description":"","isPartOf":{"@id":"/#/schema/website/1"},"about":{"@id":"/#/schema/person/1"},"datePublished":"2012-06-21T08:00:00CET","dateModified":"2012-06-21T08:00:00CET","breadcrumb":{"@id":"/blog/2012-06-21-linux%E7%B3%BB%E7%BB%9F%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5-%E5%91%BD%E4%BB%A4%E8%A1%8C%E6%8A%80%E6%9C%AF/#/schema/breadcrumb/1"},"primaryImageOfPage":{"@id":"/blog/2012-06-21-linux%E7%B3%BB%E7%BB%9F%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5-%E5%91%BD%E4%BB%A4%E8%A1%8C%E6%8A%80%E6%9C%AF/#/schema/image/2"},"inLanguage":"","potentialAction":[{"@type":"ReadAction","target":["/blog/2012-06-21-linux%E7%B3%BB%E7%BB%9F%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5-%E5%91%BD%E4%BB%A4%E8%A1%8C%E6%8A%80%E6%9C%AF/"]}]},{"@type":"BreadcrumbList","@id":"/blog/2012-06-21-linux%E7%B3%BB%E7%BB%9F%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5-%E5%91%BD%E4%BB%A4%E8%A1%8C%E6%8A%80%E6%9C%AF/#/schema/breadcrumb/1","name":"Breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"item":{"@type":"WebPage","@id":"/","url":"/","name":"Home"}},{"@type":"ListItem","position":2,"item":{"@id":"/blog2012-06-21-linux%E7%B3%BB%E7%BB%9F%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5-%E5%91%BD%E4%BB%A4%E8%A1%8C%E6%8A%80%E6%9C%AF/"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Article","@id":"/#/schema/article/1","headline":"Linux系统最佳实践 - 命令行技术","description":"","isPartOf":{"@id":"/blog/2012-06-21-linux%E7%B3%BB%E7%BB%9F%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5-%E5%91%BD%E4%BB%A4%E8%A1%8C%E6%8A%80%E6%9C%AF/"},"mainEntityOfPage":{"@id":"/blog/2012-06-21-linux%E7%B3%BB%E7%BB%9F%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5-%E5%91%BD%E4%BB%A4%E8%A1%8C%E6%8A%80%E6%9C%AF/"},"datePublished":"2012-06-21T08:00:00CET","dateModified":"2012-06-21T08:00:00CET","author":{"@id":"/#/schema/person/2"},"publisher":{"@id":"/#/schema/person/1"},"image":{"@id":"/blog/2012-06-21-linux%E7%B3%BB%E7%BB%9F%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5-%E5%91%BD%E4%BB%A4%E8%A1%8C%E6%8A%80%E6%9C%AF/#/schema/image/2"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/2","name":null,"sameAs":[]}]},{"@context":"https://schema.org","@graph":[{"@type":"ImageObject","@id":"/blog/2012-06-21-linux%E7%B3%BB%E7%BB%9F%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5-%E5%91%BD%E4%BB%A4%E8%A1%8C%E6%8A%80%E6%9C%AF/#/schema/image/2","url":"/doks.png","contentUrl":"/doks.png","caption":"Linux系统最佳实践 - 命令行技术"}]}]}</script><meta name=theme-color content="#fff"><link rel=icon href=/favicon.ico sizes=any><link rel=icon type=image/svg+xml href=/favicon.svg><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest crossorigin=use-credentials href=/site.webmanifest><script type=text/javascript src="https://platform-api.sharethis.com/js/sharethis.js#property=607868a58d7101001829a8df&product=sop" async></script><style>[alt~=sharing]{border:0;box-shadow:none}div#st-1{text-align:unset}div#st-1 .st-btn{height:24px;padding:0 4px}div#st-1 .st-btn>img{top:4.2px}div#st-2 .st-btn{height:24px;padding:0 4px}div#st-2 .st-btn>img{top:4.2px}</style><script async src="https://www.googletagmanager.com/gtag/js?id=UA-168027530-1"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date),gtag('config','UA-168027530-1')</script></head><body class="blog single d-flex flex-column min-vh-100"><div class=sticky-top><div class=header-bar></div><header class="navbar navbar-expand-lg navbar-light doks-navbar"><nav class="container-xxl flex-wrap flex-lg-nowrap" aria-label="Main navigation"><a class="navbar-brand order-0" href=/ aria-label=MySpace>MySpace</a>
+<button class="btn btn-menu order-2 d-block d-lg-none" type=button data-bs-toggle=offcanvas data-bs-target=#offcanvasDoks aria-controls=offcanvasDoks aria-label="Open main menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div class="offcanvas offcanvas-end border-0 py-lg-1" tabindex=-1 id=offcanvasDoks data-bs-backdrop=true aria-labelledby=offcanvasDoksLabel><div class="header-bar d-lg-none"></div><div class="offcanvas-header d-lg-none"><h2 class="h5 offcanvas-title ps-2" id=offcanvasDoksLabel><a class=text-dark href=/>MySpace</a></h2><button type=button class="btn-close text-reset me-2" data-bs-dismiss=offcanvas aria-label="Close main menu"></button></div><div class="offcanvas-body p-4 p-lg-0"><ul class="nav flex-column flex-lg-row align-items-lg-center mt-2 mt-lg-0 ms-lg-2 me-lg-auto"><li class=nav-item><a class="nav-link ps-0 py-1 active" href=/blog/>Blog</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/books/>Books</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/landscape>Landscape</a></li></ul><hr class="text-black-50 my-4 d-lg-none"><form class="doks-search position-relative flex-grow-1 ms-lg-auto me-lg-2"><input id=search class="form-control is-search" type=search placeholder="Search docs..." aria-label="Search docs..." autocomplete=off><div id=suggestions class="shadow bg-white rounded d-none"></div></form><hr class="text-black-50 my-4 d-lg-none"><ul class="nav flex-column flex-lg-row"><li class=nav-item><a class="nav-link social-link" href=https://twitter.com/hitzhangjie><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg><small class="ms-2 d-lg-none">Twitter</small></a></li><li class=nav-item><a class="nav-link social-link" href=https://github.com/hitzhangjie><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37.0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44.0 0020 4.77 5.07 5.07.0 0019.91 1S18.73.65 16 2.48a13.38 13.38.0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07.0 005 4.77 5.44 5.44.0 003.5 8.55c0 5.42 3.3 6.61 6.44 7A3.37 3.37.0 009 18.13V22"/></svg><small class="ms-2 d-lg-none">GitHub</small></a></li></ul></div></div></nav></header></div><div class="wrap container-xxl" role=document><div class=content><div class="row flex-xl-nowrap"><div class="col-lg-5 col-xl-4 docs-sidebar"><nav class=docs-links aria-label="Main navigation"><h3>Tag List</h3><ol><li><a href=/tags/unix/>unix</a></li><li><a href=/tags/linux/>linux</a></li><li><a href=/tags/shell/>shell</a></li><li><a href=/tags/bash/>bash</a></li></ol></nav></div><nav class="docs-toc d-none d-xl-block col-xl-3" aria-label="Secondary navigation"><div class=page-links><h3>On this page</h3><nav id=TableOfContents></nav></div></nav><main class="docs-content col-lg-11 col-xl-9"><h1>Linux系统最佳实践 - 命令行技术</h1><p><small>Posted 2012-06-21 08:00 +0800 by <a class="stretched-link position-relative" href>ZhangJie</a>&nbsp;&dash;&nbsp;<strong>4&nbsp;min read</strong></small><p><div style=display:flex><div>分享:&nbsp;&nbsp;</div><div><div class=sharethis-inline-share-buttons></div></div></div><hr><p class=lead></p><p>迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是《Linux系统最佳实践工具-命令行技术》里的一些知识要点。</p><pre><code># 《Linux系统最佳实践》学习笔记
+
+&gt; 参考书目： 《Linux 系统最佳实践工具 —— 命令行技术 》
+&gt; 本文撰写： 张 杰
+&gt; 截至日期： 2012-6-21
+&gt; 总结	：
+&gt; 	这是我在学习linux过程中，对本书重点内容的一点总结。谈不上心得，只是一点总结，便于以后查阅。在理解/实践的基础上，回头看这些总结的内容会轻松许多。
+&gt; 	如果你想从本文中获取到丁点帮助，恐怕你必须付出实践，必须肯花时间。
+&gt;   	有句话叫做“纸上得来终觉浅，绝知此事要躬行”。如果想进步，想获得实质性的进步，必须付出实践。
+&gt; 	linux系统的强大之处不在于它的桌面环境，可能linux现在众多的发行版本中没有任何一款可以与微软抗衡。也许你觉得linux很酷，是的，它的确很酷。
+&gt; 	它给予了你无穷尽的自由，从内核到桌面，每一个使用linux的人都从中尝到了甜头。但是说真的，linux的“酷”不是靠桌面打下的口碑，这是我们都深知的。
+&gt; 	当你学习过linux的命令行之后，也许，你才会大彻大悟，linux真是非一般的强悍。而这是windows望尘莫及的。
+&gt; 	如果你渴望自由，如果你渴望高效，如果……
+&gt; 	欢迎你加入linux大家庭中来！
+
+
+
+# 第一章 Linux简介
+
+## 1.查看内核版本
+
+uname -r，主版本号/次版本号/修订次数/编译次数
+
+# 第二章 Linux文件系统及其相关处理命令
+
+## 1.file system
+
+- /:文件系统根目录
+- /bin:最小系统所需要的命令，其中的文件都是可执行的
+- /boot:包含一些启动文件
+- /dev:接口设备文件目录
+- /etc:系统配置文件所在目录,Editable Text Configuration
+- /home:用户的主目录
+- /lib:库文件目录，例如在执行/bin，/sbin目录下的二进制命令文件时可能会调用的库文件
+- /mnt:各项装置的文件系统挂载点，如/mnt/cdrom是光驱的挂载点
+- /opt:可以在这里安装自定义软件包（较大的且固定的）
+- /proc:系统运行时，进程信息以及内核信息（cpu/disk/memory等）都存放在这里。它是一个伪文件系统，存在于内存中，而非硬盘中，通过这个虚拟的文件系统可以在系统运行时调整内核参数，改变内核行为。不用重新启动查看cmos，即可查看系统信息。
+- /root:管理员的主目录
+- /sbin:目录sbin下的程序都是root权限才可以执行的
+- /tmp:存放暂存盘的目录
+
+- /usr:这是系统存放程序的目录，比如命令/配置文件等。当我们安装一个linux发行版提供提供的软件包时，大多安装在这里。这个目录下包含字体文件目录/usr/share/fonts,帮助目录/usr/share/man,/usr/share/doc，普通用户可执行目录/usr/bin,/usr/local/bin,/usr/X11R6/bin,超级用户可执行命令目录/usr/sbin,usr/X11R6/sbin,/usr/local/sbin等。还包含程序的头文件目录/usr/include。
+
+
+
+## 2.比较重要的子目录的功能
+
+- /etc/init.d，存放系统或服务器以System V模式启动的脚本，这在以System V模式启动或初始化的系统中
+  常见。如Fedora/Redhat。
+- /etc/xinit.d，如果服务器是通过xinitd模式启动运行的，它的脚本要放在这个目录下，有些系统没有这个
+  目录，比如Slackware，有些老版本也没有。在Redhat/Fedora中比较新的版本中存在。
+- /etc/rc.d，这是Slackware发行版下的一个目录，是BSD方式启动脚本的存放地。比如定义网卡，服务器
+  开启脚本等。
+- /etc/X11，这是X-Windows相关的配置文件存放地。
+- /usr/bin，这个目录是可执行程序的目录，普通用户就有权限执行。当我们通过系统自带的软件包安装
+  工具安装软件时，软件对应的可执行文件大多都存放在这个目录下。与此类似的文件是/usr
+  /local/bin，有时/usr/bin目录下的文件是指向/usr/local/bin下文件的符号链接文件。
+- /usr/sbin，这个目录是可执行程序的目录，但是大多数情况下存放涉及系统管理的命令。只有root权限
+  才能运行。相似的目录是/usr/local/sbin,/sbin,/usr/X11R6/sbin。
+- /usr/local，这个目录通常用来存放用户自编译安装软件。一般是通过源码包安装的软件，如果没有特别
+  指明安装目录，则一般安装这个目录下。这个目录下面可以建立用于存放安装程序的子目录
+  ，便于管理安装程序。
+- /usr/lib，和/lib目录相似，是库文件的存储目录。
+- /usr/share，本系统中所有用户共用文件或者程序的存放地点。比如/usr/share/fonts是所有用户共用的
+  字体文件存放地，/usr/share/doc是文档存放地，/usr/share/man是命令文档存放地。
+- /usr/src，这个是内核源码包的所在目录，有的系统中安装源码程序时，也会安装到此目录下的相应子
+  目录中。
+- /var/adm，存放软件包安装信息/日志/管理信息等，在Slackware操作系统中有这个目录，但是在Fedora系统中没有，其他的自行查看。
+- /var/log，系统日志所在的目录，分析日志要查看这个目录的东西。
+- /var/spool，打印机/邮件/代理服务器等假脱机目录。
+
+## 3./proc vfs
+
+此目录中的主要文件：
+- apm，高级电源管理
+- cmdline，内核命令行
+- cpuinfo，中央处理器信息
+- dma，显示当前使用的dma通道
+- filesystems， 核心配置的文件系统
+- ioports，当前使用的io端口
+- interrupts，显示使用的中断
+- core，系统物理内存映像
+- msg，核心输出的消息，被送到syslog文件
+- syms，核心符号表
+- loadavg，系统平均负载均衡
+- meminfo，存储器使用信息，包括物理内存和交换内存swap
+- modules，当前加载了哪些核心模块
+- net，网络协议状态信息
+- partitions，系统识别的分区表
+- pci，pci设备信息
+- scsi，scsi设备信息
+	 elf，指向查看/proc进程目录的符号链接	
+- stat，全面统计状态表
+- swaps，交换分区情况
+- uptime，系统启动的时间长度
+- version，核心版本号
+
+## 4.file type
+
+- 普通文件：ascii码文件，二进制文件。
+- 目录文件：linux中通过指针进行管理。
+- 链接文件：硬链接/软链接。
+- 设备文件：linux系统把每一个io设备都看成是一个文件，操作设备与操作文件采取的方法一样，屏蔽了io设备的细节，这样可以是文件操作和设备操作尽可能统 一。值得一提的特殊设备文件有FIFO，/dev/null。向fifo中写入数据，它就增长，读取数据，它就缩减。向/dev/null中写入的任何数据都会被忽略。
+- 管道文件：管道是通过通常的io接口存取的字节流。管道文件是一种很特殊的文件，主要用于不同进程之间的信息传递，在进程通信中扮演着重要的角色。
+
+## 5.文件系统主流格式
+
+ext：第一个专门开发的linux文件系统类型，叫做扩展文件系统。
+ext2：是为解决ext文件系统的缺陷而设计的可扩展的/高性能的文件系统，它又被称为二级扩展的文件系统。
+ext3：日志式文件系统，由数据库中因操作失败触发回滚操作从而恢复数据的思想演变而来，每进行操作之前，会向日志中写入一个条目，如果出错，则会按照日志中的记录回滚，恢复到操作之前的状态。
+还有很多其他的文件系统，ubuntu中主要使用的是上述三种类型。
+
+## 6.man手册
+
+查看一个命令的选项时，最好用man而非info，虽然info也可以，但是info中包含很多不需要的信息，阅读起来浪费时间。
+
+## 7.隐藏文件
+
+linux中，以'.'开头的文件名对应的文件表示隐藏文件。隐藏文件多数是配置文件。
+
+## 8.常用文件操作命令
+
+ls	：显示当前目录下的文件或者目录信息，也可以显示指定文件或者目录的信息。
+cat	：将文件或者标准输入组合输出到标准输出。但是也可以通过重定向将标准输入写	  入文件中去。
+rm	：删除文件。
+less	：分屏显示文件，类似与more。
+cp	：复制文件。
+mv	：更改文件名，通过更改路径，可以实现移动/重命名操作。
+grep	：查找字符串。grep 'pattern' filename，从指定文件中查找匹配模式pattern的
+	  字符串。也可以将其用作管道操作符的右侧操作命令，将其他命令的输出结果作
+	  为grep命令的输入，比如检索当前目录下有没有file文件，ls | grep 'file'。
+head	：显示文件内容的前多少行，head -n 10 filename,显示文件的前10行
+tail	：显示文件末尾的后多商行，tail -n 10 filename,显示文件的后10行。
+sort	：对文件中的内容进行排序并将排序后的结果输出。
+	  sort filename，正序排序；sort -r filename，逆序排序。
+uniq	：忽略文件中的重复行。
+diff	：找出两个文件的不同点。
+diffstat：读取diff的输出结果，然后统计各文件的插入/删除/修改等差异计量。
+file	：file filename，可以探测filename对应文件的类型。
+echo 	：显示文本。
+date	：先似乎日期/时间。
+script	：记录终端中输入的命令信息以及命令执行后的输出信息。记录的信息是从script启动开始到script记录结束之间的活动信息。script命令启动，默认在当前路径下创建script文件，然后在里面记录输入输出信息，直到exit退出script为止。也可以手动指定记录活动信息的文件名，如'script /usr/test.txt'。
+apropos ：根据提供的关键词，搜寻相关的命令，例如'apropos search'，将给出与搜索相关联的指令，其实apropos完全可以用'man -k'来代替。
+
+locate	: 搜索文件。
+rmdir	: 删除目录。
+basename: 删除文件或者目录的基本名。
+chattr	: 改变文件的属性。
+cksum	: 文件的CRC校验。
+cmp	: 比较文件差异。
+split	: 分割文件，这个比较实用。split -b 1m srcfile prefix,这条命令表示将文件srcfile以1m为约定尺寸，将其进行分割，分割后的文件将以prefix加上自动追加的编号命名。split -l，将按照行数进行分割；split -c，与-b类似，按照字节数进行分割，但是分割的时候尽量保持行的完整性。
+
+dirname	: 显示除文件名之外的路径信息。
+find	: 查找目录或者文件。find &lt;path&gt; &lt;option&gt;在路径path下按照选项option查找符号expression的文件。
+ln	: 链接文件或目录，-s符号链接，不加-s，硬链接。
+lsattr  : 显示文件属性。
+od  	: 读取文件内容并以8进制形式输出。
+paste	: 合并文件的列。
+stat	: 显示索引节点inode的内容。
+tee	: 读取标准输入到标准输出并可保存为文件。例如：tee &gt;&gt; hello.txt。
+tmpwatch: 删除临时文件。
+touch	: 更新文件或者目录时间，也可以用来创建文件。
+tree 	: 以树状图显示目录的内容。
+chmod	: 设置文件或者目录的权限。
+chgrp 	: 改变文件或者目录所属的组。
+chown	: 改变文件的拥有者或者群组。
+
+# 第三章 Linux磁盘文件管理及其相关命令
+
+1.linux里面最多可以有16个分区，其中主分区（或者扩展分区）最多4个，逻辑分区占12个。其中主分区（或扩展分区）占hda1，hda2,hda3,hda4，而逻辑分区占hda5~hda16。
+2.安装linux系统必须建立的分区有：swap分区，/boot分区，/分区。
+
+3.常用命令
+df	： 磁盘信息。
+du	： 显示文件或者目录所占用的空间。
+dd	： 主要是从文件或者设备读取信息，然后输出到设备或者文件。功能相当强大，
+	   可以用来拷贝文件/备份磁盘数据/备份恢复mbr等等。
+fdisk	： 磁盘分区。
+mount	： 加载文件系统。
+unmount ： 卸载文件系统。
+mkfs	： 建立文件系统。
+mkbootdisk： 建立启动盘。
+fsck	： 检查文件系统。
+hdparm	： 设置磁盘参数。
+mkswap	： 建立交换分区。
+dump	： 备份文件系统。
+restore	： 还原文件。
+sync	： 写入磁盘。
+badblock： 检查磁盘。
+quota	： 显示磁盘已使用的空间与限制。
+quotacheck： 检查磁盘的使用空间与限制。
+quotaoff： 关闭磁盘空间限制。
+quotaon ： 开启磁盘空间限制。
+quotastats： 显示磁盘空间的限制。
+mdadm	： raid工具。
+parted	： 磁盘分区工具。
+
+# 第四章 Linux进程及其管理命令
+
+1.Linux进程中最有名的属性就是它的进程号PID和它的父进程号PPID。PID，PPID都是非零的正整数。
+
+2.所有的进程追踪其祖先，最终都会洛到进程号为1的进程身上，这个进程叫做init进程。它是内核自举后第一个启动的进程。
+
+3.通过pstree命令可以查看进程树中进程与进程之间的继承关系。
+
+4.进程在内存里有3部分数据，数据段/代码段/堆栈段，一个程序可以对应多个进程，因此这多个进程共用同一代码段，只是各自的数据段/堆栈段不同。
+
+5.创建进程可以理解为创建PCB的过程，PCB，进程控制块。
+
+6.启动进程的方式有两种：前台启动和后台启动。对于前台启动的程序，在终端中，可以利用组合见ctrl+c来终止；但是如果是后台运行的程序，就不能用ctrl+c来终止，必须提供pid，然后用‘kill pid’来终止。
+
+7.通过命令runlevel可以查看当前系统的运行级别，系统常见的运行级别有0～6，不同的发行版可能不一样，大体上差不多，这里姑且认为是一致的：
+(0)-halt(do not set initdefault to this)
+(1)-single user mode
+(2)-multiuser,without nfs(the same as 3,if you don't use networking)
+(3)-full multiuser mode
+(4)-unused
+(5)-X11
+(6)-reboot(do not set initdefault to this)
+
+8.在rcX.d目录下的进程，如果以S开头，表示启动该程序，以K打头，表示终止该程序。
+
+9.进程与线程的比较，了解将进程再细分为线程的原因，以及何时需要使用线程。
+
+10.理解linux守护进程
+进程一般分为交互进程/批处理进程/守护进程3种，其中守护进程总是活跃的，一般在后台运行。它一般是在开机的时候通过脚本启动或开机之后由root用户手动启动。
+有的时候，习惯上也将守护进程称为服务。
+
+11.linux下的守护进程很多，单单是常见的就有100多项，这里就不记下了，用的时候再查。
+
+12.Linux进程管理命令详解
+linux管理进程的最好方法就是使用命令行下的系统命令。linux下面涉及进程的命令有at/bg/fg/kill/crontab/jobs/ps/pstree/top/nice/renice/sleep/nohup。
+at：在指定时刻执行指定的命令序列。
+	at 23:52 06/05/2012
+	at&gt;wall &quot;hello,zhangjie&quot;
+	ctrl+d
+bg：使一个被挂起的进程在后台运行。
+fg：使一个被挂起的进程在前台运行。
+jobs：显示后台程序。
+kill：终止一个进程。
+crontab：用于安装/删除或者列出用于驱动cron后台进程的任务表。
+ps：查看系统中进程的状态。
+pstree：列出当前进程的树状结构。
+top：显示当前的进程状况。
+nice：改变程序执行的优先权等级。
+renice：允许用户修改一个正在运行的进程的优先权。
+sleep：使进程暂停一段时间，然后继续执行。
+nohup：用户退出系统之后继续工作。
+pgrep：查找当前进程并列出匹配给定条件的进程pid。
+chkconfig：检查/设置系统的各种服务。
+
+# 第五章 Linux网络体系及其相关命令
+
+1.专用ip地址有三块：
+10.0.0.0
+172.16.0.0~172.31.0.0
+192.168.0.0~192.168.255.0
+
+2.linux下的tcp/ip网络配置
+以redhat为例，系统中大部分的配置文件都存放在/etc目录下面。配置文件如下所示：
+
+/etc/gated.conf:
+gated的配置，只能被gated守护进程使用。
+
+/etc/gated.version:
+gated守护进程的版本号
+
+/etc/gateway:
+由routed守护进程可选择地使用
+
+/etc/networks：
+列举及其所连接的网络中可以访问的网络名和网络地址。通过路由命令使用，允许使用网络名称
+
+/etc/protocols：
+列举当前可用的协议，请参阅网络管理员指南和联机帮助页
+
+/etc/rsolv.conf:
+在程序请求解析一个ip地址时，告诉内核应该查询哪个dns服务器
+
+/etc/rpc：
+包含rpc指令规则,这些指令/规则可以在nfs调用/远程文件系统安装等中使用
+
+/etc/exports：
+要导出的网络文件系统（nfs）和对它的权限
+
+/etc/services：
+将网络服务器名转换为端口号/协议，由inet.d/telnet/tcpdump和一些其他程序读取，有一些c访问例程
+
+/etc/xinetd.conf:
+xinetd的配置文件，请参阅xinetd联机帮助页，包含每个网络服务的条目，inetd必须为这些网络服务控制守护进程或者其他服务，注意，服务将会运行，但是在/etc/services中将它们注释掉了，这样即时这些服务在运行也将不可用
+
+/etc/hostname：
+该文件包含了系统的主机名称，包括完全的域名
+
+/etc/host.cnf：
+该文件指定如何解析主机名，linux通过解析器来获得主机名对应的ip地址
+
+/etc/sysconfig/network：
+指出networking=yes或者no，由rc.sysinit读取
+
+/etc/sysconfig/network-scripts/if*：
+redhat网络配置脚本
+
+/etc/host：
+机器启动时，在查询dns以前，机器需要查询一些主机名与ip地址的配置信息，这些配置信息存放在/etc/hosts文件中。在没有域名服务器的情况下，系统上的所有网络程序都是通过查询该文件来解析对应某个主机名的ip地址
+
+这些配置信息存放在/etc/hosts文件中。在没有域名服务器的情况下，系统上的所有网络程序都是通过查询该文件来解析对应某个主机名的ip地址
+
+3 linux网络管理命令详解
+arp命令：arp协议，工作在数据链路层，将ip地址转换为mac地址。arp命令可以列出/添加/删除ip地址与mac地址的记录
+
+arpwatch：用来监听网络上的arp记录
+
+adsl命令：adsl调制解调器命令用来配置宽带调制解调器工作
+
+ifconfig：用来设置网络设备的状态，或显示目前的设置。功能比较多，而且涉及很多常用的操作，建议仔细查看一下man文档
+
+iwconfig:设置无线网卡
+
+hostname：显示主机名
+
+ifup：激活网络设备
+
+ifdown：禁用网络设备
+
+mii-tool:调整网卡模式
+
+route：设置路由表
+
+netstat：查看网络连接
+
+ping：检查网卡接口
+
+minicom：设置调制解调器，主要用来设置28～56K调制解调器
+
+pppd：该命令用来在56K调制解调器和ppp服务器之间建立连接并维持链接，传输数据。Peer to Peer Protocol。
+
+pppstats：显示ppp连接状态
+
+chat：拨号命令
+
+traceroute：显示数据包到达主机之间的路径
+
+rcp：远程复制文件或者目录
+
+finger：查找并显示用户信息
+
+tcpdump：网络数据分析器
+
+ip：网络集成命令工具
+
+yum：软件包管理工具
+
+apt:管理套件的工具
+
+# 第六章 Linux用户管理及其相关命令
+
+1.linux多用户多任务概念的理解
+
+2.用户的角色区分，通过UID来区分。root用户/虚拟用户/普通真实用户。root用户权限最高，可以操作所有的文件/命令等，普通真实用户与root用户做对比，只能操作自己的目录下的文件和普通用户允许执行的命令，root用户和普通真实用户都可以登录系统。虚拟用户是系统所有的，这类用户不具有登录系统的能力。
+
+3.理解用户，用户组。用户组下的用户具有相同的操作权限，用户和用户组之间的对应关系可以是一对一/一对多/多对一/多对多。
+
+4.linux安装过程中，创建的系统标准用户与/etc/passwd文件对应，创建的标准用户组用/etc/group对应。
+
+5.定制环境变量echo $varname,env,export,set,unset $varname。
+
+6.useradd，userdel，usermod，passwd，chage，groupadd，groupdel，groupmod，vipw,vigr,newgrp,groups,gpasswd,whoami,who,id,su,pwck,grpck,chsh,chfn.
+
+# 第七章 Linux的备份和压缩及其相关命令
+
+1.首先学会普通的压缩文件的解压和创建，其他高级的功能慢慢再学，因此这一章，先行跳过。
+
+# 第八章 Linux系统管理
+
+1.linux基本启动过程：
+1).bios由两部分组成，post代码，运行时服务。post即加电自检阶段，这一阶段结束后，post代码会从内存中清理出来，但是运行时服务仍然保留在内存中，供系统使用。
+2).提取mbr信息
+	dd if=/dev/sda of=mbr.bin bs=512 count=1
+	od -xa mbr.bin
+3).引导加载程序boot loader会读取引导介质的前512个字节，即主引导记录mbr。在一个单一的mbr中只能存储一个os的引导程序，因此如果有多个os时，引导的时候就会出现问题，因此需要更加灵活的引导方式。比如grub。
+4).加载内核，当内核影像文件被加载到内存，内核就开始工作了。
+5).执行init进程，进程号为1，是所有进程的父进程。
+6).根据运行级别，执行相应的脚本文件。这里不同的linux发行版可能有所差异。
+
+2.运行级别
+0	：关闭系统
+1	：单一用户模式，一般用于管理目的
+2	：多用户模式，不允许使用网络
+3	：多用户模式，允许使用网络
+4	：没有用到的优先级
+5	：多用户模式，允许使用网络，x-windows方式
+6	：重新启动
+
+运行级别的定义以及相关执行脚本在/etc/inittab中定义。
+
+3.Linux 系统管理命令详解
+
+arch	：显示主机的体系结构
+alias	：设置命令的别名
+chkconfig：设置服务
+cal	：显示日历
+chroot	：改变根目录
+date	：显示或设置系统时间
+dmesg	：显示开机信息
+depmod	：分析模块的相依性，供modprobe在安装模块时使用
+exec	：执行完命令后，交出命令控制权
+eject	：弹出介质
+enable	：开启或关闭shell内建命令
+fgconsole：显示当前虚拟终端的数目
+free	：显示内存信息
+halt	：关闭系统
+history	：显示使用的命令历史列表
+hwclock	：显示与设定硬件时钟
+init	：进程处理初始化
+	init 0 ；转入运行级别0，即关闭系统
+	init 6 ；转入运行级别6，即重启系统
+last	：显示登录用户信息
+locale	：显示本地支持的语言系统
+logname	：显示登录的用户信息
+logout	：退出登录shell
+lsmod	：显示linux内核的模块信息
+modinfo	：显示内核信息
+modprobe：自动处理可载入模块
+ntsysv	：设置系统的各种服务（ubuntu没有此命令）
+pmap	：显示程序的内存信息
+procinfo：显示系统状态
+pwd	：显示当前工作目录
+reboot	：重启系统
+rlogin	：远程登录
+rmmod	：删除模块
+	rmmod -a ；删除当前所有不使用的模块
+	rmmod 模块名称 ；删除指定模块
+shutdown：系统关机命令
+sleep	：延迟指定数量的时间
+suspend	：暂停执行shell
+	用kill恢复执行，但是必须事先获知被挂起shell的pid，然后在另一个shell中执行命令kill -18 pid
+tload	：显示系统负载
+uname	：显示系统信息
+authconfig：配置系统的认证信息
+declare	：显示或设定shell变量
+enable	：可用的shell内置命令
+export	：设置或者显示环境变量
+hostid	：打印出当前主机的标识
+insmod	：插入模块
+	常用的：insmod -o 模块名称
+runlevel：显示运行等级
+set	：shezhishell
+setconsole：设置系统终端
+setenv	：查询或显示环境变量
+startx	：启动x window
+unalias	：删除别名
+unset	：删除变量或函数
+	创建环境变量var,export var=&quot;value&quot;;查看环境变量是否存在，env | grep var,set | grep var;显示环境变量,echo $var;删除环境变量,unset var
+uptime	：告知系统运行了多长时间
+lspci	：显示主板所有硬件插槽信息
+whereis	：在特定的目录中查找符合条件的文件（二进制文件，手册页文件，源代码文件）
+
+4.linux系统性能监控
+
+1）linux服务器整体性能监控包括几大部分：cpu监控/进程监控/内存监控/网络监控/io监控/磁盘监控
+2）监控系统的性能可以通过现有工具，也可以通过内核模块，也可以通过/proc虚拟文件系统，常用的是利用/proc虚拟文件系统
+3）proc虚拟文件系统实现了如下五大功能：进程信息/系统信息/cpu信息/负载信息/系统内存信息
+4）进程信息：对于系统中的任何一个进程来说，在proc子目录里都有一个同名的进程ID。你还可以找到如下的信息：cmdline，meminfo等等。
+   系统信息：可以从/proc/stat中获得系统的整体信息，包括cpu占用/磁盘空间/内存页/内存对换/全部中断/接触开关以及上次系统自举时间
+   cpu信息 ：利用/proc/cpuinfo文件，可以获得当前中央处理器的详细信息
+   负载信息：/proc/loadavg文件包含了系统负载信息
+   系统内存信息：meminfo文件包含了系统内存的详细信息
+5)这部分涉及到的命令和工具就不详细介绍了，一般情况下在个人计算机上用之甚少
+
+# 第九章	Linux服务器命令
+
+1）linux服务器管理，主要涉及以下几个大方向：
+apache服务器应用命令
+dns服务器管理命令
+nfs服务器管理命令
+samba服务器管理命令
+ssh服务器管理命令
+squid服务器管理命令
+dhcp服务器管理命令
+ftp服务器管理命令
+e-mail服务器管理命令
+linux防火墙管理工具
+xinetd和linux服务器工作方式的关系
+2）这部分内容在自己的实际应用过程中，可以有侧重点/有针对性地学习，比如学习php开发需要搭建自己的web服务器，就可以学习apache服务器管理命令。
+
+# 第十章  Linux打印系统及其相关命令
+
+这部分内容与打印机相关，在实际购买并连接打印机之后，可以有针对性地学习。
+略。
+
+# 第十一章 Linux库应用及其相关命令
+
+在学习编程的过程中，可以慢慢学习。
+略。
+
+# 第十二章 Linux开发常用命令gcc和make
+
+在学习编程的过程中，可以慢慢学习。
+略。
+
+# 第十三章 Linux编辑器VI和EMACS
+
+我喜欢vim,喜欢哪个编辑器，无所谓，能达到自己期望的效率就好了。
+略。
+
+# 第十四章 使用SHELL
+
+linux系统的shell作为操作系统的外壳，为用户提供使用操作系统的接口。它是命令语言/命令解释程序以及程序设计语言的统称。
+2）可以理解为shell就是围绕在linux操作系统内核周围的一个外壳，一个接口，当用户通过这个接口执行命令或者应用程序时，这些命令或程序将被分解为系统调用，然后   将这些调用信息传入内核，内核会对此作出相应的反映。
+3）简单介绍shell在执行命令时的步骤：
+   step1：用户输入命令后，shell首先检查输入的命令是否是内部命令，如果是的话，就执行。
+   step2：如果不是内部命令，shell将检查输入是否是一个应用程序，如果是应用程序，shell就会在搜索路径里搜索这些应用程序（搜索路径是由用户设定的一个路径列
+   	  表)。
+   step3：如果应用程序被搜索到了，shell的内部命令或应用程序将被转化为系统调用，然后传递给linux内核。
+   step4：如果输入的命令或应用程序在搜索路径中没有找到，shell将会显示一条错误提示信息。
+4）linux系统提供多种不同shell以供选择，常用的有Bourne Shell(sh)/C-Shell(csh)/Korn Shell(ksh)/Bourne Againe Shell(bash)。还有其他shell。
+5）linux系统shell中比较重要的几个知识点是：
+   通配符/重定向/管道/别名/命令行补全/命令替换/命令历史
+6）元字符，最好系统地学习下正则表达式。
+7）shell变量和shell环境
+变量是一个可以保存值的内存位置。
+变量可以分为用户变量和预定义变量，其中用户变量是指在第一次使用时被创建的变量，预定义变量用来保存关于环境的配置。
+预定义变量又可以分为两类：shell变量和环境变量。
+shell变量用来定制shell，环境变量用来定制用户环境。
+</code></pre><div class=edit-page><a href=https://github.com/hitzhangjie/myspace/blob/master/content/blog/study/2012-06-21-Linux%e7%b3%bb%e7%bb%9f%e6%9c%80%e4%bd%b3%e5%ae%9e%e8%b7%b5%20-%20%e5%91%bd%e4%bb%a4%e8%a1%8c%e6%8a%80%e6%9c%af.md><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2"><path d="M17 3a2.828 2.828.0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>Edit this page on GitHub</a></div><div class="docs-navigation d-flex justify-content-between"><a href=/blog/2013-09-30-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8tcpipnetworksecurity/><div class="card my-1"><div class="card-body py-2">&larr; TCP/IP网络安全篇</div></div></a><a class=ms-auto href=/blog/2013-07-01-linux%E7%B3%BB%E7%BB%9F%E4%BD%BF%E7%94%A8%E6%9D%82%E8%B0%88-%E7%BB%8F%E9%AA%8C%E6%8A%80%E5%B7%A7/><div class="card my-1"><div class="card-body py-2">Linux系统使用杂谈 - 经验技巧 &rarr;</div></div></a></div></main></div></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.fdbe9b9ba88a036135318f3c721784d684ac9e3280fe282cc80d7d49f7f9c82780cd54228c1608685a230c09984300d7946fc471734d566fcebc148b65bd16db.js integrity="sha512-/b6bm6iKA2E1MY88cheE1oSsnjKA/igsyA19Sff5yCeAzVQijBYIaFojDAmYQwDXlG/EcXNNVm/OvBSLZb0W2w==" crossorigin=anonymous defer></script>
+<script src=/js/highlight.min.b64f1e7517e5839396950ceee4ef937fbbd3ff20aa1fdd261ce87fa457863404f35a6e5239dd57b20b37f39c2401b933deeef60af180195b16941c88f10e948d.js integrity="sha512-tk8edRflg5OWlQzu5O+Tf7vT/yCqH90mHOh/pFeGNATzWm5SOd1Xsgs385wkAbkz3u72CvGAGVsWlByI8Q6UjQ==" crossorigin=anonymous defer></script>
+<script src=/main.min.f16ffd9b364013a1df84be9cd7a45c470cb48639766bf5551e05bba845fe4ab150cb6436de43609bfed9af47c23bd5e395e9a10b932fa6fb2c4ee8f6cc78d7a3.js integrity="sha512-8W/9mzZAE6HfhL6c16RcRwy0hjl2a/VVHgW7qEX+SrFQy2Q23kNgm/7Zr0fCO9XjlemhC5MvpvssTuj2zHjXow==" crossorigin=anonymous defer></script>
+<script src=/index.min.92ac783f85391c57c1d71a6a559b8a5126dd61df9a5cec90537c9ccdf5387b27d33fcecdf47569c3498379091cb4cc30eb6bbb4715dca444bc7585532b3fd872.js integrity="sha512-kqx4P4U5HFfB1xpqVZuKUSbdYd+aXOyQU3yczfU4eyfTP87N9HVpw0mDeQkctMww62u7RxXcpES8dYVTKz/Ycg==" crossorigin=anonymous defer></script></body></html>

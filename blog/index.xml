@@ -1,4 +1,5 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blog on</title><link>/blog/</link><description>Recent content in Blog on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:49:55 +0000</lastBuildDate><atom:link href="/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>vscode-常规配置以及同步说明</title><link>/blog/2024-04-14-%E5%B8%B8%E8%A7%84%E9%85%8D%E7%BD%AE%E5%8F%8A%E5%90%8C%E6%AD%A5%E8%AF%B4%E6%98%8E/</link><pubDate>Sun, 14 Apr 2024 23:00:00 +0800</pubDate><guid>/blog/2024-04-14-%E5%B8%B8%E8%A7%84%E9%85%8D%E7%BD%AE%E5%8F%8A%E5%90%8C%E6%AD%A5%E8%AF%B4%E6%98%8E/</guid><description>前言 # 我经常在项目开发过程中针对不同项目，甚至是相同项目的不同模块阶段，频繁调整配置以满足当时的需要，我觉得能够快速调整vscode配置满足开发人员需要，是一项必备技能。
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blog on</title><link>/blog/</link><description>Recent content in Blog on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:49:55 +0000</lastBuildDate><atom:link href="/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>Bash常用命令</title><link>/blog/2016-01-07-bash%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/</link><pubDate>Sun, 19 May 2024 09:10:25 +0800</pubDate><guid>/blog/2016-01-07-bash%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/</guid><description>迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是一些日常高频使用的linux命令。
+lp : submit files and print pwd : print current work directory match pattern in bash : ? * [] extension of '{}' : b{ed,olt,ar}s ls *.{c,h,o} i/o : cat : copy input to output grep: match lines from input sort: sort lines from input cut : extract columns from input how to set the delimiter to space? note: -d' ' only specify space as the delimiter,not including tab,so it's inconvenient when files contain both of space and tab.</description></item><item><title>vscode-常规配置以及同步说明</title><link>/blog/2024-04-14-%E5%B8%B8%E8%A7%84%E9%85%8D%E7%BD%AE%E5%8F%8A%E5%90%8C%E6%AD%A5%E8%AF%B4%E6%98%8E/</link><pubDate>Sun, 14 Apr 2024 23:00:00 +0800</pubDate><guid>/blog/2024-04-14-%E5%B8%B8%E8%A7%84%E9%85%8D%E7%BD%AE%E5%8F%8A%E5%90%8C%E6%AD%A5%E8%AF%B4%E6%98%8E/</guid><description>前言 # 我经常在项目开发过程中针对不同项目，甚至是相同项目的不同模块阶段，频繁调整配置以满足当时的需要，我觉得能够快速调整vscode配置满足开发人员需要，是一项必备技能。
 这里就简单总结下vscode配置调整过程中，一些比较有价值的信息。
 搜索配置项 # 搜索修改过的配置项，可以按照 &amp;ldquo;@modified&amp;quot;进行过滤， 搜索指定插件的话，可以按照&amp;rdquo;@ext:&amp;ldquo;进行过滤 设置优先级 # 配置项可以在不同的设置范围内进行覆盖。在下面的列表中，后面的范围会覆盖前面的范围：
 默认设置 - 这个范围代表未配置的默认设置值。 用户设置 - 对所有的 VS Code 实例全局适用。 远程设置 - 适用于用户打开的远程机器。 工作区设置 - 适用于打开的文件夹或工作区。 工作区文件夹设置 - 适用于多根工作区的特定文件夹。 特定语言的默认设置 - 这些是由扩展提供的特定语言的默认值。 特定语言的用户设置 - 与用户设置相同，但特定于某种语言。 特定语言的远程设置 - 与远程设置相同，但特定于某种语言。 特定语言的工作区设置 - 与工作区设置相同，但特定于某种语言。 特定语言的工作区文件夹设置 - 与工作区文件夹设置相同，但特定于某种语言。 策略设置 - 由系统管理员设置，这些值始终会覆盖其他设置值。 跨设备同步 # Settings Sync功能，之前使用IDEA系列产品时，一来一个Settings Repository及插件来做这个事情，VSCode就方便多了，直接支持用户维度下的多份的同步，比如分别为macOS、Linux、Windows分别自定义一份配置。
@@ -113,23 +114,4 @@ O(1)调度器的问题 # 随着 2.6.0 版本的临近，一些开发人员担心
 当其从最低优先级队列掉出来时，它的优先级、时间片可以被重置并重新放入runqueue，但是其优先级比原来初始优先级低一级、时间片+1。
 ps：当时内核社区还不愿意在稳定系列中进行另一次重大调度程序更改，很多人希望看到 2.6 真正稳定下来。然而，这个补丁似乎值得考虑，因为它简化了内核的复杂部分。
 旋转楼梯调度器 # 2007年，Con Kolivas继续提出了 “旋转楼梯截止时间调度器(Rotating Staircase Deadline Scheduler, RSDL)”，旋转楼梯调度器，是对楼梯调度器的增强，为什么呢？我个人认为，旋转楼梯调度器更好的建模了优先级、公平性、响应性、解决饿死等的问题，它更好理解和维护。
-简而言之，CPU调度似乎是一项无法完美解决的工作。尽管开发者不断优化调度算法，但总会有某些类型的工作负载得不到很好的调度服务，特别是对交互型任务要求响应迅速的用户。现在的调度器为了提高交互式进程的响应,已经发展出了非常复杂的优化手段。但复杂的代码也带来维护困难，而用户对响应时间的抱怨仍未止息。CPU调度需要持续改进，才能更好平衡不同类型任务的需要。</description></item><item><title>Linux任务调度(2)</title><link>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A62/</link><pubDate>Tue, 14 Nov 2023 12:59:05 +0800</pubDate><guid>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A62/</guid><description>演进过程 # 首先，简要描述下Linux进程调度器的一个发展历史：
-v0.01~v2.4.x: the very first scheduler，复杂度O(n) v2.6.0~v2.6.22: O(1) scheduler，复杂度O(1) v2.6.23~: Completely Fair Scheduler (CFS)，复杂度O(log(n)) 可能会有点好奇，只有这么几种吗？这是出现在内核源码树中的实现方案，研究探索过程中，涌现出的实现方案多的多，前一篇文章任务调度(1)中就提到过很多种方案，感兴趣可以了解下。本文只重点介绍内核源码树中真实出现过的调度器实现方案。
-最早的版本 v0.01 # v0.01是最早的Linux内核版本。它的进程调度器只有20行代码，非常简单。作为对比，最新的Linux内核由数万行代码组成。
-在v0.01中，所有的任务都由一个数组表示。这个数组不仅是所有任务的列表，还是运行队列。这个数组的长度是64。这意味着这个版本中的任务数最多为64个。在这个数组中，空的条目用NULL表示。
-调度器的时间片是150毫秒。当前任务是否用尽了它的时间片是由一个称为间隔定时器的硬件检测的。间隔定时器每10毫秒中断一次CPU，然后调度器注册的处理程序被调用。这个函数减少当前任务的时间片，如果时间片变为零，调度器就会在运行队列中调度下一个可运行的任务。
-在这个版本之后，时间片的值和定时器中断的间隔都发生了变化。然而，为了简单起见，本文不会逐一解释这些变化。
-ps：进程切换的时机，v0.01里面是在系统调用返回前、时钟中断服务程序中检测是否需要进行进程切换。时钟中断处理时会递减当前进程的剩余时间片，为0后就会调度其他进程执行。
-以下是Linux v0.01的进程调度器的调度算法：
-逆序遍历运行队列，并调度第一个时间片大于零的可运行进程，并且要是剩余时间片最大的进程。 如果没有这样的进程，调度器会重置所有任务的时间片。在这里，调度器给可运行进程150毫秒的时间片，并将当前时间片的一半添加到休眠任务中。后者的原因是为了尽快调度唤醒的任务，以提高交互性。 我将用图示来展示上述算法的流程。
-初始状态如下所示，时间片的单位是10毫秒：
-首先，调度器以逆序遍历运行队列。在这里，t4被跳过，因为它正在休眠。此外，t2也被跳过，因为该条目为空。在遍历整个任务数组后，它发现t1的时间片是所有可运行任务中最大的。调度器调度t1运行，直到t1用光剩余的时间片。
-调度器继续遍历，发现接下来t0是可运行的、剩余时间片最大的，于是调度t0运行直到时间片用光。在逆序遍历的过程中，如果发现了多个任务的剩余时间片同时为最大，那么选择第一个扫描到的进程执行。
-最终所有的可运行的进程都被调度执行了，并且时间片全部用光变为0：
-然后调度器会重置runqueue中所有可运行进程的时间片，比如150ms，也就是timeslice=150ms/10ms=15，对于睡眠状态的t4为了能让其从睡眠中恢复后尽快被调度以改善交互性，它的时间片等于=15+12/2=15+6=21。
-当t4从睡眠中恢复时，t4的剩余时间片就是最大的了，但是调度器不一定就立即会调度它，因为调度的发生是在固定的时机才会触发，比如时钟中断处理程序发现当前进程时间片耗光了，或者当前进程要睡眠、退出或者执行其他系统调用需要让出CPU时。
-ps：其实，在内核代码里面写法是这样的，就是说：最开始的时间片15是由优先级（nice值）确定的，counter&amp;raquo;1对应的就是睡眠进程的时间片除以2的操作。
-void schedule(void) { ... (*p)-&amp;gt;counter = ((*p)-&amp;gt;counter &amp;gt;&amp;gt; 1) + (*p)-&amp;gt;priority; ... } 如果你对这部分的源码实现感兴趣可以参考：https://github.com/hitzhangjie/linux-0.0.1-learning/blob/master/linux-0.0.1/kernel/sched.c#L82。
-本文小结 # 本文简单介绍了Linux内核调度器在演进过程中主要的实现版本，并先介绍了最最最早期的一个版本，也就是linux kernel v0.0.1版本中的调度器版本，真的是非常简单。但是这里面已经有了进程优先级、交互性的一些考量。毕竟是一个玩具版本，后面的版本中也对这个调度器做了一些改进。到了v2.6.0的时候引入了O(1)调度器，再后来v2.6.23引入了对公平性支持更好的CFS调度器，并且不断完善中。
-接下来，会写几篇文章，再继续介绍下O(1)调度器和CFS调度器，欢迎阅读交流。
-参考文献 # Linux Scheduler History, https://ops-class.</description></item></channel></rss>
+简而言之，CPU调度似乎是一项无法完美解决的工作。尽管开发者不断优化调度算法，但总会有某些类型的工作负载得不到很好的调度服务，特别是对交互型任务要求响应迅速的用户。现在的调度器为了提高交互式进程的响应,已经发展出了非常复杂的优化手段。但复杂的代码也带来维护困难，而用户对响应时间的抱怨仍未止息。CPU调度需要持续改进，才能更好平衡不同类型任务的需要。</description></item></channel></rss>

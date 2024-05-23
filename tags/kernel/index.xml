@@ -13,4 +13,6 @@
 ​ 注意llvm不同版本兼容性有些问题，可能在低版本上编译ok升级后反而失败了，
 ​ 我就是遇到的这样的坑，原本bcc 0.26可以在llvm 16上编过，升级到llvm 17失败
 2、不使用yum源中的bcc 0.25.0，有bug未修复，直接从源码安装
-​ git clone https://github.</description></item></channel></rss>
+​ git clone https://github.</description></item><item><title>Linux内核文档索引</title><link>/blog/2014-10-24-linux%E5%86%85%E6%A0%B8%E6%96%87%E6%A1%A3%E7%B4%A2%E5%BC%95/</link><pubDate>Fri, 24 Oct 2014 00:10:00 +0800</pubDate><guid>/blog/2014-10-24-linux%E5%86%85%E6%A0%B8%E6%96%87%E6%A1%A3%E7%B4%A2%E5%BC%95/</guid><description>迁移自 hitzhangjie/Study 项目下的内容，本文是看内核源码时对文档的一个阅读、内容总结。
+============================================================================= Fri Sep 18 12:23:06 CST 2014 # Documentation/
+[1] zorro.txt zorro bus ii\iiioZorro II is the name of the general purpose expansion bus used by the Amiga 2000 computer. The bus is mainly a buffered extension of the Motorola 68000 bus, with support for bus mastering DMA. The expansion slots use a 100-pin connector and the card form factor is the same as the IBM PC. Zorro II cards implement the Autoconfig protocol for automatic address space assignment (designed before, yet similar to, Plug and Play on the PC).</description></item></channel></rss>

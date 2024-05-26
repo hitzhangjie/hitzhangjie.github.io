@@ -14,16 +14,4 @@ Fedora发行版每6个月更新一次，CentOS 7可以支持10年，我本来也
 最后，我选择了Ubuntu 16.04 LTS版本，可以支持5年，而我本身也想重新比较一下 Ubuntu、Fedora这两大发行版，为什么呢？因为对这两款发行版，我都有向当长的使用时 间，现在也积累了很多的经验，前不久我碰巧又看到了一个各大发行版性能对比的文章， 其中Debian系列的性能要明显优于RHEL系列，原因我暂时也不是特别清楚，这也是激发我 重新选择Ubuntu的原因之一。我希望在使用过程中，重新比较一下Ubuntu和Fedora这两大 发行版的差异，例如包管理工具的差异、软件包中的配置文件的差异、系统管理方面的差 异，此外呢，我也希望能够对其性能上的差异进行一下更深的认识。
 1.系统安装过程 # 系统安装过程，应该说是驾轻就熟了，下载一个Ubuntu 16.04 LTS的ISO文件，然后使用 Unetbootin制作一个可以引导系统安装的U盘。U盘要格式化成FAT32格式，且要根据需要 预留一定的存储空间，以供安装过程中释放文件使用，如果预留空间不足，可能导致安装 失败。
 制作完成安装U盘之后，插入电脑，关闭BIOS中的UEFI引导模式，然后从USB HDD启动安装 即可。安装的时候手动分区，最好能够把那些第三方软件包给安装上，这样省的后续安装 ，省心。我是深有体会，之前安装音频、视频播放器的时候，安装解码库浪费了很多时间 。安装过程中有个别地方需要设置一下，例如用户名、密码、语言、地区、时间等等的。
-注意，Ubuntu在安装过程中不会对root用户的密码进行设置，并且默认将新建的用户加入 wheel组中！但是在Fedora安装过程中，会对root密码进行设置，然后再创建一个新用户 ，并允许选择是否将该用户加入wheel组中，还可以指定uid、gid等。这是一个区别，需 要注意一下，安装完成之后，需要通过“passwd root”对密码进行重新设定。</description></item><item><title>Linux桌面发行版CentOS</title><link>/blog/2015-01-14-linux%E6%A1%8C%E9%9D%A2%E5%8F%91%E8%A1%8C%E7%89%88centos/</link><pubDate>Wed, 14 Jan 2015 00:30:02 +0800</pubDate><guid>/blog/2015-01-14-linux%E6%A1%8C%E9%9D%A2%E5%8F%91%E8%A1%8C%E7%89%88centos/</guid><description>迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是Linux发行版使用过程中一些常用设置。
-中文输入法 安装完centos之后，在输入法中默认是没有添加中文输入法的，这个时候，运行 ibus-setup添加上中文输入法，具体的方式是，首先选择语言为中文，然后找到展开中文 就可以看到下面的好几个输入法，选择简体中文。然后通过system settings-&amp;gt;input method selector选择输入法框架为ibus，登出后重新登陆即可。
-经过安装测试，在fedora 21中进行了安装测试，配置过程是一样的。 但是测试后也发现，在fedora中的ibus-pinyin工作起来不如在centos下效果好，经 过一段时间的使用之后换成了fcitx，目前还在使用过程中，其实我想的是，如果 fcitx 中自带的输入法如果不好用的话，后面我就直接换成sogou输入法。
-从本地安装源安装软件 我之前下载的是centos-everything.iso，大约有7个G，里面包含了很多软件，为了 减少下载软件花费的时间，我们可以将这个压缩包解压到指定目录，然后将其作为本地安 装源进行软件的安装。 在实际安装之前，我们需要首先在/etc/yum.repos.d/下面创建一个配置文件，该配 置文件告诉yum在搜索软件包的时候优先搜索本地软件源。该配置文件内容如下：
-[Local] name=Local Repo baseurl=file:///media/cdrom gpgkey=file:///RPM-GPG-KEY-CentOS-7 gpgcheck=1 enabled=1
-该配置文件中写明了软件源为目录/media/cdrom，所以我们将iso解压后的所有内容 应该放在/media/cdrom，也可以根据实际情况更改合适的路径名。
-桌面环境 我安装了kde-plasma 4和gnome 3两种桌面环境，kde是我一直以来都比较喜欢的，至 于gnome3，在ubuntu下面的gnome3真心觉得很差劲，估计是centos将其优化了以下吧，感 觉还不错。
-显示管理器 centos7默认使用的显示管理器是gdm，不过我还是比较喜欢kdm，但是发现现在已经 centos官方源中已经没有kdm这个软件了。甚至，在kde的相关配置界面中，也找不到kdm 相关的login登陆相关的设置了。 这让我想起了一件事。之前安装centos7时，安装了很多第三方软件包后，从第三方 软件库中安装了kdm，结果导致系统无法启动图形界面。估计可能是rhel官方修改了某些 重要文件，这个还得等到后面我再再行测试。
-plymouth设置启动界面
-安装epel软件源，并从中安装wine。 我是从epel上面安装的wine，但是这里安装的wine是64位的，而且epel官方也声明了 ，该wine包只支持64位windows程序。注意这一点，如果非要运行windows程序，那么就要 确保该程序是64位的。
-正是因为这个原因，我新下载了foxit reader的64位版本。ubuntu上的wine既能够支 持64位，也能够支持32位。
-安装软件源rpmforge rpmforge上面有大约5000多个软件包，……，我是要解压说rar文件的时候，发现没有 这个程序，google了下发现了第三方软件源rpmforge。
-wget http://pkgs.</description></item></channel></rss>
+注意，Ubuntu在安装过程中不会对root用户的密码进行设置，并且默认将新建的用户加入 wheel组中！但是在Fedora安装过程中，会对root密码进行设置，然后再创建一个新用户 ，并允许选择是否将该用户加入wheel组中，还可以指定uid、gid等。这是一个区别，需 要注意一下，安装完成之后，需要通过“passwd root”对密码进行重新设定。</description></item></channel></rss>

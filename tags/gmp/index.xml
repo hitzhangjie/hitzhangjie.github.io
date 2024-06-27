@@ -7,6 +7,8 @@ CPU1上的任务P1的vruntime较大，暂时不被CPU1调度。 CPU2上的任务
 周期性负载均衡：调度器会定期检查各个CPU的负载，并在必要时进行任务迁移。 任务唤醒：当一个任务从睡眠状态被唤醒时，调度器会检查当前CPU的负载情况，并可能将任务分配到负载较轻的CPU。 任务创建：当一个新任务被创建时，调度器会选择一个负载较轻的CPU来运行该任务。 任务迁移的考虑因素: 在决定是否迁移任务时，调度器会考虑多个因素，包括：
 CPU负载：调度器会比较各个CPU的负载，选择负载较轻的CPU进行任务迁移。 任务的vruntime：调度器会比较任务的vruntime，选择合适的任务进行迁移。 任务的亲和性：某些任务可能对特定的CPU有亲和性（例如，缓存亲和性），调度器会尽量避免迁移这些任务。 为何会想到这个问题呢 # 一个直接原因时因为go程序中GOMAXPROCS设置不合理，母机上有128 cores，但是虚拟化技术下容器里分配的只有2个cpus。
 此时go进程里看到GOMAXPROCS=128（go不会自动感知到实际上只分配了2个cpus），此时runtime会误认为最多可以创建128个P（GMP中的P，Processor），后果就是程序启动时会创建128个P，负载一升高，goruntime负载均衡就会为每个P分配goroutines执行，对应的M就要创建出来并轮询P localrunq、globalrunq等处理。
-这样的话就会两个不好的影响：
-M多了线程切换频率也会高，也会导致开销。当然128个M肯定是不够多的，但是由这个问题联想到了CFS调度器这里的工作机制，顺便提下而已； 更主要原因还是在于，M关联P后，会轮询P的localrunq，，以及globalrunq，这些自旋等待会导致cpu开销升高； 由于此时cpu配额实际上是有限制的，所以无意义的操作空耗cpu占用了可以执行业务代码的时间。而且更容易触发cpu throttling（节流），进一步导致整体性能变差。
-go程序中解决这个问题，可以直接 import _ &amp;quot;github.com/uber-go/automaxprocs&amp;quot; 来解决。这不是一个新问题，只是思考了下和CFS调度器、goruntime调度的一点联系。</description></item></channel></rss>
+ps: 严格来说，go运行时是这样创建GMP的
+进程启动的时候会根据GOMAXPROCS先创建出对应数量的P，详见schedinit()-&amp;gt;procresize()，但是线程数M还是没有创建的 上述创建出来的一堆P，除了当前g.m.p是在用状态，其他都是idle状态；M也不会预先创建出来，而是根据设计负载情况动态去创建、去激活P去执行的； 具体来说就是当创建一堆goroutines后，这些goroutine会先往p.runq放，放不下了就会考虑injectglist，这个其实就是放到全局队列sched.runq，放的时候： 如果当前M有关联一个P，就先放npidle个G到sched.runq，并且启动npdile个M去激活npdile个P，去尝试从goroutine抢G然后执行。然后剩下的放到p.runq 如果当前M没有关联一个P，这种情况下怎么会发生呢（有多种情况可能会发生，比如GC、系统调用阻塞、初始化阶段等）？这种情况下会全部放到sched.runq，然后启动最多npidle个（即 min(goroutineQSize, npdile)）个M去激活P并执行； 有些细节就过分展开细说，大家知道这一点就好了，“如果短时间内创建大量goroutine，当前p.runq full就会往sched.runq放，并且会启动最多npidle个M去抢P执行。”
+如果这种情况出现了，并且GOMAXPROCS设置的不合理（如远大于虚拟化技术分配的cpu配合，如docker run &amp;ndash;cpus=2，GOMAXPROCS=128），那么这些创建出来的众多的M在执行一些轮询p.runq,sched.runq,netpoller,stealing,contextswitch过程中就容易推高cpu占用，就容易被虚拟化管理软件给限制导致出现cpu throttling（节流），进而导致性能出现整体性的下降。
+ok, 这样的话就会两个不好的影响：
+M多了线程切换频率也会高，也会导致开销。当然128个M肯定是不够多的，但是由这个问题联想到了CFS调度器这里的工作机制，顺便提下而已； 更主要原因还是在于，M关联P后，会轮询P的localrunq，，以及globalrunq，这些自旋等待会导致cpu开销升高； 由于此时cpu配额实际上是有限制的，所以无意义的操作空耗cpu占用了可以执行业务代码的时间。而且更容易触发cpu throttling（节流），进一步导致整体性能变差。</description></item></channel></rss>

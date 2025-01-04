@@ -16,6 +16,8 @@ images: []
 
 实际上，我们做很多事情，都是为了降低解决问题的复杂度。解决问题的途径当然不止一种，但是我们要懂得权衡、降低解决问题的复杂度，这应该是有追求的开发人员的共识。
 
-2024 DF上线后，我在以前相关示例代码的基础上，系统性整理了设计模式的问题背景、模式核心要素、代码示例，最后便有了这个设计模式文集，《[Design Patterns in Go](https://medium.com/@hitzhangjie/list/go-patterns-363e273d1f45)》。
+现在，我在示例代码的基础上，系统性整理了设计模式的问题背景、模式核心要素、代码示例，便有了这个Go设计模式实战文集：
+- 《[Design Patterns in Go](https://medium.com/@hitzhangjie/list/go-patterns-363e273d1f45)》
+- 《[Go设计模式实战](https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzU2NjY3MTc3MQ==&action=getalbum&album_id=3682790731581669378)》
 
 欢迎阅读，如果您在阅读过程中发现有错误、疏漏、建议，不要犹豫，请给我提issue。

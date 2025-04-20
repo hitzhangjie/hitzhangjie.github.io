@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>roundrobin on</title><link>/tags/roundrobin/</link><description>Recent content in roundrobin on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 14 Nov 2023 12:59:05 +0800</lastBuildDate><atom:link href="/tags/roundrobin/index.xml" rel="self" type="application/rss+xml"/><item><title>Linux任务调度(2)</title><link>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A62/</link><pubDate>Tue, 14 Nov 2023 12:59:05 +0800</pubDate><guid>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A62/</guid><description>演进过程 # 首先，简要描述下Linux进程调度器的一个发展历史：
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>roundrobin on</title><link>/tags/roundrobin/</link><description>Recent content in roundrobin on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 14 Nov 2023 12:59:05 +0800</lastBuildDate><atom:link href="/tags/roundrobin/index.xml" rel="self" type="application/rss+xml"/><item><title>Linux任务调度(2): v0.01</title><link>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A62/</link><pubDate>Tue, 14 Nov 2023 12:59:05 +0800</pubDate><guid>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A62/</guid><description>演进过程 # 首先，简要描述下Linux进程调度器的一个发展历史：
 v0.01~v2.4.x: the very first scheduler，复杂度O(n) v2.6.0~v2.6.22: O(1) scheduler，复杂度O(1) v2.6.23~: Completely Fair Scheduler (CFS)，复杂度O(log(n)) 可能会有点好奇，只有这么几种吗？这是出现在内核源码树中的实现方案，研究探索过程中，涌现出的实现方案多的多，前一篇文章任务调度(1)中就提到过很多种方案，感兴趣可以了解下。本文只重点介绍内核源码树中真实出现过的调度器实现方案。
 最早的版本 v0.01 # v0.01是最早的Linux内核版本。它的进程调度器只有20行代码，非常简单。作为对比，最新的Linux内核由数万行代码组成。
 在v0.01中，所有的任务都由一个数组表示。这个数组不仅是所有任务的列表，还是运行队列。这个数组的长度是64。这意味着这个版本中的任务数最多为64个。在这个数组中，空的条目用NULL表示。
@@ -6,7 +6,7 @@ v0.01~v2.4.x: the very first scheduler，复杂度O(n) v2.6.0~v2.6.22: O(1) sche
 在这个版本之后，时间片的值和定时器中断的间隔都发生了变化。然而，为了简单起见，本文不会逐一解释这些变化。
 ps：进程切换的时机，v0.01里面是在系统调用返回前、时钟中断服务程序中检测是否需要进行进程切换。时钟中断处理时会递减当前进程的剩余时间片，为0后就会调度其他进程执行。
 以下是Linux v0.01的进程调度器的调度算法：
-逆序遍历运行队列，并调度第一个时间片大于零的可运行进程，并且要是剩余时间片最大的进程。 如果没有这样的进程，调度器会重置所有任务的时间片。在这里，调度器给可运行进程150毫秒的时间片，并将当前时间片的一半添加到休眠任务中。后者的原因是为了尽快调度唤醒的任务，以提高交互性。 我将用图示来展示上述算法的流程。
+逆序遍历运行队列，找到剩余时间片最大且大于0的进程，调度该进程； 如果没找到可调度的进程，调度器会重置所有任务的剩余时间片。对于可运行任务，调度器将给与150ms的时间片；对于仍处于休眠状态的任务，调度器在该任务剩余时间片的基础上额外增加剩余时间片的一半（也就是t=t*1.5）。 后者的原因是为了让之前休眠任务被唤醒后能尽快被调度，以提高交互性。 我将用图示来展示上述算法的流程。
 初始状态如下所示，时间片的单位是10毫秒：
 首先，调度器以逆序遍历运行队列。在这里，t4被跳过，因为它正在休眠。此外，t2也被跳过，因为该条目为空。在遍历整个任务数组后，它发现t1的时间片是所有可运行任务中最大的。调度器调度t1运行，直到t1用光剩余的时间片。
 调度器继续遍历，发现接下来t0是可运行的、剩余时间片最大的，于是调度t0运行直到时间片用光。在逆序遍历的过程中，如果发现了多个任务的剩余时间片同时为最大，那么选择第一个扫描到的进程执行。

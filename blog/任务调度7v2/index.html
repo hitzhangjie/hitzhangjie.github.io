@@ -1,0 +1,399 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-regular.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-500.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-700.woff2 type=font/woff2 crossorigin><link rel=stylesheet href=/main.919d32897099d0335611840e8de8126598e04dec08600b11dc58a2217f4a8223a0719340de3efeedf96217230bed172fe5d3b4dc7b9b6b5065e74c49a2539323.css integrity="sha512-kZ0yiXCZ0DNWEYQOjegSZZjgTewIYAsR3FiiIX9KgiOgcZNA3j7+7fliFyML7Rcv5dO03Huba1Bl50xJolOTIw==" crossorigin=anonymous><noscript><style>img.lazyload{display:none}</style></noscript><meta name=robots content="index, follow"><meta name=googlebot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><meta name=bingbot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><title>Linux任务调度(7): CFS调度器源码分析1 - MySpace</title><meta name=description content="前面几篇文章介绍了Linux下调度器的演进过程，也对CFS调度器的大致工作原理进行了介绍，但是还是只停留在思想层面，本文在CFS源码层面进行深入分析，帮助大家更深刻地理解CFS调度器的实现细节。本文最后继续探讨几个比较实际的问题，当线程数多了之后，线程切换频率会上升吗？会导致CPU占用率上升吗？调度器又如何平衡多cpu多核上的负载。"><link rel=canonical href=/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A67v2/><meta property="og:locale" content="en_US"><meta property="og:type" content="article"><meta property="og:title" content="Linux任务调度(7): CFS调度器源码分析1"><meta property="og:description" content="前面几篇文章介绍了Linux下调度器的演进过程，也对CFS调度器的大致工作原理进行了介绍，但是还是只停留在思想层面，本文在CFS源码层面进行深入分析，帮助大家更深刻地理解CFS调度器的实现细节。本文最后继续探讨几个比较实际的问题，当线程数多了之后，线程切换频率会上升吗？会导致CPU占用率上升吗？调度器又如何平衡多cpu多核上的负载。"><meta property="og:url" content="/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A67v2/"><meta property="og:site_name" content="MySpace"><meta property="article:published_time" content="2024-06-27T12:36:00+08:00"><meta property="article:modified_time" content="2024-06-27T12:36:00+08:00"><meta property="og:image" content="/doks.png"><meta property="og:image:alt" content="MySpace"><meta name=twitter:card content="summary_large_image"><meta name=twitter:site content="@hitzhangjie"><meta name=twitter:creator content="@hitzhangjie"><meta name=twitter:title content="Linux任务调度(7): CFS调度器源码分析1"><meta name=twitter:description content="前面几篇文章介绍了Linux下调度器的演进过程，也对CFS调度器的大致工作原理进行了介绍，但是还是只停留在思想层面，本文在CFS源码层面进行深入分析，帮助大家更深刻地理解CFS调度器的实现细节。本文最后继续探讨几个比较实际的问题，当线程数多了之后，线程切换频率会上升吗？会导致CPU占用率上升吗？调度器又如何平衡多cpu多核上的负载。"><meta name=twitter:image content="/doks.png"><meta name=twitter:image:alt content="Linux任务调度(7): CFS调度器源码分析1"><script type=application/ld+json>{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/1","name":"","url":"/","sameAs":["https://twitter.com/hitzhangjie","https://www.linkedin.com/in/hitzhangjie/","https://github.com/hitzhangjie"],"image":{"@type":"ImageObject","@id":"/#/schema/image/1","url":"/\u003cnil\u003e","width":null,"height":null,"caption":""}},{"@type":"WebSite","@id":"/#/schema/website/1","url":"/","name":"MySpace","description":"MySpace is a hitzhangjie\u0027s personal space, for blogs, books, journey, thinkings.","publisher":{"@id":"/#/schema/person/1"}},{"@type":"WebPage","@id":"/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A67v2/","url":"/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A67v2/","name":"Linux任务调度(7): CFS调度器源码分析1","description":"前面几篇文章介绍了Linux下调度器的演进过程，也对CFS调度器的大致工作原理进行了介绍，但是还是只停留在思想层面，本文在CFS源码层面进行深入分析，帮助大家更深刻地理解CFS调度器的实现细节。本文最后继续探讨几个比较实际的问题，当线程数多了之后，线程切换频率会上升吗？会导致CPU占用率上升吗？调度器又如何平衡多cpu多核上的负载。","isPartOf":{"@id":"/#/schema/website/1"},"about":{"@id":"/#/schema/person/1"},"datePublished":"2024-06-27T12:36:00CET","dateModified":"2024-06-27T12:36:00CET","breadcrumb":{"@id":"/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A67v2/#/schema/breadcrumb/1"},"primaryImageOfPage":{"@id":"/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A67v2/#/schema/image/2"},"inLanguage":"","potentialAction":[{"@type":"ReadAction","target":["/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A67v2/"]}]},{"@type":"BreadcrumbList","@id":"/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A67v2/#/schema/breadcrumb/1","name":"Breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"item":{"@type":"WebPage","@id":"/","url":"/","name":"Home"}},{"@type":"ListItem","position":2,"item":{"@id":"/blog%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A67v2/"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Article","@id":"/#/schema/article/1","headline":"Linux任务调度(7): CFS调度器源码分析1","description":"前面几篇文章介绍了Linux下调度器的演进过程，也对CFS调度器的大致工作原理进行了介绍，但是还是只停留在思想层面，本文在CFS源码层面进行深入分析，帮助大家更深刻地理解CFS调度器的实现细节。本文最后继续探讨几个比较实际的问题，当线程数多了之后，线程切换频率会上升吗？会导致CPU占用率上升吗？调度器又如何平衡多cpu多核上的负载。","isPartOf":{"@id":"/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A67v2/"},"mainEntityOfPage":{"@id":"/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A67v2/"},"datePublished":"2024-06-27T12:36:00CET","dateModified":"2024-06-27T12:36:00CET","author":{"@id":"/#/schema/person/2"},"publisher":{"@id":"/#/schema/person/1"},"image":{"@id":"/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A67v2/#/schema/image/2"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/2","name":null,"sameAs":[]}]},{"@context":"https://schema.org","@graph":[{"@type":"ImageObject","@id":"/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A67v2/#/schema/image/2","url":"/doks.png","contentUrl":"/doks.png","caption":"Linux任务调度(7): CFS调度器源码分析1"}]}]}</script><meta name=theme-color content="#fff"><link rel=icon href=/favicon.ico sizes=any><link rel=icon type=image/svg+xml href=/favicon.svg><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest crossorigin=use-credentials href=/site.webmanifest><script type=text/javascript src="https://platform-api.sharethis.com/js/sharethis.js#property=607868a58d7101001829a8df&product=sop" async></script><style>[alt~=sharing]{border:0;box-shadow:none}div#st-1{text-align:unset}div#st-1 .st-btn{height:24px;padding:0 4px}div#st-1 .st-btn>img{top:4.2px}div#st-2 .st-btn{height:24px;padding:0 4px}div#st-2 .st-btn>img{top:4.2px}</style><script async src="https://www.googletagmanager.com/gtag/js?id=UA-168027530-1"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date),gtag('config','UA-168027530-1')</script></head><body class="blog single d-flex flex-column min-vh-100"><div class=sticky-top><div class=header-bar></div><header class="navbar navbar-expand-lg navbar-light doks-navbar"><nav class="container-xxl flex-wrap flex-lg-nowrap" aria-label="Main navigation"><a class="navbar-brand order-0" href=/ aria-label=MySpace>MySpace</a>
+<button class="btn btn-menu order-2 d-block d-lg-none" type=button data-bs-toggle=offcanvas data-bs-target=#offcanvasDoks aria-controls=offcanvasDoks aria-label="Open main menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div class="offcanvas offcanvas-end border-0 py-lg-1" tabindex=-1 id=offcanvasDoks data-bs-backdrop=true aria-labelledby=offcanvasDoksLabel><div class="header-bar d-lg-none"></div><div class="offcanvas-header d-lg-none"><h2 class="h5 offcanvas-title ps-2" id=offcanvasDoksLabel><a class=text-dark href=/>MySpace</a></h2><button type=button class="btn-close text-reset me-2" data-bs-dismiss=offcanvas aria-label="Close main menu"></button></div><div class="offcanvas-body p-4 p-lg-0"><ul class="nav flex-column flex-lg-row align-items-lg-center mt-2 mt-lg-0 ms-lg-2 me-lg-auto"><li class=nav-item><a class="nav-link ps-0 py-1 active" href=/blog/>Blog</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/books/>Books</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/landscape>Landscape</a></li></ul><hr class="text-black-50 my-4 d-lg-none"><form class="doks-search position-relative flex-grow-1 ms-lg-auto me-lg-2"><input id=search class="form-control is-search" type=search placeholder="Search docs..." aria-label="Search docs..." autocomplete=off><div id=suggestions class="shadow bg-white rounded d-none"></div></form><hr class="text-black-50 my-4 d-lg-none"><ul class="nav flex-column flex-lg-row"><li class=nav-item><a class="nav-link social-link" href=https://twitter.com/hitzhangjie><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg><small class="ms-2 d-lg-none">Twitter</small></a></li><li class=nav-item><a class="nav-link social-link" href=https://github.com/hitzhangjie><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37.0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44.0 0020 4.77 5.07 5.07.0 0019.91 1S18.73.65 16 2.48a13.38 13.38.0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07.0 005 4.77 5.44 5.44.0 003.5 8.55c0 5.42 3.3 6.61 6.44 7A3.37 3.37.0 009 18.13V22"/></svg><small class="ms-2 d-lg-none">GitHub</small></a></li></ul></div></div></nav></header></div><div class="wrap container-xxl" role=document><div class=content><div class="row flex-xl-nowrap"><div class="col-lg-5 col-xl-4 docs-sidebar"><nav class=docs-links aria-label="Main navigation"><h3>Tag List</h3><ol><li><a href=/tags/scheduler/>scheduler</a></li><li><a href=/tags/cfs/>cfs</a></li><li><a href=/tags/fair/>fair</a></li><li><a href=/tags/vruntime/>vruntime</a></li><li><a href=/tags/gmp/>gmp</a></li></ol></nav></div><nav class="docs-toc d-none d-xl-block col-xl-3" aria-label="Secondary navigation"><div class=page-links><h3>On this page</h3><nav id=TableOfContents><ul><li><a href=#linux任务调度7-cfs调度器源码分析>Linux任务调度(7): CFS调度器源码分析</a><ul><li><ul><li><a href=#核心概念及源码分析>核心概念及源码分析</a><ul><li><a href=#对公平的理解>对“公平”的理解</a></li><li><a href=#核心数据结构>核心数据结构</a></li><li><a href=#调度粒度>调度粒度</a></li><li><a href=#任务的优先级>任务的优先级</a></li><li><a href=#虚拟运行时间>虚拟运行时间</a></li><li><a href=#调度周期>调度周期</a></li><li><a href=#时间片>时间片</a></li><li><a href=#调度节拍>调度节拍</a></li><li><a href=#任务抢占>任务抢占</a></li><li><a href=#任务切换>任务切换</a></li><li><a href=#负载均衡>负载均衡</a></li><li><a href=#组调度>组调度</a></li></ul></li><li><a href=#本文总结>本文总结</a></li></ul></li></ul></li></ul></nav></div></nav><main class="docs-content col-lg-11 col-xl-9"><h1>Linux任务调度(7): CFS调度器源码分析1</h1><p><small>Posted 2024-06-27 12:36 +0800 by <a class="stretched-link position-relative" href>ZhangJie</a>&nbsp;&dash;&nbsp;<strong>7&nbsp;min read</strong></small><p><div style=display:flex><div>分享:&nbsp;&nbsp;</div><div><div class=sharethis-inline-share-buttons></div></div></div><hr><p class=lead></p><h1 id=linux任务调度7-cfs调度器源码分析>Linux任务调度(7): CFS调度器源码分析 <a href=#linux%e4%bb%bb%e5%8a%a1%e8%b0%83%e5%ba%a67-cfs%e8%b0%83%e5%ba%a6%e5%99%a8%e6%ba%90%e7%a0%81%e5%88%86%e6%9e%90 class=anchor aria-hidden=true>#</a></h1><p>前面几篇文章介绍了Linux下调度器的演进过程，也对CFS调度器的大致工作原理进行了介绍，本文在CFS源码层面进行深入分析，帮助大家更深刻地理解CFS调度器的实现细节。Linux从开始引入CFS调度器到现在，已经发展了近20年的时间。在这一段时间里，CFS调度器经历了多次演进，我们选择相对比较新的版本 v5.12 版本内核为例进行说明。现在主流云厂商提供的Linux发行版内核都还有这个版本，我们的分析仍然具有一定的时效性方面的价值。OK，我们开始。</p><h3 id=核心概念及源码分析>核心概念及源码分析 <a href=#%e6%a0%b8%e5%bf%83%e6%a6%82%e5%bf%b5%e5%8f%8a%e6%ba%90%e7%a0%81%e5%88%86%e6%9e%90 class=anchor aria-hidden=true>#</a><a href=#核心概念及源码分析 class=anchor aria-hidden=true>#</a></h3><h4 id=对公平的理解>对“公平”的理解 <a href=#%e5%af%b9%e5%85%ac%e5%b9%b3%e7%9a%84%e7%90%86%e8%a7%a3 class=anchor aria-hidden=true>#</a><a href=#对公平的理解 class=anchor aria-hidden=true>#</a></h4><p>CFS的目标是为所有任务提供公平的CPU时间分配，这里要先好好理解下 “<strong>公平</strong>” 的含义：</p><p>1）如果多个任务具有相同的优先级，那么它们理应获得相同的调度机会；
+2）如果多个任务优先级有高低之分，那么它们在调度上要有对应的体现，优先级高的要获得更多的调度机会；
+3）要防止高优先级任务始终霸占CPU，导致低优先级任务饿死（starvation）；
+4）对于响应式任务、非响应式任务，要有必要的奖励和惩罚机制，以改善用户体验；
+5）要有能力在用户层级、任务组层级、具体任务层级，建立这种“公平性”；
+6）这种公平性在多CPU核心上，除了100%保证单CPU核心上的公平，也需要考虑负载均衡和任务迁移，尽力去做到多CPU核心上的整体调度的相对公平；</p><p>这是我对CFS中“公平性”的理解，接下来我们将结合CFS的源码来分析是如何做到的，让大家知其然知其所以然。</p><h4 id=核心数据结构>核心数据结构 <a href=#%e6%a0%b8%e5%bf%83%e6%95%b0%e6%8d%ae%e7%bb%93%e6%9e%84 class=anchor aria-hidden=true>#</a><a href=#核心数据结构 class=anchor aria-hidden=true>#</a></h4><ol><li>被调度的具体任务，或者用户组、任务组，它们都用可调度实体来抽象表示，即 <code>sched_entity</code>；<pre><code class=language-c>struct sched_entity {
+    /* For load-balancing: */
+    struct load_weight        load;
+    struct rb_node            run_node;
+    struct list_head		      group_node;
+    unsigned int              on_rq;
+
+    u64                       exec_start;
+    u64                       sum_exec_runtime;
+    u64                       vruntime;
+    u64                       prev_sum_exec_runtime;
+
+    u64                       nr_migrations;
+
+    struct sched_statistics exec_statistics;
+
+    #ifdef CONFIG_FAIR_GROUP_SCHED
+        int                     depth;
+        struct sched_entity     *parent;
+        /* rq on which this entity is (to be) queued: */
+        struct cfs_rq           *cfs_rq;
+        /* rq &quot;owned&quot; by this entity/group: */
+        struct cfs_rq           *my_q;
+        /* cached value of my_q-&gt;h_nr_running */
+        unsigned long           runnable_weight;
+    #endif
+
+    #ifdef CONFIG_SMP
+        /*
+         * Per entity load average tracking.
+         *
+         * Put into separate cache line so it does not
+         * collide with read-mostly values above.
+         */
+       struct sched_avg        avg;
+   #endif
+}
+</code></pre></li></ol><p>2）每个处理器独立维护一个任务队列cfs_rq，避免1个全局队列的方式导致竞争问题：</p><pre><code class=language-c>   /* CFS-related fields in a runqueue */
+    struct cfs_rq {
+        struct load_weight    load;
+        unsigned int          nr_running;
+        unsigned int          h_nr_running;      /* SCHED_{NORMAL,BATCH,IDLE} */
+        unsigned int          idle_h_nr_running; /* SCHED_IDLE */
+  
+        u64                   exec_clock;
+        u64                   min_vruntime;
+        ...
+  
+        struct rb_root_cached    tasks_timeline; /* 维护任务的vruntime的rbtree */
+  
+        /*
+         * 'curr' points to currently running entity on this cfs_rq.
+         * It is set to NULL otherwise (i.e when none are currently running).
+         */
+        struct sched_entity    *curr;
+        struct sched_entity    *next;
+        struct sched_entity    *last;
+        struct sched_entity    *skip;
+        ...
+  
+        /*
+         * CFS load tracking
+         */
+        struct sched_avg    avg;
+        ...
+  
+    // 组调度相关的内容，暂时忽略
+    #ifdef CONFIG_FAIR_GROUP_SCHED
+      ...
+    #endif /* CONFIG_FAIR_GROUP_SCHED */
+    };
+</code></pre><p>内核为每个处理器维护一个任务队列cfs_rq, cfs_rq中通过指针成员next,last建立了一个双向链表，方便调度器遍历任务列表。</p><ol start=3><li><p>调度器为了能够快速找到任务队列cfs_rq中下一个vruntime最小的可运行任务，构建了1个rbtree：</p><pre><code class=language-c>/* CFS-related fields in a runqueue */
+ struct cfs_rq {
+     ...
+     struct rb_root_cached    tasks_timeline; /* 维护任务的vruntime的rbtree */
+     struct sched_entity      *curr;
+     ...
+ }
+ /*
+  * Leftmost-cached rbtrees.
+  *
+  * We do not cache the rightmost node based on footprint
+  * size vs number of potential users that could benefit
+  * from O(1) rb_last(). Just not worth it, users that want
+  * this feature can always implement the logic explicitly.
+  * Furthermore, users that want to cache both pointers may
+  * find it a bit asymmetric, but that's ok.
+  */
+  struct rb_root_cached {
+      struct rb_root rb_root;
+      struct rb_node *rb_leftmost;
+   };
+</code></pre><p>红黑树的更新逻辑这里暂时按下不提，我们先关注核心逻辑，如果此时运行中的任务curr被抢占，那么下一个执行的就是cfs_rq.tasks_timeline->rb_leftmost。
+在介绍调度器抢占逻辑时，我们会看到这部分的更多的源码细节。OK，理解cfs的核心数据结构大致就是这些，篇幅原因我们暂时移除了支持组调度相关的部分。</p></li></ol><h4 id=调度粒度>调度粒度 <a href=#%e8%b0%83%e5%ba%a6%e7%b2%92%e5%ba%a6 class=anchor aria-hidden=true>#</a><a href=#调度粒度 class=anchor aria-hidden=true>#</a></h4><p>前面核心数据结构部分，我们介绍了sched_entity，从这里可以引申出一个重要概念，调度粒度。</p><pre><code class=language-c>struct sched_entity {
+    /* For load-balancing: */
+    struct load_weight        load;
+    struct rb_node            run_node;
+    struct list_head          group_node;
+    unsigned int              on_rq;
+
+    ...
+
+    #ifdef CONFIG_FAIR_GROUP_SCHED
+        int                     depth;
+        struct sched_entity     *parent;
+
+        /* rq on which this entity is (to be) queued: */
+        struct cfs_rq           *cfs_rq;
+
+        /* rq &quot;owned&quot; by this entity/group: */
+        struct cfs_rq           *my_q;
+
+        /* cached value of my_q-&gt;h_nr_running */
+        unsigned long           runnable_weight;
+    #endif
+    ...
+}
+</code></pre><p>sched_entity，可以表示：</p><ol><li>具体的1个任务；</li><li>任务组，此时sched_entity.cfs_rq表示当前任务组从属于哪个任务队列，并且sched_entity.my_q表示当前任务组包含的任务队列；
+现在你明白了：<ul><li>调度器cfs_rq中的某个任务可以是一个“任务组”，</li><li>该任务组内包含了自己的任务队列，任务组内的任务也是按照CFS vruntime进行调度，</li><li>同时该任务组的vruntime是由其my_q中的所有可调度实体的vruntime求和计算而来，该任务组与其所在的cfs_rq中的其他调度实体按照CFS vruntime进行调度。</li></ul></li><li>用户组是任务组的一种特殊应用形式，本质还是任务组这样的组调度；</li></ol><p>关于组调度的实现源码，篇幅原因，本文中可能不涉及，但是看罢此文，我相信读者已经可以自己去阅读源码了。如果有时间我会再写一篇文章讲述组调度的细节。</p><h4 id=任务的优先级>任务的优先级 <a href=#%e4%bb%bb%e5%8a%a1%e7%9a%84%e4%bc%98%e5%85%88%e7%ba%a7 class=anchor aria-hidden=true>#</a><a href=#任务的优先级 class=anchor aria-hidden=true>#</a></h4><p>在前面介绍的楼梯调度算法、旋转楼梯调度算法，提到了多优先级队列来实现“公平性”对于“任务优先级”的理解。看上去它确实也是种解决办法，但是它真的很难被建模、量化然后说它到底好还是不好？任务在active、expire队列中挪来挪去，或者从高优先级队列挪到低优先级队列，真的是最优雅的解决办法吗？首先，理解起来它就不是那么简单，尽管我在信息流图文、视频链路处理过程中也使用过类似的方法来解决业务中的资源调度问题，但是我确实不认为那就是最好的解决方案。</p><p>CFS调度器的设计，核心思想更简单易懂，且非常容易比建模、量化评估：
+1）任务的优先级，包括了初始的静态优先级(nice，从-20到19)和动态优先级(priority，根据是否响应式任务动态调整)；
+2）调度器执行调度时，会检查任务列表中的任务是否是响应式任务，并调整其对应的动态优先级（奖励 or 惩罚，-5到+5）；
+3）任务的最终优先级 = 静态优先级 + 动态优先级；
+4）任务的优先级会被映射为一种“权重”，表示它在总的CPU执行时间里的一种占比，显然优先级越高对应的权重也应该越大；</p><h4 id=虚拟运行时间>虚拟运行时间 <a href=#%e8%99%9a%e6%8b%9f%e8%bf%90%e8%a1%8c%e6%97%b6%e9%97%b4 class=anchor aria-hidden=true>#</a><a href=#虚拟运行时间 class=anchor aria-hidden=true>#</a></h4><p>调度器执行调度时，很重要的一部操作就是迅速找到下一个被调度的可运行任务。Linux v0.01版本中找到下一个可运行任务的复杂度是O(n)，O(1)调度器是O(1)，CFS调度器是O(log(n))。
+CFS调度器建立了一个红黑树（RBTree），树种每个节点表示一个任务，任务中包含了一个属性 <code>vruntime</code>。</p><p><code>vruntime</code>是一个虚拟运行时间: <code>vruntime = 实际执行时间 / weight</code></p><ol><li>实际执行时间，就是任务被调度到CPU上执行的总时间；
+2）处理器时钟中断定时触发，时钟中断服务程序此时会更新当前运行中的任务的实际执行时间，并更新vruntime；<pre><code class=language-c>时钟中断服务入口 scheduler_tick(preempt):
+   \-&gt; scheduler_tick()
+         \-&gt; task_tick(rq, cur, 0)
+               \-&gt; task_tick_fair(rq, cur, 0)
+                     \-&gt; foreach se in cfs_rq: entity_tick(cfs_rq, se, queued)
+                           \-&gt; update_curr(cfs_rq)
+                                 \-&gt; curr-&gt;sum_exec_runtime += delta_exec;
+                                 \-&gt; curr-&gt;vruntime += calc_delta_fair(delta_exec, curr);
+
+/*
+* delta /= w
+*/
+static inline u64 calc_delta_fair(u64 delta, struct sched_entity *se)
+{
+   if (unlikely(se-&gt;load.weight != NICE_0_LOAD))
+    delta = __calc_delta(delta, NICE_0_LOAD, &amp;se-&gt;load);
+   return delta;
+}   
+</code></pre></li></ol><p>3）weight则是由前面提到的任务优先级，通过查表映射而来得到的权重值；
+vruntime的实际计算式为：</p><pre><code class=language-c>   virtual runtime = (real runtime) * (NICE_0_LOAD) / (weight of the process)
+</code></pre><ul><li><p>其中virtual runtime指的就是vruntime;</p></li><li><p>real runtime指的是cpu上的实际执行时间;</p></li><li><p>NICE_0_LOAD表示nice==0时的默认权重（1024）;</p></li><li><p>而weight of the process指的是由进程的实际优先级从映射表映射而来的权重;</p><p>完整的映射表可以参考：</p></li></ul><pre><code class=language-c>   const int sched_prio_to_weight[40] = {
+    /* -20 */     88761,     71755,     56483,     46273,     36291,
+    /* -15 */     29154,     23254,     18705,     14949,     11916,
+    /* -10 */      9548,      7620,      6100,      4904,      3906,
+    /*  -5 */      3121,      2501,      1991,      1586,      1277,
+    /*   0 */      1024,       820,       655,       526,       423,
+    /*   5 */       335,       272,       215,       172,       137,
+    /*  10 */       110,        87,        70,        56,        45,
+    /*  15 */        36,        29,        23,        18,        15,
+   };
+</code></pre><p>当一个任务被调度执行时，时钟中断会定时触发，对应的时钟中断通过1）中代码序列会不断更新任务的实际执行时间和 <code>vruntime</code>，陷入阻塞状态的任务不会占用CPU，这里的时间也不会增加。</p><p>ps：sched_entity可以表示具体任务，也可以表示任务组、用户组（用户组是任务组的一种特殊应用方式），而vruntime是定义在sched_entity中的，对于组调度而言，计算vruntime的时候就是递归计算其包含的所有任务的vruntime，汇总起来。</p><h4 id=调度周期>调度周期 <a href=#%e8%b0%83%e5%ba%a6%e5%91%a8%e6%9c%9f class=anchor aria-hidden=true>#</a><a href=#调度周期 class=anchor aria-hidden=true>#</a></h4><p>sched_latency，直译过来应该是调度延迟，但是理解成调度周期更好理解一点，它表示什么呢？
+1）任意一个可运行任务先后两次调度之间的时间差上限；
+2）在这个时限内所有可运行任务都必须完成一次调度；</p><p>sched_latency，强调的是多久的时间窗口内所有运行任务可以都被调度一轮，它不等于任务执行时的时间片sched_slice。在传统调度器实现中，时间片是固定的，在CFS中不是的，时间片是动态计算的，后面会提到。</p><p>我们看下调度周期的相关计算逻辑：</p><pre><code class=language-c>/*
+ * Targeted preemption latency for CPU-bound tasks:
+ *
+ * NOTE: this latency value is not the same as the concept of
+ * 'timeslice length' - timeslices in CFS are of variable length
+ * and have no persistent notion like in traditional, time-slice
+ * based scheduling concepts.
+ *
+ * (to see the precise effective timeslice length of your workload,
+ *  run vmstat and monitor the context-switches (cs) field)
+ *
+ * (default: 6ms * (1 + ilog(ncpus)), units: nanoseconds)
+ */
+unsigned int sysctl_sched_latency			= 6000000ULL;
+
+/*
+ * Minimal preemption granularity for CPU-bound tasks:
+ *
+ * (default: 0.75 msec * (1 + ilog(ncpus)), units: nanoseconds)
+ */
+unsigned int sysctl_sched_min_granularity			= 750000ULL;
+
+/*
+ * This value is kept at sysctl_sched_latency/sysctl_sched_min_granularity
+ */
+static unsigned int sched_nr_latency = 8;
+
+ * The idea is to set a period in which each task runs once.
+ *
+ * When there are too many tasks (sched_nr_latency) we have to stretch
+ * this period because otherwise the slices get too small.
+ *
+ * p = (nr &lt;= nl) ? l : l*nr/nl
+ */
+static u64 __sched_period(unsigned long nr_running)
+{
+	if (unlikely(nr_running &gt; sched_nr_latency))
+		return nr_running * sysctl_sched_min_granularity;
+	else
+		return sysctl_sched_latency;
+}
+</code></pre><p>不难看出:</p><ol><li>当可运行任务数&lt;=8时，调度周期sched_latency=6ms；</li><li>当>8时，调度周期sched_latency=可运行任务数*0.75ms，超过8个时就大于6ms。</li></ol><p>这里的调度延迟和下面的动态时间片的计算有关系，注意看。</p><h4 id=时间片>时间片 <a href=#%e6%97%b6%e9%97%b4%e7%89%87 class=anchor aria-hidden=true>#</a><a href=#时间片 class=anchor aria-hidden=true>#</a></h4><p>调度器中包含“时间片”这个设计，主要有两个目的：
+1）为了避免进程频繁切换，必须要让任务执行一段时间后再切换，否则每次系统调用返回、时钟中断服务检测到vruntime最小时都会立即触发触发，开销极大；
+2）为了避免进程长时间霸占CPU，有些进程不进行IO或者其他可能阻塞性的处理，就不会主动让出CPU，时钟中断服务每隔一段时间触发调度器进行检查，如果任务运行时间片就要强制抢占；</p><p>不同调度器实现都肯定需要考虑“时间片”的设计，不同于传统的基于固定时间片大小的调度器实现，CFS中的任务时间片是动态计算的，详见 <code>sched_slice(...)</code>。</p><pre><code class=language-c>/*
+ * We calculate the wall-time slice from the period by taking a part
+ * proportional to the weight.
+ *
+ * s = p*P[w/rw]
+ */
+static u64 sched_slice(struct cfs_rq *cfs_rq, struct sched_entity *se)
+{
+   // if nr_running&lt;=8, slice=6ms; else slice=nr_running*0.75ms
+	u64 slice = __sched_period(cfs_rq-&gt;nr_running + !se-&gt;on_rq);
+
+	for_each_sched_entity(se) {
+		struct load_weight *load;
+		struct load_weight lw;
+
+		cfs_rq = cfs_rq_of(se);
+		load = &amp;cfs_rq-&gt;load;
+
+		if (unlikely(!se-&gt;on_rq)) {
+         // total load on this cfs_rq, sum(load-per-task)
+			lw = cfs_rq-&gt;load;
+
+			update_load_add(&amp;lw, se-&gt;load.weight);
+			load = &amp;lw;
+		}
+		// slice = delta_exec * weight / lw.weight
+      // or
+      // (delta_exec * (weight * lw-&gt;inv_weight)) &gt;&gt; WMULT_SHIFT
+		slice = __calc_delta(slice, se-&gt;load.weight, load);
+	}
+	return slice;
+}
+</code></pre><p>首先根据可运行任务数量计算出一个调度周期，然后根据过去每个任务执行贡献的负载/总负载，按比例划分调度周期得到该任务的动态时间片。</p><blockquote><p>ps: 这里的概念“负载”，就是占据CPU的时间，不是top中的loadavg的负载概念。</p></blockquote><p>能不能确定动态时间片的一个上下界呢？接着往下看你就知道了。</p><h4 id=调度节拍>调度节拍 <a href=#%e8%b0%83%e5%ba%a6%e8%8a%82%e6%8b%8d class=anchor aria-hidden=true>#</a><a href=#调度节拍 class=anchor aria-hidden=true>#</a></h4><p>检查任务是否需要切换，有这么几个时机:</p><ol><li>时钟中断服务程序触发scheduler_tick(void)，如果检查逻辑发现需要触发会设置对应的标记位TIF_NEED_RESCHED；</li><li>任务执行到阻塞型系统调用时，任务需要阻塞执行、不可被调度，此时会主动让出CPU，如mutex, semaphore, waitqueue；</li><li>任务执行系统调用返回时，一般也会做个检查 （在看linux v0.01源码时就是会检查的，合理，推测后续版本也是这样的）；</li></ol><p>这里的调度节拍，强调的更多的是硬件时钟中断触发时钟中断服务程序，进入这里的scheduler_tick执行任务切换逻辑:</p><ol><li>更新任务执行时间、vruntime；</li><li>抢占逻辑check_preempty_check里检查任务执行时间是否已经超过时间片，超过则寻找下一个待调度任务，设置标志位TIF_NEED_RESCHED返回；</li><li>等待调度器__schedule(preempt)执行实际的任务切换逻辑。</li></ol><pre><code class=language-c>时钟中断服务入口 scheduler_tick(preempt):
+   \-&gt; scheduler_tick()
+         \-&gt; task_tick(rq, cur, 0)
+               \-&gt; task_tick_fair(rq, cur, 0)
+                     \-&gt; foreach se in cfs_rq: entity_tick(cfs_rq, se, queued)
+                           \-&gt; update_curr(cfs_rq)
+                                 \-&gt; curr-&gt;sum_exec_runtime += delta_exec;
+                                 \-&gt; curr-&gt;vruntime += calc_delta_fair(delta_exec, curr);
+                           \-&gt; check_preempt_tick(cfs_rq, curr)
+
+// Preempt the current task with a newly woken task if needed:
+static void
+check_preempt_tick(struct cfs_rq *cfs_rq, struct sched_entity *curr)
+{ ... }
+</code></pre><h4 id=任务抢占>任务抢占 <a href=#%e4%bb%bb%e5%8a%a1%e6%8a%a2%e5%8d%a0 class=anchor aria-hidden=true>#</a><a href=#任务抢占 class=anchor aria-hidden=true>#</a></h4><p>当前正在执行的任务，在时钟中断到来时schedule_tick函数被执行，它里面会检查当前任务是否应该被抢占，如果需要被抢占，则会调用resched_cur
+来标记任务的一些抢占标记为。检查当前任务是否运行足够久应该被抢占的函数，前面我们已经分析过了，就是check_preempt_tick函数。</p><pre><code class=language-c>/*
+ * Preempt the current task with a newly woken task if needed:
+ * 1) 如果运行足够久了，超过了sched_slice返回的时间片（时间配额），则直接标记为抢占然后返回
+ * 2) 如果运行任务时间很短，没有超过动态时间片，并且还不到最小的0.75ms，那么无需抢占、继续执行
+ * 3) 如果运行时间不太短，虽然不到动态时间片大小，但是超过了0.75ms，可以检测下是否需要被抢占 
+ *    则从当前cpu的cfs_rq（任务队列）中取出vruntime最小的一个se，进行比较。
+ *    - 如果当前任务的vruntime更小，则不能被抢占，当前任务继续执行；
+ *    - 如果当前任务的vruntime更大 (delta=curr.vruntime-se.vruntime，delta&gt;0)
+ *       - delta&lt;=ideal_time，从全局来看有比我更应该优先调度的，但是也没等太久，让我再执行一会，一会就让出CPU；
+         - delta&gt;ideal_time，从全局来有比我更应该优先调度的，且已经等了比较久时间了；
+ */
+static void
+check_preempt_tick(struct cfs_rq *cfs_rq, struct sched_entity *curr)
+{
+	unsigned long ideal_runtime, delta_exec;
+	struct sched_entity *se;
+	s64 delta;
+
+	ideal_runtime = sched_slice(cfs_rq, curr);
+	delta_exec = curr-&gt;sum_exec_runtime - curr-&gt;prev_sum_exec_runtime;
+	if (delta_exec &gt; ideal_runtime) {
+		resched_curr(rq_of(cfs_rq));
+      ...
+		return;
+	}
+
+	/*
+	 * Ensure that a task that missed wakeup preemption by a
+	 * narrow margin doesn't have to wait for a full slice.
+	 * This also mitigates buddy induced latencies under load.
+	 */
+	if (delta_exec &lt; sysctl_sched_min_granularity)
+		return;
+
+	se = __pick_first_entity(cfs_rq);
+	delta = curr-&gt;vruntime - se-&gt;vruntime;
+
+	if (delta &lt; 0)
+		return;
+
+	if (delta &gt; ideal_runtime)
+		resched_curr(rq_of(cfs_rq));
+}
+
+
+/*
+ * resched_curr - mark rq's current task 'to be rescheduled now'.
+ *
+ * On UP this means the setting of the need_resched flag, on SMP it
+ * might also involve a cross-CPU call to trigger the scheduler on
+ * the target CPU.
+ */
+void resched_curr(struct rq *rq)
+{
+   ...
+	if (test_tsk_need_resched(curr))
+		return;
+
+	cpu = cpu_of(rq);
+	if (cpu == smp_processor_id()) {
+		set_tsk_need_resched(curr);
+		set_preempt_need_resched();
+		return;
+	}
+
+	if (set_nr_and_not_polling(curr))
+		smp_send_reschedule(cpu);
+	else
+		trace_sched_wake_idle_without_ipi(cpu);
+}
+</code></pre><p>什么情况下会出现上述check_preempt_tick注释中 3) 这种情况呢？</p><ul><li>nr_running>8，并且任务优先级高贡献负载多，sched_slice>0.75ms，</li><li>恰巧任务执行期间scheduler_tick执行这里的检测，有可能会发现此时执行时间不到sched_slice，</li><li>但是超过了0.75ms，此时为什么要检测有没有vruntime更小的呢？</li></ul><p>理想情况下，还是需要执行完sched_slice后再切换，才能体现公平是不是？确实。
+那为什么现在就要执行检测呢？因为系统中随时可能会插入高优先级进程、考虑交互性程序的奖励、非交互性程序的处罚以及避免饿死问题。“公平”不仅要看过去、现在，也要看将来，不仅要看局部，也要看整体。So……此时检查下是否需要被抢占十分合理，更何况是一个已经“等”了我一会的任务呢？</p><blockquote><p>ps: 从这里可以看出，cfs并不是立即选一个vruntime更小的任务来立即执行，即使下一个任务的vruntime比当前任务小，当前任务也会尽量拖着再执行一会，要么等到执行完理想的时间片（这样最公平），要么拖到下一个任务再等我一会，这样我执行时间更接近理想时间片。</p></blockquote><h4 id=任务切换>任务切换 <a href=#%e4%bb%bb%e5%8a%a1%e5%88%87%e6%8d%a2 class=anchor aria-hidden=true>#</a><a href=#任务切换 class=anchor aria-hidden=true>#</a></h4><p><code>schedule_tick(...)</code> 只是时钟中断服务触发检查“是否需要抢占当前任务“，如果需要就设置标记位并返回。
+我们知道此时当前任务还是在执行中的，顶多被设置了个抢占标记位而已，那么调度器什么时候执行了真正的切换呢？在 <code>__schedule(preempt)</code>这个调度器逻辑中。</p><pre><code class=language-c>/*
+ * __schedule() is the main scheduler function.
+ *
+ * The main means of driving the scheduler and thus entering this function are:
+ *
+ *   1. Explicit blocking: mutex, semaphore, waitqueue, etc.
+ *
+ *   2. TIF_NEED_RESCHED flag is checked on interrupt and userspace return
+ *      paths. For example, see arch/x86/entry_64.S.
+ *
+ *      To drive preemption between tasks, the scheduler sets the flag in timer
+ *      interrupt handler scheduler_tick().
+ *
+ *   3. Wakeups don't really cause entry into schedule(). They add a
+ *      task to the run-queue and that's it.
+ *
+ *      Now, if the new task added to the run-queue preempts the current
+ *      task, then the wakeup sets TIF_NEED_RESCHED and schedule() gets
+ *      called on the nearest possible occasion:
+ */
+static void __sched notrace __schedule(bool preempt)
+{
+	struct task_struct *prev, *next;
+	unsigned long *switch_count;
+	unsigned long prev_state;
+	struct rq_flags rf;
+	struct rq *rq;
+	int cpu;
+
+	cpu = smp_processor_id();
+	rq = cpu_rq(cpu);
+	prev = rq-&gt;curr;
+
+   ...
+
+   // 寻找下一个可执行任务
+	next = pick_next_task(rq, prev, &amp;rf);
+   // 清理旧任务的抢占标记位
+	clear_tsk_need_resched(prev);
+	clear_preempt_need_resched();
+
+   // 如果next!=prev，更新上下文切换计数器，并执行上下文切换
+   // 如果next==prev，说明当前runq上没有其他任务，需要检查下负载均衡了
+	if (likely(prev != next)) {
+		rq-&gt;nr_switches++;
+
+      // ptrace时间上报，用于bpftrace分析
+      trace_sched_switch(preempt, prev, next);
+
+      // 执行上下文切换，从prev到next，切换完就开始执行next这个任务了
+		rq = context_switch(rq, prev, next, &amp;rf);
+	} else {
+		rq-&gt;clock_update_flags &amp;= ~(RQCF_ACT_SKIP|RQCF_REQ_SKIP);
+
+      // 负载均衡相关的操作，rq.lock dropped之后会执行balance_callbacks
+		rq_unpin_lock(rq, &amp;rf);
+		__balance_callbacks(rq);
+		raw_spin_unlock_irq(&amp;rq-&gt;lock);
+	}
+}
+</code></pre><p><code>__schedule(preempt)</code> 函数非常长，我们删减了不是很相关的代码，只看下任务切换的核心逻辑：
+1）这个函数什么时候会被执行到呢？注释提到了有几个时机，任务阻塞主动让出CPU、任务被抢占、任务被唤醒任务重新加入run-queue；
+我们刚才提到的任务抢占就会导致进入这个函数处理。
+2）cfs调度器通过pick_next_task(&mldr;)从rq中找到下一个vruntime最小的任务；
+3）清理之前设置的抢占标记位，更新抢占计数器；
+4）执行上下文切换 context_switch，执行新任务逻辑；
+5）再释放掉rq上的锁后，会执行负载均衡逻辑（work-sharing mode）；</p><p>这就是大致的任务抢占、任务切换、负载均衡的核心逻辑。</p><h4 id=负载均衡>负载均衡 <a href=#%e8%b4%9f%e8%bd%bd%e5%9d%87%e8%a1%a1 class=anchor aria-hidden=true>#</a><a href=#负载均衡 class=anchor aria-hidden=true>#</a></h4><p>see: <code>__balance_callbacks(rq)</code>，因为我们了解go workstealing相关的迁移负载的做法，对linux cfs调度器做到负载均衡的思路并不十分好奇，
+我们这里只是简单总结下负载均衡的核心思路，细节直接跳过。</p><p><strong>1）这里笼统地说下cfs调度器负载均衡的时机，以及考虑因素。</strong></p><p><strong>负载均衡的时机</strong>，负载均衡通常在以下几种情况下触发：</p><ul><li>周期性负载均衡：调度器会定期检查各个CPU的负载，并在必要时进行任务迁移。</li><li>任务唤醒：当一个任务从睡眠状态被唤醒时，调度器会检查当前CPU的负载情况，并可能将任务分配到负载较轻的CPU。</li><li>任务创建：当一个新任务被创建时，调度器会选择一个负载较轻的CPU来运行该任务。</li></ul><p><strong>任务迁移的考虑因素</strong>，在决定是否迁移任务时，调度器会考虑多个因素，包括：</p><ul><li>CPU负载：调度器会比较各个CPU的负载，选择负载较轻的CPU进行任务迁移。</li><li>任务的vruntime：调度器会比较任务的vruntime，选择合适的任务进行迁移。</li><li>任务的亲和性：某些任务可能对特定的CPU有亲和性（例如，缓存亲和性），调度器会尽量避免迁移这些任务。</li></ul><p><strong>2）CPU1上的P1的vruntime比CPU2上的P2的vruntime更小，CPU1负载高，会将P1迁迁移到CPU2上吗？</strong></p><p>假设有两个CPU（CPU1和CPU2），每个CPU有自己的调度队列和红黑树：</p><ul><li>CPU1上的任务P1的vruntime较大，暂时不被CPU1调度。</li><li>CPU2上的任务P2的vruntime最小，但P1的vruntime比P2更小。</li></ul><p>在这种情况下，是否会将P1迁移到CPU2取决于负载均衡机制的具体实现和当前系统的负载情况：</p><ul><li>如果CPU1的负载较高，而CPU2的负载较低，负载均衡机制可能会将P1迁移到CPU2，以平衡负载。</li><li>如果CPU1和CPU2的负载相对均衡，调度器可能不会进行任务迁移，因为任务迁移本身也有一定的开销。</li></ul><p>如果您对负载均衡的细节感兴趣，可以看下相关的代码。</p><h4 id=组调度>组调度 <a href=#%e7%bb%84%e8%b0%83%e5%ba%a6 class=anchor aria-hidden=true>#</a><a href=#组调度 class=anchor aria-hidden=true>#</a></h4><p>组调度，一个任务组是组，一个用户组是一个特殊的任务组的应用场景。前面介绍核心数据结构时，特别提了sched_entity中如何借助字段my_q来表示该任务组包含的任务队列，组内的任务也是按照CFS调度器算法进行调度。而这个任务组又作为一个调度实体从属于更上层的“组”，被CFS调度算法调度。</p><p>这里的“组调度”，在Linux的设计实现中：
+1）需要有一个能力来灵活的定义组，然后灵活地在这个组中添加任务，灵活地建立一个sched_entity的树形结构。cgroups就是用来干这个事情的。
+在cgroups中增加配置项来影响调度，如cpu.shares表示这个调度组的CPU开销的配额。
+2) 对应地cfs调度器需要读取cgroups这里的这些配置项，来感知到有哪些任务组，每个任务组的配置是啥样的，进而整合成sched_entity的树形结构，让树形结构中的每个调度实体（任务、组）被CFS调度器调度。</p><p>OK，篇幅原因本文不打算继续介绍组调度相关的内容，读到这里了解了CFS关键的处理过程后，大家可以自行查看组调度相关的设计实现了。或者等我有时间时再补一篇文章，专门介绍组调度的源码分析。</p><h3 id=本文总结>本文总结 <a href=#%e6%9c%ac%e6%96%87%e6%80%bb%e7%bb%93 class=anchor aria-hidden=true>#</a><a href=#本文总结 class=anchor aria-hidden=true>#</a></h3><p>本文详细介绍了CFS调度器的核心概念、核心数据结构以及关键操作流程的源码级分析，相信读者对CFS调度器的工作原理也有了更加全面的认识。下一篇文章我们将讲述了一个曾经困扰在我们项目组心头的关于go进程混部时的一些担忧，以及由此引出的多进程混部时的隔离性问题，个别程序实现不健壮创建大量进程是否会推高上下文切换次数导致无谓的CPU开销的问题。我们将结合工具perf、bpftrace来深入观察并分析，以加深了对真实负载场景下任务调度的深层理解。</p><p>OK，欢迎点赞关注我，我们继续一起学习。</p><div class=edit-page><a href=https://github.com/hitzhangjie/myspace/blob/master/content/blog/kernel/%e4%bb%bb%e5%8a%a1%e8%b0%83%e5%ba%a6%287%29v2.md><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2"><path d="M17 3a2.828 2.828.0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>Edit this page on GitHub</a></div><div class="docs-navigation d-flex justify-content-between"><a class=ms-auto href=/blog/2024-04-14-%E5%B8%B8%E8%A7%84%E9%85%8D%E7%BD%AE%E5%8F%8A%E5%90%8C%E6%AD%A5%E8%AF%B4%E6%98%8E/><div class="card my-1"><div class="card-body py-2">vscode-常规配置以及同步说明 &rarr;</div></div></a></div></main></div></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.fdbe9b9ba88a036135318f3c721784d684ac9e3280fe282cc80d7d49f7f9c82780cd54228c1608685a230c09984300d7946fc471734d566fcebc148b65bd16db.js integrity="sha512-/b6bm6iKA2E1MY88cheE1oSsnjKA/igsyA19Sff5yCeAzVQijBYIaFojDAmYQwDXlG/EcXNNVm/OvBSLZb0W2w==" crossorigin=anonymous defer></script>
+<script src=/js/highlight.min.b64f1e7517e5839396950ceee4ef937fbbd3ff20aa1fdd261ce87fa457863404f35a6e5239dd57b20b37f39c2401b933deeef60af180195b16941c88f10e948d.js integrity="sha512-tk8edRflg5OWlQzu5O+Tf7vT/yCqH90mHOh/pFeGNATzWm5SOd1Xsgs385wkAbkz3u72CvGAGVsWlByI8Q6UjQ==" crossorigin=anonymous defer></script>
+<script src=/main.min.f16ffd9b364013a1df84be9cd7a45c470cb48639766bf5551e05bba845fe4ab150cb6436de43609bfed9af47c23bd5e395e9a10b932fa6fb2c4ee8f6cc78d7a3.js integrity="sha512-8W/9mzZAE6HfhL6c16RcRwy0hjl2a/VVHgW7qEX+SrFQy2Q23kNgm/7Zr0fCO9XjlemhC5MvpvssTuj2zHjXow==" crossorigin=anonymous defer></script>
+<script src=/index.min.24061c6df778f7a61c42b82b8447a6dc11aa0966131e4e3b55b86fec8c0106cde656f30d8667afdaf3635b2f3f51a88510f81e24c6a150263f8a3572ec72f067.js integrity="sha512-JAYcbfd496YcQrgrhEem3BGqCWYTHk47Vbhv7IwBBs3mVvMNhmev2vNjWy8/UaiFEPgeJMahUCY/ijVy7HLwZw==" crossorigin=anonymous defer></script></body></html>

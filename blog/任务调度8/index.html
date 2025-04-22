@@ -1,0 +1,242 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-regular.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-500.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-700.woff2 type=font/woff2 crossorigin><link rel=stylesheet href=/main.919d32897099d0335611840e8de8126598e04dec08600b11dc58a2217f4a8223a0719340de3efeedf96217230bed172fe5d3b4dc7b9b6b5065e74c49a2539323.css integrity="sha512-kZ0yiXCZ0DNWEYQOjegSZZjgTewIYAsR3FiiIX9KgiOgcZNA3j7+7fliFyML7Rcv5dO03Huba1Bl50xJolOTIw==" crossorigin=anonymous><noscript><style>img.lazyload{display:none}</style></noscript><meta name=robots content="index, follow"><meta name=googlebot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><meta name=bingbot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><title>Linux任务调度(8): 任务越多调度就越频繁吗 - MySpace</title><meta name=description content="前面几篇文章介绍了Linux下调度器的演进过程，也对CFS调度器的大致工作原理进行了介绍，也从源码层面进行了深度剖析。本文继续探讨个项目中服务混部的困扰，当线程数多了之后，线程切换频率会上升吗？"><link rel=canonical href=/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A68/><meta property="og:locale" content="en_US"><meta property="og:type" content="article"><meta property="og:title" content="Linux任务调度(8): 任务越多调度就越频繁吗"><meta property="og:description" content="前面几篇文章介绍了Linux下调度器的演进过程，也对CFS调度器的大致工作原理进行了介绍，也从源码层面进行了深度剖析。本文继续探讨个项目中服务混部的困扰，当线程数多了之后，线程切换频率会上升吗？"><meta property="og:url" content="/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A68/"><meta property="og:site_name" content="MySpace"><meta property="article:published_time" content="2025-04-22T12:36:00+08:00"><meta property="article:modified_time" content="2025-04-22T12:36:00+08:00"><meta property="og:image" content="/doks.png"><meta property="og:image:alt" content="MySpace"><meta name=twitter:card content="summary_large_image"><meta name=twitter:site content="@hitzhangjie"><meta name=twitter:creator content="@hitzhangjie"><meta name=twitter:title content="Linux任务调度(8): 任务越多调度就越频繁吗"><meta name=twitter:description content="前面几篇文章介绍了Linux下调度器的演进过程，也对CFS调度器的大致工作原理进行了介绍，也从源码层面进行了深度剖析。本文继续探讨个项目中服务混部的困扰，当线程数多了之后，线程切换频率会上升吗？"><meta name=twitter:image content="/doks.png"><meta name=twitter:image:alt content="Linux任务调度(8): 任务越多调度就越频繁吗"><script type=application/ld+json>{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/1","name":"","url":"/","sameAs":["https://twitter.com/hitzhangjie","https://www.linkedin.com/in/hitzhangjie/","https://github.com/hitzhangjie"],"image":{"@type":"ImageObject","@id":"/#/schema/image/1","url":"/\u003cnil\u003e","width":null,"height":null,"caption":""}},{"@type":"WebSite","@id":"/#/schema/website/1","url":"/","name":"MySpace","description":"MySpace is a hitzhangjie\u0027s personal space, for blogs, books, journey, thinkings.","publisher":{"@id":"/#/schema/person/1"}},{"@type":"WebPage","@id":"/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A68/","url":"/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A68/","name":"Linux任务调度(8): 任务越多调度就越频繁吗","description":"前面几篇文章介绍了Linux下调度器的演进过程，也对CFS调度器的大致工作原理进行了介绍，也从源码层面进行了深度剖析。本文继续探讨个项目中服务混部的困扰，当线程数多了之后，线程切换频率会上升吗？","isPartOf":{"@id":"/#/schema/website/1"},"about":{"@id":"/#/schema/person/1"},"datePublished":"2025-04-22T12:36:00CET","dateModified":"2025-04-22T12:36:00CET","breadcrumb":{"@id":"/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A68/#/schema/breadcrumb/1"},"primaryImageOfPage":{"@id":"/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A68/#/schema/image/2"},"inLanguage":"","potentialAction":[{"@type":"ReadAction","target":["/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A68/"]}]},{"@type":"BreadcrumbList","@id":"/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A68/#/schema/breadcrumb/1","name":"Breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"item":{"@type":"WebPage","@id":"/","url":"/","name":"Home"}},{"@type":"ListItem","position":2,"item":{"@id":"/blog%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A68/"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Article","@id":"/#/schema/article/1","headline":"Linux任务调度(8): 任务越多调度就越频繁吗","description":"前面几篇文章介绍了Linux下调度器的演进过程，也对CFS调度器的大致工作原理进行了介绍，也从源码层面进行了深度剖析。本文继续探讨个项目中服务混部的困扰，当线程数多了之后，线程切换频率会上升吗？","isPartOf":{"@id":"/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A68/"},"mainEntityOfPage":{"@id":"/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A68/"},"datePublished":"2025-04-22T12:36:00CET","dateModified":"2025-04-22T12:36:00CET","author":{"@id":"/#/schema/person/2"},"publisher":{"@id":"/#/schema/person/1"},"image":{"@id":"/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A68/#/schema/image/2"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/2","name":null,"sameAs":[]}]},{"@context":"https://schema.org","@graph":[{"@type":"ImageObject","@id":"/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A68/#/schema/image/2","url":"/doks.png","contentUrl":"/doks.png","caption":"Linux任务调度(8): 任务越多调度就越频繁吗"}]}]}</script><meta name=theme-color content="#fff"><link rel=icon href=/favicon.ico sizes=any><link rel=icon type=image/svg+xml href=/favicon.svg><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest crossorigin=use-credentials href=/site.webmanifest><script type=text/javascript src="https://platform-api.sharethis.com/js/sharethis.js#property=607868a58d7101001829a8df&product=sop" async></script><style>[alt~=sharing]{border:0;box-shadow:none}div#st-1{text-align:unset}div#st-1 .st-btn{height:24px;padding:0 4px}div#st-1 .st-btn>img{top:4.2px}div#st-2 .st-btn{height:24px;padding:0 4px}div#st-2 .st-btn>img{top:4.2px}</style><script async src="https://www.googletagmanager.com/gtag/js?id=UA-168027530-1"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date),gtag('config','UA-168027530-1')</script></head><body class="blog single d-flex flex-column min-vh-100"><div class=sticky-top><div class=header-bar></div><header class="navbar navbar-expand-lg navbar-light doks-navbar"><nav class="container-xxl flex-wrap flex-lg-nowrap" aria-label="Main navigation"><a class="navbar-brand order-0" href=/ aria-label=MySpace>MySpace</a>
+<button class="btn btn-menu order-2 d-block d-lg-none" type=button data-bs-toggle=offcanvas data-bs-target=#offcanvasDoks aria-controls=offcanvasDoks aria-label="Open main menu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div class="offcanvas offcanvas-end border-0 py-lg-1" tabindex=-1 id=offcanvasDoks data-bs-backdrop=true aria-labelledby=offcanvasDoksLabel><div class="header-bar d-lg-none"></div><div class="offcanvas-header d-lg-none"><h2 class="h5 offcanvas-title ps-2" id=offcanvasDoksLabel><a class=text-dark href=/>MySpace</a></h2><button type=button class="btn-close text-reset me-2" data-bs-dismiss=offcanvas aria-label="Close main menu"></button></div><div class="offcanvas-body p-4 p-lg-0"><ul class="nav flex-column flex-lg-row align-items-lg-center mt-2 mt-lg-0 ms-lg-2 me-lg-auto"><li class=nav-item><a class="nav-link ps-0 py-1 active" href=/blog/>Blog</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/books/>Books</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/landscape>Landscape</a></li></ul><hr class="text-black-50 my-4 d-lg-none"><form class="doks-search position-relative flex-grow-1 ms-lg-auto me-lg-2"><input id=search class="form-control is-search" type=search placeholder="Search docs..." aria-label="Search docs..." autocomplete=off><div id=suggestions class="shadow bg-white rounded d-none"></div></form><hr class="text-black-50 my-4 d-lg-none"><ul class="nav flex-column flex-lg-row"><li class=nav-item><a class="nav-link social-link" href=https://twitter.com/hitzhangjie><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg><small class="ms-2 d-lg-none">Twitter</small></a></li><li class=nav-item><a class="nav-link social-link" href=https://github.com/hitzhangjie><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37.0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44.0 0020 4.77 5.07 5.07.0 0019.91 1S18.73.65 16 2.48a13.38 13.38.0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07.0 005 4.77 5.44 5.44.0 003.5 8.55c0 5.42 3.3 6.61 6.44 7A3.37 3.37.0 009 18.13V22"/></svg><small class="ms-2 d-lg-none">GitHub</small></a></li></ul></div></div></nav></header></div><div class="wrap container-xxl" role=document><div class=content><div class="row flex-xl-nowrap"><div class="col-lg-5 col-xl-4 docs-sidebar"><nav class=docs-links aria-label="Main navigation"><h3>Tag List</h3><ol><li><a href=/tags/scheduler/>scheduler</a></li><li><a href=/tags/cfs/>cfs</a></li><li><a href=/tags/fair/>fair</a></li><li><a href=/tags/vruntime/>vruntime</a></li><li><a href=/tags/gmp/>gmp</a></li></ol></nav></div><nav class="docs-toc d-none d-xl-block col-xl-3" aria-label="Secondary navigation"><div class=page-links><h3>On this page</h3><nav id=TableOfContents><ul><li><ul><li><a href=#linux任务调度7-任务越多上下文切换就越频繁吗>Linux任务调度(7): 任务越多上下文切换就越频繁吗</a><ul><li><a href=#go运行时引发的思考>Go运行时引发的思考</a><ul><li><a href=#一个线上问题>一个线上问题</a></li><li><a href=#gmp调度是如何初始化的>GMP调度是如何初始化的</a></li><li><a href=#一时负载高创建的m能退出吗>一时负载高创建的M能退出吗</a></li><li><a href=#更多任务会导致更频繁上下文切换吗>更多任务会导致更频繁上下文切换吗</a></li><li><a href=#谨慎评估下上下文切换频率>谨慎评估下上下文切换频率</a></li><li><a href=#实际测试下>实际测试下</a></li><li><a href=#使用bpf来跟踪下任务执行时间>使用bpf来跟踪下任务执行时间</a></li><li><a href=#分析误区>分析误区</a></li><li><a href=#经验教训>经验教训</a></li></ul></li><li><a href=#本文总结>本文总结</a></li></ul></li></ul></li></ul></nav></div></nav><main class="docs-content col-lg-11 col-xl-9"><h1>Linux任务调度(8): 任务越多调度就越频繁吗</h1><p><small>Posted 2025-04-22 12:36 +0800 by <a class="stretched-link position-relative" href>ZhangJie</a>&nbsp;&dash;&nbsp;<strong>5&nbsp;min read</strong></small><p><div style=display:flex><div>分享:&nbsp;&nbsp;</div><div><div class=sharethis-inline-share-buttons></div></div></div><hr><p class=lead></p><h2 id=linux任务调度7-任务越多上下文切换就越频繁吗>Linux任务调度(7): 任务越多上下文切换就越频繁吗 <a href=#linux%e4%bb%bb%e5%8a%a1%e8%b0%83%e5%ba%a67-%e4%bb%bb%e5%8a%a1%e8%b6%8a%e5%a4%9a%e4%b8%8a%e4%b8%8b%e6%96%87%e5%88%87%e6%8d%a2%e5%b0%b1%e8%b6%8a%e9%a2%91%e7%b9%81%e5%90%97 class=anchor aria-hidden=true>#</a><a href=#linux任务调度7-任务越多上下文切换就越频繁吗 class=anchor aria-hidden=true>#</a></h2><p>本文将讲述一个曾经困扰在我们项目组心头的关于go进程混部时的担忧，以及由此引出的多进程混部时的隔离性问题。比如，个别程序不健壮创建大量进程，是否会推高上下文切换次数导致无谓的CPU开销的问题。我们将结合工具perf、bpftrace来深入观察并分析，以加深了对真实负载场景下任务调度的深层理解。</p><h3 id=go运行时引发的思考>Go运行时引发的思考 <a href=#go%e8%bf%90%e8%a1%8c%e6%97%b6%e5%bc%95%e5%8f%91%e7%9a%84%e6%80%9d%e8%80%83 class=anchor aria-hidden=true>#</a><a href=#go运行时引发的思考 class=anchor aria-hidden=true>#</a></h3><h4 id=一个线上问题>一个线上问题 <a href=#%e4%b8%80%e4%b8%aa%e7%ba%bf%e4%b8%8a%e9%97%ae%e9%a2%98 class=anchor aria-hidden=true>#</a><a href=#一个线上问题 class=anchor aria-hidden=true>#</a></h4><p>对CFS的深入思考，一个直接原因是因为go程序中GOMAXPROCS设置不合理，母机上有128个CPU核心，但是虚拟化技术下容器里分配的只有2个cpus。</p><p>此时go进程检测到GOMAXPROCS=128（go不会自动感知到实际上只分配了2个cpus），此时runtime会误认为最多可以创建128个P（GMP中的P，Processor），后果就是进程中最多会创建128个P。比如随着goroutines增多如果当前P处理不过来，就会激活更多的空闲P，对应的创建更多的线程M并轮询绑定的P上的的localrunq、全局的globalrunq以及定时器事件、网络IO事件就绪的goroutines并调度。这里的轮询操作就会导致较高的CPU开销，容易导致CPU throttling（节流）从而导致程序性能下降。</p><h4 id=gmp调度是如何初始化的>GMP调度是如何初始化的 <a href=#gmp%e8%b0%83%e5%ba%a6%e6%98%af%e5%a6%82%e4%bd%95%e5%88%9d%e5%a7%8b%e5%8c%96%e7%9a%84 class=anchor aria-hidden=true>#</a><a href=#gmp调度是如何初始化的 class=anchor aria-hidden=true>#</a></h4><p>go运行时是这样创建GMP的</p><ol><li>进程启动的时候会根据GOMAXPROCS先创建出对应数量的P，详见 <code>schedinit()->procresize()</code>，但是还是没有创建M个这么多线程的；</li><li>上述创建出来的一堆P，除了当前g.m.p是在用状态，其他都是idle状态；M也不会预先创建出来，而是根据设计负载情况动态去创建、去激活P去执行的；</li><li>具体来说就是当创建一堆goroutines后，这些goroutine会先往 <code>p.runq</code>放，放不下了就会考虑 <code>injectglist(...)</code>，这个其实就是放到全局队列 <code>sched.runq</code>，放的时候：<ul><li>如果当前M有关联一个P，就先放 <code>npidle</code>个G到 <code>sched.runq</code>，并且启动 <code>npdile</code>个M去激活 <code>npdile</code>个P，去尝试从goroutine抢G然后执行。然后剩下的放到 <code>p.runq</code>；</li><li>如果当前M没有关联一个P，这种情况下怎么会发生呢（有多种情况可能会发生，比如GC、系统调用阻塞、初始化阶段等）？这种情况下会全部放到 <code>sched.runq</code>，然后启动最多npidle个（即 <code>min(goroutineQSize, npdile)</code>）个M去激活P并执行；</li></ul></li></ol><p>简单总结就是：“<strong>如果短时间内创建大量goroutines，当前p.runq full（或者M解绑了P）就会往sched.runq放。然后会启动最多npidle个M去抢P激活，然后workstealing的方式从sched.runq抢goroutines执行。</strong>”</p><p>如果这种情况一旦出现了，这些大量创建出来的M，后续无goroutines执行时，也会不断地执行一些轮询 p.runq、sched.runq、netpoller、stealing、timer事件，这个无谓的轮询过程中就容易推高CPU占用。而实际的 <code>--cpus</code> 配额很少，就更容易达到CPU配额限制，进而被虚拟化管理软件给节流（CPU throttling），进而导致程序性能出现整体性的下降 (程序正常逻辑还没怎么执行，全被这些多出来的M轮询消耗掉了)。</p><h4 id=一时负载高创建的m能退出吗>一时负载高创建的M能退出吗 <a href=#%e4%b8%80%e6%97%b6%e8%b4%9f%e8%bd%bd%e9%ab%98%e5%88%9b%e5%bb%ba%e7%9a%84m%e8%83%bd%e9%80%80%e5%87%ba%e5%90%97 class=anchor aria-hidden=true>#</a><a href=#一时负载高创建的m能退出吗 class=anchor aria-hidden=true>#</a></h4><p>那有没有办法，让这些创建出来的大量M退出呢？创建出来的M退出只有一种办法，<code>runtime.LockOSThread()</code>，这种情况下，goroutine会和M绑定，goroutine执行完毕退出时，M也会被销毁。但是正常情况下是不会调用这个函数的（调试器tracer会调用该函数），所以多创建出来的M不会退出，进而就导致了这里的问题。</p><p>实际上，go程序中解决这个问题，很简单，读取下cgroups的cpu配额即可。可以直接 <code>import _ "github.com/uber-go/automaxprocs"</code> 来解决。</p><h4 id=更多任务会导致更频繁上下文切换吗>更多任务会导致更频繁上下文切换吗 <a href=#%e6%9b%b4%e5%a4%9a%e4%bb%bb%e5%8a%a1%e4%bc%9a%e5%af%bc%e8%87%b4%e6%9b%b4%e9%a2%91%e7%b9%81%e4%b8%8a%e4%b8%8b%e6%96%87%e5%88%87%e6%8d%a2%e5%90%97 class=anchor aria-hidden=true>#</a><a href=#更多任务会导致更频繁上下文切换吗 class=anchor aria-hidden=true>#</a></h4><p>上面go运行时错误设置GOMAXPROCS导致过多P、M创建出来导致了轮询的CPU开销，这个点我们已经明确了，并且了解到了对应的解决方案。</p><p>我们还有一个顾虑：</p><p>1）同一个机器上，有多个进程，其中一个go进程因为上述原因创建了大量的线程，CFS调度器任务切换频率会不会也被推高？我们都知道上下文切换有开销。
+2）同一个机器上，如果有多个进程，如果我想避免某个进程对其他进程的影响，或者某个用户下的所有进程对其他用户下的进程的影响？该如何做。</p><p>这几个问题，其实就是我深入研究CFS调度器的根本原因，因为我像搞明白混部的影响及问题边界，这对保证服务乃至系统的可用性至关重要。当然你可以不混部来绕过这些弯弯绕绕的细节。</p><p>让我来尝试会大下上面两个问题，其中2）我们已经知道了，CFS可以通过组调度来解决这类问题，但是不会自动构建不同用户的任务组，一个进程包括多个线程也不会作为一个任务组进行限制，可以理解成系统默认有更多线程有更多处理能力，除非你们的系统管理员显示设置。</p><p>OK, 那现在，我们只需要搞清楚1），<strong>如果任务数增多会导致上下文切换更频率吗</strong>？</p><p>假设CFS的设计实现果真如此，那这就是个巨大的风险点。现代Linux系统可以创建非常多的任务出来。现代Linux系统不是早些年的时候由CS 13bits索引范围限制了GDT/LDT表长度了，2^13/2=4096个进程（每个进程占GDT表的2项），早期版本最多支持这么多个任务。但是后面Linux版本对此做了修改，解除了这里的限制。每个处理器核心只在GDT中记录它当前运行的任务的表项信息，而任务队列则交给每个处理器核心的cfs_rq，可以创建的任务数量不再受CS 13bits索引、GDT/LDT表长度限制了。Linux系统可以支持的任务数只受限于pid_max、内核配置项、系统资源了。</p><p>而如果随着任务数增多，上下文切换频率就变高，这样大量的CPU资源会被浪费在上下文切换上。所以调度器是绝对不会这样实现的，这种设计太蠢了。如果任务数很多，我们可以接受不饿死的前提下、允许一定的调度延时、允许降低一定的交互性，但是不能降低系统调度的吞吐量、不能导致CPU资源巨大浪费、完全不可用。</p><p>所以我们的判断应该是，No！更多任务不会导致更频繁的上下文切换！这里的更多任务是指的非常多任务，而不是说从1到2，从2到4，从4到8，从8到16，从16到32这种程度，我们讨论的是从128到256，从1024到2048，从2048到4096这种程度。</p><h4 id=谨慎评估下上下文切换频率>谨慎评估下上下文切换频率 <a href=#%e8%b0%a8%e6%85%8e%e8%af%84%e4%bc%b0%e4%b8%8b%e4%b8%8a%e4%b8%8b%e6%96%87%e5%88%87%e6%8d%a2%e9%a2%91%e7%8e%87 class=anchor aria-hidden=true>#</a><a href=#谨慎评估下上下文切换频率 class=anchor aria-hidden=true>#</a></h4><p>根据前面的介绍，任务切换 <code>__schedule(preempt)</code>的时机有3个，任务阻塞主动让出CPU、任务抢占、任务唤醒被重新加入run-queue。结合我们下面的测试用例，任务阻塞到被唤醒，我们创建的线程不会主动阻塞，只会被抢占，所以我们只需要分析任务抢占这个路径即可，<code>scheduler_tick()->task_tick()->check_preempt_tick()</code>，这里面会检查当前任务是否应该被抢占，发生抢占才会发生上下文切换。</p><p>但是：
+1）其他任务可能会涉及到阻塞、唤醒，也会涉及到奖励、惩罚导致的动态优先级、动态时间片调整。
+2）我们创建的线程也是系统的一部分，它的时间片也会因为其他进程动态优先级变化而变化。
+3）而且即使我们确定了任务的执行时间片，抢占检测时，只要有vruntime比它小一个时间片的，就可以被抢占，不一定执行完自己的时间片。</p><p>所以要说我们的程序一秒钟会上下文切换多少次？因为整个系统是动态的，真的没那么好推算。</p><p>那我们能否先简化下这个量化模型，姑且认为：
+1）所有任务的静态优先级（nice值）相同，也都不是交互式任务（动态优先级都是0），最终他们优先级一样；
+2）最终从优先级转换为的权重也应该一样；
+3）那么这样计算出的动态时间片也应该一样；
+Ok，那时间片长度是如何计算的？sched_slice来计算动态时间片，大致计算方式是:</p><pre><code>   u64 slice = __sched_period(cfs_rq-&gt;nr_running + !se-&gt;on_rq);
+   slice = __calc_delta(slice, se-&gt;load.weight, load);
+</code></pre><p>第1步__sched_period计算的是调度周期：1）nr_running&lt;=8时，固定6ms；2）nr_running>8时，等于nr_running<em>0.75ms；
+第2步 __calc_delta按当前任务贡献的全局权重来瓜分调度周期，作为该任务的时间片；
+每个任务的时间片 = nr_running</em>3ms * (1/nr_running)=3ms，对吗？
+那上下文切换频率 = 1000ms/3ms = 333.3 次/s，对吗？</p><p>这个值，可能过于理想了，如果是写个cfs调度算法，输入是一堆优先级完全相同的任务，可能抛出来结果是这样的，但是真实系统中存在各种IO任务（交互式任务）、不同优先级任务、任务创建销毁等情况，这些都会反过来影响调度，所以实际测试跑出来的结果可能与这里的分析差的非常远。我们还是实测下，然后从测试结果来反推、来理解下吧。</p><h4 id=实际测试下>实际测试下 <a href=#%e5%ae%9e%e9%99%85%e6%b5%8b%e8%af%95%e4%b8%8b class=anchor aria-hidden=true>#</a><a href=#实际测试下 class=anchor aria-hidden=true>#</a></h4><p><strong>测试环境说明</strong>:</p><p>注意在Linux v5.13版本，调度器内核参数位置作了修改，sysctl -a看不到调度器相关的参数了。实际上是做了调整，以前的 <code>kernel.sched_xxx</code> 相关参数被移动到了 <code>/sys/kernel/debug/sched/</code> 下面，比如 <code>kernel.sched_latency_ns</code> 对应的就是 <code>/sys/kernel/debug/sched/latency_ns</code>。</p><p>另外几个关键配置的默认值也做了修改，在内核版本 v5.12中:</p><pre><code>kernel.sched_latency_ns = 6000000        // 6ms
+kernel.sched_min_granularity_ns = 750000 // 0.75ms
+</code></pre><p>从v5.13开始：</p><pre><code>kernel.sched_latency_ns = 24000000        // 24ms
+kernel.sched_min_granularity_ns = 3000000 // 3ms
+</code></pre><p>我用来测试的版本是v5.15，配置值同v5.13：</p><pre><code>$ uname -r
+5.15.90.1-microsoft-standard-WSL2+
+</code></pre><p><strong>测试步骤：</strong></p><ol><li>我们写个工具测试下，thread_test.c：</li></ol><pre><code class=language-c>#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;pthread.h&gt;
+#include &lt;unistd.h&gt;
+
+// Thread function
+void *thread_func(void *arg) {
+    long long i = 0;
+    while (1) {
+        i++;  // Simple increment operation
+    }
+    return NULL;
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        printf(&quot;Usage: %s -n &lt;thread_count&gt;\n&quot;, argv[0]);
+        return 1;
+    }
+
+    int thread_count = atoi(argv[1] + 2);  // Skip &quot;-n&quot;
+    if (thread_count &lt;= 0) {
+        printf(&quot;Invalid thread count: %d\n&quot;, thread_count);
+        return 1;
+    }
+
+    pthread_t *threads = malloc(thread_count * sizeof(pthread_t));
+    if (!threads) {
+        perror(&quot;Failed to allocate memory for threads&quot;);
+        return 1;
+    }
+
+    printf(&quot;Creating %d threads...\n&quot;, thread_count);
+
+    // Create threads
+    for (int i = 0; i &lt; thread_count; i++) {
+        if (pthread_create(&amp;threads[i], NULL, thread_func, NULL) != 0) {
+            perror(&quot;Failed to create thread&quot;);
+            free(threads);
+            return 1;
+        }
+    }
+
+    printf(&quot;Threads created. Press Ctrl+C to exit...\n&quot;);
+
+    // Wait indefinitely (or until Ctrl+C)
+    while (1) {
+        sleep(1);
+    }
+
+    // This code is unreachable but included for completeness
+    free(threads);
+    return 0;
+}
+</code></pre><ol start=2><li>编译构建：<code>gcc -o thread_test thread_test.c -lpthread</code>。</li><li>然后为了避免其他机器进程的影响，我们使用docker来隔离下环境，然后在docker容器里观察该进程下所有线程的上下文切换次数：</li></ol><p>shell1:</p><pre><code class=language-bash># 先创建容器，分配一个cpu减少多核负载均衡影响
+docker run --name linux101 --rm -it -v .:/workspace --cpus=1 --cap-add SYS_ADMIN hitzhangjie/linux101:latest /bin/bash
+
+# 启动进程
+cd /workspace
+./thread_test -n1 #逐渐增大到2,3,4,5,8,16,32,64,128,256,512,1024,2048,4096等分别观察
+</code></pre><p>shell2:</p><pre><code class=language-bash># 先进入容器
+docker exec linux101 -it /bin/bash` 
+
+# perf观察，每1s输出一次结果
+yum install perf
+perf stat -e context-switches -I 1000 -p `pidof thread_test`
+</code></pre><ol start=4><li>逐渐增大thread_test -n&lt;?>的参数值，观察线程数增大时，perf观察到的上下文切换频率的变化。</li></ol><p><strong>预期结果</strong>:</p><p>我推测单处理器核心上下文切换频率最高=1000ms/3ms=333.3次/s，而且我判断这个频率可能与创建的线程数没有太大关系，因为我前面做了两个重要的问题简化：</p><ul><li>简化1：假定系统中所有任务的优先级都相同</li><li>简化2：任务数nr_running超过1，那么调度周期sched_latency=nr_running*3ms，假定所有任务权重相同，那么权重占总权重的比例相同，那么每个任务得到的动态时间片相同，恒为3ms左右；</li><li>简化3：当任务执行抢占逻辑检查时，vruntime更小的任务继续等待，直到当前任务运行完时间片，实际上不用等到执行完就可以切换。</li></ul><p>OK，带着这个预期的结果，我们跑下测试看看，看看是不是与我们想象中一样。</p><pre><code class=language-c> 9.001905387                168      context-switches      &lt;= 16 threads, 168 次/s
+10.099542009                184      context-switches
+11.099730077                164      context-switches
+...
+
+ 4.299515329                372      context-switches      &lt;= 64 threads, 372 次/s
+ 5.399359483                387      context-switches
+ 6.499338791                380      context-switches
+...
+
+ 7.699145120                458      context-switches      &lt;= 256 threads, 458 次/s
+ 8.798950683                418      context-switches
+ 9.899027530                447      context-switches
+...
+
+157.899086597               551      context-switches      &lt;= 512 threads，598/(159-157) = 299 次/s
+159.000687239               598      context-switches
+160.100710621               507      context-switches
+...
+
+56.603350232              6,854      context-switches       &lt;= 2048 threads, 6991/(71-56)=466 次/s
+71.400023708              6,991      context-switches
+83.700729604              6,418      context-switches
+...
+</code></pre><p>实际测试结果，我们预测的333次/s和真实情况有较大偏差，说明我们之前的一些判断是有问题的，真实系统中不能忽略的因素就不能忽略。我们之前试图简化系统中的任务优先级、交互式任务的奖励与惩罚、任务抢占时执行时间小于任务时间片等的一系列做法，在真实负载的系统中是错误的，是违背真实情况的。如果我们是是写一个cfs的单测，输入是优先级相同的任务数量，那结果可能会和我们的分析接近，但是真实系统中完全不一样</p><p>但是这里的测试结果表明，尽管随着任务数增加，上下文切换次数也增加（从16个线程涨到2k个，上下文切换次数多了2倍），但是好的结果是，有上涨，但并不是线性上涨的，更不是数量级上的变化。这样其实是可以接受的。</p><h4 id=使用bpf来跟踪下任务执行时间>使用bpf来跟踪下任务执行时间 <a href=#%e4%bd%bf%e7%94%a8bpf%e6%9d%a5%e8%b7%9f%e8%b8%aa%e4%b8%8b%e4%bb%bb%e5%8a%a1%e6%89%a7%e8%a1%8c%e6%97%b6%e9%97%b4 class=anchor aria-hidden=true>#</a><a href=#使用bpf来跟踪下任务执行时间 class=anchor aria-hidden=true>#</a></h4><p>但是我们不满足于上述测试，我们想通过bpftrace跟踪下随着线程数增加，我们测试程序中创建出来的线程参与调度时获得的实际执行时间是多少，从而更好帮助我们理解，真实负载系统中的调度是什么样子的，我们忽略那些任务优先级、交互式任务的奖励与惩罚、任务抢占时的执行时间小于时间片等的一系列做法，是有多么“粗暴” :)</p><blockquote><p>ps: 注意：</p><p>1）这里分析的是任务的实际执行时间，非动态时间片sched_slice，抢占发生时不一定用完时间片。</p><p>2）bpftrace跟踪sched_switch统计执行时间比较方便，比跟踪sched_slice算时间片方便。</p></blockquote><p>bpftrace收集sched_switch事件然后统计可以做到这点，我们现在写一个bpftrace脚本，sched_trace.bt：</p><pre><code>#!/usr/bin/env bpftrace
+
+BEGIN
+{
+    printf(&quot;Tracing CFS scheduler... Hit Ctrl-C to end.\n&quot;);
+    @last_switch = nsecs;
+}
+
+// 跟踪进程切换事件
+tracepoint:sched:sched_switch
+{
+    $prev_pid = args-&gt;prev_pid;
+    $next_pid = args-&gt;next_pid;
+    $prev_prio = args-&gt;prev_prio;
+    $next_prio = args-&gt;next_prio;
+    $prev_comm = args-&gt;prev_comm;
+    $next_comm = args-&gt;next_comm;
+
+    // 计算两次切换之间的时间间隔（实际运行时间）
+    $delta = nsecs - @last_switch;
+    @last_switch = nsecs;
+
+    // 只关注 thread_test 相关的线程
+    if (strncmp($prev_comm, &quot;thread_test&quot;, 10) == 0 &amp;&amp; strncmp($next_comm, &quot;thread_test&quot;, 10) == 0) {
+        // 记录运行时间分布（单位：微秒）
+        @runtime_us = hist($delta / 1000);
+    
+        // 记录超过理论时间片(3ms)的次数
+        if ($delta &gt; 3000000) {
+            @long_runtime++;
+        }
+    
+        // 打印详细信息
+        printf(&quot;switch: %s(%d) -&gt; %s(%d), runtime: %d us\n&quot;, 
+               $prev_comm, $prev_pid, $next_comm, $next_pid, $delta / 1000);
+    }
+}
+
+// 跟踪唤醒事件
+tracepoint:sched:sched_wakeup
+{
+    $pid = args-&gt;pid;
+    $comm = args-&gt;comm;
+  
+    if (strncmp($comm, &quot;thread_test&quot;, 10) == 0) {
+        @wakeups[$comm]++;
+    }
+}
+
+END
+{
+    clear(@last_switch);
+    printf(&quot;\nRuntime distribution (microseconds):\n&quot;);
+    print(@runtime_us);
+    printf(&quot;\nLong runtime (&gt;3ms) count: %d\n&quot;, @long_runtime);
+    printf(&quot;\nWakeup counts per thread:\n&quot;);
+    print(@wakeups);
+}
+</code></pre><p>然后在docker宿主机上执行 <code>bpftrace sched_trace.bt</code>，注意使用root权限。</p><p>128 threads时：</p><pre><code>[0]                  281 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[1]                  128 |@@@@@@@@@@@@@@@@@@@@@@@                             |
+[2, 4)                88 |@@@@@@@@@@@@@@@@                                    |
+[4, 8)                33 |@@@@@@                                              |
+[8, 16)               71 |@@@@@@@@@@@@@                                       |
+[16, 32)              79 |@@@@@@@@@@@@@@                                      |
+[32, 64)              80 |@@@@@@@@@@@@@@                                      |
+[64, 128)            165 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                      |
+[128, 256)           161 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                       |
+[256, 512)           121 |@@@@@@@@@@@@@@@@@@@@@@                              |
+[512, 1K)             28 |@@@@@                                               |
+...
+</code></pre><p>256 ~ 512 threads:</p><pre><code>&lt;skip&gt;
+</code></pre><p>1024 threads时：</p><pre><code>@runtime_us:
+[0]                  605 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[1]                  206 |@@@@@@@@@@@@@@@@@                                   |
+[2, 4)                29 |@@                                                  |
+[4, 8)                15 |@                                                   |
+[8, 16)               15 |@                                                   |
+[16, 32)              18 |@                                                   |
+[32, 64)              29 |@@                                                  |
+[64, 128)             29 |@@                                                  |
+[128, 256)            26 |@@                                                  |
+[256, 512)            43 |@@@                                                 |
+[512, 1K)              6 |                                                    |
+[1K, 2K)               0 |                                                    |
+...
+</code></pre><p>2048threads：</p><pre><code>@runtime_us:
+[0]                  591 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[1]                  216 |@@@@@@@@@@@@@@@@@@@                                 |
+[2, 4)                37 |@@@                                                 |
+[4, 8)                20 |@                                                   |
+[8, 16)                8 |                                                    |
+[16, 32)              12 |@                                                   |
+[32, 64)              25 |@@                                                  |
+[64, 128)             38 |@@@                                                 |
+[128, 256)            15 |@                                                   |
+[256, 512)            22 |@                                                   |
+[512, 1K)              2 |                                                    |
+</code></pre><p>4096threads：</p><pre><code>[0]                  718 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[1]                  263 |@@@@@@@@@@@@@@@@@@@                                 |
+[2, 4)                60 |@@@@                                                |
+[4, 8)                17 |@                                                   |
+[8, 16)               12 |                                                    |
+[16, 32)              16 |@                                                   |
+[32, 64)              43 |@@@                                                 |
+[64, 128)             56 |@@@@                                                |
+[128, 256)            16 |@                                                   |
+[256, 512)            49 |@@@                                                 |
+[512, 1K)              4 |                                                    |
+[1K, 2K)               0 |                                                    |
+</code></pre><p>So &mldr; 实际上算出来的动态时间片，跟我们想象的完全不一样:</p><ol><li>它并没有尽可能逼近那个所谓的最小值3ms，实际上时间片要小的多；</li><li>从几十个任务增加到几百个任务，每个任务的动态时间片确实是减少的趋势。128个任务时甚至还有1ms的时间片，1k个任务时大部分任务的时间片缩到了10微秒以下；</li><li>从1k个任务增加到4k个任务，每个任务的动态时间片并没有继续明显减少了。1k个任务到4k个任务，任务的时间片没有明显减少了，大部分都是10微秒以下；</li></ol><p>我们通过bpf工具观察到了这个现象，并没第一时间从源码层面分析出，呃呃任务的时间片还可以这么短。有可能变量kernel.sched_min_granularity_ns将我们的思路引入歧途了。</p><h4 id=分析误区>分析误区 <a href=#%e5%88%86%e6%9e%90%e8%af%af%e5%8c%ba class=anchor aria-hidden=true>#</a><a href=#分析误区 class=anchor aria-hidden=true>#</a></h4><p>我们分析下推测严重失误的原因，因为我们前面做了几个重要的问题简化，这里的简化在真实系统负载中是不可以简化的：</p><ul><li>简化1：假定系统中所有任务的优先级都相同，实际上不可能
+误区1：对动态优先级认识不足
+1）即使我们top中看到有些进程的nice值相同，也不能认为后面运行中它们的优先级一直相同。
+2）nice只是确定了一个静态优先级，运行时调度器会根据进程是否是交互式任务进行奖励和触发，动态优先级会不同。
+3）静态优先级相同，动态优先级不同，最终优先级还是不同。
+4）优先级不同，导致权重不同，会影响任务分得的时间片大小。
+简化1会错误估计时间片大小，进而错误估计上下文切换频率。</li><li>简化2：任务数nr_running超过1，那么调度周期sched_latency=nr_running<em>3ms，假定所有任务权重相同，那么权重占总权重的比例相同，那么每个任务得到的动态时间片相同，恒为3ms左右；
+误区3：低估了系统中高优先级进程的影响
+1）系统中存在其他高优先级进程
+2）高优先级进程获得的权重要大，对于的vruntime可能小的多
+3）实际执行后，其他高优先级进程贡献的负载，要比当前测试进程多的多
+4）实际上我们这里创建的线程的时间片=nr_running</em>load/totalload，实际上分得的时间片可能会少的可怜，甚至连kernel.sched_min_granularity_ns=3ms都不到，可能是微妙级别的，后面的bpf跟踪证明了这点。
+简化2导致低估了优先级的影响，高估了测试线程时间片长度，而高优先级进程时间片可能很长，上下文切换次数不一定高。
+比如就不能只拿微妙级别的时间片来做除法，1000ms/1us=10^6，很可能高优先级进程的存在降低了整体的上下文切换次数。</li><li>简化3：当任务执行抢占逻辑检查时，vruntime更小的任务继续等待，直到当前任务运行完时间片，实际上不用等到执行完就可以切换。
+误区3：这个假设不准确，
+1）假定此时cfs_rq上存在vruntime更小的任务t
+2）且此时当前任务vruntime-min_vruntime > 当前任务的ideal_time
+3）那么当前任务此时没有用光时间片，也需要进行任务抢占
+简化3会导致低估了上下文切换的次数。</li></ul><h4 id=经验教训>经验教训 <a href=#%e7%bb%8f%e9%aa%8c%e6%95%99%e8%ae%ad class=anchor aria-hidden=true>#</a><a href=#经验教训 class=anchor aria-hidden=true>#</a></h4><p>OK，那我们最后来总结下，其实我们想知道的无非就是当创建大量任务时（上1000之后），调度器层面会不会随着任务数增加导致更加频繁的上下文切换，过于频繁的上下文切换会浪费CPU资源，程序也不能得到很好的执行。对，我们担心的主要是这个。其实从前面perf、bpftrace的跟踪结果显示，当任务数量达到一定数量后，继续增加的话，动态时间片、上下文切换次数，都不会有明显的上涨了，这是一个可以接受的结果，恰恰说明了Linux CFS调度器的吞吐能力。</p><h3 id=本文总结>本文总结 <a href=#%e6%9c%ac%e6%96%87%e6%80%bb%e7%bb%93 class=anchor aria-hidden=true>#</a><a href=#本文总结 class=anchor aria-hidden=true>#</a></h3><p>本文讲述了困扰在我们项目心头的关于go进程混部时的一些担忧，以及由此引出思考。通过对CFS调度器的内部工作原理的深入学习，以及结合perf、bpftrace对真实负载下任务调度的观测，我们分析了为什么实际测试结果与我们预期相去甚远的原因，加深了对真实负载场景下任务调度的理解。</p><p>OK，希望大家读完后，能够有所感悟吧！</p><div class=edit-page><a href=https://github.com/hitzhangjie/myspace/blob/master/content/blog/kernel/%e4%bb%bb%e5%8a%a1%e8%b0%83%e5%ba%a6%288%29.md><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2"><path d="M17 3a2.828 2.828.0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>Edit this page on GitHub</a></div><div class="docs-navigation d-flex justify-content-between"><a class=ms-auto href=/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A67v2/><div class="card my-1"><div class="card-body py-2">Linux任务调度(7): CFS调度器源码分析1 &rarr;</div></div></a></div></main></div></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.fdbe9b9ba88a036135318f3c721784d684ac9e3280fe282cc80d7d49f7f9c82780cd54228c1608685a230c09984300d7946fc471734d566fcebc148b65bd16db.js integrity="sha512-/b6bm6iKA2E1MY88cheE1oSsnjKA/igsyA19Sff5yCeAzVQijBYIaFojDAmYQwDXlG/EcXNNVm/OvBSLZb0W2w==" crossorigin=anonymous defer></script>
+<script src=/js/highlight.min.b64f1e7517e5839396950ceee4ef937fbbd3ff20aa1fdd261ce87fa457863404f35a6e5239dd57b20b37f39c2401b933deeef60af180195b16941c88f10e948d.js integrity="sha512-tk8edRflg5OWlQzu5O+Tf7vT/yCqH90mHOh/pFeGNATzWm5SOd1Xsgs385wkAbkz3u72CvGAGVsWlByI8Q6UjQ==" crossorigin=anonymous defer></script>
+<script src=/main.min.f16ffd9b364013a1df84be9cd7a45c470cb48639766bf5551e05bba845fe4ab150cb6436de43609bfed9af47c23bd5e395e9a10b932fa6fb2c4ee8f6cc78d7a3.js integrity="sha512-8W/9mzZAE6HfhL6c16RcRwy0hjl2a/VVHgW7qEX+SrFQy2Q23kNgm/7Zr0fCO9XjlemhC5MvpvssTuj2zHjXow==" crossorigin=anonymous defer></script>
+<script src=/index.min.101a971b9bd6e59fd58de8a81e3f0d4e30787ca7df453bd0aeab20e691bed332452172ccdd6e3b4339697fd2669d838053d27805deae2db1fa14e034c89b3c1f.js integrity="sha512-EBqXG5vW5Z/VjeioHj8NTjB4fKffRTvQrqsg5pG+0zJFIXLM3W47Qzlpf9JmnYOAU9J4Bd6uLbH6FOA0yJs8Hw==" crossorigin=anonymous defer></script></body></html>

@@ -8,29 +8,5 @@ toc: true
 reward: true
 ---
 
-<style>  
-    iframe { 
-        width: 100%; 
-        height: 100%; 
-    }  
-
-    .iframe-container {
-        position: relative;
-        height: 100vh;
-        overflow: hidden;
-    }
-    .iframe-container iframe {
-        position: absolute;
-        top: -170px;
-        left: -40px;
-        border: none;
-        width: 100%;
-        height: 98%;
-    }
-</style>
-
-<div class="iframe-container">
-    <iframe src="https://docs.qq.com/doc/DYmhCZXNiYXhLVHFK"/>
-</div>
-
+{{< tencent_doc src="https://docs.qq.com/doc/DYmhCZXNiYXhLVHFK" >}}
 

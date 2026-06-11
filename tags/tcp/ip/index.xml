@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>tcp/ip on</title><link>/tags/tcp/ip/</link><description>Recent content in tcp/ip on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><atom:link href="/tags/tcp/ip/index.xml" rel="self" type="application/rss+xml"/><item><title>TCP/IP网络安全篇</title><link>/blog/2013-09-30-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8tcpipnetworksecurity/</link><pubDate>Mon, 30 Sep 2013 02:08:29 +0800</pubDate><guid>/blog/2013-09-30-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8tcpipnetworksecurity/</guid><description>《TCP/IP 网络安全篇》，作者是日本的寺田真敏 萱岛 信。
+感谢作者理论与实践结合的教学方式，简单地介绍了网络安全的方方面面，让 我学起来也是很有兴趣，真诚地向寺田真敏先生道一声谢谢。
+下面是我对本书学习过程中的一个总结，难免有理解偏差之处，还需在以后的 学习实践过程中，进一步体会、纠正。
+1 TCP/IP的基础知识 # 1.1 TCP/IP与因特网 # OSI 7-layer model
+Host layers: applications Message presentation session -------------------------- transport Message segment -------------------------- media layer: network packet/datagram -------------------------- data link frame -------------------------- physical bit 用于分组交换的设备，IMP（Interface Message Processor）接口报文处理机 的第一号机被设计制成。
+TCP/IP协议，是以tcp协议和ip协议为中心，构成的协议族的总称。 TCP/IP协议，从最底层开始，是由网络接口层、网络层、传输层、应用层构成。 像这样的构成层次，可以使开发工作形成模块式开发。
+1.2 IP # IP地址与网络分类 # IP数据包的数据最大长度为65535字节。
+IP地址由网络号与主机号组成。可以类对网络进行划分，根据网络的规模，从 A类到C类，也存在用于多播通信的D类，其他用于实验的地址还有E类。
+但是在目前，为了有效利用已经濒临枯竭的IPv4地址，采用了不依赖于类的IP 地址分配方法——CIDR（Classless Inter Domain Routing，无类域间路由）。 而且为了解决IPv4地址的资源枯竭问题，也开发了具有128位长度的IPv6。
+无类域间路由CIDR # 无类域间路由中关键的就是子网掩码。子网掩码，是为了改变网络号与主机号的分界位置而采用的方法，如192.168.0.0/24，表示网络号24位，主机号8位，这个子网掩码设置就比之前分类的方式要灵活多了。
+特殊的IP地址: 1)本地环路地址:linux下常见的回环接口lo，地址127.0.0.1，其ip地址可以 根据需要任意设定，也称为localhost。常被用于同一计算机上的通信。 2)广播地址:主机号字段全部为1。 3)多播地址:224.0.0.0～239.255.255.255,常被用于特定工作组中的通信。 4)私有IP地址:限定于内部网络使用而分配的地址，rfc1597中，建议使用以下 的地址段: A类中，10.</description></item></channel></rss>

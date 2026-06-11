@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>fair on</title><link>/tags/fair/</link><description>Recent content in fair on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 22 Apr 2025 12:36:00 +0800</lastBuildDate><atom:link href="/tags/fair/index.xml" rel="self" type="application/rss+xml"/><item><title>Linux任务调度(8): 任务越多调度就越频繁吗</title><link>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A68/</link><pubDate>Tue, 22 Apr 2025 12:36:00 +0800</pubDate><guid>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A68/</guid><description>Linux任务调度(8): 任务越多调度就越频繁吗 # 本文将讲述一个曾经困扰在我们项目组心头的关于go进程混部时的担忧，以及由此引出的多进程混部时的隔离性问题。比如，个别程序不健壮创建大量进程，是否会推高上下文切换次数导致无谓的CPU开销的问题。我们将结合工具perf、bpftrace来深入观察并分析，以加深了对真实负载场景下任务调度的深层理解。
+Go运行时引发的思考 # 一个线上问题 # 对CFS的深入思考，一个直接原因是因为go程序中GOMAXPROCS设置不合理，母机上有128个CPU核心，但是虚拟化技术下容器里分配的只有2个cpus。
+此时go进程检测到GOMAXPROCS=128（go不会自动感知到实际上只分配了2个cpus），此时runtime会误认为最多可以创建128个P（GMP中的P，Processor），后果就是进程中最多会创建128个P。比如随着goroutines增多如果当前P处理不过来，就会激活更多的空闲P，对应的创建更多的线程M并轮询绑定的P上的的localrunq、全局的globalrunq以及定时器事件、网络IO事件就绪的goroutines并调度。这里的轮询操作就会导致较高的CPU开销，容易导致CPU throttling（节流）从而导致程序性能下降。
+GMP调度是如何初始化的 # go运行时是这样创建GMP的
+进程启动的时候会根据GOMAXPROCS先创建出对应数量的P，详见 schedinit()-&amp;gt;procresize()，但是还是没有创建M个这么多线程的； 上述创建出来的一堆P，除了当前g.m.p是在用状态，其他都是idle状态；M也不会预先创建出来，而是根据设计负载情况动态去创建、去激活P去执行的； 具体来说就是当创建一堆goroutines后，这些goroutine会先往 p.runq放，放不下了就会考虑 injectglist(...)，这个其实就是放到全局队列 sched.runq，放的时候： 如果当前M有关联一个P，就先放 npidle个G到 sched.runq，并且启动 npdile个M去激活 npdile个P，去尝试从goroutine抢G然后执行。然后剩下的放到 p.runq； 如果当前M没有关联一个P，这种情况下怎么会发生呢（有多种情况可能会发生，比如GC、系统调用阻塞、初始化阶段等）？这种情况下会全部放到 sched.runq，然后启动最多npidle个（即 min(goroutineQSize, npdile)）个M去激活P并执行； 简单总结就是：“如果短时间内创建大量goroutines，当前p.runq full（或者M解绑了P）就会往sched.runq放。然后会启动最多npidle个M去抢P激活，然后workstealing的方式从sched.runq抢goroutines执行。”
+如果这种情况一旦出现了，这些大量创建出来的M，后续无goroutines执行时，也会不断地执行一些轮询 p.runq、sched.runq、netpoller、stealing、timer事件，这个无谓的轮询过程中就容易推高CPU占用。而实际的 --cpus 配额很少，就更容易达到CPU配额限制，进而被虚拟化管理软件给节流（CPU throttling），进而导致程序性能出现整体性的下降 (程序正常逻辑还没怎么执行，全被这些多出来的M轮询消耗掉了)。
+一时负载高创建的M能退出吗 # 那有没有办法，让这些创建出来的大量M退出呢？创建出来的M退出只有一种办法，runtime.LockOSThread()，这种情况下，goroutine会和M绑定，goroutine执行完毕退出时，M也会被销毁。但是正常情况下是不会调用这个函数的（调试器tracer会调用该函数），所以多创建出来的M不会退出，进而就导致了这里的问题。
+实际上，go程序中解决这个问题，很简单，读取下cgroups的cpu配额即可。可以直接 import _ &amp;quot;github.com/uber-go/automaxprocs&amp;quot; 来解决。
+更多任务会导致更频繁上下文切换吗 # 上面go运行时错误设置GOMAXPROCS导致过多P、M创建出来导致了轮询的CPU开销，这个点我们已经明确了，并且了解到了对应的解决方案。
+我们还有一个顾虑：
+1）同一个机器上，有多个进程，其中一个go进程因为上述原因创建了大量的线程，CFS调度器任务切换频率会不会也被推高？我们都知道上下文切换有开销。 2）同一个机器上，如果有多个进程，如果我想避免某个进程对其他进程的影响，或者某个用户下的所有进程对其他用户下的进程的影响？该如何做。
+这几个问题，其实就是我深入研究CFS调度器的根本原因，因为我像搞明白混部的影响及问题边界，这对保证服务乃至系统的可用性至关重要。当然你可以不混部来绕过这些弯弯绕绕的细节。
+让我来尝试会大下上面两个问题，其中2）我们已经知道了，CFS可以通过组调度来解决这类问题，但是不会自动构建不同用户的任务组，一个进程包括多个线程也不会作为一个任务组进行限制，可以理解成系统默认有更多线程有更多处理能力，除非你们的系统管理员显示设置。
+OK, 那现在，我们只需要搞清楚1），如果任务数增多会导致上下文切换更频率吗？
+假设CFS的设计实现果真如此，那这就是个巨大的风险点。现代Linux系统可以创建非常多的任务出来。现代Linux系统不是早些年的时候由CS 13bits索引范围限制了GDT/LDT表长度了，2^13/2=4096个进程（每个进程占GDT表的2项），早期版本最多支持这么多个任务。但是后面Linux版本对此做了修改，解除了这里的限制。每个处理器核心只在GDT中记录它当前运行的任务的表项信息，而任务队列则交给每个处理器核心的cfs_rq，可以创建的任务数量不再受CS 13bits索引、GDT/LDT表长度限制了。Linux系统可以支持的任务数只受限于pid_max、内核配置项、系统资源了。
+而如果随着任务数增多，上下文切换频率就变高，这样大量的CPU资源会被浪费在上下文切换上。所以调度器是绝对不会这样实现的，这种设计太蠢了。如果任务数很多，我们可以接受不饿死的前提下、允许一定的调度延时、允许降低一定的交互性，但是不能降低系统调度的吞吐量、不能导致CPU资源巨大浪费、完全不可用。
+所以我们的判断应该是，No！更多任务不会导致更频繁的上下文切换！这里的更多任务是指的非常多任务，而不是说从1到2，从2到4，从4到8，从8到16，从16到32这种程度，我们讨论的是从128到256，从1024到2048，从2048到4096这种程度。
+谨慎评估下上下文切换频率 # 根据前面的介绍，任务切换 __schedule(preempt)的时机有3个，任务阻塞主动让出CPU、任务抢占、任务唤醒被重新加入run-queue。结合我们下面的测试用例，任务阻塞到被唤醒，我们创建的线程不会主动阻塞，只会被抢占，所以我们只需要分析任务抢占这个路径即可，scheduler_tick()-&amp;gt;task_tick()-&amp;gt;check_preempt_tick()，这里面会检查当前任务是否应该被抢占，发生抢占才会发生上下文切换。</description></item><item><title>Linux任务调度(7): CFS调度器源码分析1</title><link>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A67v2/</link><pubDate>Thu, 27 Jun 2024 12:36:00 +0800</pubDate><guid>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A67v2/</guid><description>Linux任务调度(7): CFS调度器源码分析 # 前面几篇文章介绍了Linux下调度器的演进过程，也对CFS调度器的大致工作原理进行了介绍，本文在CFS源码层面进行深入分析，帮助大家更深刻地理解CFS调度器的实现细节。Linux从开始引入CFS调度器到现在，已经发展了近20年的时间。在这一段时间里，CFS调度器经历了多次演进，我们选择相对比较新的版本 v5.12 版本内核为例进行说明。现在主流云厂商提供的Linux发行版内核都还有这个版本，我们的分析仍然具有一定的时效性方面的价值。OK，我们开始。
+核心概念及源码分析 # 对“公平”的理解 # CFS的目标是为所有任务提供公平的CPU时间分配，这里要先好好理解下 “公平” 的含义：
+1）如果多个任务具有相同的优先级，那么它们理应获得相同的调度机会； 2）如果多个任务优先级有高低之分，那么它们在调度上要有对应的体现，优先级高的要获得更多的调度机会； 3）要防止高优先级任务始终霸占CPU，导致低优先级任务饿死（starvation）； 4）对于响应式任务、非响应式任务，要有必要的奖励和惩罚机制，以改善用户体验； 5）要有能力在用户层级、任务组层级、具体任务层级，建立这种“公平性”； 6）这种公平性在多CPU核心上，除了100%保证单CPU核心上的公平，也需要考虑负载均衡和任务迁移，尽力去做到多CPU核心上的整体调度的相对公平；
+这是我对CFS中“公平性”的理解，接下来我们将结合CFS的源码来分析是如何做到的，让大家知其然知其所以然。
+核心数据结构 # 被调度的具体任务，或者用户组、任务组，它们都用可调度实体来抽象表示，即 sched_entity； struct sched_entity { /* For load-balancing: */ struct load_weight load; struct rb_node run_node; struct list_head group_node; unsigned int on_rq; u64 exec_start; u64 sum_exec_runtime; u64 vruntime; u64 prev_sum_exec_runtime; u64 nr_migrations; struct sched_statistics exec_statistics; #ifdef CONFIG_FAIR_GROUP_SCHED int depth; struct sched_entity *parent; /* rq on which this entity is (to be) queued: */ struct cfs_rq *cfs_rq; /* rq &amp;quot;owned&amp;quot; by this entity/group: */ struct cfs_rq *my_q; /* cached value of my_q-&amp;gt;h_nr_running */ unsigned long runnable_weight; #endif #ifdef CONFIG_SMP /* * Per entity load average tracking.</description></item><item><title>Linux任务调度(6): CFS不是银弹</title><link>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A66/</link><pubDate>Mon, 20 Nov 2023 12:59:05 +0800</pubDate><guid>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A66/</guid><description>演进过程 # 首先，再次回顾下下Linux进程调度器的一个发展历史：
+v0.01~v2.4.x: the very first scheduler，复杂度O(n) v2.6.0~v2.6.22: O(1) scheduler，复杂度O(1) v2.6.23~: Completely Fair Scheduler (CFS)，复杂度O(log(n)) 前一篇文章中我们介绍了完全公平调度器CFS（Completely Fair Scheduler)，我们介绍了它的核心思想，并结合我们之前的几个顾虑给出了在CFS调度器下如何来解决顾虑的问题。CFS自从诞生以来，一直是Linux内核的默认调度器实现。它也先后经历了多次演进，如前文提到的对sched_entity的抽象改进以实现对组调度（group scheduling)的支持。看上去CFS已经是非常好的调度器实现了，事实上CFS也不是银弹。
+没有银弹 # 尽管Torvalds、Ingo等人坚持希望在内核中维护一个通用的调度器实现，来支撑不同的场景。这个理想很丰满，但是从实践上来看，确实在某些领域CFS的表现仍然并不是很令人满意。
+比如在个人桌面场景下，也不需要NUMA、也不要求在4096个处理器上具有良好扩展性，有没有比CFS更合适的调度器实现方案呢？那么在移动设备中呢？在其他更广泛的应用场景下呢？我们真的需要一个以一当十的CFS scheduler吗？还是需要一个个更适应各自领域的专用的scheduler？
+BFS调度器 # 2009年，Con Kolivas 又带着他的新版本调度器实现方案BFS回归了内核开发社区，BFS是Brain Fucker Scheduler的简称，挑衅意味浓厚，这与其主张的希望为Linux kernel在不同场景下允许提供多样化的scheduler方案相关，而Torvalds、Ingo等人主张用一个通用的scheduler统领各种场景。
+有些开发者进行了测试，在桌面场景下，BFS比CFS的效果好很多，但是因为理念的问题，BFS当时也被认为不会被合入内核，但是确实引发了广泛的关于scheduler的讨论。如今已经是2023年，Linux kernel仍然是采用CFS作为调度器，内核主线代码并没有BFS的身影。
+关于BFS scheduler的设计，您可以通过阅读这篇文章来了解：BFS cpu scheduler v0.304 stable release。
+BFS设计实现的内容，感兴趣的读者可以自行搜索，本文就不展开了。这里只是想跟大家强调，调度场景的多样性，以及内核大佬们对于CFS的不满以及孜孜不倦的探索。
+Con Kolivas的方向是对的，内核应该有这种机制来支持用户选择对应的调度器实现以适应不同场景。
+在论文BFS vs. CFS - scheduler comparison的摘要部分，作者也清晰表达了这种看法：
+Our results indicate that scheduler performance varies dramatically according to hardware and workload, and as a result we strongly encourage Linux distributions to take an increased level of responsibility for selecting appropriate default schedulers that best suit the intended usage of the system.</description></item><item><title>Linux任务调度(5): CFS调度器</title><link>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A65/</link><pubDate>Sun, 19 Nov 2023 21:59:05 +0800</pubDate><guid>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A65/</guid><description>演进过程 # 首先，再次回顾下下Linux进程调度器的一个发展历史：
+v0.01~v2.4.x: the very first scheduler，复杂度O(n) v2.6.0~v2.6.22: O(1) scheduler，复杂度O(1) v2.6.23~: Completely Fair Scheduler (CFS)，复杂度O(log(n)) 前一篇文章中我们介绍了v0.01版本中的调度器实现，复杂度为O(n)，在v0.01内核实现中写死了最多可调度的任务数量，只能算作是一个toy！随着从v0.01~v2.4.x版本中的优化，能调度的任务数量也上来了，但是复杂度还是O(n)。O(1)调度器对其进行了优化，但是其启发式算法来识别、奖惩交互性的逻辑难以建模、理解、维护、优化。RSDL调度器相比O(1)调度器有了很大的改进，但是Con Kolivas和Torvalds、Ingo等人有不同看法，最终迟迟未能合入内核主线。最后，在此前探索优化基础上，CFS诞生了并成为了运行至今的调度器解决方案。
+问题背景 # 对Linux调度器做过点了解的话，应该都听说过“完全公平调度器”这个术语吧。完全公平调度器(Complete Fair Scheduler, 简称CFS)。CFS从v2.6.23到现在v6.0.0+久经沙场考验，它一定是有些过人之处，才能在多用户多任务、服务器、桌面、虚拟机、容器化乃至云原生领域都表现还不错。
+业务在项目部署上的实践，让我产生了对Linux scheduler设计实现的一些思考。事情是这样的，项目是采用的微服务架构，但是在初期项目部署时节约成本、减少机器管理、服务部署的复杂度，项目采用了1台机器混部多个微服务的形式。这就不得不思考，如果其中一个服务进程占用CPU过多的话，对其他进程会不会造成影响。肯定会，但是如何隔离这种影响。
+混部的坑 # 对于采用了k8s容器化部署的项目而言，一般就不会遇到这样的困扰，因为容器运行时已经做了比较好的资源隔离，包括CPU、内存等等，混部的话就有一定的挑战，尤其是像go这种支持协程、本身也是多线程而且支持GC的程序。
+go本身就是多线程程序，用来支持多处理器多核上的goroutine调度执行，支持GC，轮询网络IO事件、轮询定时器事件等； go本身支持协程，协程的调度、最终执行依赖于多线程，尽管可以限制GOMAXPROCS（P的数量，限制同时运行的M数量）； go支持GC，但是对于程序上限没有硬限制（有别于Java等），只有软限制，内存占用居高不下容易导致OOM； 其他； 内存分配控制 # 对于go程序混部，有一定的挑战，综合投入产出比，可以考虑根据服务的重要程度、吞吐量、响应时间等要求给与不同的设置。以内存为例，混部服务GOMEMLIMIT上限尽量不要高于总可用内存的70%，留一点buffer给系统服务、个别服务超额分配的情况。Go GC中的MarkAssit机制实际上会要求申请分配内存的goroutine在GC期间参与一定的扫描，既加速了垃圾的扫描进度，也延缓了内存的分配速度，通过这种手段来保持堆大小尽可能维持着平衡。如果打开了GOMEMLIMIT，请求负载超过预期时会导致堆内存占用超过软限制时，并且无法通过GC降到GOMEMLIMIT以下。此时会导致Go GC的death spirals，CPU会消耗在GC上高达50%，严重影响进程的处理性能。而且，如果多个进程都遇到类似问题，内存占用会超过预设的70%，有OOM的风险。
+这是对内存进行的控制，那么对CPU呢？实际上在对请求负载、内存消耗、物理资源不具备充足的掌控的时候，不建议大范围混部Go服务，因为上述影响可能会导致影响面扩大。
+CPU分配控制 # 对于计算密集型任务，如果涉及到混部，为了分配CPU资源可能会考虑通过taskset进行绑核，实际上对于IO密集型任务也未尝不可，但是收益有多少呢？作者此前曾经在压测中做过这方面的一点尝试，将不同服务绑定在不同核上，这是我的一个单机用于压测的探索，实际真正线上服务，这种方案不一定真的可取。资源分配要取决于真实的负载情况才合理，不能简单的cpu 1,2,3,4给服务1，cpu 5,6给服务2，cpu 7给3，cpu 8给4这样。这样的粒度太糙了，而且预期的资源配给可能跟真实的负载相差很多。
+与其瞎琢磨，瞎测试，不如多了解下CFS调度器让内核自己来解决。CFS调度器其实可以比较好地解决这个问题，不同服务可能创建了不同数量的线程、协程来应对匹配的请求负载，CFS调度器尽可能保证每个线程调度的公平（CFS调度的目标实际上是更抽象的sched_entity，这里用“线程”先简化问题范畴），从而让服务获得应该和负载匹配的cpu执行时间。
+调度实现顾虑 # 看似通过上述设置，即使是混部，也可以工作的很好，嗯，但是我还是有顾虑。俗话说“无规矩不成方圆”，如果大家都守规矩、不犯错，可能也没写这篇文章的必要了。或者说，写这篇文章主要是想探讨下，研发规范、平台能力如何避免让这些不守规矩、爱犯错的人犯错。《波斯王子》里老国王对儿子说，“一个伟大的人，不仅自己要尽量不犯错，也要阻止他人犯错”。
+CFS调度器设计实现上能否彻底解决我的顾虑呢？
+1、如果机器混部有不同用户1、用户2的服务，用户1的进程数（线程数）特别多，如果不加控制手段，用户1会挤占用户2的资源；
+2、如果用户1混部了多个服务1、2、3，如果服务3实现有问题，创建了大量线程，服务3会挤占服务1、2的资源；
+3、还有种情况，每个服务可能对应着一个进程组，如果某个服务创建大量进程、线程，从而挤占了其他服务的资源怎么办；
+其实这些问题，都属于调度器层面对于“公平性”的考虑范畴，只是它们有不同的层次：线程级别，用户级别，组级别。
+CFS调度器随着第一个patch以及后续的很多次优化，可以解决上述不同层级的“公平性”问题，这就是“组调度(CFS group scheduling)”，我们在后面介绍。
+CFS调度器 # 在学习RSDL调度器中我们也了解了它是如何保证和体现调度的公平性的，那么CFS调度器又是如何做的呢？一起来看下。
+公平性建模 # 抽象vruntime # 在我看来，抛开道德、协作争议等问题不谈，我认为CFS调度器比Con Kolivas提出的RSDL调度器对公平性的建模上更胜一筹，因为它非常容易理解、容易实现，能够比较简单地论证这个算法能否比较好的工作。</description></item><item><title>Linux任务调度(4): O(1)后的探索优化</title><link>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A64/</link><pubDate>Thu, 16 Nov 2023 18:59:05 +0800</pubDate><guid>/blog/%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A64/</guid><description>演进过程 # 首先，再次回顾下下Linux进程调度器的一个发展历史：
+v0.01~v2.4.x: the very first scheduler，复杂度O(n) v2.6.0~v2.6.22: O(1) scheduler，复杂度O(1) v2.6.23~: Completely Fair Scheduler (CFS)，复杂度O(log(n)) O(1)调度器解决了O(n)调度器存在的调度下一个任务的瓶颈问题，但O(1)调度器也并非完美，难以对O(1)调度器进行建模并对其效果进行量化。在O(1)之后，内核开发人员依然做了不少探索，CFS调度器是一个更好的解决方案，但是在CFS出现之前还有几个比较火的调度器解决方案，本文我们就来了解下这个探索历程。
+前面已经介绍了O(n), O(1)调度器，本文我们来了解下CFS解决方案诞生之前的相关探索。
+O(1)调度器的问题 # 随着 2.6.0 版本的临近，一些开发人员担心 CPU 调度程序的问题会让这个稳定版本系列垮台。交互性能差、NUMA 系统支持不佳等等的抱怨很常见。随着时间的推移，大部分问题都已得到解决，大量的交互工作和域调度程序已经解决了大部分问题。近年来，有关调度程序的投诉相对较少。
+然而，2.6 调度程序的复杂性仍然困扰着一些人。尤其是交互性工作，添加了大量非常晦涩的代码。调度程序竭尽全力尝试识别交互式任务并相应地提高其优先级。这个过程涉及到许多奇怪的计算，很难理解，更不用说改进了。
+比CFS更早的探索 # 楼梯调度器 # 内核开发人员 Con Kolivas 于2004年提出了 “楼梯调度算法(Starecase Deadline Scheduler)”。Con Kolivas 参与了大部分交互工作，他发布了“楼梯调度程序”补丁的新版本，该补丁旨在大大简化调度程序，同时提高交互响应；它删除了 498 行代码，同时添加了不到 200 行代码。删除的大部分内容是“黑魔法”交互计算；它全部被一个相对简单的、基于等级的方案所取代。
+楼梯调度程序为每个 CPU 设置一个多优先级运行队列。最初，每个进程按照其基本优先级确定的等级进入运行队列；然后调度程序可以以常见的方式找到并运行最高优先级的进程。到目前为止，与O(1)相比没有太大变化。
+在当前的O(1)调度程序中，用完其时间片的进程将被移至单独的“过期”运行队列（expire runqueue）；它们在那里一直等待，直到活跃运行队列（active runqueue）中的其余进程也用完它们的时间片（或被阻塞），此时二者交换后才能被调度。
+而楼梯调度程序中删除了expired runqueue这个设计，时间片用光的进程，其优先级将被调低，并据此重新计算一个时间片，然后将其放回到新优先级对应的队列中。因此，它可以继续运行，但优先级较低。当它耗尽这个时间片时，它再次向下移动，一直这样重复。
+当其从最低优先级队列掉出来时，它的优先级、时间片可以被重置并重新放入runqueue，但是其优先级比原来初始优先级低一级、时间片+1。
+ps：当时内核社区还不愿意在稳定系列中进行另一次重大调度程序更改，很多人希望看到 2.6 真正稳定下来。然而，这个补丁似乎值得考虑，因为它简化了内核的复杂部分。
+旋转楼梯调度器 # 2007年，Con Kolivas继续提出了 “旋转楼梯截止时间调度器(Rotating Staircase Deadline Scheduler, RSDL)”，旋转楼梯调度器，是对楼梯调度器的增强，为什么呢？我个人认为，旋转楼梯调度器更好的建模了优先级、公平性、响应性、解决饿死等的问题，它更好理解和维护。</description></item></channel></rss>

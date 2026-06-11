@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>go on</title><link>/tags/go/</link><description>Recent content in go on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 11 Jun 2026 15:00:00 +0800</lastBuildDate><atom:link href="/tags/go/index.xml" rel="self" type="application/rss+xml"/><item><title>GoTalk - Go垃圾回收之混合写屏障</title><link>/blog/2026-06-11-go_gc_hybrid_writebarrier/</link><pubDate>Thu, 11 Jun 2026 15:00:00 +0800</pubDate><guid>/blog/2026-06-11-go_gc_hybrid_writebarrier/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 90%; border: none; position: absolute; top: -200px; left: -0px; }</description></item><item><title>GoTalk - Go Execution Tracer</title><link>/blog/2025-11-08-go_execution_tracer/</link><pubDate>Sat, 08 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/2025-11-08-go_execution_tracer/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 90%; border: none; position: absolute; top: -200px; left: -0px; }</description></item><item><title>GoTalk - Go内存管理</title><link>/blog/2025-11-08-go_memory_management/</link><pubDate>Sat, 08 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/2025-11-08-go_memory_management/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 90%; border: none; position: absolute; top: -200px; left: -0px; }</description></item><item><title>how go.mod works?</title><link>/blog/2022-11-24-how-go.mod-works/</link><pubDate>Thu, 24 Nov 2022 15:31:49 +0800</pubDate><guid>/blog/2022-11-24-how-go.mod-works/</guid><description>go.mod/go.sum内容 # go.mod里面包含的信息包括：
+当前module构建要求的最小go版本 依赖的module及校验和信息 为了方便本地开发测试的一些replace信息 这里不讨论vendor相关的modules.txt中的内容。
+最小go版本号 # 我们举个例子来描述下。
+如果当前module的go.mod是go 1.16，等价于编译的时候go build -gcflags &amp;lsquo;-lang=1.16&amp;rsquo; / go tool compile -lang=1.16。
+假设我们现在安装的go版本是go1.19。
+这种情况下执行编译测试：
+如果我们用了范型（go1.18开始支持），go编译器编译时会检查， 本来go1.19肯定能编译1.18的范型代码，但是它会报错出来，因为go.mod里声明的go版本，是当前项目支持的最小go版本，有可能别人不是1.19而是1.15,1.17，所以要报错提示下
+我们还没有用那些1.16.5以后的新特性非得要新版本的go来编，所以之前能正常编。
+如果我们安装的go1.15，go.mod里面的1.16高了，也会先尝试编译，编过了就编过了，编不过就报错最小版本是1.16.5 比如机器上现在是1.19，可以go.mod改成1.20正常编过
+如果因为-lang编译导致的编不过，如果go.mod里面的版本比当前安装的版本高，还会打印出来 module requires go 1.21，提示安装新版本
+依赖信息 # 依赖的module，除了指明importPath，还要指明version，才能完整指明一个依赖。这个应该没什么疑问，所以大家都会提交go.mod文件。
+再说下校验和，有什么用呢？防止包内容被篡改。有些同学因为什么原因导致校验和经常冲突，需要解决冲突，所以直接不提交go.sum文件了，这是十分错误的。
+有同学可能会觉得这些繁琐的步骤很荒唐，其实并不是，可重复的制品构建，是一门非常重要的工程上的保证手段，为了达到此目的，甚至还有封闭构建、构建容器等其他方法来提供进一步的保证。
+本文小结 # 本文简单记录了下go.mod/go.sum相关的知识点，可能对刚接触这块的同学比较有价值 :)</description></item><item><title>go如何触发垃圾回收的</title><link>/blog/2022-11-20-go%E5%A6%82%E4%BD%95%E8%A7%A6%E5%8F%91%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</link><pubDate>Sun, 20 Nov 2022 20:39:22 +0800</pubDate><guid>/blog/2022-11-20-go%E5%A6%82%E4%BD%95%E8%A7%A6%E5%8F%91%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</guid><description>前言 # go触发GC有这么几个时机，内存分配时触发mallogc，定时触发sysmon，手动触发runtime.GC、debug.FreeOSMemory，其中内存分配时触发是go是重中之重，go runtime以此来平衡好内存分配、内存回收的节奏以让内存占用维持在一个合适的水准。本文对内存分配过程中触发GC的一些设计考量进行了总结梳理。
+应该听过“mark assist” # gc过程中mutator分配内存时可能会被搞去做assistg,去辅助扫描标记一些对象是否该回收的工作,当我的辅助标记内存数量减去要申请的内存数,如果为负数时,相当于我申请的比辅助标记的多,相当于欠债了,这个时候我就得去做些辅助标记的工作 gcAssistBytes:
+然后根据当前内存使用情况\扫描情况\下次GC的heapgoal,计算出我应该辅助标记多少,才能保证达到堆大小时GC标记工作恰好能完成,让我去干活 这个时候干活之前会先检查下bgMarkWorker因为扫描工作贡献的信用分,然后我可以借用这个信用分来偿还债务,以减少扫描工作,或者完全避免扫描工作 如果依旧欠债,那就干活呗,后面会执行到gcDrainN,去执行一些标记类的工作 这些标记类的工作从何而来呢,比如写屏障记录下来的一些需要去扫描的对象 执行完了这个扫描之后,这个assistG.gcAssistBytes就会加上扫描的字节数,相当于攒的一点信用分 干完这些之后,才允许你申请内存\分配对象,哈哈哈! goroutine可以去做些mark assist之类的工作的前提是，GC已经进入了GCMark阶段，那内存分配期间GC是什么如何被触发的呢？
+GC什么情况下被触发的 # 关于什么时候触发GC，严谨一点，内存分配期间何时触发的GC，这里不考虑sysmon触发、手动runtime.GC()触发，ok。
+GOGC\GOMEMLIMIT\heapGoal # 我们应该都这样的认识阶段，通过GOGC、GOMEMLIMIT可以计算出下次GC时的heapGoal，等堆内存占用达到这个heapGoal时会触发GC。
+但是严格来讲，理解成接下来内存占用达到heapGoal才触发GC，是不正确的。
+引入GC Trigger # 为了触发GC，还有一个概念，叫GC trigger，它的值heapGoal要小些，在GCOff阶段，内存分配过程中会检查当前heapLive大小是否超过了这个trigger，是则启动gc（gcStart） 那个协程来负责检查是否启动gc，可以理解成所有的协程，协程如果是申请大内存（&amp;gt;32K）则一定会做上述检查，小内存为了效率则不一定每次检查，当如果申请小内存（tiny or small）如果过程中span不足发生了refill也会做上述检查（shouldhelpgc） 当启动了GC之后，接下来goroutines如果涉及到内存分配，就会转入markAssist阶段，要分配多少，先要干一定量的标记扫描的活才行（内存debt/assist设计） 那么heapGoal干嘛用的呢，前面提到的内存debt/assist设计，就是为了在当前堆大小达到heapGoal时尽量完成内存的标记扫描，将markbits改成allocbits，未使用的就可以复用或者等下个GC cycle阶段回收 所以从GC trigger到heapGoal，这中间是有一些考量的，如果只认为GC heapGoal控制GC的触发，其实是认识不到位的。ps：可能在这这个提案 GC pacer redesign 实现之前确实是根据heapGoal来触发的，但是这会导致内存的不受限制的增长。
+GC Trigger计算 # 那么这个GC trigger是如何计算的呢？
+首先它不能比heapGoal小很多，那可能会导致GC启动过早，写屏障打开后程序latency会上升，而且如果内存分配比较快GC一直触发运行，期间分配的对象会一直标记为black，Rss会上升 也不能过晚触发，可能导致标记扫描阶段assistG的工作量过大，latency会比较明显，而且会堆大小增长会超出预期。 至于如何计算的，可以先看下上面这个提案中关于GC trigger的设计，然后翻下源码瞧瞧……额，还是简单总结下吧：
+明确下目标，GC trigger是用来确定何时触发GC的一个值，当内存分配导致堆大小变化时会检查当前heapLive&amp;gt;trigger来决定是否触发GC（申请大内存必检查，申请小内存为了效率一般不检查，但在span不足refill后检查） GC trigger如何计算出来的： 首先根据GOGC、GOMEMLIMIT算出下次GC的heapGoal， 然后根据minTrigger=heapMarked+(heapGoal-heapMarked)*0.7， 然后maxTrigger=heapMarked+(heapGoal-heapMarked)*.0.95，如果堆比较小就用这里算出的值意味着总有一个buffer来赶在内存占用达到heapGoal之前启动GC。如果堆比较大但是有没有多少扫描工作，就用heapGoal-defaultHeapMinimum(4MB)来作为maxTrigger，这也是一种优化。 ps: 这里的heapMarked表示上轮GC标记结束时堆大小。这两个值，相当于确定了一个候选的触发GC的heapLive范围，最终trigger值一定要大于等于minTrigger，一定要小于等于maxTrigger。 确定trigger： 确定runway，根据上轮GC过程记录的consMark（程序分配内存、扫描内存量的比值）、实际的扫描内存的量（heap+stack+global）以及并发标记执行阶段mutator:collector的CPU执行时间的比值3:1，可以大致算出下一轮GC期间内存使用量能涨到多少，这个源码中选了个词叫runway，意思是我们内存使用量能走多远。 很明显如果这个值如果大于heapGoal说明我们很可能会让堆占用走高，此时需要更激进地触发GC，所以此时的trigger就选下界minTrigger。 如果这个值比比heapGoal小，那就用goal-runway作为trigger，但是这个值表示的时啥？如果这个值比minTrigger小就用minTrigger。 前面还算了个最大trigger，如果这里的trigger值比maxTrigger还大，那trigger要改成maxTrigger。 Put it together # OK，现在知道了trigger值是怎么详细计算的了，好，我们继续串一下：</description></item><item><title>go1.18泛型支持</title><link>/blog/2022-11-10-go1.18%E6%B3%9B%E5%9E%8B%E6%94%AF%E6%8C%81/</link><pubDate>Fri, 11 Nov 2022 01:00:44 +0800</pubDate><guid>/blog/2022-11-10-go1.18%E6%B3%9B%E5%9E%8B%E6%94%AF%E6%8C%81/</guid><description>go1.18 泛型支持 # 关于泛型编程 # 首先什么是泛型呢？ # Generic programming is a style of computer programming in which algorithms are written in terms of types to-be-specified-later that are then instantiated when needed for specific types provided as parameters.
+泛型编程有啥好处呢？ # cleaner code and simpler API (not always) improve code exectution performance (not always) 没有泛型的日子 # 如何应付的 # go1.18之前苦于没有范型编程，开发人员一般会这么做：
+go编译器对内置类型有一定的范型支持，比如new、make、len、cap go支持reflection和interace，通过这两个一定程度上可以模拟范型的能力 go支持//go:generate，通过自定义工具可以生成一些“重复”代码 痛点依然在 # 即便是通过反射、interface来模拟也把风险从编译时类型安全推到了运行时检查部分，生成代码也会有大量重复性代码……所以痛点依然存在。
+go1.18中终于解决了这个问题，虽然现在来看还没那么尽善尽美，但是总算在路上了。
+go泛型知识点 # go1.</description></item><item><title>go垃圾回收调优</title><link>/blog/2022-11-10-go%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E8%B0%83%E4%BC%98/</link><pubDate>Thu, 10 Nov 2022 10:54:26 +0800</pubDate><guid>/blog/2022-11-10-go%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E8%B0%83%E4%BC%98/</guid><description>相关背景 # 在go1.19之前，go程序内存调优的方式主要是通过环境变量GOGC（或者debug.SetGCPercent(?)）来控制，
+它的效果是影响go runtime计算nextGC heapGoal的大小：
+较早的版本计算方式为：heapGoal = heapMarked + (heapMarked) * GOGC / 100， 后续go迭代时发现非堆内存也是有影响的，于是go1.18完善了下 heapGoal = heapMarked + (heapMarked + GCROOTs) * GOGC/100，这里的GCROOTS=(gstacks+globals) GC pacer的目的就是为了根据上述公式计算下次GC的heapGoal，然后在必要时（比如malloc时）决定是否要GC。
+默认初始heapGoal大小为4MB，如果靠GOGC来控制的话，会比较频繁触发GC，对绝大多数server程序而言频繁GC占比较多CPU，程序整体吞吐、响应延迟会受一定影响。
+所以业界一般会通过两种方式来调优：
+ballast，利用一块不用的大内存（比如1GB），来推高下次GC的heapGoal，通过这种方式来降低GC频率 GC tuner，动态设置GOGC，定义一个对象为其设置finalizer，每轮GC结束时触发它并检查当前进程当前的内存占用情况，并与允许的最大内存占用进行比较，并计算出达到最大内存占用才触发GC时GOGC应该设定的值（其思路和go1.19 GOMEMLIMIT类似） 项目以前的方案 # 项目以前使用的是go1.16.5，这个版本中也只有GOGC一个控制GC的选项，使用的是ballast的方案：
+在服务初始化阶段去初始化一个大内存而推高下次GC时的heapGoal 不同程序可能对内存需求不同，配置文件中允许自定义ballast大小，默认为1GB 包括业界在内都是介绍了ballast如何使用：
+全局变量声明，垃圾回收器会认为其在整个进程生命周期内reachable 局部变量声明，通过runtime.KeepAlive(&amp;hellip;)来欺骗垃圾回收器这之前对象reachable 但是，好像只看到了一派祥和，我们使用时却遇到了Rss占用问题。
+问题1：ballast占物理内存 # 在测试环境（很多套测试环境）都有比较大概率发现服务在几乎空闲时，物理内存占用竟然高达1.1g…这很不符合常理。
+通过pprof跟踪内存分配，发现内存分配比较大的路径就是这个压舱石（pprof mem采样是看的虚拟内存）。
+然后top、pmap等跟踪可疑进程发现其确实存在1GB左右的anon区域，且该区域为dirty**（其实gdb把内存dump一看全是0，就很容易联想到类似对象分配后memset的操作）**。
+根据了解的go GC、内存分配器相关的知识，了解到go向操作系统申请内存时通过mmap的方式，释放内存是通过madvise+MADV_DONTNEED/MADV_FREE的方式。
+go1.12的时候改成了FREE默认代替DONTNEED，这两个选项是有区别的，详细的可以看下man手册（man 2 madvise），FREE的效率更好一点，但是也有一些不好的副作用。
+go1.</description></item><item><title>go map设计实现及应用选型</title><link>/blog/2021-06-15-go-map%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0%E5%8F%8A%E5%BA%94%E7%94%A8%E9%80%89%E5%9E%8B/</link><pubDate>Tue, 15 Jun 2021 15:52:11 +0800</pubDate><guid>/blog/2021-06-15-go-map%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0%E5%8F%8A%E5%BA%94%E7%94%A8%E9%80%89%E5%9E%8B/</guid><description>map大致实现 # buckets &amp;amp; overflow # 本文介绍了map的内部数据结构，每个桶8个kvpairs，超过了可以用溢出桶，但是溢出桶会降低map性能，所以会创建新的bucket将数据迁到新bucket里面。
+hash &amp;amp; top hash table # 一个kvpairs存储在哪个bucket里面呢，首先根据key计算hash，然后对buckets数量取余，再放到对应桶里面，如果有空位置就放入，没有就需要走前面提到的溢出桶的逻辑。
+根据key计算出的hash除了计算key分布在哪个桶，还有其他用途，每个桶里都有一个top hash构成的数组，是为了map访问时加快查询key所在的数组索引的，通过减少比较key的耗时来加速访问。
+mapaccess_faststr, mapaccess_fast64&amp;hellip;访问map中元素时，根据key类型不同编译器插入不同的函数调用，函数名后缀表示key的类型，为什么有不同的函数呢？这是为了提高key的hash计算效率和比较效率。
+load factor # 装填因子，是用来控制map装填的元素数量，即元素数量除以桶数量。装填因子过小容易浪费内存空间，过大容易引发更多的碰撞冲突导致性能下降。
+initialization &amp;amp;&amp;amp; lazy initialization # map提前初始化再赋值，比lazy初始化后再赋值效率高，为什么呢？lazy初始化桶是后面创建的更花时间。但是lazy初始化相比较而言容易节省内存。
+kvpairs padding # map中kvpairs的存储有考虑内存占用方面的优化，key的类型和value的类型可能不同，所以在数据对齐过程中padding会浪费不少内存，所以go map中的keys和values是分开存储的，先存储keys再存储values。
+并发安全检测 # map中的并发读写问题，go提供了如下方式进行检查：
+data race detection：通过选项-race来检测是否存在data race，关于data race检测的问题，kavya joshi的分享里有介绍；
+concurrent map writes：map对应的数据结构hmap中有个字段flags来记录当前的map操作，比如当前执行m[1]=1，是一个kv的赋值，对应的函数是mapassign_fast64，如果执行的是delete(m, 1)，对应的函数是mapdelete_fast64，这里的map修改操作对应的函数内部会将hmap.flags^=hashWriting，如果已经有一个写操作在执行，后面又有一个写操作执行，后面的写操作就有很大概率检测到flags的hashWriting位被设置了，此时就会抛出错误“concurrent map writes”错误；
+关于map为什么不直接提供并发安全的版本，原因也简单。并发安全的版本是有同步开销的，但是很多时候并不需要并发安全的版本，如果默认实现是并发安全的，性能上就要大打折扣了。不考虑并发安全问题的话，map比sync.Map要快7~10倍。
+并发安全实现 # sync.Map是并发安全的实现，它对某些场景下的并发读写做了性能方面的优化：
+&amp;ldquo;The Map type is optimized for two common use cases: (1) when the entry for a given key is only ever written once but read many times, as in caches that only grow, (2) when multiple goroutines read, write and overwrite entries for disjoint sets of keys.</description></item><item><title>syscall：how does go runtime handles syscall</title><link>/blog/2021-06-06-how-go-handles-syscall/</link><pubDate>Sun, 06 Jun 2021 10:17:34 +0800</pubDate><guid>/blog/2021-06-06-how-go-handles-syscall/</guid><description>1 How go runtime handle syscall ? # 最近遇到个线上服务频繁陷入系统调用导致go运行时创建了大量线程，影响到了服务质量，定位、解决问题之后，希望能进一步探究go运行时处理系统调用的过程，以便加深理解。参考了不少网友的分享，特别是知乎Golang Inernal专栏，结合个人的学习理解在此整理记录一下，与大家分享。
+1.1 前言 # 在开始结合源码进行分析之前，先做下简单的介绍，方便先从整体上把握go对系统调用的处理过程，然后从第二部分开始，再结合源码介绍具体的细节。
+系统调用分为阻塞系统调用、非阻塞系统调用，go里面对这些系统调用有归类整理，详见源文件：/src/syscall/syscall_linux_amd64.go。
+如下图所示，sys开头的表示的是阻塞系统调用，会调用Syscall，以sysnb开头的是非阻塞系统调用，会调用RawSyscall，关于Syscall和RawSyscall的区别下面整理。阻塞型的系统调用本身会阻塞线程，为了避免线程阻塞导致协程不可调度，golang运行时要感知这样的系统调用并做特殊处理，非阻塞的系统调用直接调即可，不需要golang运行时参与。 Syscall定义在asm_linux_amd64.s里面，代码中有runtime.entersyscall(SB)和runtime.exitsyscall(SB)函数调用，这个是与golang运行时进行交互的，用于通知golang运行时我即将发起或者退出一个系统调用。
+对于会导致阻塞的系统调用，都要通过Syscall来调用来通知golang运行时，以便golang运行时做处理，如创建新的物理线程调度器其它的goroutine，避免整个进程无线程可调度而最终被sysmon杀死进程。 对于某些非阻塞的系统调用，就不必再与golang运行时交互了，直接调用就可以，这样可以减少两次与golang运行时交互的函数调用开销，这里就掉的是RawSyscall： 网络io操作本来也是阻塞的，但是因为socket fd会被设置为non-blocking，系统调用虽然还是阻塞的系统调用，但是已经不会阻塞调用线程了，所以也无所谓了。
+有个脚本mksyscall.pl根据syscall_linux_amd64.go里面定义的系通调用列表，就是第一张图那些带注释的部分，这个pl脚本会负责生成与之相关的系统调用函数，生成在syscall/zsyscall_linux_amd64.go里面。可以找几个有代表性的来看下生成的系统调用函数：
+比如sendfile是阻塞的系统调用： 比如settimeofday是非阻塞的系统调用： epoll相关的epollwait也是阻塞的，但是网络socket fd在go里面都统一设置为了nonblocking fd处理了，因此并不会阻塞。 1.2 开始分析源码 # 在讲述系统调用发生的协程调度之前，让我们看看go是如何进入系统调用的，理解了这个让我们不会对后面所说的一些东西感到很陌生。
+golang对操作系统的系统调用作了封装，提供了syscall这样的库让我们执行系统调用。例如，Read系统调用实现如下：
+func Read(fd int, p []byte) (n int, err error) { n, err = read(fd, p) if raceenabled { if n &amp;gt; 0 { ...... } ...... } return } // 最终封装了Syscall func read(fd int, p []byte) (n int, err error) { var _p0 unsafe.</description></item><item><title>go抢占式调度</title><link>/blog/2021-05-25-go%E6%8A%A2%E5%8D%A0%E5%BC%8F%E8%B0%83%E5%BA%A6/</link><pubDate>Tue, 25 May 2021 13:13:52 +0800</pubDate><guid>/blog/2021-05-25-go%E6%8A%A2%E5%8D%A0%E5%BC%8F%E8%B0%83%E5%BA%A6/</guid><description>SIGURG，在信号处理函数runtime/signal_unix.go:sighandler(&amp;hellip;)函数中又看到对sigPreempt的处理。
+SIGURG实现抢占式调度： 对应这个函数doSigPreempt，检查当前g是不是wantAsyncPreempt，ok的话检查是不是isAsyncSafePoint，ok的话，sigctxt.pushCall(funcPC(asyncPreempt), newpc)，这个函数调整PC并注入一个对asyncPreempt的调用。
+TODO wantAsyncPreempt对应的判断参数是谁去设置的，什么时候设置的？
+TODO isAsyncSafePoint，safepoint的含义？这个函数的注释以及代码中的if-else已经足够结实清楚什么是safepoint了，以及safepoint的意义了。
+看下asyncPreempt的逻辑，该函数是在汇编中实现的，首先保存寄存器的值，然后调用asyncPreempt2执行其他处理。
+g.preemptStop决定是挂起g还是重新调度g：
+如果被抢占的g的g.preemptStop为true，则执行mcall(preemptPark)挂起该g，g的状态被改为preempted，后面什么时机会重新调度它吧。然后执行schedule调度其他goroutine执行； 如果g.preemptStop为false，则mcall(gopreempt_m)将g从running改为runnable重新调度一次。 大致的抢占式调度逻辑就是这样的。
+ps: func mcall(fn func(*g))，mcall switches from the g to the g0 stack and invokes fn(g), where g is the goroutine that made the call.</description></item></channel></rss>

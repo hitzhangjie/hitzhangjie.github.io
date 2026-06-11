@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>sse2 on</title><link>/tags/sse2/</link><description>Recent content in sse2 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 08 Sep 2023 16:30:30 +0800</lastBuildDate><atom:link href="/tags/sse2/index.xml" rel="self" type="application/rss+xml"/><item><title>SIMD数据级并行处理</title><link>/blog/2023-10-13-simd%E6%95%B0%E6%8D%AE%E7%BA%A7%E5%B9%B6%E8%A1%8C%E5%A4%84%E7%90%86/</link><pubDate>Fri, 08 Sep 2023 16:30:30 +0800</pubDate><guid>/blog/2023-10-13-simd%E6%95%B0%E6%8D%AE%E7%BA%A7%E5%B9%B6%E8%A1%8C%E5%A4%84%E7%90%86/</guid><description>Q: 那，接下来需要看下下面几个问题：什么是SIMD呢？SIMD最初是用来解决什么问题的呢？SIMD在JSON编码、解析中可以用来做什么呢？simdjson正确使用SIMD还需要注意些什么呢？
+What&amp;rsquo;s SIMD # SIMD(Single Instruction Multiple Data) 是一种并行计算技术,可以同时对多个数据执行相同的操作。使用 SIMD 的主要目的是为了提升计算性能。
+目前在大多数现代主流ARM、x64处理器上都支持SIMD，最初Pentium支持SIMD是为了更好地对多媒体（声音）进行处理，现代处理器增加了位宽更大的寄存器（128-bit、256-bit、512-bit），也增加了一些高效的指令。
+老的x64（Intel、AMD）平台可以用SSE2&amp;hellip;SSE4.2（128-bit），主流的x64（Intel、AMD）可以用AVX、AVX2（256-bit），最新的x64（Intel）可以用AVX-512（512-bit），其他平台可以自行检索下。
+ps: 并行处理按照发生的粒度，可以划分为：任务并行（多核），指令并行（超标量流水线），数据并行（simd、vector、gpu）。
+SIMD适用场景 # 适合使用 SIMD 的情况包括:
+需要对大批量数据执行相同的数学运算或逻辑运算,如向量、矩阵运算、图像处理等。 需要对多媒体数据如音频、视频等进行处理,如编码、解码、滤波、变换等。 在数据库、科学计算、金融分析等需要处理大量数值计算的场景。 游戏开发中的物理模拟、人工智能等也可以使用 SIMD。 使用 SIMD 的好处有:
+提高计算并行度,单次指令处理更多数据。 减少指令数,降低指令调度开销。 更高效利用处理器内部执行单元。 数据级并行,更易映射到多核架构。 一些常见使用 SIMD 的例子:
+图像处理:模糊、锐化、色彩空间转换等算法可以用SIMD加速。 信号处理:FFT、FIR/IIR 滤波等用SIMD实现。 科学计算:向量矩阵运算都可以用 SIMD 优化。 数据压缩/解压:如音频视频编解码中的 SIMD 优化。 数据库操作:聚集函数、关系运算可用 SIMD 实现。 机器学习:神经网络中矩阵乘法、激活函数计算等使用 SIMD。 总之,SIMD 非常适合数据并行的场景,使用它可以显著提升计算性能。编译器和开发者都可以通过自动向量化和手动优化,利用 SIMD 使程序运行更快。
+SIMD新手入门 # 这里以对两个数组进行求和为例，如果使用C来进行编码的话，基本逻辑应该是这样：
+int nums1[LENGTH] = {1, 2, 3, 4, 5, 6, 7, 8}; int nums2[LENGTH] = {1, 1, 1, 1, 1, 1, 1, 1}; int result[LENGTH] = {0}; for (int i=0; i&amp;lt;LENGTH; i++) { result[i] = nums1[i] + nums2[i]; } 现在，我们考虑使用SSE、AVX2分别对其进行处理。</description></item></channel></rss>

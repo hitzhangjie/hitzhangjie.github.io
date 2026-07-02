@@ -15,7 +15,7 @@ Linus Torvards在一次采访中，主持人贴了两个链表操作的实现，
 公司代码规范 # 只要是规范，就有局限性、滞后性。我理解，规范不是让我们追求完美主义，而是追求better code，better practices。如果一个开发者有好的taste，他写出来的代码可能已经接近或达到规范的要求了。但是并不是每个开发者都有这样的taste，所以我们才需要规范来约束我们做一件共同的事情。
 遵守代码规范的一个明显的好处是，可读性会有比较明显的提升，这是很有意义的。可读性提升，意味着维护成本降低，意味着省下时间，意味着可以在正常工作时间做更多事情，可以早下班休息、充电。这可能不是对每个人都是个好事情，但是是对团队有意义的事情，对多数人有意义的事情，就应该坚持！
 最后 # 多年前翻阅Linux文档，Torvards解释为什么一个Tab非要8个空格而非通用的4个，他说，我就是要让那些爱写嵌套多层代码的人“难受”……
-省下大把自己、大家的时间，这难道不是一种很聪明的“偷懒”行为？</description></item><item><title>Google CR指引, 如何推进代码评审</title><link>/blog/2019-09-10-%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E5%9C%B0%E8%BF%9B%E8%A1%8C%E4%BB%A3%E7%A0%81review/</link><pubDate>Tue, 10 Sep 2019 17:26:01 +0800</pubDate><guid>/blog/2019-09-10-%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E5%9C%B0%E8%BF%9B%E8%A1%8C%E4%BB%A3%E7%A0%81review/</guid><description>最近学习了Google的CodeReview指引，整理了其中一些比较有价值的点，分享给大家。
+省下大把自己、大家的时间，这难道不是一种很聪明的“偷懒”行为？</description></item><item><title>Google CR指引如何推进代码评审</title><link>/blog/2019-09-10-%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E5%9C%B0%E8%BF%9B%E8%A1%8C%E4%BB%A3%E7%A0%81review/</link><pubDate>Tue, 10 Sep 2019 17:26:01 +0800</pubDate><guid>/blog/2019-09-10-%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E5%9C%B0%E8%BF%9B%E8%A1%8C%E4%BB%A3%E7%A0%81review/</guid><description>最近学习了Google的CodeReview指引，整理了其中一些比较有价值的点，分享给大家。
 Google Code Review Guidelines # Google积累了很多最佳实践，涉及不同的开发语言、项目，这些文档，将Google工程师多年来积攒的一些最佳实践经验进行了总结并分享给众开发者。学习下这里的经验，我们在进行项目开发、开源协同的过程中，相信也可以从中受益。
 Google目前公开的最佳实践相关文档，目前包括：
 Google&amp;rsquo;s Code Review Guidelines，Google代码review指引，包含以下两个系列的内容： The Code Reviewer&amp;rsquo;s Guide The Change Author&amp;rsquo;s Guide 这了涉及到Google内部使用的一些术语，先提下：

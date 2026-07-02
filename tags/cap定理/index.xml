@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>CAP定理 on</title><link>/tags/cap%E5%AE%9A%E7%90%86/</link><description>Recent content in CAP定理 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 01 Jul 2026 20:16:00 +0800</lastBuildDate><atom:link href="/tags/cap%E5%AE%9A%E7%90%86/index.xml" rel="self" type="application/rss+xml"/><item><title>异地多活的阿喀琉斯之踵：写一致性的技术真相与工业实践</title><link>/blog/2026-07-01-%E5%BC%82%E5%9C%B0%E5%A4%9A%E6%B4%BB%E6%95%B0%E6%8D%AE%E4%B8%80%E8%87%B4%E6%80%A7%E6%B7%B1%E5%BA%A6%E5%89%96%E6%9E%90/</link><pubDate>Wed, 01 Jul 2026 20:16:00 +0800</pubDate><guid>/blog/2026-07-01-%E5%BC%82%E5%9C%B0%E5%A4%9A%E6%B4%BB%E6%95%B0%E6%8D%AE%E4%B8%80%E8%87%B4%E6%80%A7%E6%B7%B1%E5%BA%A6%E5%89%96%E6%9E%90/</guid><description>背景 # 在上一篇文章中，我们讨论了容错、高可用、容灾三者的本质区别。在容灾部分提到，异地多活是容灾体系中的&amp;quot;最高形态&amp;quot;——RTO ≈ 0，RPO ≈ 0，一个数据中心挂了，另一个无缝接管。
+听起来很美好。但如果你深入问一句：&amp;ldquo;多活&amp;quot;到底是读多活，还是写多活？ 很多号称实现了异地多活的系统就要开始支支吾吾了。
+本文试图诚实回答一个问题：异地多活中，数据的写一致性到底怎么解决？工业界真正落地的方式是什么？以及，我们到底需要&amp;quot;多活&amp;quot;到什么程度？
+一、异地多活的挑战全景 # 在讨论具体方案之前，我们需要先把面临的挑战看清楚。异地多活的&amp;quot;异地&amp;quot;二字意味着机房之间隔着几十到上千公里——这带来了一系列环环相扣的难题。
+1.1 根源：CAP 定理 # Eric Brewer 在 2000 年提出的 CAP 定理告诉我们：一个分布式系统最多只能同时满足以下三个性质中的两个：
+C (Consistency) — 所有节点在同一时刻看到相同的数据 A (Availability) — 每个请求都能收到（非错误的）响应 P (Partition Tolerance) — 系统在任意网络分区下仍能正常运转 异地多活场景下，机房之间的网络延迟不可消除（北京到上海光速极限约 12ms 往返），网络分区不可杜绝（光缆被挖断、运营商 BGP 抖动）。P 是必须接受的现实。
+所以我们真正面对的取舍是：在 P（网络分区必然发生）的前提下，你选 C 还是选 A？ 这就是异地多活写一致性所有技术方案的分叉路口。
+1.2 读很容易，写才是难题 # 读多活的核心思路非常简单：数据复制 + 就近读取。无论用 MySQL 异步复制、Redis 主从同步，还是消息队列的广播模式，本质都是把一份数据拷贝到多个机房，然后让每个机房的用户读自己本地的那份。即使复制有延迟（通常秒级），绝大多数业务场景——看文章、刷 feed、查商品详情——对&amp;quot;读到 3 秒前的数据&amp;quot;完全没意见。
+写多活则完全不同。它的核心矛盾可以抽象为一个简洁的问题：
+当两个数据中心同时修改数据，甚至修改同一条数据 或者 事务性的对多条记录的修改，而且彼此不知道对方的修改——谁说了算？
+举个例子：</description></item></channel></rss>

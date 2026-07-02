@@ -1,4 +1,18 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blog on</title><link>/blog/</link><description>Recent content in Blog on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:49:55 +0000</lastBuildDate><atom:link href="/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>异地多活的阿喀琉斯之踵：写一致性的技术真相与工业实践</title><link>/blog/2026-07-01-%E5%BC%82%E5%9C%B0%E5%A4%9A%E6%B4%BB%E6%95%B0%E6%8D%AE%E4%B8%80%E8%87%B4%E6%80%A7%E6%B7%B1%E5%BA%A6%E5%89%96%E6%9E%90/</link><pubDate>Wed, 01 Jul 2026 20:16:00 +0800</pubDate><guid>/blog/2026-07-01-%E5%BC%82%E5%9C%B0%E5%A4%9A%E6%B4%BB%E6%95%B0%E6%8D%AE%E4%B8%80%E8%87%B4%E6%80%A7%E6%B7%B1%E5%BA%A6%E5%89%96%E6%9E%90/</guid><description>背景 # 在上一篇文章中，我们讨论了容错、高可用、容灾三者的本质区别。在容灾部分提到，异地多活是容灾体系中的&amp;quot;最高形态&amp;quot;——理想情况下 RTO ≈ 0，RPO ≈ 0。
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blog on</title><link>/blog/</link><description>Recent content in Blog on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:49:55 +0000</lastBuildDate><atom:link href="/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>FLP 不可能性：分布式共识的边界、启示与工业突围</title><link>/blog/2026-07-02-flp-impossibility-guide/</link><pubDate>Thu, 02 Jul 2026 20:00:00 +0800</pubDate><guid>/blog/2026-07-02-flp-impossibility-guide/</guid><description>背景 # 写这篇文章的原因很简单：我跟同事聊 FLP 的时候，发现自己虽然读过论文，但真让我用大白话解释清楚，还是磕磕绊绊。什么&amp;quot;异步系统&amp;quot;、&amp;ldquo;二价配置&amp;rdquo;、&amp;ldquo;liveness&amp;rdquo;……读到一半就想放弃。
+所以我决定把这篇文章写给自己，也写给和我一样的分布式系统工程师——我们不是研究员，不需要用形式化符号交流，但我们需要真的搞懂 FLP 到底在说什么、它为什么值得被记住、以及它对我们日常写的分布式系统有什么影响。
+这篇文章会尽量避免&amp;quot;定义 3.1&amp;quot;、&amp;ldquo;定理 5.2&amp;quot;式的写法。如果某个概念第一次出现，我会先花几句话讲清楚它到底是什么。证明过程放到附录，正文只保留直觉。
+一、先把话说清楚：这些词到底是什么意思 # FLP 论文里有几个反复出现的词，不先搞清楚，后面没法聊。FLP，三位作者名字首字母缩写，它指的是三位作者论文提出的观点，“纯异步系统中即使只有一个节点故障，也无法建立确定性共识算法来同时满足safety和liveness”。
+1.1 &amp;ldquo;进程&amp;quot;是什么？ # 在 FLP 的语境下，一个&amp;quot;进程&amp;rdquo;（process）就是分布式系统里的一台机器——或者更准确地说，是这台机器上运行的那个程序实例。
+比如你有一个三节点的 etcd 集群，每个节点就是一个&amp;quot;进程&amp;rdquo;。这些进程之间只能通过发消息来通信——没有共享内存，没有全局变量。
+1.2 &amp;ldquo;正确的进程&amp;rdquo; vs &amp;ldquo;故障的进程&amp;rdquo; # 正确的进程：按照协议规定的逻辑老老实实在跑，不 crash，不发假消息。你可以理解成&amp;quot;这个节点是健康的&amp;quot;。
+故障的进程（FLP 论文里指 crash-stop 故障）：这个进程某一天突然不干活了。它不发送任何消息，也不响应任何请求——就像一台机器突然断电了。关键限制：它不会&amp;quot;撒谎&amp;quot;——FLP 讨论的是崩溃故障，不是拜占庭故障（恶意节点故意发错误消息的那种）。
+FLP 的惊人之处在于：只需要一个进程可能 crash（其他 N-1 个都好好的），共识就已经不可能了。
+wait，假消息？对，在更一般化的分布式系统中，比如战争中的每个个体，还要考虑个体会不会发出假消息来误导整个系统，比如拜占庭将军问题中叛变的将军可能会发出“进攻&amp;quot;”撤退&amp;quot;的误导性消息，从而打破全军的共识。
+1.3 &amp;ldquo;决定一个值&amp;rdquo; 到底是什么意思？ # 共识问题的场景是这样的：
+有 N 个进程，每个进程一开始都有一个自己提议的值（比如进程 1 提议&amp;quot;主节点是 A&amp;quot;，进程 2 提议&amp;quot;主节点是 B&amp;quot;）。它们需要通过互相发消息，最终所有人对同一个值达成一致。
+&amp;ldquo;决定&amp;rdquo;（decide）就是：一个进程在某个时刻，最终选定了一个值，并且从此以后不再改变。
+这里面有两个要求：
+大家决定的值一样：不能进程 1 选了 A，进程 2 选了 B。这叫&amp;quot;一致性&amp;quot;（agreement）。 决定的值必须是某个进程提出的：不能说大家最后决定了一个谁也没提出过的&amp;quot;C&amp;quot;。这叫&amp;quot;有效性&amp;quot;（validity）。 合在一起就是共识问题的 Safety 部分——&amp;ldquo;不出错&amp;rdquo;。</description></item><item><title>异地多活的阿喀琉斯之踵：写一致性的技术真相与工业实践</title><link>/blog/2026-07-01-%E5%BC%82%E5%9C%B0%E5%A4%9A%E6%B4%BB%E6%95%B0%E6%8D%AE%E4%B8%80%E8%87%B4%E6%80%A7%E6%B7%B1%E5%BA%A6%E5%89%96%E6%9E%90/</link><pubDate>Wed, 01 Jul 2026 20:16:00 +0800</pubDate><guid>/blog/2026-07-01-%E5%BC%82%E5%9C%B0%E5%A4%9A%E6%B4%BB%E6%95%B0%E6%8D%AE%E4%B8%80%E8%87%B4%E6%80%A7%E6%B7%B1%E5%BA%A6%E5%89%96%E6%9E%90/</guid><description>背景 # 在上一篇文章中，我们讨论了容错、高可用、容灾三者的本质区别。在容灾部分提到，异地多活是容灾体系中的&amp;quot;最高形态&amp;quot;——理想情况下 RTO ≈ 0，RPO ≈ 0。
 听起来很美好。但如果你深入问一句：&amp;ldquo;多活&amp;quot;到底是读多活，还是写多活？ 很多号称实现了异地多活的系统就要开始支支吾吾了。
 在展开之前，先厘清一个关键定义。所谓&amp;quot;写多活&amp;quot;存在三种不同层级的理解：
 L1（分区多写）：不同数据中心可以同时处理写请求，但每条数据在同一时刻只有一个&amp;quot;归属&amp;quot;写入者——单元化属于这一层级。 L2（同记录多写，最终一致）：两个数据中心可以同时修改同一条记录，冲突通过事后合并解决——CRDT 属于这一层级。 L3（同记录多写，强一致）：两个数据中心可以同时修改同一条记录，且系统对外表现得像只有一个副本——Spanner 属于这一层级，是目前已知的&amp;quot;上界&amp;rdquo;。 本文试图诚实回答一个问题：异地多活中，数据的写一致性到底怎么解决？工业界真正落地的方式是什么？以及，我们到底需要&amp;quot;多活&amp;quot;到什么程度？
@@ -59,11 +73,4 @@ a := 10 // 普通整数 b := &amp;amp;User{} // 对象指针 然而，当 Go 编
 为了解决这个问题，Go 1.14 引入了基于 SIGURG 信号的非协作式抢占（Non-cooperative Preemption）机制。本文将系统性地拆解这一机制的底层原理。
 1. 为什么被称为&amp;quot;非协作式&amp;quot;？ # 为了理解非协作式抢占，我们需要先对比它与传统协作式抢占的区别：
 特性 协作式抢占 (Go 1.14 之前) 非协作式抢占 (Go 1.14 及之后) 触发前提 依赖 Goroutine 主动配合。 强制执行，无需 Goroutine 配合。 检查时机 发生函数调用或内存分配时，检查栈溢出标志。 随时随地，由操作系统信号直接中断。 死循环应对 无法解决纯计算死循环（如for {}），会导致饿死。 完美解决，可在 10ms 内强行剥夺 CPU 执行权。 核心痛点：协作式抢占就像坐公交车，乘客（Goroutine）必须走到站台（函数调用点）才能下车。而非协作式抢占则像直升机索降，无论你在哪里，调度器都能直接把你&amp;quot;抓&amp;quot;走。
-2. 核心大招：基于 SIGURG 信号的底层看板 # 非协作式抢占的整个流程由系统监控线程、操作系统内核以及 Go 运行时（Runtime）共同协作完成：</description></item><item><title>TCP send 返回成功，真的意味着对端收到了吗？</title><link>/blog/2026-06-25-tcp-send-reliability-myth/</link><pubDate>Thu, 25 Jun 2026 10:00:00 +0800</pubDate><guid>/blog/2026-06-25-tcp-send-reliability-myth/</guid><description>TCP 连接 send 返回成功，真的意味着对端收到/处理了吗？先说结论，不光可能没处理，甚至收到都不一定收到。很多人说TCP不是可靠的吗？为什么像golang tcpconn.Write 返回了nil，竟然还有可能发送不成功呢？
-这是很多开发者的TCP认知误区。现如今很多网络服务器开发都是基于开发框架、RPC桩代码生成，网络通信被简化成了一个桩代码函数调用，开发者的技能也从系统调用、libev库之类的较深的理解慢慢会话为了RPC桩代码call boy :)
-背景 # 前几天同事问了我一个问题：我们框架里通过 send 通知对方服务，如果 send 没有返回失败，能不能 100% 确定对端收到了这个包？
-先对齐下概念：这里的send，是RPC时只发req但是不返回rsp给上层调用，在有些框架里也会用选项notify或者sendonly来标识；与send一应的还有一个call，这里的call指的是发送req并且返回rsp给上层调用，有些框架里会用选项sendrcv来标识。
-答案是不能。这个问题其实触及了一个非常经典的认知误区——很多开发者把&amp;quot;系统调用没报错&amp;quot;等同于&amp;quot;对端进程收到了数据&amp;quot;。这个误区之所以普遍，是因为它跨越了多个抽象层次：从应用层 buffer 到内核协议栈，从网卡队列到网络传输，再到对端操作系统和业务进程，每一层都有&amp;quot;你以为成功了但其实还没有&amp;quot;的环节。
-下面我们从几个层次来拆解这个问题。
-问题一：系统调用成功 ≠ 数据送达 # 层层缓存：everything is cache # 当你调用 tcpconn.Write(buf) 并且没有返回 error 时，这个&amp;quot;成功&amp;quot;到底意味着什么？答案是：它只意味着数据从应用层的 buffer 拷贝到了内核的 socket buffer。后面的路还很长：
-应用层 buffer ↓ tcpconn.Write (系统调用) 内核 socket buffer ← 系统调用到这里就返回了 ↓ TCP 协议栈（分段、拥塞控制、重传……） 网卡 TX queue (NIC buffer) ↓ 物理层 网络 ↓ 对端网卡 → 内核 → 应用层 系统调用的语义是&amp;quot;数据已提交给内核&amp;quot;，它不会等待数据通过网卡发送出去，更不会等待对端的 TCP ACK。这是有意为之的设计——如果每个 write 都要等到对端确认，那么一次 RTT 就会阻塞调用线程，性能将完全不可接受（后面还会细说）。</description></item></channel></rss>
+2. 核心大招：基于 SIGURG 信号的底层看板 # 非协作式抢占的整个流程由系统监控线程、操作系统内核以及 Go 运行时（Runtime）共同协作完成：</description></item></channel></rss>

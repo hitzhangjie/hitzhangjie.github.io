@@ -50,7 +50,7 @@
 &lt;div align="center" style="padding-bottom:1rem;"&gt;
 &lt;img alt="debugger" src="/books/assets/debugger.png" style="width:600px;"/&gt;
 &lt;/div&gt;
-&lt;p&gt;由于本书内容涉及大量系统原理、调试信息标准、设计实现、go源码分析内容，篇幅很大，很难用几篇博文讲述清楚，因此单独写一本电子书，《&lt;a href="/debugger101.io"&gt;Debugger101：go调试器开发内幕&lt;/a&gt;》。&lt;/p&gt;
+&lt;p&gt;由于本书内容涉及大量系统原理、调试信息标准、设计实现、go源码分析内容，篇幅很大，很难用几篇博文讲述清楚，因此单独写一本电子书，《&lt;a href="https://hitzhangjie.pro/debugger101.io"&gt;Debugger101：go调试器开发内幕&lt;/a&gt;》。&lt;/p&gt;
 &lt;p&gt;欢迎阅读，如您在阅读过程中遇到错误、疏漏、建议，不要犹豫，请给我提issue。&lt;/p&gt;</description></item><item><title>delve调试器设计实现</title><link>/blog/2020-08-25-delve%E8%B0%83%E8%AF%95%E5%99%A8%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</link><pubDate>Tue, 25 Aug 2020 12:21:14 +0800</pubDate><guid>/blog/2020-08-25-delve%E8%B0%83%E8%AF%95%E5%99%A8%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</guid><description>&lt;p&gt;研究调试器设计实现有段时间了，前几天在调试一个程序时，发现go调试器go-delve/delve竟然不支持类似gdb的x/FMT格式，于是在之前工作上又优化了一下。CR期间，也学习到一些之前理解不深的地方，也顺便了解了下delve的整体架构设计、大致实现，今天就来说道说道。&lt;/p&gt;
 &lt;h1 id="delve简介"&gt;delve简介 &lt;a href="#delve%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;go-delve/delve是Derekparker发起的一个调试器项目，面向go语言的。为什么针对go语言要创建一个新的调试器呢？为什么不使用GDB呢？这里涉及到go的一些特性。&lt;/p&gt;

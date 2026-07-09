@@ -1,7 +1,79 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>merge on</title><link>/tags/merge/</link><description>Recent content in merge on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 06 Nov 2025 08:00:00 +0800</lastBuildDate><atom:link href="/tags/merge/index.xml" rel="self" type="application/rss+xml"/><item><title>git鬼故事 - How `git cherrypick` Works</title><link>/blog/how_git_cherrypick_works/</link><pubDate>Thu, 06 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/how_git_cherrypick_works/</guid><description>git鬼故事 - How git cherrypick Works # 1. 问题背景 # 项目组内部同事想合并一个线上版本分支的一系列bugfix到下个待发布分支，于是执行了分支merge操作：git merge &amp;lt;branch&amp;gt;。由于存在多分支同时修改的情况，所以预料之中会出现一些合并冲突问题（merge conflicts），git设计上希望能减少认为干预，尽可能启发式地、自动化地去解决一些冲突，尽管如此我们已经有心理准备。
-OK，这里我们暂时不去讨论git分支策略上的一些最佳实践或者不良实践，这里我们想讨论一个让人头疼的问题，“git merge”“git cherrypick”究竟靠谱、不靠谱？
-之所以提出这个问题，是因为出现了一个出乎我们所有人意料的情况，git merge &amp;lt;branch&amp;gt;后：
-有一个源文件中同样的处理逻辑（注意两次的代码稍有不同）竟然被追加了两次。 这两个分支独立修改(插入)后的内容在行号范围上是有重叠的，git没有报冲突。 git merge &amp;lt;branch&amp;gt;, git cherrypick &amp;lt;commit&amp;gt;都会导致相同的问题。 如果说合并一个差异很大的分支不是一个常规操作，cherrypick相比较之下则是使用更加频繁的一个操作，不管是从master cherrypick提交到其他分支，还是线上分支的bugfix backport到master分支，经常用到。巧的是，我们执行 git cherrypick &amp;lt;commit&amp;gt;也会导致上述问题。ps：这里的 &amp;lt;commit&amp;gt;就是涉及到重复的处理逻辑的提交号。
-wtf，这直接挑战了很多10年git使用经验的开发者们，发生了什么，连gitd都不住了么？禁不住会问，git是如何设计的，merge、cherrypick乃至rebase、apply是如何工作的。接下来我会用几篇文章解释清楚。
-2. 测试准备 # 尽管项目组的代码也没什么特别的分享价值，但是写分享还是要注意脱敏，所以我构造了一个可以复现这个问题的极简git仓库。 您可以通过以下脚本来重建这个测试用的git仓库 (git cp, cc, ck分别是git cherry-pick，git commit, git checkout的alias）：
-#!/bin/bash -e mkdir git_mistake &amp;amp;&amp;amp; cd git_mistake git init # master branch touch f echo &amp;quot;apple from master&amp;quot; &amp;gt; f echo &amp;quot;banana from master&amp;quot; &amp;gt;&amp;gt; f git add f &amp;amp;&amp;amp; git cc -m 'add f from master' # feat branch (insert after line 2, [3,4] inserted ) git ck -b feat echo &amp;quot;aaa from feat&amp;quot; &amp;gt;&amp;gt; f echo &amp;quot;bbb from feat&amp;quot; &amp;gt;&amp;gt;f git add .</description></item><item><title>git鬼故事 - How `git merge` Works</title><link>/blog/how_git_merge_works/</link><pubDate>Thu, 06 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/how_git_merge_works/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: -170px; }</description></item><item><title>git鬼故事 - How `git rebase` Works</title><link>/blog/how_git_rebase_works/</link><pubDate>Thu, 06 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/how_git_rebase_works/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: -170px; }</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Merge on</title><link>/tags/merge/</link><description>Recent content in Merge on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 06 Nov 2025 08:00:00 +0800</lastBuildDate><atom:link href="/tags/merge/index.xml" rel="self" type="application/rss+xml"/><item><title>git鬼故事 - How `git cherrypick` Works</title><link>/blog/how_git_cherrypick_works/</link><pubDate>Thu, 06 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/how_git_cherrypick_works/</guid><description>&lt;h1 id="git鬼故事---how-git-cherrypick-works"&gt;git鬼故事 - How &lt;code&gt;git cherrypick&lt;/code&gt; Works &lt;a href="#git%e9%ac%bc%e6%95%85%e4%ba%8b---how-git-cherrypick-works" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="1-问题背景"&gt;1. 问题背景 &lt;a href="#1-%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;项目组内部同事想合并一个线上版本分支的一系列bugfix到下个待发布分支，于是执行了分支merge操作：&lt;code&gt;git merge &amp;lt;branch&amp;gt;&lt;/code&gt;。由于存在多分支同时修改的情况，所以预料之中会出现一些合并冲突问题（merge conflicts），git设计上希望能减少认为干预，尽可能启发式地、自动化地去解决一些冲突，尽管如此我们已经有心理准备。&lt;/p&gt;
+&lt;p&gt;OK，这里我们暂时不去讨论git分支策略上的一些最佳实践或者不良实践，这里我们想讨论一个让人头疼的问题，“git merge”“git cherrypick”究竟靠谱、不靠谱？&lt;/p&gt;
+&lt;p&gt;之所以提出这个问题，是因为出现了一个出乎我们所有人意料的情况，&lt;code&gt;git merge &amp;lt;branch&amp;gt;&lt;/code&gt;后：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;有一个源文件中&lt;strong&gt;同样的处理逻辑（注意两次的代码稍有不同）竟然被追加了两次&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;这两个分支独立修改(插入)后的内容在&lt;strong&gt;行号范围上是有重叠的，git没有报冲突&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;git merge &amp;lt;branch&amp;gt;&lt;/code&gt;, &lt;code&gt;git cherrypick &amp;lt;commit&amp;gt;&lt;/code&gt;都会导致相同的问题。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;如果说合并一个差异很大的分支不是一个常规操作，cherrypick相比较之下则是使用更加频繁的一个操作，不管是从master cherrypick提交到其他分支，还是线上分支的bugfix backport到master分支，经常用到。巧的是，我们执行 &lt;code&gt;git cherrypick &amp;lt;commit&amp;gt;&lt;/code&gt;也会导致上述问题。ps：这里的 &lt;code&gt;&amp;lt;commit&amp;gt;&lt;/code&gt;就是涉及到重复的处理逻辑的提交号。&lt;/p&gt;
+&lt;p&gt;wtf，这直接挑战了很多10年git使用经验的开发者们，发生了什么，连gitd都不住了么？禁不住会问，git是如何设计的，merge、cherrypick乃至rebase、apply是如何工作的。接下来我会用几篇文章解释清楚。&lt;/p&gt;
+&lt;h2 id="2-测试准备"&gt;2. 测试准备 &lt;a href="#2-%e6%b5%8b%e8%af%95%e5%87%86%e5%a4%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;尽管项目组的代码也没什么特别的分享价值，但是写分享还是要注意脱敏，所以我构造了一个可以复现这个问题的极简git仓库。
+您可以通过以下脚本来重建这个测试用的git仓库 (git cp, cc, ck分别是git cherry-pick，git commit, git checkout的alias）：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;#!/bin/bash -e
+mkdir git_mistake &amp;amp;&amp;amp; cd git_mistake
+git init
+# master branch
+touch f
+echo &amp;quot;apple from master&amp;quot; &amp;gt; f
+echo &amp;quot;banana from master&amp;quot; &amp;gt;&amp;gt; f
+git add f &amp;amp;&amp;amp; git cc -m 'add f from master'
+# feat branch (insert after line 2, [3,4] inserted )
+git ck -b feat
+echo &amp;quot;aaa from feat&amp;quot; &amp;gt;&amp;gt; f
+echo &amp;quot;bbb from feat&amp;quot; &amp;gt;&amp;gt;f
+git add . &amp;amp;&amp;amp; git cc -m 'change f from feat'
+# feat branch (insert after line 1, [2,3] inserted)
+# we may expect a conflict here with the change on feat,
+# but no conflict reported.
+git ck master
+cat&amp;gt;f&amp;lt;&amp;lt;EOF
+apple from master
+xxxx from master
+xxxx from master
+banana from master
+EOF
+git add f &amp;amp;&amp;amp; git cc -m 'change f from master'
+# try following operations, and the result will be:
+# - not merged （Expected: two sides changes aren't identical)
+# - no conflict (NotExpected: two sides' changes overlapped)
+# - code concatenated (NotExpected: should report conflict)
+# git ck master &amp;amp;&amp;amp; git merge feat, or
+# git ck master &amp;amp;&amp;amp; git cp &amp;lt;commitOnFeat&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;执行上述脚本后，将创建一个提交历史如下所示的repo，后面我们就用这个来进行测试：&lt;/p&gt;</description></item><item><title>git鬼故事 - How `git merge` Works</title><link>/blog/how_git_merge_works/</link><pubDate>Thu, 06 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/how_git_merge_works/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/doc/DYkpFcWpEdk1SZnNo"/&gt;
+&lt;/div&gt;</description></item><item><title>git鬼故事 - How `git rebase` Works</title><link>/blog/how_git_rebase_works/</link><pubDate>Thu, 06 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/how_git_rebase_works/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/doc/DYmhCZXNiYXhLVHFK"/&gt;
+&lt;/div&gt;</description></item></channel></rss>

@@ -1,3 +1,38 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>github-actions on</title><link>/tags/github-actions/</link><description>Recent content in github-actions on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 11 Jun 2026 12:00:00 +0800</lastBuildDate><atom:link href="/tags/github-actions/index.xml" rel="self" type="application/rss+xml"/><item><title>GitHub Actions 中的认证方式：GITHUB_TOKEN、PAT 与 Deploy Key</title><link>/blog/2026-06-11-github-actions-auth-tokens/</link><pubDate>Thu, 11 Jun 2026 12:00:00 +0800</pubDate><guid>/blog/2026-06-11-github-actions-auth-tokens/</guid><description>背景 # 我的个人博客采用 Hugo 构建，源代码放在私有仓库 hitzhangjie/myspace，构建产物需要部署到公开仓库 hitzhangjie/hitzhangjie.github.io。原先的 workflow 部署在目标仓库上，每次 push 源仓库后还需要手动推一次目标仓库，很痛苦。
-迁移 workflow 到源仓库（myspace）时，发现 GITHUB_TOKEN 无法完成跨仓库推送。这引出了一个问题：GitHub Actions 中到底有哪几种认证方式？它们分别怎么配置、作用域是什么？
-三种认证方式速览 # 认证方式 谁来生成 作用域 适用场景 GITHUB_TOKEN GitHub 自动注入 当前仓库 同仓库内操作（checkout、发 release、写 PR 评论等） Personal Access Token (PAT) 用户手动创建 用户有权访问的所有仓库 跨仓库操作、需要比 GITHUB_TOKEN 更广的权限 SSH Deploy Key 用户手动生成 单个仓库（写权限可选） 跨仓库推送（如部署静态站点到另一个仓库） GITHUB_TOKEN # 它是什么 # GITHUB_TOKEN 是 GitHub Actions 在每次 workflow 运行时自动生成的一个临时令牌。你不需要、也没办法手动配置它——在任何仓库的 Settings → Secrets and variables 或 Settings → Deploy keys 里都找不到它。</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Github-Actions on</title><link>/tags/github-actions/</link><description>Recent content in Github-Actions on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 11 Jun 2026 12:00:00 +0800</lastBuildDate><atom:link href="/tags/github-actions/index.xml" rel="self" type="application/rss+xml"/><item><title>GitHub Actions 中的认证方式：GITHUB_TOKEN、PAT 与 Deploy Key</title><link>/blog/2026-06-11-github-actions-auth-tokens/</link><pubDate>Thu, 11 Jun 2026 12:00:00 +0800</pubDate><guid>/blog/2026-06-11-github-actions-auth-tokens/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;我的个人博客采用 Hugo 构建，源代码放在私有仓库 &lt;code&gt;hitzhangjie/myspace&lt;/code&gt;，构建产物需要部署到公开仓库 &lt;code&gt;hitzhangjie/hitzhangjie.github.io&lt;/code&gt;。原先的 workflow 部署在目标仓库上，每次 push 源仓库后还需要手动推一次目标仓库，很痛苦。&lt;/p&gt;
+&lt;p&gt;迁移 workflow 到源仓库（myspace）时，发现 &lt;code&gt;GITHUB_TOKEN&lt;/code&gt; 无法完成跨仓库推送。这引出了一个问题：GitHub Actions 中到底有哪几种认证方式？它们分别怎么配置、作用域是什么？&lt;/p&gt;
+&lt;h1 id="三种认证方式速览"&gt;三种认证方式速览 &lt;a href="#%e4%b8%89%e7%a7%8d%e8%ae%a4%e8%af%81%e6%96%b9%e5%bc%8f%e9%80%9f%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;认证方式&lt;/th&gt;
+&lt;th&gt;谁来生成&lt;/th&gt;
+&lt;th&gt;作用域&lt;/th&gt;
+&lt;th&gt;适用场景&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;GITHUB_TOKEN&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;GitHub &lt;strong&gt;自动&lt;/strong&gt;注入&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;当前仓库&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;同仓库内操作（checkout、发 release、写 PR 评论等）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Personal Access Token (PAT)&lt;/td&gt;
+&lt;td&gt;用户&lt;strong&gt;手动&lt;/strong&gt;创建&lt;/td&gt;
+&lt;td&gt;用户有权访问的&lt;strong&gt;所有仓库&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;跨仓库操作、需要比 GITHUB_TOKEN 更广的权限&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;SSH Deploy Key&lt;/td&gt;
+&lt;td&gt;用户&lt;strong&gt;手动&lt;/strong&gt;生成&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;单个仓库&lt;/strong&gt;（写权限可选）&lt;/td&gt;
+&lt;td&gt;跨仓库推送（如部署静态站点到另一个仓库）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h1 id="github_token"&gt;GITHUB_TOKEN &lt;a href="#github_token" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="它是什么"&gt;它是什么 &lt;a href="#%e5%ae%83%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;GITHUB_TOKEN&lt;/code&gt; 是 GitHub Actions 在&lt;strong&gt;每次 workflow 运行时自动生成&lt;/strong&gt;的一个临时令牌。你&lt;strong&gt;不需要、也没办法&lt;/strong&gt;手动配置它——在任何仓库的 Settings → Secrets and variables 或 Settings → Deploy keys 里都找不到它。&lt;/p&gt;
+&lt;p&gt;它由 GitHub 在 workflow 启动时注入，workflow 结束后立即失效。&lt;/p&gt;</description></item></channel></rss>

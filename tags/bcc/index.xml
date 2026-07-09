@@ -1,21 +1,79 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>bcc on</title><link>/tags/bcc/</link><description>Recent content in bcc on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 15 Sep 2023 16:36:33 +0800</lastBuildDate><atom:link href="/tags/bcc/index.xml" rel="self" type="application/rss+xml"/><item><title>eBPF BCC框架：helloworld</title><link>/blog/2023-09-15-ebpf_bcc%E6%A1%86%E6%9E%B6helloworld/</link><pubDate>Fri, 15 Sep 2023 16:36:33 +0800</pubDate><guid>/blog/2023-09-15-ebpf_bcc%E6%A1%86%E6%9E%B6helloworld/</guid><description>怎么写eBPF程序 # 目前写eBPF程序的话，一般要通过C语言来写，python、golang写的都是用户态的部分，涉及到内核部分的操作都是要借助C语言来写，然后通过编译器将C部分编译成字节码，用户态部分只是借助bpf()系统调用将字节码程序提交给了eBPF子系统去运行。
-实际上任何高级语言都可以写用户态部分，但是写内核态部分的eBPF程序需要写C语言，编译器会将C语言部分编译成target=ebpf的字节码，所以现在有很多框架比如BCC+python以及Cilium+golang等，都是对eBPF字节码操作、系统调用操作的一些封装。
-ps：如果你是用Rust的话，那么确实可以直接写eBPF程序，不用依靠C，一般常用的是Rust aya这个框架。
-从0开始写eBPF程序 # 前面多次提到了eBPF程序编写、执行的大致过程，但是介绍的还是太粗略了，也不打算在这么几个简单的总结性文档中，把细节都介绍清楚。
-我们可以先看下，如果手把手从0开始写eBPF程序，大致需要经历哪些操作，看图：
-需要被简化的一些操作：
-用C语言先写eBPF程序，然后使用编译器（如clang）将其编译为target为bpf的字节码程序，然后通过系统调用将其提交给eBPF子系统执行。这一步如果没有BCC这样的框架封装下的话，那么操作起来就有一点啰嗦。 还有你编译eBPF程序时要用到的很多头文件之类的设置，可能就比较麻烦。 还有eBPF程序执行时，那些结果存储到不同的数据结构，和不同语言的类型系统如何对接，如何方便的读取，全部自己从0开始搞也很麻烦。 其他的； 所以现在有BCC、Cilium、Aya这样的一些eBPF框架来简化这一些工作，我们可以先从BCC开始，这个项目比较早、成熟，用的人也多，也被集成到了Linux YUM源中，可以直接安装bcc、bcc-tools包来尝鲜。
-从helloworld开始 # 现在就开始使用BCC来写几个helloworld，让大家了解下一个简单的eBPF程序大致是如何写的，熟悉下其结构，后面虽然不一定自己写，但是了解已有的这些工具的实现细节，以及如何调整来满足自己需要，还是有帮助的。
-file: helloworld.py
-#!/usr/bin/python3 from bcc import BPF program = r&amp;quot;&amp;quot;&amp;quot; int hello(void *ctx) { bpf_trace_printk(&amp;quot;Hello World!&amp;quot;); return 0; } &amp;quot;&amp;quot;&amp;quot; b = BPF(text=program) syscall = b.get_syscall_fnname(&amp;quot;execve&amp;quot;) b.attach_kprobe(event=syscall, fn_name=&amp;quot;hello&amp;quot;) b.trace_print() 分析下其结构：
-导入bcc中的bpf program是一段c语言程序，b = BPF(text=program)，我们执行这个脚本时bcc框架会自动将其编译为字节码 它定义了一个hello函数，bpf_trace_printk会向ebpf子系统中的一个临时文件或者什么数据结构中打印hello world字符串 syscall = b.get_syscall_fnname是获得exeve函数调用的一个hook point b.attach_kprobe是在execve这个系统调用入口处通过kprobe系统调用创建一个探针，当执行到这里时会触发trap，内核会回调函数hello去执行，这里的hello就是上面C语言中定义的函数 b.trace_print会从取出前面打印的hello world字符串取出来打印出来。 这就是一个极简的helloworld的示例，当我们执行它时，它就会跟踪所有的execve的系统调用，每次触发这个系统调用时，就会打印上述helloworld字符串信息。
-ps：执行ebpf程序时，需要使用root权限。</description></item><item><title>Go程序内存泄露问题快速定位</title><link>/blog/2021-04-14-go%E7%A8%8B%E5%BA%8F%E5%86%85%E5%AD%98%E6%B3%84%E9%9C%B2%E9%97%AE%E9%A2%98%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D/</link><pubDate>Wed, 14 Apr 2021 18:00:00 +0800</pubDate><guid>/blog/2021-04-14-go%E7%A8%8B%E5%BA%8F%E5%86%85%E5%AD%98%E6%B3%84%E9%9C%B2%E9%97%AE%E9%A2%98%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D/</guid><description>.myimg { width: 680px; padding-bottom: 1rem; } 前几天有同学反馈了cgo内存泄露问题，自己也针对这个问题探索了一番，算是为以后解决类似问题提前攒点经验吧。也趁机整理了一下go开发过程中内存泄露问题的一些常用排查方法，也希望对新接触go的同学有所帮助。整理之余，bcc工具之丰富也让我有点惊讶，也希望对自己日后的工作有所帮助吧。
-内存泄漏 # 内存泄露，一个老生常谈的问题，但即便是老手也会犯一些低级错误。如果没有可靠的研发流程保证在测试阶段发现问题，问题就容易被带到线上。计算资源始终是有限的，问题也不会因为资源充裕就消失不见，产生影响只是时间问题。影响有多大，就要结合场景来说了。
-内存泄漏，最可能的影响就是内存申请失败。但实际上操作系统更聪明，结合系统整体负载情况，它会为每个进程计算一个oom_score，并在内存资源紧张时选择一个合适的进程杀死并回收内存资源，see how does the oom killer decide which process to kill first。
-所以，内存泄露的最终结果，大概率会被操作系统kill，通常进程挂掉后，确认其是否是因为oom问题被kill，可以通过查看 /proc/messages 来确认是否有对应日志。有的话，那就坐实了oom killed（但是被oom killed的进程不一定意味着存在内存泄露）。
-服务质量 # 结合运维手段的变化，来看看是否内存泄漏问题对服务质量造成的影响。
-传统人工方式，通过感知告警、人为介入这种方式，效率低，要十几分钟； 通过虚拟机自动化部署的方式，感知异常自动重启虚拟机，耗时大约要分钟级； 通过docker容器化部署的方式，感知异常自动重启容器，耗时大约在秒级； 看上去现代运维方式一定程度上可以缓解这个问题，是，这也要分情况：
-如果内存泄露的代码路径不容易被触发，那可能要跑很久才能触发oom kill，如一周；但是如果代码路径在关键代码路径上，且请求量大，频繁触发内存泄露，那可能跑个几分钟就会挂掉； 跟每次内存泄露的内存大小也有关系，如果泄露的少，多苟活一阵子，反之容易暴毙； 进程一旦挂掉，这段时间就不能响应了，服务的健康监测、名字服务、负载均衡等措施需要一段时间才能感知到，如果请求量大，服务不可用依然会带来比较大的影响。 服务质量保证是不变的，所以别管用了什么运维手段，问题终究是问题，也是要解决的。
-Go内存泄漏 # 垃圾回收 # 自动内存管理减轻了开发人员管理内存的复杂性，不需要像C\C++开发者那样显示malloc、free，或者new、delete。垃圾回收借助于一些垃圾回收算法完成对无用内存的清理，垃圾回收算法有很多，比如：引用计数、标记清除、拷贝、分代等等。
-Go中垃圾回收器采用的是“并发三色标记清除”算法，see:
-Garbage Collection In Go : Part I - Semantics Garbage Collection In Go : Part II - GC Traces Garbage Collection In Go : Part III - GC Pacing Go语言支持自动内存管理，那还存在内存泄漏问题吗？</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Bcc on</title><link>/tags/bcc/</link><description>Recent content in Bcc on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 15 Sep 2023 16:36:33 +0800</lastBuildDate><atom:link href="/tags/bcc/index.xml" rel="self" type="application/rss+xml"/><item><title>eBPF BCC框架：helloworld</title><link>/blog/2023-09-15-ebpf_bcc%E6%A1%86%E6%9E%B6helloworld/</link><pubDate>Fri, 15 Sep 2023 16:36:33 +0800</pubDate><guid>/blog/2023-09-15-ebpf_bcc%E6%A1%86%E6%9E%B6helloworld/</guid><description>&lt;h2 id="怎么写ebpf程序"&gt;怎么写eBPF程序 &lt;a href="#%e6%80%8e%e4%b9%88%e5%86%99ebpf%e7%a8%8b%e5%ba%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;目前写eBPF程序的话，一般要通过C语言来写，python、golang写的都是用户态的部分，涉及到内核部分的操作都是要借助C语言来写，然后通过编译器将C部分编译成字节码，用户态部分只是借助bpf()系统调用将字节码程序提交给了eBPF子系统去运行。&lt;/p&gt;
+&lt;p&gt;实际上任何高级语言都可以写用户态部分，但是写内核态部分的eBPF程序需要写C语言，编译器会将C语言部分编译成target=ebpf的字节码，所以现在有很多框架比如BCC+python以及Cilium+golang等，都是对eBPF字节码操作、系统调用操作的一些封装。&lt;/p&gt;
+&lt;p&gt;ps：如果你是用Rust的话，那么确实可以直接写eBPF程序，不用依靠C，一般常用的是Rust aya这个框架。&lt;/p&gt;
+&lt;h2 id="从0开始写ebpf程序"&gt;从0开始写eBPF程序 &lt;a href="#%e4%bb%8e0%e5%bc%80%e5%a7%8b%e5%86%99ebpf%e7%a8%8b%e5%ba%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;前面多次提到了eBPF程序编写、执行的大致过程，但是介绍的还是太粗略了，也不打算在这么几个简单的总结性文档中，把细节都介绍清楚。&lt;/p&gt;
+&lt;p&gt;我们可以先看下，如果手把手从0开始写eBPF程序，大致需要经历哪些操作，看图：&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2023-09-15-eBPF_BCC%E6%A1%86%E6%9E%B6%EF%BC%9Ahelloworld/go.png" alt="BCC框架"&gt;&lt;/p&gt;
+&lt;p&gt;需要被简化的一些操作：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;用C语言先写eBPF程序，然后使用编译器（如clang）将其编译为target为bpf的字节码程序，然后通过系统调用将其提交给eBPF子系统执行。这一步如果没有BCC这样的框架封装下的话，那么操作起来就有一点啰嗦。&lt;/li&gt;
+&lt;li&gt;还有你编译eBPF程序时要用到的很多头文件之类的设置，可能就比较麻烦。&lt;/li&gt;
+&lt;li&gt;还有eBPF程序执行时，那些结果存储到不同的数据结构，和不同语言的类型系统如何对接，如何方便的读取，全部自己从0开始搞也很麻烦。&lt;/li&gt;
+&lt;li&gt;其他的；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;所以现在有BCC、Cilium、Aya这样的一些eBPF框架来简化这一些工作，我们可以先从BCC开始，这个项目比较早、成熟，用的人也多，也被集成到了Linux YUM源中，可以直接安装bcc、bcc-tools包来尝鲜。&lt;/p&gt;
+&lt;h2 id="从helloworld开始"&gt;从helloworld开始 &lt;a href="#%e4%bb%8ehelloworld%e5%bc%80%e5%a7%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;现在就开始使用BCC来写几个helloworld，让大家了解下一个简单的eBPF程序大致是如何写的，熟悉下其结构，后面虽然不一定自己写，但是了解已有的这些工具的实现细节，以及如何调整来满足自己需要，还是有帮助的。&lt;/p&gt;
+&lt;p&gt;file: helloworld.py&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-python"&gt;#!/usr/bin/python3
+from bcc import BPF
+program = r&amp;quot;&amp;quot;&amp;quot;
+int hello(void *ctx) {
+bpf_trace_printk(&amp;quot;Hello World!&amp;quot;);
+return 0;
+}
+&amp;quot;&amp;quot;&amp;quot;
+b = BPF(text=program)
+syscall = b.get_syscall_fnname(&amp;quot;execve&amp;quot;)
+b.attach_kprobe(event=syscall, fn_name=&amp;quot;hello&amp;quot;)
+b.trace_print()
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;分析下其结构：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;导入bcc中的bpf&lt;/li&gt;
+&lt;li&gt;program是一段c语言程序，b = BPF(text=program)，我们执行这个脚本时bcc框架会自动将其编译为字节码
+它定义了一个hello函数，bpf_trace_printk会向ebpf子系统中的一个临时文件或者什么数据结构中打印hello world字符串&lt;/li&gt;
+&lt;li&gt;syscall = b.get_syscall_fnname是获得exeve函数调用的一个hook point&lt;/li&gt;
+&lt;li&gt;b.attach_kprobe是在execve这个系统调用入口处通过kprobe系统调用创建一个探针，当执行到这里时会触发trap，内核会回调函数hello去执行，这里的hello就是上面C语言中定义的函数&lt;/li&gt;
+&lt;li&gt;b.trace_print会从取出前面打印的hello world字符串取出来打印出来。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这就是一个极简的helloworld的示例，当我们执行它时，它就会跟踪所有的execve的系统调用，每次触发这个系统调用时，就会打印上述helloworld字符串信息。&lt;/p&gt;
+&lt;p&gt;ps：执行ebpf程序时，需要使用root权限。&lt;/p&gt;
+&lt;h2 id="执行上述示例"&gt;执行上述示例 &lt;a href="#%e6%89%a7%e8%a1%8c%e4%b8%8a%e8%bf%b0%e7%a4%ba%e4%be%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;ebpf程序运行需要用到debugfs，这个需要先挂载下，然后再执行，会看到打印很多helloworld：&lt;/p&gt;</description></item><item><title>Go程序内存泄露问题快速定位</title><link>/blog/2021-04-14-go%E7%A8%8B%E5%BA%8F%E5%86%85%E5%AD%98%E6%B3%84%E9%9C%B2%E9%97%AE%E9%A2%98%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D/</link><pubDate>Wed, 14 Apr 2021 18:00:00 +0800</pubDate><guid>/blog/2021-04-14-go%E7%A8%8B%E5%BA%8F%E5%86%85%E5%AD%98%E6%B3%84%E9%9C%B2%E9%97%AE%E9%A2%98%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D/</guid><description>&lt;style&gt;
+.myimg {
+width: 680px;
+padding-bottom: 1rem;
+}
+&lt;/style&gt;
+&lt;p&gt;前几天有同学反馈了cgo内存泄露问题，自己也针对这个问题探索了一番，算是为以后解决类似问题提前攒点经验吧。也趁机整理了一下go开发过程中内存泄露问题的一些常用排查方法，也希望对新接触go的同学有所帮助。整理之余，bcc工具之丰富也让我有点惊讶，也希望对自己日后的工作有所帮助吧。&lt;/p&gt;
+&lt;h2 id="内存泄漏"&gt;内存泄漏 &lt;a href="#%e5%86%85%e5%ad%98%e6%b3%84%e6%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;内存泄露，一个老生常谈的问题，但即便是老手也会犯一些低级错误。如果没有可靠的研发流程保证在测试阶段发现问题，问题就容易被带到线上。计算资源始终是有限的，问题也不会因为资源充裕就消失不见，产生影响只是时间问题。影响有多大，就要结合场景来说了。&lt;/p&gt;
+&lt;p&gt;内存泄漏，最可能的影响就是内存申请失败。但实际上操作系统更聪明，结合系统整体负载情况，它会为每个进程计算一个oom_score，并在内存资源紧张时选择一个合适的进程杀死并回收内存资源，see &lt;a href="https://unix.stackexchange.com/a/153586/95211"&gt;how does the oom killer decide which process to kill first&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;所以，内存泄露的最终结果，大概率会被操作系统kill，通常进程挂掉后，确认其是否是因为oom问题被kill，可以通过查看 &lt;code&gt;/proc/messages&lt;/code&gt; 来确认是否有对应日志。有的话，那就坐实了oom killed（但是被oom killed的进程不一定意味着存在内存泄露）。&lt;/p&gt;
+&lt;h2 id="服务质量"&gt;服务质量 &lt;a href="#%e6%9c%8d%e5%8a%a1%e8%b4%a8%e9%87%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;结合运维手段的变化，来看看是否内存泄漏问题对服务质量造成的影响。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;传统人工方式，通过感知告警、人为介入这种方式，效率低，要十几分钟；&lt;/li&gt;
+&lt;li&gt;通过虚拟机自动化部署的方式，感知异常自动重启虚拟机，耗时大约要分钟级；&lt;/li&gt;
+&lt;li&gt;通过docker容器化部署的方式，感知异常自动重启容器，耗时大约在秒级；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;看上去现代运维方式一定程度上可以缓解这个问题，是，这也要分情况：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果内存泄露的代码路径不容易被触发，那可能要跑很久才能触发oom kill，如一周；但是如果代码路径在关键代码路径上，且请求量大，频繁触发内存泄露，那可能跑个几分钟就会挂掉；&lt;/li&gt;
+&lt;li&gt;跟每次内存泄露的内存大小也有关系，如果泄露的少，多苟活一阵子，反之容易暴毙；&lt;/li&gt;
+&lt;li&gt;进程一旦挂掉，这段时间就不能响应了，服务的健康监测、名字服务、负载均衡等措施需要一段时间才能感知到，如果请求量大，服务不可用依然会带来比较大的影响。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;服务质量保证是不变的，所以别管用了什么运维手段，问题终究是问题，也是要解决的。&lt;/p&gt;
+&lt;h2 id="go内存泄漏"&gt;Go内存泄漏 &lt;a href="#go%e5%86%85%e5%ad%98%e6%b3%84%e6%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="垃圾回收"&gt;垃圾回收 &lt;a href="#%e5%9e%83%e5%9c%be%e5%9b%9e%e6%94%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;自动内存管理减轻了开发人员管理内存的复杂性，不需要像C\C++开发者那样显示malloc、free，或者new、delete。垃圾回收借助于一些垃圾回收算法完成对无用内存的清理，垃圾回收算法有很多，比如：引用计数、标记清除、拷贝、分代等等。&lt;/p&gt;
+&lt;p&gt;Go中垃圾回收器采用的是“并发三色标记清除”算法，see:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;a href="https://www.ardanlabs.com/blog/2018/12/garbage-collection-in-go-part1-semantics.html"&gt;Garbage Collection In Go : Part I - Semantics&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://www.ardanlabs.com/blog/2019/05/garbage-collection-in-go-part2-gctraces.html"&gt;Garbage Collection In Go : Part II - GC Traces&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://www.ardanlabs.com/blog/2019/07/garbage-collection-in-go-part3-gcpacing.html"&gt;Garbage Collection In Go : Part III - GC Pacing&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Go语言支持自动内存管理，那还存在内存泄漏问题吗？&lt;/p&gt;</description></item></channel></rss>

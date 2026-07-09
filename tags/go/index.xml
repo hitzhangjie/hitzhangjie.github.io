@@ -1,17 +1,1554 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>go on</title><link>/tags/go/</link><description>Recent content in go on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 26 Jun 2026 18:42:00 +0800</lastBuildDate><atom:link href="/tags/go/index.xml" rel="self" type="application/rss+xml"/><item><title>深入浅出 Go Safepoints：从编译账本到抢占调度及精确式GC的底层真相</title><link>/blog/2026-06-26-go-safepoints/</link><pubDate>Fri, 26 Jun 2026 18:42:00 +0800</pubDate><guid>/blog/2026-06-26-go-safepoints/</guid><description>深度解密 Go 语言的 Safepoint：从编译账本到抢占调度的底层真相 # 在探讨 Go 语言的高性能并发时，我们经常会听到“非协作式抢占调度”和“精确式垃圾回收（Precise GC）”。而这两个底层特性的交汇点，正是 Safepoint（安全点）。 如果你去查阅资料，往往只能得到一句宏观的定义：“Safepoint 是程序执行中的一些特定位置，此时状态确定，可以安全暂停。” 但这并不能解开我们心中的疑惑：Safepoint 到底是什么？它是怎么记录的？为什么有些位置可以被抢占，而有些地方强行抢占就会导致系统崩溃？ 今天我们抛开宏观理论，用底层的眼光重新拆解 Safepoint。
-一、 为什么需要 Safepoint？CPU 眼中的“迷茫” # 在高级语言中，我们能一眼分清什么是普通数值，什么是对象指针：
-a := 10 // 普通整数 b := &amp;amp;User{} // 对象指针 然而，当 Go 编译器把这段代码翻译成二进制机器码后，在 CPU 的世界里，它们都只是寄存器（如 RAX, RBX）或栈内存里的一个 64 位的数字。 当垃圾回收（GC）需要扫描内存，或者系统发出信号想抢占这个 Goroutine 时，问题来了： 如果此时 CPU 寄存器 RAX 里的值是 0x00007f9c，GC 该不该顺着这个地址去追踪并标记内存？
-如果它其实是一个普通整数（比如一个时间戳），GC 却误把它当指针去追踪，程序就会因为访问非法地址而瞬间崩溃（Panic/段错误）。 如果它其实是一个真指针，GC 却漏掉了它，这块内存就会被提前释放，引发严重的内存悬空。 为了让 GC 能够在任意需要的时候，精准地辨别出寄存器和栈里“哪个是普通数据，哪个是指针”，Safepoint 机制应运而生。
-二、 Safepoint 的本质：编译期写死的“只读账本” # Safepoint 在底层根本不是一段拦截代码，也不是一个特殊的函数，它只是一个“位置记录”——也就是一个由编译器在编译期计算好，并打包放进可执行文件中的“位置与活动指针映射表”。 在编译阶段，编译器在生成机器码的同时，在后台偷偷拿一个小本本（静态存活分析，Liveness Analysis），把每一条核心机器指令的位置，以及在这个位置上，哪个寄存器/栈空间放的是活跃的指针，全部记录下来。 这个“账本”在编译完成后，会固化在可执行文件的只读数据段中（如 .</description></item><item><title>深入浅出 Go 非协作式抢占</title><link>/blog/2026-06-26-%E8%BF%90%E8%A1%8C%E6%97%B6%E8%B0%83%E5%BA%A6_go%E9%9D%9E%E5%8D%8F%E4%BD%9C%E5%BC%8F%E6%8A%A2%E5%8D%A0/</link><pubDate>Fri, 26 Jun 2026 18:01:57 +0800</pubDate><guid>/blog/2026-06-26-%E8%BF%90%E8%A1%8C%E6%97%B6%E8%B0%83%E5%BA%A6_go%E9%9D%9E%E5%8D%8F%E4%BD%9C%E5%BC%8F%E6%8A%A2%E5%8D%A0/</guid><description>在 Go 1.14 之前，Go 语言的调度器采用的是协作式抢占。这种机制存在一个致命的缺陷：如果一个 Goroutine 陷入了没有函数调用的死循环（例如纯 CPU 计算），它就会永久霸占线程，导致其他 Goroutine 饿死，甚至触发程序卡死或垃圾回收（GC）无法完成。
-为了解决这个问题，Go 1.14 引入了基于 SIGURG 信号的非协作式抢占（Non-cooperative Preemption）机制。本文将系统性地拆解这一机制的底层原理。
-1. 为什么被称为&amp;quot;非协作式&amp;quot;？ # 为了理解非协作式抢占，我们需要先对比它与传统协作式抢占的区别：
-特性 协作式抢占 (Go 1.14 之前) 非协作式抢占 (Go 1.14 及之后) 触发前提 依赖 Goroutine 主动配合。 强制执行，无需 Goroutine 配合。 检查时机 发生函数调用或内存分配时，检查栈溢出标志。 随时随地，由操作系统信号直接中断。 死循环应对 无法解决纯计算死循环（如for {}），会导致饿死。 完美解决，可在 10ms 内强行剥夺 CPU 执行权。 核心痛点：协作式抢占就像坐公交车，乘客（Goroutine）必须走到站台（函数调用点）才能下车。而非协作式抢占则像直升机索降，无论你在哪里，调度器都能直接把你&amp;quot;抓&amp;quot;走。
-2. 核心大招：基于 SIGURG 信号的底层看板 # 非协作式抢占的整个流程由系统监控线程、操作系统内核以及 Go 运行时（Runtime）共同协作完成：</description></item><item><title>TCP send 返回成功，真的意味着对端收到了吗？</title><link>/blog/2026-06-25-tcp-send-reliability-myth/</link><pubDate>Thu, 25 Jun 2026 10:00:00 +0800</pubDate><guid>/blog/2026-06-25-tcp-send-reliability-myth/</guid><description>TCP 连接 send 返回成功，真的意味着对端收到/处理了吗？先说结论，不光可能没处理，甚至收到都不一定收到。很多人说TCP不是可靠的吗？为什么像golang tcpconn.Write 返回了nil，竟然还有可能发送不成功呢？
-这是很多开发者的TCP认知误区。现如今很多网络服务器开发都是基于开发框架、RPC桩代码生成，网络通信被简化成了一个桩代码函数调用，开发者的技能也从系统调用、libev库之类的较深的理解慢慢会话为了RPC桩代码call boy :)
-背景 # 前几天同事问了我一个问题：我们框架里通过 send 通知对方服务，如果 send 没有返回失败，能不能 100% 确定对端收到了这个包？
-先对齐下概念：这里的send，是RPC时只发req但是不返回rsp给上层调用，在有些框架里也会用选项notify或者sendonly来标识；与send一应的还有一个call，这里的call指的是发送req并且返回rsp给上层调用，有些框架里会用选项sendrcv来标识。
-答案是不能。这个问题其实触及了一个非常经典的认知误区——很多开发者把&amp;quot;系统调用没报错&amp;quot;等同于&amp;quot;对端进程收到了数据&amp;quot;。这个误区之所以普遍，是因为它跨越了多个抽象层次：从应用层 buffer 到内核协议栈，从网卡队列到网络传输，再到对端操作系统和业务进程，每一层都有&amp;quot;你以为成功了但其实还没有&amp;quot;的环节。
-下面我们从几个层次来拆解这个问题。
-问题一：系统调用成功 ≠ 数据送达 # 层层缓存：everything is cache # 当你调用 tcpconn.Write(buf) 并且没有返回 error 时，这个&amp;quot;成功&amp;quot;到底意味着什么？答案是：它只意味着数据从应用层的 buffer 拷贝到了内核的 socket buffer。后面的路还很长：
-应用层 buffer ↓ tcpconn.Write (系统调用) 内核 socket buffer ← 系统调用到这里就返回了 ↓ TCP 协议栈（分段、拥塞控制、重传……） 网卡 TX queue (NIC buffer) ↓ 物理层 网络 ↓ 对端网卡 → 内核 → 应用层 系统调用的语义是&amp;quot;数据已提交给内核&amp;quot;，它不会等待数据通过网卡发送出去，更不会等待对端的 TCP ACK。这是有意为之的设计——如果每个 write 都要等到对端确认，那么一次 RTT 就会阻塞调用线程，性能将完全不可接受（后面还会细说）。</description></item><item><title>内存管理：Go GC停顿时间优化</title><link>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%81%9C%E9%A1%BF%E6%97%B6%E9%97%B4%E4%BC%98%E5%8C%96/</link><pubDate>Wed, 17 Jun 2026 07:39:00 +0800</pubDate><guid>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%81%9C%E9%A1%BF%E6%97%B6%E9%97%B4%E4%BC%98%E5%8C%96/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: -170px; }</description></item><item><title>内存管理 - Go GC 写屏障演进</title><link>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%86%99%E5%B1%8F%E9%9A%9C%E6%BC%94%E8%BF%9B/</link><pubDate>Wed, 17 Jun 2026 07:28:00 +0800</pubDate><guid>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%86%99%E5%B1%8F%E9%9A%9C%E6%BC%94%E8%BF%9B/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: -170px; }</description></item><item><title>内存管理：GC Barriers 读屏障 vs. 写屏障</title><link>/blog/2026-06-16-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gc_barriers/</link><pubDate>Tue, 16 Jun 2026 00:14:00 +0800</pubDate><guid>/blog/2026-06-16-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gc_barriers/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: -170px; }</description></item><item><title>内存管理：Go 如何压制内存碎片</title><link>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_go%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B9%8B%E7%A2%8E%E7%89%87%E6%8E%A7%E5%88%B6/</link><pubDate>Mon, 15 Jun 2026 19:40:00 +0800</pubDate><guid>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_go%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B9%8B%E7%A2%8E%E7%89%87%E6%8E%A7%E5%88%B6/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: -170px; }</description></item><item><title>内存管理：Linux Buddy Allocator</title><link>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_linuxbuddyallocator/</link><pubDate>Mon, 15 Jun 2026 19:00:00 +0800</pubDate><guid>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_linuxbuddyallocator/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: -170px; }</description></item><item><title>内存管理：Go 如何从OS申请内存</title><link>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_go%E5%A6%82%E4%BD%95%E4%BB%8Eos%E7%94%B3%E8%AF%B7%E5%86%85%E5%AD%98/</link><pubDate>Mon, 15 Jun 2026 08:00:00 +0800</pubDate><guid>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_go%E5%A6%82%E4%BD%95%E4%BB%8Eos%E7%94%B3%E8%AF%B7%E5%86%85%E5%AD%98/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: -170px; }</description></item><item><title>内存管理：从Go外部碎片优化到Linux透明巨页</title><link>/blog/2026-06-13-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B9%8B%E9%80%8F%E6%98%8E%E5%B7%A8%E9%A1%B5/</link><pubDate>Sat, 13 Jun 2026 10:00:00 +0800</pubDate><guid>/blog/2026-06-13-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B9%8B%E9%80%8F%E6%98%8E%E5%B7%A8%E9%A1%B5/</guid><description>THP（Transparent Huge Pages）是 Linux 内核中的一项内存管理技术。要理解它，我们得先聊聊 Linux 默认的内存管理方式。
-.iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: -170px; }</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Go on</title><link>/tags/go/</link><description>Recent content in Go on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 26 Jun 2026 18:42:00 +0800</lastBuildDate><atom:link href="/tags/go/index.xml" rel="self" type="application/rss+xml"/><item><title>深入浅出 Go Safepoints：从编译账本到抢占调度及精确式GC的底层真相</title><link>/blog/2026-06-26-go-safepoints/</link><pubDate>Fri, 26 Jun 2026 18:42:00 +0800</pubDate><guid>/blog/2026-06-26-go-safepoints/</guid><description>&lt;h2 id="深度解密-go-语言的-safepoint从编译账本到抢占调度的底层真相"&gt;深度解密 Go 语言的 Safepoint：从编译账本到抢占调度的底层真相 &lt;a href="#%e6%b7%b1%e5%ba%a6%e8%a7%a3%e5%af%86-go-%e8%af%ad%e8%a8%80%e7%9a%84-safepoint%e4%bb%8e%e7%bc%96%e8%af%91%e8%b4%a6%e6%9c%ac%e5%88%b0%e6%8a%a2%e5%8d%a0%e8%b0%83%e5%ba%a6%e7%9a%84%e5%ba%95%e5%b1%82%e7%9c%9f%e7%9b%b8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在探讨 Go 语言的高性能并发时，我们经常会听到“非协作式抢占调度”和“精确式垃圾回收（Precise GC）”。而这两个底层特性的交汇点，正是 Safepoint（安全点）。
+如果你去查阅资料，往往只能得到一句宏观的定义：“Safepoint 是程序执行中的一些特定位置，此时状态确定，可以安全暂停。”
+但这并不能解开我们心中的疑惑：Safepoint 到底是什么？它是怎么记录的？为什么有些位置可以被抢占，而有些地方强行抢占就会导致系统崩溃？
+今天我们抛开宏观理论，用底层的眼光重新拆解 Safepoint。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="一-为什么需要-safepointcpu-眼中的迷茫"&gt;一、 为什么需要 Safepoint？CPU 眼中的“迷茫” &lt;a href="#%e4%b8%80-%e4%b8%ba%e4%bb%80%e4%b9%88%e9%9c%80%e8%a6%81-safepointcpu-%e7%9c%bc%e4%b8%ad%e7%9a%84%e8%bf%b7%e8%8c%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在高级语言中，我们能一眼分清什么是普通数值，什么是对象指针：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;a := 10 // 普通整数
+b := &amp;amp;User{} // 对象指针
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;然而，当 Go 编译器把这段代码翻译成二进制机器码后，在 CPU 的世界里，它们都只是寄存器（如 RAX, RBX）或栈内存里的一个 64 位的数字。
+当垃圾回收（GC）需要扫描内存，或者系统发出信号想抢占这个 Goroutine 时，问题来了：
+如果此时 CPU 寄存器 RAX 里的值是 0x00007f9c，GC 该不该顺着这个地址去追踪并标记内存？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果它其实是一个普通整数（比如一个时间戳），GC 却误把它当指针去追踪，程序就会因为访问非法地址而瞬间崩溃（Panic/段错误）。&lt;/li&gt;
+&lt;li&gt;如果它其实是一个真指针，GC 却漏掉了它，这块内存就会被提前释放，引发严重的内存悬空。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;为了让 GC 能够在任意需要的时候，精准地辨别出寄存器和栈里“哪个是普通数据，哪个是指针”，Safepoint 机制应运而生。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="二-safepoint-的本质编译期写死的只读账本"&gt;二、 Safepoint 的本质：编译期写死的“只读账本” &lt;a href="#%e4%ba%8c-safepoint-%e7%9a%84%e6%9c%ac%e8%b4%a8%e7%bc%96%e8%af%91%e6%9c%9f%e5%86%99%e6%ad%bb%e7%9a%84%e5%8f%aa%e8%af%bb%e8%b4%a6%e6%9c%ac" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Safepoint 在底层根本不是一段拦截代码，也不是一个特殊的函数，它只是一个“位置记录”——也就是一个由编译器在编译期计算好，并打包放进可执行文件中的“位置与活动指针映射表”。
+在编译阶段，编译器在生成机器码的同时，在后台偷偷拿一个小本本（静态存活分析，Liveness Analysis），把每一条核心机器指令的位置，以及在这个位置上，哪个寄存器/栈空间放的是活跃的指针，全部记录下来。
+这个“账本”在编译完成后，会固化在可执行文件的只读数据段中（如 .gclocals 和 .pclntab 符号表）。运行时（Runtime）只有读取权限。&lt;/p&gt;</description></item><item><title>深入浅出 Go 非协作式抢占</title><link>/blog/2026-06-26-%E8%BF%90%E8%A1%8C%E6%97%B6%E8%B0%83%E5%BA%A6_go%E9%9D%9E%E5%8D%8F%E4%BD%9C%E5%BC%8F%E6%8A%A2%E5%8D%A0/</link><pubDate>Fri, 26 Jun 2026 18:01:57 +0800</pubDate><guid>/blog/2026-06-26-%E8%BF%90%E8%A1%8C%E6%97%B6%E8%B0%83%E5%BA%A6_go%E9%9D%9E%E5%8D%8F%E4%BD%9C%E5%BC%8F%E6%8A%A2%E5%8D%A0/</guid><description>&lt;p&gt;在 Go 1.14 之前，Go 语言的调度器采用的是协作式抢占。这种机制存在一个致命的缺陷：如果一个 Goroutine 陷入了没有函数调用的死循环（例如纯 CPU 计算），它就会永久霸占线程，导致其他 Goroutine 饿死，甚至触发程序卡死或垃圾回收（GC）无法完成。&lt;/p&gt;
+&lt;p&gt;为了解决这个问题，Go 1.14 引入了基于 SIGURG 信号的非协作式抢占（Non-cooperative Preemption）机制。本文将系统性地拆解这一机制的底层原理。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-为什么被称为非协作式"&gt;1. 为什么被称为&amp;quot;非协作式&amp;quot;？ &lt;a href="#1-%e4%b8%ba%e4%bb%80%e4%b9%88%e8%a2%ab%e7%a7%b0%e4%b8%ba%e9%9d%9e%e5%8d%8f%e4%bd%9c%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;为了理解非协作式抢占，我们需要先对比它与传统协作式抢占的区别：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;特性&lt;/th&gt;
+&lt;th&gt;协作式抢占 (Go 1.14 之前)&lt;/th&gt;
+&lt;th&gt;非协作式抢占 (Go 1.14 及之后)&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;触发前提&lt;/td&gt;
+&lt;td&gt;依赖 Goroutine 主动配合。&lt;/td&gt;
+&lt;td&gt;强制执行，无需 Goroutine 配合。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;检查时机&lt;/td&gt;
+&lt;td&gt;发生函数调用或内存分配时，检查栈溢出标志。&lt;/td&gt;
+&lt;td&gt;随时随地，由操作系统信号直接中断。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;死循环应对&lt;/td&gt;
+&lt;td&gt;无法解决纯计算死循环（如&lt;code&gt;for {}&lt;/code&gt;），会导致饿死。&lt;/td&gt;
+&lt;td&gt;完美解决，可在 10ms 内强行剥夺 CPU 执行权。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;核心痛点：协作式抢占就像坐公交车，乘客（Goroutine）必须走到站台（函数调用点）才能下车。而非协作式抢占则像直升机索降，无论你在哪里，调度器都能直接把你&amp;quot;抓&amp;quot;走。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="2-核心大招基于-sigurg-信号的底层看板"&gt;2. 核心大招：基于 SIGURG 信号的底层看板 &lt;a href="#2-%e6%a0%b8%e5%bf%83%e5%a4%a7%e6%8b%9b%e5%9f%ba%e4%ba%8e-sigurg-%e4%bf%a1%e5%8f%b7%e7%9a%84%e5%ba%95%e5%b1%82%e7%9c%8b%e6%9d%bf" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;非协作式抢占的整个流程由系统监控线程、操作系统内核以及 Go 运行时（Runtime）共同协作完成：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;+------------------+ 超过 10ms +-------------------+
+| | -----------------&amp;gt; | |
+| sysmon 监控线程 | | 向目标线程发送信号 |
+| | | |
++------------------+ +-------------------+
+|
+(发送 SIGURG)
+v
++------------------+ 修改 PC 寄存器 +-------------------+
+| | | |
+| 恢复执行用户代码 | &amp;lt;----------------- | sighandler 阶段 |
+| | | |
++------------------+ +-------------------+
+|
+(流向改变)
+v
++------------------+ 保存现场 &amp;amp; 挂起 +-------------------+
+| | | |
+| asyncPreempt() | -----------------&amp;gt; | 调度器切换新协程 |
+| | | |
++------------------+ +-------------------+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="详细步骤"&gt;详细步骤 &lt;a href="#%e8%af%a6%e7%bb%86%e6%ad%a5%e9%aa%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;触发检测&lt;/strong&gt;：Go 语言的后台监控线程 &lt;code&gt;sysmon&lt;/code&gt; 周期性运行。如果发现某个 Goroutine 占用单线程时间超过 10ms，就会将其标记为可抢占，并获取其绑定的操作系统线程（M）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;发送信号&lt;/strong&gt;：&lt;code&gt;sysmon&lt;/code&gt; 调用系统调用，向该线程发送一个 &lt;code&gt;SIGURG&lt;/code&gt;（紧急带外数据信号）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;信号捕获&lt;/strong&gt;：操作系统中断当前线程的执行，将控制权交给 Go 运行时提前注册好的信号处理函数 &lt;code&gt;sighandler&lt;/code&gt;。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id="为什么选择-sigurg-信号"&gt;为什么选择 SIGURG 信号？ &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e9%80%89%e6%8b%a9-sigurg-%e4%bf%a1%e5%8f%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在 Unix/Linux 系统中，&lt;code&gt;SIGALRM&lt;/code&gt; 常用于定时器，但容易与 CGO 或用户自定义计时器冲突。而 &lt;code&gt;SIGURG&lt;/code&gt; 在标准应用中极少被显式使用，且各大操作系统对其支持非常成熟，不会触发默认的进程终止，因此是绝佳的&amp;quot;内鬼信号&amp;quot;。&lt;/p&gt;</description></item><item><title>TCP send 返回成功，真的意味着对端收到了吗？</title><link>/blog/2026-06-25-tcp-send-reliability-myth/</link><pubDate>Thu, 25 Jun 2026 10:00:00 +0800</pubDate><guid>/blog/2026-06-25-tcp-send-reliability-myth/</guid><description>&lt;p&gt;TCP 连接 send 返回成功，真的意味着对端收到/处理了吗？先说结论，不光可能没处理，甚至收到都不一定收到。很多人说TCP不是可靠的吗？为什么像golang &lt;code&gt;tcpconn.Write&lt;/code&gt; 返回了nil，竟然还有可能发送不成功呢？&lt;/p&gt;
+&lt;p&gt;这是很多开发者的TCP认知误区。现如今很多网络服务器开发都是基于开发框架、RPC桩代码生成，网络通信被简化成了一个桩代码函数调用，开发者的技能也从系统调用、libev库之类的较深的理解慢慢会话为了RPC桩代码call boy :)&lt;/p&gt;
+&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;前几天同事问了我一个问题：我们框架里通过 &lt;code&gt;send&lt;/code&gt; 通知对方服务，如果 &lt;code&gt;send&lt;/code&gt; 没有返回失败，能不能 100% 确定对端收到了这个包？&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;先对齐下概念：这里的send，是RPC时只发req但是不返回rsp给上层调用，在有些框架里也会用选项notify或者sendonly来标识；与send一应的还有一个call，这里的call指的是发送req并且返回rsp给上层调用，有些框架里会用选项sendrcv来标识。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;答案是不能。这个问题其实触及了一个非常经典的认知误区——很多开发者把&amp;quot;系统调用没报错&amp;quot;等同于&amp;quot;对端进程收到了数据&amp;quot;。这个误区之所以普遍，是因为它跨越了多个抽象层次：从应用层 buffer 到内核协议栈，从网卡队列到网络传输，再到对端操作系统和业务进程，每一层都有&amp;quot;你以为成功了但其实还没有&amp;quot;的环节。&lt;/p&gt;
+&lt;p&gt;下面我们从几个层次来拆解这个问题。&lt;/p&gt;
+&lt;h1 id="问题一系统调用成功--数据送达"&gt;问题一：系统调用成功 ≠ 数据送达 &lt;a href="#%e9%97%ae%e9%a2%98%e4%b8%80%e7%b3%bb%e7%bb%9f%e8%b0%83%e7%94%a8%e6%88%90%e5%8a%9f--%e6%95%b0%e6%8d%ae%e9%80%81%e8%be%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="层层缓存everything-is-cache"&gt;层层缓存：everything is cache &lt;a href="#%e5%b1%82%e5%b1%82%e7%bc%93%e5%ad%98everything-is-cache" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当你调用 &lt;code&gt;tcpconn.Write(buf)&lt;/code&gt; 并且没有返回 error 时，这个&amp;quot;成功&amp;quot;到底意味着什么？答案是：&lt;strong&gt;它只意味着数据从应用层的 buffer 拷贝到了内核的 socket buffer&lt;/strong&gt;。后面的路还很长：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;应用层 buffer
+↓ tcpconn.Write (系统调用)
+内核 socket buffer ← 系统调用到这里就返回了
+↓ TCP 协议栈（分段、拥塞控制、重传……）
+网卡 TX queue (NIC buffer)
+↓ 物理层
+网络
+↓
+对端网卡 → 内核 → 应用层
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;系统调用的语义是&amp;quot;数据已提交给内核&amp;quot;，它&lt;strong&gt;不会&lt;/strong&gt;等待数据通过网卡发送出去，更不会等待对端的 TCP ACK。这是有意为之的设计——如果每个 &lt;code&gt;write&lt;/code&gt; 都要等到对端确认，那么一次 RTT 就会阻塞调用线程，性能将完全不可接受（后面还会细说）。&lt;/p&gt;</description></item><item><title>内存管理：Go GC停顿时间优化</title><link>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%81%9C%E9%A1%BF%E6%97%B6%E9%97%B4%E4%BC%98%E5%8C%96/</link><pubDate>Wed, 17 Jun 2026 07:39:00 +0800</pubDate><guid>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%81%9C%E9%A1%BF%E6%97%B6%E9%97%B4%E4%BC%98%E5%8C%96/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/aio/DYmJzY0RsRWVUTnd6"/&gt;
+&lt;/div&gt;</description></item><item><title>内存管理 - Go GC 写屏障演进</title><link>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%86%99%E5%B1%8F%E9%9A%9C%E6%BC%94%E8%BF%9B/</link><pubDate>Wed, 17 Jun 2026 07:28:00 +0800</pubDate><guid>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%86%99%E5%B1%8F%E9%9A%9C%E6%BC%94%E8%BF%9B/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/aio/DYmVqUm5Od2puT2Z6"/&gt;
+&lt;/div&gt;</description></item><item><title>内存管理：GC Barriers 读屏障 vs. 写屏障</title><link>/blog/2026-06-16-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gc_barriers/</link><pubDate>Tue, 16 Jun 2026 00:14:00 +0800</pubDate><guid>/blog/2026-06-16-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gc_barriers/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/doc/DYnRXSnJCb3RNdHJG"/&gt;
+&lt;/div&gt;</description></item><item><title>内存管理：Go 如何压制内存碎片</title><link>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_go%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B9%8B%E7%A2%8E%E7%89%87%E6%8E%A7%E5%88%B6/</link><pubDate>Mon, 15 Jun 2026 19:40:00 +0800</pubDate><guid>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_go%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B9%8B%E7%A2%8E%E7%89%87%E6%8E%A7%E5%88%B6/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/aio/DYmJLWHhFa292SmtH"/&gt;
+&lt;/div&gt;</description></item><item><title>内存管理：Linux Buddy Allocator</title><link>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_linuxbuddyallocator/</link><pubDate>Mon, 15 Jun 2026 19:00:00 +0800</pubDate><guid>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_linuxbuddyallocator/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/aio/DYkVwV21VSG5QYUxh"/&gt;
+&lt;/div&gt;</description></item><item><title>内存管理：Go 如何从OS申请内存</title><link>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_go%E5%A6%82%E4%BD%95%E4%BB%8Eos%E7%94%B3%E8%AF%B7%E5%86%85%E5%AD%98/</link><pubDate>Mon, 15 Jun 2026 08:00:00 +0800</pubDate><guid>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_go%E5%A6%82%E4%BD%95%E4%BB%8Eos%E7%94%B3%E8%AF%B7%E5%86%85%E5%AD%98/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/aio/DYmhQdEVDUXNxSnB0"/&gt;
+&lt;/div&gt;</description></item><item><title>内存管理：从Go外部碎片优化到Linux透明巨页</title><link>/blog/2026-06-13-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B9%8B%E9%80%8F%E6%98%8E%E5%B7%A8%E9%A1%B5/</link><pubDate>Sat, 13 Jun 2026 10:00:00 +0800</pubDate><guid>/blog/2026-06-13-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B9%8B%E9%80%8F%E6%98%8E%E5%B7%A8%E9%A1%B5/</guid><description>&lt;p&gt;THP（Transparent Huge Pages）是 Linux 内核中的一项内存管理技术。要理解它，我们得先聊聊 Linux 默认的内存管理方式。&lt;/p&gt;
+&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/aio/DYnZ4VVVSVkxjbHFG"/&gt;
+&lt;/div&gt;</description></item><item><title>内存管理：Go垃圾回收之混合写屏障</title><link>/blog/2026-06-11-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/</link><pubDate>Thu, 11 Jun 2026 15:00:00 +0800</pubDate><guid>/blog/2026-06-11-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/doc/DYmZKd0NVQU9ObHRL"/&gt;
+&lt;/div&gt;</description></item><item><title>GoTalk - Go Execution Tracer</title><link>/blog/2025-11-08-go_execution_tracer/</link><pubDate>Sat, 08 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/2025-11-08-go_execution_tracer/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 90%;
+border: none;
+position: absolute;
+top: -200px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/slide/DYnVocFl6dHhWdnBO"/&gt;
+&lt;/div&gt;</description></item><item><title>GoTalk - Go内存管理</title><link>/blog/2025-11-08-go_memory_management/</link><pubDate>Sat, 08 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/2025-11-08-go_memory_management/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 90%;
+border: none;
+position: absolute;
+top: -200px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/slide/DYlNsdU1GQ3ZKeEdZ"/&gt;
+&lt;/div&gt;</description></item><item><title>how go.mod works?</title><link>/blog/2022-11-24-how-go.mod-works/</link><pubDate>Thu, 24 Nov 2022 15:31:49 +0800</pubDate><guid>/blog/2022-11-24-how-go.mod-works/</guid><description>&lt;h3 id="gomodgosum内容"&gt;go.mod/go.sum内容 &lt;a href="#gomodgosum%e5%86%85%e5%ae%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;go.mod里面包含的信息包括：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;当前module构建要求的最小go版本&lt;/li&gt;
+&lt;li&gt;依赖的module及校验和信息&lt;/li&gt;
+&lt;li&gt;为了方便本地开发测试的一些replace信息&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这里不讨论vendor相关的modules.txt中的内容。&lt;/p&gt;
+&lt;h3 id="最小go版本号"&gt;最小go版本号 &lt;a href="#%e6%9c%80%e5%b0%8fgo%e7%89%88%e6%9c%ac%e5%8f%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;我们举个例子来描述下。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;如果当前module的go.mod是go 1.16，等价于编译的时候go build -gcflags &amp;lsquo;-lang=1.16&amp;rsquo; / go tool compile -lang=1.16。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;假设我们现在安装的go版本是go1.19。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这种情况下执行编译测试：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;如果我们用了范型（go1.18开始支持），go编译器编译时会检查，
+本来go1.19肯定能编译1.18的范型代码，但是它会报错出来，因为go.mod里声明的go版本，是当前项目支持的最小go版本，有可能别人不是1.19而是1.15,1.17，所以要报错提示下&lt;/p&gt;
+&lt;p&gt;我们还没有用那些1.16.5以后的新特性非得要新版本的go来编，所以之前能正常编。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;如果我们安装的go1.15，go.mod里面的1.16高了，也会先尝试编译，编过了就编过了，编不过就报错最小版本是1.16.5
+比如机器上现在是1.19，可以go.mod改成1.20正常编过&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;如果因为-lang编译导致的编不过，如果go.mod里面的版本比当前安装的版本高，还会打印出来 module requires go 1.21，提示安装新版本&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="依赖信息"&gt;依赖信息 &lt;a href="#%e4%be%9d%e8%b5%96%e4%bf%a1%e6%81%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;依赖的module，除了指明importPath，还要指明version，才能完整指明一个依赖。这个应该没什么疑问，所以大家都会提交go.mod文件。&lt;/p&gt;
+&lt;p&gt;再说下校验和，有什么用呢？防止包内容被篡改。有些同学因为什么原因导致校验和经常冲突，需要解决冲突，所以直接不提交go.sum文件了，这是十分错误的。&lt;/p&gt;
+&lt;p&gt;有同学可能会觉得这些繁琐的步骤很荒唐，其实并不是，&lt;strong&gt;可重复的制品构建&lt;/strong&gt;，是一门非常重要的工程上的保证手段，为了达到此目的，甚至还有封闭构建、构建容器等其他方法来提供进一步的保证。&lt;/p&gt;
+&lt;h3 id="本文小结"&gt;本文小结 &lt;a href="#%e6%9c%ac%e6%96%87%e5%b0%8f%e7%bb%93" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;本文简单记录了下go.mod/go.sum相关的知识点，可能对刚接触这块的同学比较有价值 :)&lt;/p&gt;</description></item><item><title>go如何触发垃圾回收的</title><link>/blog/2022-11-20-go%E5%A6%82%E4%BD%95%E8%A7%A6%E5%8F%91%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</link><pubDate>Sun, 20 Nov 2022 20:39:22 +0800</pubDate><guid>/blog/2022-11-20-go%E5%A6%82%E4%BD%95%E8%A7%A6%E5%8F%91%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</guid><description>&lt;h2 id="前言"&gt;前言 &lt;a href="#%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;go触发GC有这么几个时机，内存分配时触发mallogc，定时触发sysmon，手动触发runtime.GC、debug.FreeOSMemory，其中内存分配时触发是go是重中之重，go runtime以此来平衡好内存分配、内存回收的节奏以让内存占用维持在一个合适的水准。本文对内存分配过程中触发GC的一些设计考量进行了总结梳理。&lt;/p&gt;
+&lt;h2 id="应该听过mark-assist"&gt;应该听过“mark assist” &lt;a href="#%e5%ba%94%e8%af%a5%e5%90%ac%e8%bf%87mark-assist" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;gc过程中mutator分配内存时可能会被搞去做assistg,去辅助扫描标记一些对象是否该回收的工作,当我的辅助标记内存数量减去要申请的内存数,如果为负数时,相当于我申请的比辅助标记的多,相当于欠债了,这个时候我就得去做些辅助标记的工作 gcAssistBytes:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;然后根据当前内存使用情况\扫描情况\下次GC的heapgoal,计算出我应该辅助标记多少,才能保证达到堆大小时GC标记工作恰好能完成,让我去干活&lt;/li&gt;
+&lt;li&gt;这个时候干活之前会先检查下bgMarkWorker因为扫描工作贡献的信用分,然后我可以借用这个信用分来偿还债务,以减少扫描工作,或者完全避免扫描工作&lt;/li&gt;
+&lt;li&gt;如果依旧欠债,那就干活呗,后面会执行到gcDrainN,去执行一些标记类的工作
+&lt;ul&gt;
+&lt;li&gt;这些标记类的工作从何而来呢,比如写屏障记录下来的一些需要去扫描的对象&lt;/li&gt;
+&lt;li&gt;执行完了这个扫描之后,这个assistG.gcAssistBytes就会加上扫描的字节数,相当于攒的一点信用分&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;干完这些之后,才允许你申请内存\分配对象,哈哈哈!&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;goroutine可以去做些mark assist之类的工作的前提是，GC已经进入了GCMark阶段，那内存分配期间GC是什么如何被触发的呢？&lt;/p&gt;
+&lt;h2 id="gc什么情况下被触发的"&gt;GC什么情况下被触发的 &lt;a href="#gc%e4%bb%80%e4%b9%88%e6%83%85%e5%86%b5%e4%b8%8b%e8%a2%ab%e8%a7%a6%e5%8f%91%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;关于什么时候触发GC，严谨一点，内存分配期间何时触发的GC，这里不考虑sysmon触发、手动runtime.GC()触发，ok。&lt;/p&gt;
+&lt;h3 id="gogcgomemlimitheapgoal"&gt;GOGC\GOMEMLIMIT\heapGoal &lt;a href="#gogcgomemlimitheapgoal" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;我们应该都这样的认识阶段，通过GOGC、GOMEMLIMIT可以计算出下次GC时的heapGoal，等堆内存占用达到这个heapGoal时会触发GC。&lt;/p&gt;
+&lt;p&gt;但是严格来讲，理解成接下来内存占用达到heapGoal才触发GC，是不正确的。&lt;/p&gt;
+&lt;h3 id="引入gc-trigger"&gt;引入GC Trigger &lt;a href="#%e5%bc%95%e5%85%a5gc-trigger" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;为了触发GC，还有一个概念，叫GC trigger，它的值heapGoal要小些，在GCOff阶段，内存分配过程中会检查当前heapLive大小是否超过了这个trigger，是则启动gc（gcStart）&lt;/li&gt;
+&lt;li&gt;那个协程来负责检查是否启动gc，可以理解成所有的协程，协程如果是申请大内存（&amp;gt;32K）则一定会做上述检查，小内存为了效率则不一定每次检查，当如果申请小内存（tiny or small）如果过程中span不足发生了refill也会做上述检查（shouldhelpgc）&lt;/li&gt;
+&lt;li&gt;当启动了GC之后，接下来goroutines如果涉及到内存分配，就会转入markAssist阶段，要分配多少，先要干一定量的标记扫描的活才行（内存debt/assist设计）&lt;/li&gt;
+&lt;li&gt;那么heapGoal干嘛用的呢，前面提到的内存debt/assist设计，就是为了在当前堆大小达到heapGoal时尽量完成内存的标记扫描，将markbits改成allocbits，未使用的就可以复用或者等下个GC cycle阶段回收&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;所以从GC trigger到heapGoal，这中间是有一些考量的，如果只认为GC heapGoal控制GC的触发，其实是认识不到位的。ps：可能在这这个提案 &lt;a href="https://go.googlesource.com/proposal/+/a216b56e743c5b6b300b3ef1673ee62684b5b63b/design/44167-gc-pacer-redesign.md"&gt;GC pacer redesign&lt;/a&gt; 实现之前确实是根据heapGoal来触发的，但是这会导致内存的不受限制的增长。&lt;/p&gt;
+&lt;h2 id="gc-trigger计算"&gt;GC Trigger计算 &lt;a href="#gc-trigger%e8%ae%a1%e7%ae%97" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;那么这个GC trigger是如何计算的呢？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;首先它不能比heapGoal小很多，那可能会导致GC启动过早，写屏障打开后程序latency会上升，而且如果内存分配比较快GC一直触发运行，期间分配的对象会一直标记为black，Rss会上升&lt;/li&gt;
+&lt;li&gt;也不能过晚触发，可能导致标记扫描阶段assistG的工作量过大，latency会比较明显，而且会堆大小增长会超出预期。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;至于如何计算的，可以先看下上面这个提案中关于GC trigger的设计，然后翻下源码瞧瞧……额，还是简单总结下吧：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;明确下目标，GC trigger是用来确定何时触发GC的一个值，当内存分配导致堆大小变化时会检查当前heapLive&amp;gt;trigger来决定是否触发GC（申请大内存必检查，申请小内存为了效率一般不检查，但在span不足refill后检查）&lt;/li&gt;
+&lt;li&gt;GC trigger如何计算出来的：
+&lt;ul&gt;
+&lt;li&gt;首先根据GOGC、GOMEMLIMIT算出下次GC的heapGoal，&lt;/li&gt;
+&lt;li&gt;然后根据minTrigger=heapMarked+(heapGoal-heapMarked)*0.7，&lt;/li&gt;
+&lt;li&gt;然后maxTrigger=heapMarked+(heapGoal-heapMarked)*.0.95，如果堆比较小就用这里算出的值意味着总有一个buffer来赶在内存占用达到heapGoal之前启动GC。如果堆比较大但是有没有多少扫描工作，就用heapGoal-defaultHeapMinimum(4MB)来作为maxTrigger，这也是一种优化。
+ps: 这里的heapMarked表示上轮GC标记结束时堆大小。这两个值，相当于确定了一个候选的触发GC的heapLive范围，最终trigger值一定要大于等于minTrigger，一定要小于等于maxTrigger。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;确定trigger：
+&lt;ul&gt;
+&lt;li&gt;确定runway，根据上轮GC过程记录的consMark（程序分配内存、扫描内存量的比值）、实际的扫描内存的量（heap+stack+global）以及并发标记执行阶段mutator:collector的CPU执行时间的比值3:1，可以大致算出下一轮GC期间内存使用量能涨到多少，这个源码中选了个词叫runway，意思是我们内存使用量能走多远。&lt;/li&gt;
+&lt;li&gt;很明显如果这个值如果大于heapGoal说明我们很可能会让堆占用走高，此时需要更激进地触发GC，所以此时的trigger就选下界minTrigger。&lt;/li&gt;
+&lt;li&gt;如果这个值比比heapGoal小，那就用goal-runway作为trigger，但是这个值表示的时啥？如果这个值比minTrigger小就用minTrigger。&lt;/li&gt;
+&lt;li&gt;前面还算了个最大trigger，如果这里的trigger值比maxTrigger还大，那trigger要改成maxTrigger。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="put-it-together"&gt;Put it together &lt;a href="#put-it-together" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;OK，现在知道了trigger值是怎么详细计算的了，好，我们继续串一下：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果当前没有触发GC，当前goroutine正在执行内存分配
+&lt;ul&gt;
+&lt;li&gt;根据当前内存分配的量来确定是否shouldhelpgc（&amp;gt;32K一定为true，反之则要根据是否有span不足refill）
+&lt;ul&gt;
+&lt;li&gt;如果否就分配完内存该干嘛干嘛去就完了&lt;/li&gt;
+&lt;li&gt;如果需要辅助gc，首先先计算下当前trigger（上面详细描述了如何计算的），然后比较下当前heapLive、trigger的大小
+&lt;ul&gt;
+&lt;li&gt;如果heapLive &amp;lt; trigger，不用触发GC，该干嘛干嘛&lt;/li&gt;
+&lt;li&gt;如果heapLive &amp;gt; trigger，发起GC，即调用gcStart()，这里其实是发起一轮完整的GC，等它完成后再返回来该干嘛干嘛&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;当有其他goroutine发起了GC，进入GCMark阶段后gcBlackenEnabled=1表示其他mutator要把新分配对象标记为黑，可以理解成当前进入GC阶段了
+&lt;ul&gt;
+&lt;li&gt;每一个goroutine都要维护一个账本，自己分配了多少内存，自己辅助标记了多少内存&lt;/li&gt;
+&lt;li&gt;如果自己分配的内存没有超过辅助标记的内存，gcAssistBytes&amp;gt;0，没欠债该干嘛干嘛去&lt;/li&gt;
+&lt;li&gt;如果自己分配的内存超过自己辅助标记的内存，表示自己欠债了，欠债了怎么办？就得还债，还债就得去辅助标记内存，这就是我们说的markAssist
+&lt;ul&gt;
+&lt;li&gt;如果我要分配npages的内存，那么要辅助扫描多少内存呢，这个运行时有个计算规则，总的目标是在GC发起后、内存占用达到heapGoal之前我能把所有的内存扫描完&lt;/li&gt;
+&lt;li&gt;确定了要扫描多少内存后，就可以去干活了？等等，当前goroutine欠的债，也可以先找大佬帮还一下，这就是bgMarkWorker攒的credit（bytes），如果一次还不完，欠多少就是多少，自己去扫描就完了
+ps: 这样有个好处，当前goroutine可以不用引入扫描内存的开销就可以继续干自己该干的事情。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;这个阶段会更新当前goroutine的这个账本，如果当前GC Cycle内它还有动作，就可以继续拿来秋后算账&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;当一轮GC Cycle结束时，go runtime会将当前的gcMarkBits作为gcAllocBits，意思就是这些没有被标记的内存都可以在后续分配内存对象时复用了，实在没用的就可以还给操作系统了。&lt;/p&gt;</description></item><item><title>go1.18泛型支持</title><link>/blog/2022-11-10-go1.18%E6%B3%9B%E5%9E%8B%E6%94%AF%E6%8C%81/</link><pubDate>Fri, 11 Nov 2022 01:00:44 +0800</pubDate><guid>/blog/2022-11-10-go1.18%E6%B3%9B%E5%9E%8B%E6%94%AF%E6%8C%81/</guid><description>&lt;h1 id="go118-泛型支持"&gt;go1.18 泛型支持 &lt;a href="#go118-%e6%b3%9b%e5%9e%8b%e6%94%af%e6%8c%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="关于泛型编程"&gt;关于泛型编程 &lt;a href="#%e5%85%b3%e4%ba%8e%e6%b3%9b%e5%9e%8b%e7%bc%96%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="首先什么是泛型呢"&gt;首先什么是泛型呢？ &lt;a href="#%e9%a6%96%e5%85%88%e4%bb%80%e4%b9%88%e6%98%af%e6%b3%9b%e5%9e%8b%e5%91%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Generic programming is &lt;strong&gt;a style of computer programming in which algorithms are written in terms of types to-be-specified-later that are then instantiated when needed for specific types provided as parameters&lt;/strong&gt;.&lt;/p&gt;
+&lt;h3 id="泛型编程有啥好处呢"&gt;泛型编程有啥好处呢？ &lt;a href="#%e6%b3%9b%e5%9e%8b%e7%bc%96%e7%a8%8b%e6%9c%89%e5%95%a5%e5%a5%bd%e5%a4%84%e5%91%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;cleaner code and simpler API (not always)&lt;/li&gt;
+&lt;li&gt;improve code exectution performance (not always)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="没有泛型的日子"&gt;没有泛型的日子 &lt;a href="#%e6%b2%a1%e6%9c%89%e6%b3%9b%e5%9e%8b%e7%9a%84%e6%97%a5%e5%ad%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="如何应付的"&gt;如何应付的 &lt;a href="#%e5%a6%82%e4%bd%95%e5%ba%94%e4%bb%98%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;go1.18之前苦于没有范型编程，开发人员一般会这么做：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;go编译器对内置类型有一定的范型支持，比如new、make、len、cap&lt;/li&gt;
+&lt;li&gt;go支持reflection和interace，通过这两个一定程度上可以模拟范型的能力&lt;/li&gt;
+&lt;li&gt;go支持//go:generate，通过自定义工具可以生成一些“重复”代码&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="痛点依然在"&gt;痛点依然在 &lt;a href="#%e7%97%9b%e7%82%b9%e4%be%9d%e7%84%b6%e5%9c%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;即便是通过反射、interface来模拟也把风险从编译时类型安全推到了运行时检查部分，生成代码也会有大量重复性代码……所以痛点依然存在。&lt;/p&gt;
+&lt;p&gt;go1.18中终于解决了这个问题，虽然现在来看还没那么尽善尽美，但是总算在路上了。&lt;/p&gt;
+&lt;h2 id="go泛型知识点"&gt;go泛型知识点 &lt;a href="#go%e6%b3%9b%e5%9e%8b%e7%9f%a5%e8%af%86%e7%82%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;go1.19当前范型设计实现，也还没完全实现提案&lt;a href="https://go.googlesource.com/proposal/+/refs/heads/master/design/43651-type-parameters.md"&gt;type parameters proposal&lt;/a&gt;，这个提案也并非未来go泛型实现的天花板，会一步步完善。尽管还不尽善尽美，但是将来go泛型编程应该有较大的应用场景。现在有些库已经在用泛型重写了。&lt;/p&gt;
+&lt;h3 id="自定义泛型"&gt;自定义泛型： &lt;a href="#%e8%87%aa%e5%ae%9a%e4%b9%89%e6%b3%9b%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;1.18支持了自定义范型（customized generics），这个提法是为了与内置的泛型支持区分开。所说的内置泛型，指的是类似new、make、len、cap这样的一些函数，或者map[k]v这样的数据结构类型，这些有泛型的思想和支持。&lt;/p&gt;</description></item><item><title>go垃圾回收调优</title><link>/blog/2022-11-10-go%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E8%B0%83%E4%BC%98/</link><pubDate>Thu, 10 Nov 2022 10:54:26 +0800</pubDate><guid>/blog/2022-11-10-go%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E8%B0%83%E4%BC%98/</guid><description>&lt;h3 id="相关背景"&gt;&lt;strong&gt;相关背景&lt;/strong&gt; &lt;a href="#%e7%9b%b8%e5%85%b3%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在go1.19之前，go程序内存调优的方式主要是通过环境变量GOGC（或者debug.SetGCPercent(?)）来控制，&lt;/p&gt;
+&lt;p&gt;它的效果是影响go runtime计算nextGC heapGoal的大小：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;较早的版本计算方式为：&lt;strong&gt;heapGoal = heapMarked + (heapMarked) * GOGC / 100&lt;/strong&gt;，&lt;/li&gt;
+&lt;li&gt;后续go迭代时发现非堆内存也是有影响的，于是go1.18完善了下 &lt;strong&gt;heapGoal = heapMarked + (heapMarked + GCROOTs) * GOGC/100&lt;/strong&gt;，这里的&lt;strong&gt;GCROOTS=(gstacks+globals)&lt;/strong&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;GC pacer的目的就是为了根据上述公式计算下次GC的heapGoal，然后在必要时（比如malloc时）决定是否要GC。&lt;/p&gt;
+&lt;p&gt;默认初始heapGoal大小为4MB，如果靠GOGC来控制的话，会比较频繁触发GC，对绝大多数server程序而言频繁GC占比较多CPU，程序整体吞吐、响应延迟会受一定影响。&lt;/p&gt;
+&lt;p&gt;所以业界一般会通过两种方式来调优：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;ballast，利用一块不用的大内存（比如1GB），来推高下次GC的heapGoal，通过这种方式来降低GC频率&lt;/li&gt;
+&lt;li&gt;GC tuner，动态设置GOGC，定义一个对象为其设置finalizer，每轮GC结束时触发它并检查当前进程当前的内存占用情况，并与允许的最大内存占用进行比较，并计算出达到最大内存占用才触发GC时GOGC应该设定的值（其思路和go1.19 GOMEMLIMIT类似）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="项目以前的方案"&gt;项目以前的方案 &lt;a href="#%e9%a1%b9%e7%9b%ae%e4%bb%a5%e5%89%8d%e7%9a%84%e6%96%b9%e6%a1%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;项目以前使用的是go1.16.5，这个版本中也只有GOGC一个控制GC的选项，使用的是ballast的方案：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;在服务初始化阶段去初始化一个大内存而推高下次GC时的heapGoal&lt;/li&gt;
+&lt;li&gt;不同程序可能对内存需求不同，配置文件中允许自定义ballast大小，默认为1GB&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;包括业界在内都是介绍了ballast如何使用：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;全局变量声明，垃圾回收器会认为其在整个进程生命周期内reachable&lt;/li&gt;
+&lt;li&gt;局部变量声明，通过runtime.KeepAlive(&amp;hellip;)来欺骗垃圾回收器这之前对象reachable&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;但是，好像只看到了一派祥和，我们使用时却遇到了Rss占用问题。&lt;/p&gt;
+&lt;h4 id="问题1ballast占物理内存"&gt;问题1：ballast占物理内存 &lt;a href="#%e9%97%ae%e9%a2%981ballast%e5%8d%a0%e7%89%a9%e7%90%86%e5%86%85%e5%ad%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;在测试环境（很多套测试环境）都有比较大概率发现服务在几乎空闲时，物理内存占用竟然高达1.1g…这很不符合常理。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;通过pprof跟踪内存分配，发现内存分配比较大的路径就是这个压舱石（pprof mem采样是看的虚拟内存）。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;然后top、pmap等跟踪可疑进程发现其确实存在1GB左右的anon区域，且该区域为dirty**（其实gdb把内存dump一看全是0，就很容易联想到类似对象分配后memset的操作）**。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;根据了解的go GC、内存分配器相关的知识，了解到&lt;strong&gt;go向操作系统申请内存时通过mmap的方式&lt;/strong&gt;，&lt;strong&gt;释放内存是通过madvise+MADV_DONTNEED/MADV_FREE&lt;/strong&gt;的方式。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;go1.12的时候改成了FREE默认代替DONTNEED，这两个选项是有区别的，详细的可以看下man手册（man 2 madvise），FREE的效率更好一点，但是也有一些不好的副作用。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;go1.16之后linux下又恢复成了DONTNEED，因为FREE不会立即让进程的RSS降下来，会误导很多监控、开发运维人员&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;内存分配器为了提高分配效率、GC效率会进行一定的组织，这些概念大家应该有听说过，mheap、spanClass、mcentral、mspan、markbits、allocbits，还有p.mcache。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;smallSize&amp;lt;=32K的分配，走p.mcache（tinySize的更特殊一点，略）&lt;/li&gt;
+&lt;li&gt;largeSize&amp;gt;32K的分配，直接走mheap&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些对象不管是从p.mcache-&amp;gt;mcentral-&amp;gt;arena-&amp;gt;mheap路径来分配的，还是从mheap直接分配的，最终都是建立在从操作系统申请来的page里的，而这些page是由page allocator申请的。即使是很大的对象，最终也是以存在span描述的区域里的。&lt;/p&gt;
+&lt;p&gt;一个span可以很多pages，而在里面分配一个对象时，这些page是可以复用的，如果之前其中一个page用过了，但是现在申请一个更大的对象，之前这个旧的page也是所需pages中的一个，那么分配器会先清零memclr&amp;hellip;这段内存区域，这样在操作系统看来就是要真正分配内存，并且因为写了0，那就是全为dirty。&lt;/p&gt;
+&lt;p&gt;ps：可能我们以为我mmap新申请的内存页面，不写不也是0，为什么不只写之前复用过的page呢？嗯，道理归道理，现在的分配器实现就是这么干的，详见&lt;code&gt;allocNeedsZero(base, npages)&lt;/code&gt;这个函数。&lt;/p&gt;
+&lt;p&gt;结论：就是通过ballast这种方案初始化有点tricky，在更大范围的应用中不是很可靠：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;虽然通过一些尽早分配的办法可以避免上述问题，但是不太可靠。因为不确定哪天import了一个包，里面干了些内存分配比较多的操作，说不定影响到ballast占物理内存。&lt;/li&gt;
+&lt;li&gt;另外ballast这种方案不可移植，它是否占内存与特定平台也有一定关系，并不总是说mmap了一段内存过来不读写就不占内存，windows下的分配就是立即分配。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4 id="问题2可能引发oom问题"&gt;问题2：可能引发OOM问题 &lt;a href="#%e9%97%ae%e9%a2%982%e5%8f%af%e8%83%bd%e5%bc%95%e5%8f%91oom%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;本来是想通过ballast来在程序内存负载低时尽量减少GC活动，但是当内存负载高了之后，还是希望它能多清理下GC的，如果清理不及时就容易OOM。特别是混部场景下，这种问题就更明显。&lt;/p&gt;
+&lt;p&gt;我们可以在内存占用较高时，把GOGC设置的小一点来频繁的触发GC，来缓解这个问题。但是如果项目已经是使用的GOGC=100+ballast方案的话可能就不是很好调节，因为下次GC的heapGoal已经被推高了。&lt;/p&gt;
+&lt;p&gt;如果一开始就采用动态设置GOGC的方式，就更容易实施，比如uber的GC Tuner。在内存占用离上限（uber容器部署时通常取可用物理资源的70%）比较大时就用更大的GOGC（大于100），随着内存占用变高，GOGC也越来越小，通过更频繁的GC来尽可能避免OOM。&lt;/p&gt;</description></item><item><title>go map设计实现及应用选型</title><link>/blog/2021-06-15-go-map%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0%E5%8F%8A%E5%BA%94%E7%94%A8%E9%80%89%E5%9E%8B/</link><pubDate>Tue, 15 Jun 2021 15:52:11 +0800</pubDate><guid>/blog/2021-06-15-go-map%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0%E5%8F%8A%E5%BA%94%E7%94%A8%E9%80%89%E5%9E%8B/</guid><description>&lt;h2 id="map大致实现"&gt;map大致实现 &lt;a href="#map%e5%a4%a7%e8%87%b4%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="buckets--overflow"&gt;buckets &amp;amp; overflow &lt;a href="#buckets--overflow" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;本文介绍了map的内部数据结构，每个桶8个kvpairs，超过了可以用溢出桶，但是溢出桶会降低map性能，所以会创建新的bucket将数据迁到新bucket里面。&lt;/p&gt;
+&lt;h3 id="hash--top-hash-table"&gt;hash &amp;amp; top hash table &lt;a href="#hash--top-hash-table" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;一个kvpairs存储在哪个bucket里面呢，首先根据key计算hash，然后对buckets数量取余，再放到对应桶里面，如果有空位置就放入，没有就需要走前面提到的溢出桶的逻辑。&lt;/p&gt;
+&lt;p&gt;根据key计算出的hash除了计算key分布在哪个桶，还有其他用途，每个桶里都有一个top hash构成的数组，是为了map访问时加快查询key所在的数组索引的，通过减少比较key的耗时来加速访问。&lt;/p&gt;
+&lt;p&gt;mapaccess_faststr, mapaccess_fast64&amp;hellip;访问map中元素时，根据key类型不同编译器插入不同的函数调用，函数名后缀表示key的类型，为什么有不同的函数呢？这是为了提高key的hash计算效率和比较效率。&lt;/p&gt;
+&lt;h3 id="load-factor"&gt;load factor &lt;a href="#load-factor" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;装填因子，是用来控制map装填的元素数量，即元素数量除以桶数量。装填因子过小容易浪费内存空间，过大容易引发更多的碰撞冲突导致性能下降。&lt;/p&gt;
+&lt;h3 id="initialization--lazy-initialization"&gt;initialization &amp;amp;&amp;amp; lazy initialization &lt;a href="#initialization--lazy-initialization" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;map提前初始化再赋值，比lazy初始化后再赋值效率高，为什么呢？lazy初始化桶是后面创建的更花时间。但是lazy初始化相比较而言容易节省内存。&lt;/p&gt;
+&lt;h3 id="kvpairs-padding"&gt;kvpairs padding &lt;a href="#kvpairs-padding" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;map中kvpairs的存储有考虑内存占用方面的优化，key的类型和value的类型可能不同，所以在数据对齐过程中padding会浪费不少内存，所以go map中的keys和values是分开存储的，先存储keys再存储values。&lt;/p&gt;
+&lt;h2 id="并发安全检测"&gt;并发安全检测 &lt;a href="#%e5%b9%b6%e5%8f%91%e5%ae%89%e5%85%a8%e6%a3%80%e6%b5%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;map中的并发读写问题，go提供了如下方式进行检查：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;data race detection&lt;/strong&gt;：通过选项-race来检测是否存在data race，关于data race检测的问题，kavya joshi的分享里有介绍；&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;concurrent map writes&lt;/strong&gt;：map对应的数据结构hmap中有个字段flags来记录当前的map操作，比如当前执行m[1]=1，是一个kv的赋值，对应的函数是mapassign_fast64，如果执行的是delete(m, 1)，对应的函数是mapdelete_fast64，这里的map修改操作对应的函数内部会将hmap.flags^=hashWriting，如果已经有一个写操作在执行，后面又有一个写操作执行，后面的写操作就有很大概率检测到flags的hashWriting位被设置了，此时就会抛出错误“concurrent map writes”错误；&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;关于map为什么不直接提供并发安全的版本，原因也简单。并发安全的版本是有同步开销的，但是很多时候并不需要并发安全的版本，如果默认实现是并发安全的，性能上就要大打折扣了。不考虑并发安全问题的话，map比sync.Map要快7~10倍。&lt;/p&gt;
+&lt;h2 id="并发安全实现"&gt;并发安全实现 &lt;a href="#%e5%b9%b6%e5%8f%91%e5%ae%89%e5%85%a8%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;sync.Map是并发安全的实现，它对某些场景下的并发读写做了性能方面的优化：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&amp;ldquo;The Map type is optimized for two common use cases: (1) when the entry for a given key is only ever written once but read many times, as in caches that only grow, (2) when multiple goroutines read, write and overwrite entries for disjoint sets of keys. In these two cases, use of a Map may significantly reduce lock contention compared to a Go map paired with a separate Mutex or RWMutex.&amp;rdquo;&lt;/p&gt;</description></item><item><title>syscall：how does go runtime handles syscall</title><link>/blog/2021-06-06-how-go-handles-syscall/</link><pubDate>Sun, 06 Jun 2021 10:17:34 +0800</pubDate><guid>/blog/2021-06-06-how-go-handles-syscall/</guid><description>&lt;h1 id="1-how-go-runtime-handle-syscall-"&gt;1 How go runtime handle syscall ? &lt;a href="#1-how-go-runtime-handle-syscall-" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;最近遇到个线上服务频繁陷入系统调用导致go运行时创建了大量线程，影响到了服务质量，定位、解决问题之后，希望能进一步探究go运行时处理系统调用的过程，以便加深理解。参考了不少网友的分享，特别是知乎Golang Inernal专栏，结合个人的学习理解在此整理记录一下，与大家分享。&lt;/p&gt;
+&lt;h2 id="11-前言"&gt;1.1 前言 &lt;a href="#11-%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在开始结合源码进行分析之前，先做下简单的介绍，方便先从整体上把握go对系统调用的处理过程，然后从第二部分开始，再结合源码介绍具体的细节。&lt;/p&gt;
+&lt;p&gt;系统调用分为阻塞系统调用、非阻塞系统调用，go里面对这些系统调用有归类整理，详见源文件：&lt;code&gt;/src/syscall/syscall_linux_amd64.go&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;如下图所示，sys开头的表示的是阻塞系统调用，会调用Syscall，以sysnb开头的是非阻塞系统调用，会调用RawSyscall，关于Syscall和RawSyscall的区别下面整理。阻塞型的系统调用本身会阻塞线程，为了避免线程阻塞导致协程不可调度，golang运行时要感知这样的系统调用并做特殊处理，非阻塞的系统调用直接调即可，不需要golang运行时参与。
+&lt;img alt="系统调用列表节选" src="assets/syscall/1545292741_96.png" class="myimg"&gt;&lt;/p&gt;
+&lt;p&gt;Syscall定义在asm_linux_amd64.s里面，代码中有&lt;code&gt;runtime.entersyscall(SB)&lt;/code&gt;和&lt;code&gt;runtime.exitsyscall(SB)&lt;/code&gt;函数调用，这个是与golang运行时进行交互的，用于通知golang运行时我即将发起或者退出一个系统调用。&lt;/p&gt;
+&lt;p&gt;对于会导致阻塞的系统调用，都要通过Syscall来调用来通知golang运行时，以便golang运行时做处理，如创建新的物理线程调度器其它的goroutine，避免整个进程无线程可调度而最终被sysmon杀死进程。
+&lt;img alt="Syscall" src="assets/syscall/1545292975_48.png" class="myimg"&gt;&lt;/p&gt;
+&lt;p&gt;对于某些非阻塞的系统调用，就不必再与golang运行时交互了，直接调用就可以，这样可以减少两次与golang运行时交互的函数调用开销，这里就掉的是RawSyscall：
+&lt;img alt="RawSyscall" src="assets/syscall/1545293027_28.png" class="myimg"&gt;&lt;/p&gt;
+&lt;p&gt;网络io操作本来也是阻塞的，但是因为socket fd会被设置为non-blocking，系统调用虽然还是阻塞的系统调用，但是已经不会阻塞调用线程了，所以也无所谓了。&lt;/p&gt;
+&lt;p&gt;有个脚本mksyscall.pl根据syscall_linux_amd64.go里面定义的系通调用列表，就是第一张图那些带注释的部分，这个pl脚本会负责生成与之相关的系统调用函数，生成在syscall/zsyscall_linux_amd64.go里面。可以找几个有代表性的来看下生成的系统调用函数：&lt;/p&gt;
+&lt;p&gt;比如sendfile是阻塞的系统调用：
+&lt;img alt="sendfile" src="assets/syscall/1545293113_49.png" class="myimg"&gt;&lt;/p&gt;
+&lt;p&gt;比如settimeofday是非阻塞的系统调用：
+&lt;img alt="gettimeofday" src="assets/syscall/1545293136_67.png" class="myimg"&gt;&lt;/p&gt;
+&lt;p&gt;epoll相关的epollwait也是阻塞的，但是网络socket fd在go里面都统一设置为了nonblocking fd处理了，因此并不会阻塞。
+&lt;img alt="image-20181211095200708" src="assets/syscall/image-20181211095200708-4493120.png" class="myimg"&gt;&lt;/p&gt;
+&lt;h2 id="12-开始分析源码"&gt;1.2 开始分析源码 &lt;a href="#12-%e5%bc%80%e5%a7%8b%e5%88%86%e6%9e%90%e6%ba%90%e7%a0%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在讲述系统调用发生的协程调度之前，让我们看看go是如何进入系统调用的，理解了这个让我们不会对后面所说的一些东西感到很陌生。&lt;/p&gt;
+&lt;p&gt;golang对操作系统的系统调用作了封装，提供了syscall这样的库让我们执行系统调用。例如，Read系统调用实现如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;func Read(fd int, p []byte) (n int, err error) {
+n, err = read(fd, p)
+if raceenabled {
+if n &amp;gt; 0 {
+......
+}
+......
+}
+return
+}
+// 最终封装了Syscall
+func read(fd int, p []byte) (n int, err error) {
+var _p0 unsafe.Pointer
+if len(p) &amp;gt; 0 {
+_p0 = unsafe.Pointer(&amp;amp;p[0])
+} else {
+_p0 = unsafe.Pointer(&amp;amp;_zero)
+}
+r0, _, e1 := Syscall(SYS_READ, uintptr(fd), uintptr(_p0), uintptr(len(p)))
+n = int(r0)
+if e1 != 0 {
+err = e1
+}
+return
+}
+// 我们只关心进入系统调用时调用的runtime·entersyscall
+// 和退出时调用的runtime·exitsyscall
+TEXT ·Syscall(SB),NOSPLIT,$0-56
+CALL runtime·entersyscall(SB)
+MOVQ 16(SP), DI
+MOVQ 24(SP), SI
+MOVQ 32(SP), DX
+MOVQ $0, R10 s
+MOVQ $0, R8
+MOVQ $0, R9
+MOVQ 8(SP), AX // syscall entry
+SYSCALL
+CMPQ AX, $0xfffffffffffff001
+JLS ok
+MOVQ $-1, 40(SP) // r1
+MOVQ $0, 48(SP) // r2
+NEGQ AX
+MOVQ AX, 56(SP) // errno
+CALL runtime·exitsyscall(SB)
+RET
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;我们并不关心系统调用到底怎么实现。我们只关心系统调用过程与调度器相关内容，因为Golang自己接管系统调用，调度器便可以在进出系统调用时做一些你所不明白的优化，这里我要带你弄清楚调度器怎么做优化的。&lt;/p&gt;</description></item><item><title>go抢占式调度</title><link>/blog/2021-05-25-go%E6%8A%A2%E5%8D%A0%E5%BC%8F%E8%B0%83%E5%BA%A6/</link><pubDate>Tue, 25 May 2021 13:13:52 +0800</pubDate><guid>/blog/2021-05-25-go%E6%8A%A2%E5%8D%A0%E5%BC%8F%E8%B0%83%E5%BA%A6/</guid><description>&lt;p&gt;SIGURG，在信号处理函数runtime/signal_unix.go:sighandler(&amp;hellip;)函数中又看到对sigPreempt的处理。&lt;/p&gt;
+&lt;p&gt;SIGURG实现抢占式调度：
+对应这个函数doSigPreempt，检查当前g是不是wantAsyncPreempt，ok的话检查是不是isAsyncSafePoint，ok的话，sigctxt.pushCall(funcPC(asyncPreempt), newpc)，这个函数调整PC并注入一个对asyncPreempt的调用。&lt;/p&gt;
+&lt;p&gt;TODO wantAsyncPreempt对应的判断参数是谁去设置的，什么时候设置的？&lt;/p&gt;
+&lt;p&gt;TODO isAsyncSafePoint，safepoint的含义？这个函数的注释以及代码中的if-else已经足够结实清楚什么是safepoint了，以及safepoint的意义了。&lt;/p&gt;
+&lt;p&gt;看下asyncPreempt的逻辑，该函数是在汇编中实现的，首先保存寄存器的值，然后调用asyncPreempt2执行其他处理。&lt;/p&gt;
+&lt;p&gt;g.preemptStop决定是挂起g还是重新调度g：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果被抢占的g的g.preemptStop为true，则执行mcall(preemptPark)挂起该g，g的状态被改为preempted，后面什么时机会重新调度它吧。然后执行schedule调度其他goroutine执行；&lt;/li&gt;
+&lt;li&gt;如果g.preemptStop为false，则mcall(gopreempt_m)将g从running改为runnable重新调度一次。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;大致的抢占式调度逻辑就是这样的。&lt;/p&gt;
+&lt;p&gt;ps: func mcall(fn func(*g))，mcall switches from the g to the g0 stack and invokes fn(g),
+where g is the goroutine that made the call.&lt;/p&gt;</description></item><item><title>go程序信号处理过程</title><link>/blog/2021-05-25-go%E7%A8%8B%E5%BA%8F%E4%BF%A1%E5%8F%B7%E5%A4%84%E7%90%86%E8%BF%87%E7%A8%8B/</link><pubDate>Tue, 25 May 2021 11:32:39 +0800</pubDate><guid>/blog/2021-05-25-go%E7%A8%8B%E5%BA%8F%E4%BF%A1%E5%8F%B7%E5%A4%84%E7%90%86%E8%BF%87%E7%A8%8B/</guid><description>&lt;h2 id="go信号处理基础"&gt;go信号处理基础 &lt;a href="#go%e4%bf%a1%e5%8f%b7%e5%a4%84%e7%90%86%e5%9f%ba%e7%a1%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;go os.signal package对信号处理做了封装，其中信号SIGKILL、SIGSTOP是操作系统规定的不允许捕获的信号，是不受os.signal这个package影响的&lt;/p&gt;
+&lt;p&gt;go中将信号分为两类：同步信号和异步信号。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;同步信号：指的是go程序运行时程序内部错误触发的一些问题，如SIGBUS、SIGFPE、SIGSEGV，这些信号会被转换成运行时panic信息；&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;异步信号：除了上述提及的信号之外的信号，就是异步信号了。异步信号不是程序内部错误导致的，而是由操作系统或者外部其他程序发送给它的。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="有哪些异步信号"&gt;有哪些异步信号？ &lt;a href="#%e6%9c%89%e5%93%aa%e4%ba%9b%e5%bc%82%e6%ad%a5%e4%bf%a1%e5%8f%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;当程序失去对控制终端的控制时，会收到SIGHUP信号；&lt;/li&gt;
+&lt;li&gt;在控制终端中输入Ctrl+C时会收到SIGINT信号；&lt;/li&gt;
+&lt;li&gt;在控制终端中输入Ctrl+\时会受到SIGQUIT信号；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;ps：通常想让程序退出的话，Ctrl+C就可以了，如果想让程序退出同时打印栈转储信息，那就用Ctrl+\。&lt;/p&gt;
+&lt;h3 id="默认的信号处理方式"&gt;默认的信号处理方式？ &lt;a href="#%e9%bb%98%e8%ae%a4%e7%9a%84%e4%bf%a1%e5%8f%b7%e5%a4%84%e7%90%86%e6%96%b9%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;接收到信号之后，肯定有默认的处理方式，这个在学习linux信号处理时肯定有了解过的，在go程序中可能只是默认处理方式有点不同，这个有需要的时候去了解就可以了。这里不展开了。&lt;/p&gt;
+&lt;p&gt;值得一提的是信号SIGPROF，这个信号用于实现runtime.CPUProfile。&lt;/p&gt;
+&lt;h3 id="自定义信号处理方式"&gt;自定义信号处理方式？ &lt;a href="#%e8%87%aa%e5%ae%9a%e4%b9%89%e4%bf%a1%e5%8f%b7%e5%a4%84%e7%90%86%e6%96%b9%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;自定义信号处理方式，在linux signal函数中可以指定信号及对应对应的处理函数，go中类似，它允许通过os.Notify指定一个或多个信号chan，里面可以注册感兴趣的信号，当收到这些信号时，就可以执行用户自定义的信号处理逻辑。&lt;/p&gt;
+&lt;h3 id="sigpipe信号处理"&gt;SIGPIPE信号处理 &lt;a href="#sigpipe%e4%bf%a1%e5%8f%b7%e5%a4%84%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;当程序write broken pipe时，会收到SIGPIPE信号，比如写网络连接失败，如果不做处理默认崩溃掉那就完蛋了。go程序中对这个做了优化处理。&lt;/p&gt;
+&lt;p&gt;write broken pipe的行为与write的file descriptor的fd有关系：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果fd是stdout、stderr，那么程序收到SIGPIPE信号，默认行为是程序会退出；&lt;/li&gt;
+&lt;li&gt;如果是其他fd，程序收到SIGPIPE信号，默认行为是不采取任何动作，对应的write操作返回一个EPIPE错误；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;ps：后者很重要，写网络连接失败是常有的事情，linux c程序如果不显示处理SIGPIPE信号，默认行为将是程序直接crash，go程序对此作了优化，让write返回error而非crash，对于go将构建高性能、稳定健壮的网络程序的初衷来说是有必要的。&lt;/p&gt;
+&lt;h3 id="cgo程序信号处理"&gt;cgo程序信号处理？ &lt;a href="#cgo%e7%a8%8b%e5%ba%8f%e4%bf%a1%e5%8f%b7%e5%a4%84%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;涉及到cgo就要分几种情况来讨论，这里会有点麻烦了，涉及到信号处理函数的重复注册、信号掩码设置、信号处理函数的栈等问题，在os/signal/doc.go里面有这方面的描述，这里不赘述。&lt;/p&gt;
+&lt;h2 id="go信号处理过程"&gt;go信号处理过程 &lt;a href="#go%e4%bf%a1%e5%8f%b7%e5%a4%84%e7%90%86%e8%bf%87%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;介绍了go程序内部的信号处理过程。GMP调度模型里面，每个M都有一个独立的gsignal goroutine，系统投递信号给进程时实际上是有gsignal goroutine来接受这个信号，然后检查下是否可处理。如果可处理就将其push到一个信号队列中，然后有一个专门的goroutine执行signal.loop，这个函数从上述信号队列中取信号，并转移到用户自定义的chan os.Signal中，再由我们自己写的chan read代码消费，并执行处理。&lt;/p&gt;
+&lt;p&gt;对应到源码中主要有几个函数：&lt;/p&gt;
+&lt;p&gt;对应到源码中主要有几个函数：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;os/signal/signal.go：这个函数里面在func init()的时候有启动一个loop函数，这个函数内调用runtime.signal_recv来不停地接收信号，然后检查程序通过os.Notify为哪些chan os.Signal订阅了该信号，就将该信号push到对应的chan中，后面应用程序就可以自行处理了；&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;runtime/sigqueue.go：runtime.sigsend、runtime.signal_recv这两个函数很重要，前者是程序收到系统发送来的信号时将信号写入outgoing sigqueue中，其实就是sig结构体的mask字段，后面signal_recv的时候也是从该mask字段读取，并写入recv字段中，recv中非0的应该就是表示收到了信号（信号编号为索引值）；&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;runtime/signal_unix.go：有个函数sighandler，这个函数负责对不同的信号执行不同的处理，比如抢占式调度SIGURG的处理，比如SIGPROF的处理，比如我们这里讨论的一些异步信号的处理sigsend。在go程序中不管是什么信号，这些信号是在sighandler做不同处理。sighandler虽然名字是信号处理函数，我们也看到了通过setsig将所有信号全部设置sighandler为信号处理函数，但是其实这只是表现。setsig函数内部又做了一个转换，将信号的信号处理函数设置为了sigtramp活着cgosigtramp，这些函数内部又调用sighandler。下面会提到sigtramp的逻辑；&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;runtime/runtime2.go：这里定义了GMP调度模型中的m，m包含一个成员gsignal，它表示信号处理用的goroutine。os_linux.go中mpreinit会为创建一个goroutine，协程栈被初始化一个32KB大小的信号处理栈，很大这是为了兼容不同操作系统的一些问题，linux要≥2KB，OSX要≥8KB&amp;hellip;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;sigtramp是注册到操作系统的信号处理函数，当操作系统执行系统调用返回时检查进程有没有信号到达，有并且没有屏蔽信号则执行对应的信号处理函数，这个时候是切到了用户态去执行信号处理函数。在执行信号处理函数的时候比较特殊，go需要为信号处理函数准备一个不同的栈帧，即信号处理栈，这个前面提过了是一个32KB大小的栈，然后将当前m.g设置为gsignal（栈大小为32KB），栈准备好之后，执行前面提过的sighandler执行信号处理，处理完成返回后，再将m.g设置为原来的g恢复正常执行。其实signhandler执行过程中，sigsend发送到outgoing sigqueue，然后signal_recv收信号发送到os.Notify订阅的chan，就完事了，后面就是我们熟悉的chan read并处理逻辑了。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;算是介绍的比较详细了吧，篇幅、时间原因就不贴源码了，感兴趣的可以对着提及的源码仔细看看、求证一下。&lt;/p&gt;</description></item><item><title>how goroutine created and started</title><link>/blog/2021-05-24-how-goroutine-created-and-started/</link><pubDate>Mon, 24 May 2021 00:14:01 +0800</pubDate><guid>/blog/2021-05-24-how-goroutine-created-and-started/</guid><description>&lt;p&gt;goroutine创建：runtime.newproc(siz int32, fn *funcval)&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;go fn()，传递给fn的参数实际上是紧跟着存在fn压栈后的地址后面，在newproc1的栈帧里面，但是不出现在签名参数列表中，因为这些参数类型、数量不一样，也无法出现在签名参数列表中；&lt;/li&gt;
+&lt;li&gt;newproc1创建g；&lt;/li&gt;
+&lt;li&gt;getg().m.p.ptr()拿到当前p；&lt;/li&gt;
+&lt;li&gt;runqput将当前g放入p的local queue中，如果满则放到global queue中；&lt;/li&gt;
+&lt;li&gt;g等待被调度器调度执行；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;大致创建执行goroutine的逻辑是这样的，下面的逻辑都是切到系统栈上去执行的。&lt;/p&gt;
+&lt;p&gt;1 newproc1逻辑&lt;/p&gt;
+&lt;p&gt;查看源码发现，goroutine初始创建时对函数参数大小是有限制的，如果参数占内存空间很大，比如超过初始栈帧大小2KB，那么goroutine创建会失败：&amp;ldquo;fatal error: newproc: function arguments too large for new goroutine&amp;rdquo;，比如，&lt;code&gt;go func(a [1024]int) {}([1024]int{})&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;每个p内部都有一个空闲goroutine队列gFree，这个就是用来执行fn的goroutine，是可以复用的，不用的时候可以丢给调度器schedt.gFree供其他p复用。这里空闲的goroutines，一部分存在于p.gFree，如果gfput(p, gp)时发现p.gFree队列太长说明过剩了，就转移一部分到调度器schedt.gFree中供其他p复用。&lt;/p&gt;
+&lt;p&gt;goroutine执行完毕后运行时并不急于将其销毁，而是会考虑goroutine的复用，gfput，前面提过了。希望go func()通过协程执行时，也不必每次创建新的goroutine，gfget，可以复用p.gFree中的goroutine，如果p.gFree空或者过少（32）且调度器schedt.gFree中有空闲，则转移一部分过来给p复用。但是goroutine的栈有可能会被销毁，如果复用到栈被销毁的goroutine就需要stackalloc重新为其分配新栈帧。&lt;/p&gt;
+&lt;p&gt;如果没有空闲的g可供复用，那就只能malg从头新建一个goroutine了。&lt;/p&gt;
+&lt;p&gt;goroutine创建成功、栈空间也ok了之后，就要把goroutine要执行的函数对应的函数参数给拷贝到这个栈空间里面来，通过memmove(spArg, argp, uintptr(narg))来完成。完成后调整newg的调度上下文相关的寄存器值，等调度器调度它时，还原其中的上下文信息，pc就指向其对应的函数地址了，对应的数据也会指向其对应的栈空间。&lt;/p&gt;
+&lt;p&gt;然后，通过gostartcallfn→gostartcall(buf, fn, ctxt)，之前已经拷贝了函数fn的参数到goroutine栈空间了，这里面再继续在栈内设置fn返回地址、gobuf.sp+gobuf.pc信息。&lt;/p&gt;
+&lt;p&gt;上述调整完成之后，将goroutine的状态从_Gdead调整为_Grunnable，等待调度器调度。新创建的时候其状态是_Gidle，一定会将其调整为_Gdead然后再进行上述准备工作，一切就绪后才调整为_Grunnable让其参与调度。&lt;/p&gt;
+&lt;p&gt;2 runqput(p, gp, next)
+这里的逻辑是，希望将gp放到p的local queue中，但是也有头插、尾插两种方式。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果next为true，可以认为是头插，其实是放到p.runnext中，比p.queue中的得到优先调度。如果之前p.runnext有值，还要该值对应的g放入p.queue中；&lt;/li&gt;
+&lt;li&gt;如果next为false，则尝试将其放置到p.queue中，这里也有快慢两种情况，快的情况就是，因为p.queue这个本地队列长度最大为256，如果有空余位置放入就返回，这是快的情况。慢的情况就是如果p.queue满了就要先转移1/2到调度器全局队列schedt.queue中，然后再放入，这个过程就慢一些。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;放置过程中，如果p.runqueue满了怎么办，将其放置到调度器schedt.queue这个全局队列中。&lt;/p&gt;
+&lt;p&gt;3 wakeup()逻辑&lt;/p&gt;
+&lt;p&gt;这个函数内部执行startm(p, spinning)，来找一个m来执行goroutine，具体是怎么做的呢？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;如果没有指定p，比如新建goroutine时，此时会尝试检查有没有空闲的p，没有的话就直接返回了，相当于当前一次没有执行成功，那么只能下次调度的时候再执行这个新建的goroutine了；&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;现在有空闲的p，我们还缺什么，m！然后mget找一个空闲的m，如果没有空闲的，就newm创建一个新的，本质上是通过clone系统调用创建的新的线程。然后将这个m和这个p关联起来，m.nextp = p。值得一提的是clone出来的线程对应的线程处理函数是mstart，mstart使用汇编写的，内部实际调用的是mstart0，它内部又请求mstart1，获取当前g：&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;如果g.m==&amp;amp;m0，则执行mstartm0完成信号处理注册，继续执行其他；&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;获取当前m.mstartfn，即线程处理函数，执行该函数，如果该函数会执行结束那还要继续执行；&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;如果当前g.m不是m0，那么要将g.m.nextp与当前m关联起来，为什么呢？m执行调度时用这个p呗，执行它的queue中的goroutine呗；&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;执行调度schedule()逻辑，这个函数调用一次就是执行一轮调度，逻辑就是寻找一个可运行的goroutine然后执行。这个函数比较有意思了，有些goroutine是通过lockOSThread绑定了执行它的线程的，这样的goroutine只能用那个绑定的m来执行，未绑定的则无此限制。
+lockedg：这个schedule函数先获取当前g，如果发现当前g.m.lockedg不为0，表示有一个g通过lockOSThread绑定到了g.m，这个时候先停掉当前m，让其把p交出来，等下次有线程schedule里面调度执行lockedg时再唤醒该m，此时m被parked，p被空出来了。再调用execute(lockedg, inheritTime)，将该lockedg设置为当前g.m.curg，并修改装改为_Grunning，然后下面gogo(&amp;amp;gp.sched)恢复该待执行goroutine的上下文，执行之，execute函数never returns。可以想象下，如果一个m有g locked，那么每次调度都会先优先执行该goroutine？
+剩下的逻辑：获取当前g.m.p，&amp;hellip;..一堆有的没的逻辑，会通过findRunnable找一个可以运行的g来执行，最后也是调用execute来执行gp。
+netpoller：值得一提的是这个函数里面会通过findRunnable来查找一个可执行的g，除了从p.queue、schedt.queue、其他p.queue中找可运行的goroutine外，也包括从netpoller中获取等待网络IO事件就绪的g。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;到这里就可以算是结束了，到这里基本就了解了整个goroutine从创建到执行的完整逻辑了。当然这个后面还有点逻辑，目前也没搞懂写来干嘛的，先不管后面这个逻辑吧。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;然后notewakeup唤醒阻塞在&amp;amp;m.park上的一个proc，这个是做什么呢？意思是说，如果之前m执行（执行某个goroutine的代码）时，因为某个原因阻塞了（这个原因通常用目标对象的事件地址来表示，如&amp;amp;m.park），现在这个条件满足了，现在将其唤醒继续执行。我们不禁想问，这里的&amp;amp;m.park表示的是什么呢？&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;ps：这里用到了futex来实现轻量级地锁获取+获取失败阻塞、锁释放+唤醒阻塞线程操作，see https://lwn.net/Articles/360699/。&lt;/p&gt;</description></item><item><title>GC: prioritizing low latency and simplicity</title><link>/blog/2021-05-01-gogc-prioritizing-low-latency-and-simplicity/</link><pubDate>Sat, 01 May 2021 11:17:56 +0800</pubDate><guid>/blog/2021-05-01-gogc-prioritizing-low-latency-and-simplicity/</guid><description>&lt;p&gt;原文地址：https://blog.golang.org/go15gc&lt;/p&gt;
+&lt;p&gt;介绍了当前软硬件大规模发展的趋势以及go GC需要优先解决的问题：低延迟和简单性（通过一个参数就可以控制，而非像JVM调参那样）。&lt;/p&gt;
+&lt;p&gt;go团队的目标是设计一个面向未来十年的垃圾回收器，借鉴了十几年前发明的算法。go GC使用的是并发三色标记清除算法（concurrent, tri-color, mark-sweep collector），由Dijkstra在1978年提出。该算法与现在大多数企业级的GC实现不同，但是go团队认为该算法更适合于现代硬件的发展，也更有助于实现现代软件的GC低延迟目标。&lt;/p&gt;
+&lt;p&gt;该GC算法中，每个对象只能是white、grey、black中的其中一种，heap可以看做是互相连接的对象构成的一个graph。GC算法流程是：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;GC开始时，所有对象都是white；&lt;/li&gt;
+&lt;li&gt;GC遍历所有的roots对象（比如全局变量、栈变量）将其标记为灰色；&lt;/li&gt;
+&lt;li&gt;然后GC选择一个grey对象，将其标记为black，并扫描（scan）该对象检查它内部的指向其他对象的指针。如果发现有指针指向其他white对象，将white对象标记为grey；&lt;/li&gt;
+&lt;li&gt;该过程重复执行，直到没有任何的灰色对象；&lt;/li&gt;
+&lt;li&gt;最后，剩下的白色对象即认为是不可达对象，可以被回收再利用；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;GC过程和应用程序执行是并发进行的，应用程序也称为mutator，它会在GC运行期间修改一些指针的值。mutator必须遵循这样一条规则，就是不允许出现一个黑色对象指向一个白色对象，这样会导致对象被错误地回收。为了保证该规则成立，就需要引入写屏障（write barrier），它是编译阶段由编译器对mutator指针操作安插的一些特殊指令，用来跟踪对指针的修改，write barrier如果发现当前黑色对象的内部指针字段指向了外部的一个白色对象，则会将白色对象染色为grey，避免其被错误地GC掉，也保证其可以被继续扫描。&lt;/p&gt;
+&lt;p&gt;有些GC相关的问题：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;什么时候启动GC？&lt;/li&gt;
+&lt;li&gt;通过哪些指标来判断要启动GC？&lt;/li&gt;
+&lt;li&gt;GC应该如何与scheduler进行交互？&lt;/li&gt;
+&lt;li&gt;如何暂停一个mutator线程足够长时间，以扫描器stack？&lt;/li&gt;
+&lt;li&gt;如何表示white、grey和black三种颜色来实现高效地查找、扫描grey对象？&lt;/li&gt;
+&lt;li&gt;如何知道roots对象在哪里？&lt;/li&gt;
+&lt;li&gt;如何知道一个指向对象的指针的位置？&lt;/li&gt;
+&lt;li&gt;如何最小化内存碎片？&lt;/li&gt;
+&lt;li&gt;如何解决cache性能问题？&lt;/li&gt;
+&lt;li&gt;heap应该设置为多大？&lt;/li&gt;
+&lt;li&gt;等等。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;上述问题有些与内存分配有关，有些与可达对象分析有关，有些与goroutine调度有关，有些与性能有关，关于这些内容的讨论远远超出本文篇幅，可以自己参考相关的材料。&lt;/p&gt;
+&lt;p&gt;为了解决GC性能问题，可以考虑为每一种优化加个参数来控制，开发人员可以自己调整这里的参数来达到想要的优化效果。但是这种做法时间久了之后会发现有非常多的参数，调优就会变得非常困难，比如JVM调优。go团队不想走这样的老路，力求简单高效。&lt;/p&gt;
+&lt;p&gt;go通过GOGC这个环境变量来控制整个堆大小相对于现阶段可达对象大小的比例。GOGC默认值是100%，意味着当堆大小增长了当前可达对象大小的1倍时（2倍大小），就会触发GC；200%则意味着继续增长了当前可达对象的2倍时触发GC（3倍大小）。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果想降低GC花费的时间，就把这个值设置的大一点，因为这样不容易频繁触发GC；&lt;/li&gt;
+&lt;li&gt;如果愿意花费更多的GC时间来换取更少的内存占用，就把这个值设置的小一点，因为这样能够更加频繁地GC；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;前面提到go团队要设计一个面向未来十年的垃圾回收器，未来十年机器内存容量可能会翻倍或者成倍增长，简单地将GOGC设置为一定倍率也可以很好地工作，也不用像JVM调优那样重新设置一堆地参数，调参大军好惨。go团队也可以倾听用户真正地诉求在运行时方面做更多的优化。&lt;/p&gt;</description></item><item><title>Go sync.Mutex 设计实现</title><link>/blog/2021-04-19-go-sync.mutex%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</link><pubDate>Mon, 19 Apr 2021 00:00:00 +0800</pubDate><guid>/blog/2021-04-19-go-sync.mutex%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</guid><description>&lt;p&gt;终于来到了go语言相关的设计实现，go中sync.Mutex的设计有很多设计方面的考虑。&lt;/p&gt;
+&lt;p&gt;我们看下对应的加锁解锁部分，对应的源码 see https://sourcegraph.com/github.com/golang/go/-/blob/src/sync/mutex.go#L72&lt;/p&gt;
+&lt;p&gt;首先，了解下锁的定义，我们看到里面有个state字段，这个字段表示的是锁的状态，为0表示锁是解锁状态，其他状态可以参考下源码中的定义。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;// A Mutex is a mutual exclusion lcok.
+// The zero value for a Mutex is an unlocked mutex.
+//
+// A Mutex must not be copied after first use.
+type Mutext struct {
+state int32
+sema uint32
+}
+const (
+mutexLocked = 1 &amp;lt;&amp;lt; iota // mutex is locked
+mutexWoken
+mutexStarving
+mutexWaiterShift = iota
+)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;下面看下加解锁实现，多注意下state相关的逻辑，比较容易好理解。&lt;/p&gt;
+&lt;h3 id="mutexlock"&gt;mutex.Lock() &lt;a href="#mutexlock" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;h4 id="fastpath"&gt;fastpath &lt;a href="#fastpath" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;首先，会执行fastpath，会尝试CAS加锁一次，如果没有很多锁竞争，且锁处于未加锁状态（state=0），大概率会加锁成功（state=1）成功返回。&lt;/p&gt;
+&lt;p&gt;如果fastpath加锁失败了，比如尝试加锁前state != 0：&lt;/p&gt;</description></item><item><title>Locks实现:背后不为人知的故事</title><link>/blog/2021-04-17-locks%E5%AE%9E%E7%8E%B0%E9%82%A3%E4%BA%9B%E4%B8%8D%E4%B8%BA%E4%BA%BA%E7%9F%A5%E7%9A%84%E6%95%85%E4%BA%8B/</link><pubDate>Sat, 17 Apr 2021 11:32:36 +0800</pubDate><guid>/blog/2021-04-17-locks%E5%AE%9E%E7%8E%B0%E9%82%A3%E4%BA%9B%E4%B8%8D%E4%B8%BA%E4%BA%BA%E7%9F%A5%E7%9A%84%E6%95%85%E4%BA%8B/</guid><description>&lt;p&gt;从事软件开发多年的你，真的理解locks背后的那些故事吗？锁是如何实现的，无锁指的又是什么，无锁真的移除了任何同步操作吗？为什么大家总是谈锁色变，锁的开销真的有那么大吗，平时编码中又该注意些什么呢？本文将结合go sync.Mutex对这些问题进行讨论。&lt;/p&gt;
+&lt;h2 id="并发我们关心什么"&gt;并发：我们关心什么 &lt;a href="#%e5%b9%b6%e5%8f%91%e6%88%91%e4%bb%ac%e5%85%b3%e5%bf%83%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;并发编程，开发人员应该对原子性、指令重排有深刻的认识。&lt;/p&gt;
+&lt;h3 id="原子性"&gt;原子性 &lt;a href="#%e5%8e%9f%e5%ad%90%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;大家都了解过数据库事务的原子性，类似地，程序中也经常有些操作也需要达到类似的效果——被某种类似事务的机制“保护”起来，要么全部执行要么全部不执行。通常我们将这样需要保护的代码段称为临界区。我们希望临界区内的代码要么全部执行要么全部不执行，达到这种原子性的效果。&lt;/p&gt;
+&lt;p&gt;其实不只是代码段，给一个int变量赋值，也需要考虑原子性，因为在不同的操作系统、处理器平台上，可能一个简单的int变量赋值需要涉及多条机器指令，而在多条指令执行期间，则可能发生各种事件，比如被其他CPU核的赋值指令写乱了同一变量的数据。设想下一个int变量4字节，但是处理器平台只有16位mov指令。再或者执行i++（i为int类型）操作，实际上是包含了read-modify-write三个操作，这几个操作中间也可能插入其他指令执行。当然一条机器指令也可能不是原子的，比如 &lt;code&gt;add src, dst&lt;/code&gt;，src和dst都是内存地址，这里就涉及到读取src和dst、计算、写回dst的多个操作……更不用说一个包含了多个字段的struct结构体的赋值了。&lt;/p&gt;
+&lt;p&gt;这类原子性问题，可以通过一些相当低级的原子操作来保证，如int变量i++，可以考虑lock add指令（假定操作数位宽和int变量相同），稍复杂的数据结构（如struct）也可以使用一些“高级锁”来做同步保证，如go中的sync.Mutex。&lt;/p&gt;
+&lt;h3 id="指令重排"&gt;指令重排 &lt;a href="#%e6%8c%87%e4%bb%a4%e9%87%8d%e6%8e%92" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;指令重排的根源在于CPU的设计，古老的CPU只有一条取指、译码、执行、访存、写回的功能电路。联想下假如一个单线程程序执行阻塞网络IO的时候会发生什么，整个程序全阻塞在这里干不了其他的。CPU也存在类似问题，假如一条指令执行过程中因为数据没ready的问题不能执行，或者碰到多CPU多核间cache一致性同步，那CPU会stall，后续的指令都无法执行。&lt;/p&gt;
+&lt;p&gt;所以CPU为了提高指令吞吐，增加了多条流水线设计，可以同时执行多条指令的取指、译码、执行、访存、写回，当然这其中有些指令是有数据依赖的，现代处理器支持寄存器重命名、指令乱序执行、重排序缓冲等功能，都是保证CPU执行效率的常用手段。如果想了解这方面的内容，see &lt;a href="https://youtu.be/XuCu9EEHBtk?t=1087"&gt;Computer Architecture: Dynamic Execution Core&lt;/a&gt;及系列课程&lt;a href="https://www.youtube.com/playlist?list=PLYqt8zMAiKeb64Z6_BK2fwHajO7Qoo0IE"&gt;Computer Architecture&lt;/a&gt;。这里贴一张超标量处理器的简图，方便大家理解这些优化手段所在的位置：&lt;/p&gt;
+&lt;div style="width:100%;text-align:center;"&gt;
+&lt;img alt="cpu0" class="myimg" src="assets/locks/cpu0.png"/&gt;
+&lt;/div&gt;
+&lt;p&gt;&lt;strong&gt;为什么要指令重排：&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;为什么要指令重排呢？&lt;/p&gt;
+&lt;p&gt;因为希望提高cpu指令吞吐，就要并行执行指令，要并行执行指令，就要分析出哪些指令之间有数据依赖的，表面上一个架构寄存器RAX可能被相邻多条指令使用，但是可能是一个伪数据依赖，就需要通过分析、寄存器重命名（如RAX重命名为物理寄存器R11）来消除伪数据依赖，从而允许其在执行阶段并行执行（out-of-order）。&lt;/p&gt;
+&lt;p&gt;一条指令的执行过程，会分为多个阶段，有些阶段是按序执行的（in-order），有些则是乱序执行的（out-of-order）。在指令乱序执行之后，可能会对程序正确性造成影响？影响究竟有多大，就需要参考硬件内存一致性模型，比如Intel x86处理器采用的是TSO模型（Total Store Order）, see &lt;a href="https://www.cl.cam.ac.uk/~pes20/weakmemory/cacm.pdf"&gt;x86-TSO: A Rigorous and Usable Programmer's Model for x86 Multiprocessors&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;指令重排带来的问题：&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;指令在CPU乱序执行，在某些并发场景下，可能会带来一些微妙的问题。比如：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;type num struct {
+a int
+b int
+}
+n := &amp;amp;num{}
+go func() { n.a = 1; n.b = 2; }() // g1
+go func() { n.a = 2; n.b = 1; }() // g2
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;你们说最终n.a，n.b的结果是多少呢？不确定的，虽然go现在支持64位系统，现在处理器基本也都有64位mov指令，对a、b单独赋值都是原子的，但是对n整体的赋值不是。由于没有对n做保护，g1、g2中的赋值指令也没有什么数据一来，到时候乱序执行，g1 g2执行完成后，&amp;lt;n.a,n.b&amp;gt;的可能结果是：&amp;lt;1, 2&amp;gt; &amp;lt;1, 1&amp;gt; &amp;lt;2,1&amp;gt; &amp;lt;2,2&amp;gt;，这几种都有可能，而不只是有&amp;lt;1,2&amp;gt; &amp;lt;2,1&amp;gt;两种可能。&lt;/p&gt;</description></item><item><title>如何看待gopanic及异常处理</title><link>/blog/2021-04-16-%E5%A6%82%E4%BD%95%E7%9C%8B%E5%BE%85gopanic%E5%8F%8A%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86/</link><pubDate>Fri, 16 Apr 2021 13:47:21 +0800</pubDate><guid>/blog/2021-04-16-%E5%A6%82%E4%BD%95%E7%9C%8B%E5%BE%85gopanic%E5%8F%8A%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86/</guid><description>&lt;h2 id="background"&gt;Background &lt;a href="#background" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;最近有同学提问，大意是：&lt;strong&gt;“go中什么时候用panic、什么时候用error，能不能像其他语言中的try-catch一样用panic-recover来代替层层return err，或者应不应该recover一个panic之后转换为error？”&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这个问题引起了广泛的讨论，在对这几个问题的理解上，我本以为大家应该会认识到位的，没想到很多人认识很模糊。当然，好的地方就是总有有见识的同学站出来指出大家的问题。&lt;/p&gt;
+&lt;p&gt;对于那些有灵性的同学，勤实践勤思考的同学，他会自然而然意识到哪种error handling pattern更好，也会有意识地去区分不同pattern的定位和应用场景。这类同学虽然没有什么理论术语支撑，但是他们的“经验”是贴近更好的设计思想、最佳实践的。如果更进一步，能愿意接受一些设计思想的洗礼，则可以&lt;strong&gt;将“经验”上升到“模式”&lt;/strong&gt;，以指导更多人。&lt;/p&gt;
+&lt;h2 id="panic--exception"&gt;panic != exception &lt;a href="#panic--exception" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;go panic不同于其他语言中的exception，在设计、定位上是有明确的区别的，see: https://dave.cheney.net/2012/01/18/why-go-gets-exceptions-right。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;panics are always fatal to your program. In panicing you never assume that your caller can solve the problem. Hence panic is only used in exceptional circumstances, ones where it is not possible for your code, or anyone integrating your code to continue.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;go panic是用来表示程序出现了十分致命的错误，并且你不能假定这个错误能被解决。所以panic只在很少的场景下才会被用到，并且出现panic时，你的代码解决不了，引用这部分代码的其他代码也解决不了。&lt;/p&gt;
+&lt;p&gt;所以，&lt;strong&gt;panic并非一般意义上的error，更不能用panic-recover代替层层向上传递error&lt;/strong&gt;！&lt;/p&gt;
+&lt;p&gt;对于，为了自身程序的健壮性，而在启动新的goroutine时，或者调用外部依赖的导出函数、方法时，可能选择recover一些预料之外的panic，并转换为error处理。&lt;/p&gt;
+&lt;p&gt;有追求的开发人员，在panic的使用上应该始终遵循go设计理念，同时在程序的健壮性上也会采用些防御性编程的手段。&lt;/p&gt;
+&lt;h2 id="panic-vs-exception"&gt;panic vs exception &lt;a href="#panic-vs-exception" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;我们很多开发人员都接触过多门语言，比如Java、C++，等等，这类语言都有异常处理机制，遇到一些意外事件时可以抛出一个异常，异常通常由try-catch block捕获并处理。&lt;/p&gt;
+&lt;p&gt;初学者阶段，很多同学会努力去学习异常处理的正确编码方式，甚至是异常处理的实现原理，对性能的影响，等等，但是由于实际缺乏实际的大规模工程供锻炼实践，也很少有人会去思考一些问题，比如：&lt;/p&gt;</description></item><item><title>Go程序内存泄露问题快速定位</title><link>/blog/2021-04-14-go%E7%A8%8B%E5%BA%8F%E5%86%85%E5%AD%98%E6%B3%84%E9%9C%B2%E9%97%AE%E9%A2%98%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D/</link><pubDate>Wed, 14 Apr 2021 18:00:00 +0800</pubDate><guid>/blog/2021-04-14-go%E7%A8%8B%E5%BA%8F%E5%86%85%E5%AD%98%E6%B3%84%E9%9C%B2%E9%97%AE%E9%A2%98%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D/</guid><description>&lt;style&gt;
+.myimg {
+width: 680px;
+padding-bottom: 1rem;
+}
+&lt;/style&gt;
+&lt;p&gt;前几天有同学反馈了cgo内存泄露问题，自己也针对这个问题探索了一番，算是为以后解决类似问题提前攒点经验吧。也趁机整理了一下go开发过程中内存泄露问题的一些常用排查方法，也希望对新接触go的同学有所帮助。整理之余，bcc工具之丰富也让我有点惊讶，也希望对自己日后的工作有所帮助吧。&lt;/p&gt;
+&lt;h2 id="内存泄漏"&gt;内存泄漏 &lt;a href="#%e5%86%85%e5%ad%98%e6%b3%84%e6%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;内存泄露，一个老生常谈的问题，但即便是老手也会犯一些低级错误。如果没有可靠的研发流程保证在测试阶段发现问题，问题就容易被带到线上。计算资源始终是有限的，问题也不会因为资源充裕就消失不见，产生影响只是时间问题。影响有多大，就要结合场景来说了。&lt;/p&gt;
+&lt;p&gt;内存泄漏，最可能的影响就是内存申请失败。但实际上操作系统更聪明，结合系统整体负载情况，它会为每个进程计算一个oom_score，并在内存资源紧张时选择一个合适的进程杀死并回收内存资源，see &lt;a href="https://unix.stackexchange.com/a/153586/95211"&gt;how does the oom killer decide which process to kill first&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;所以，内存泄露的最终结果，大概率会被操作系统kill，通常进程挂掉后，确认其是否是因为oom问题被kill，可以通过查看 &lt;code&gt;/proc/messages&lt;/code&gt; 来确认是否有对应日志。有的话，那就坐实了oom killed（但是被oom killed的进程不一定意味着存在内存泄露）。&lt;/p&gt;
+&lt;h2 id="服务质量"&gt;服务质量 &lt;a href="#%e6%9c%8d%e5%8a%a1%e8%b4%a8%e9%87%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;结合运维手段的变化，来看看是否内存泄漏问题对服务质量造成的影响。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;传统人工方式，通过感知告警、人为介入这种方式，效率低，要十几分钟；&lt;/li&gt;
+&lt;li&gt;通过虚拟机自动化部署的方式，感知异常自动重启虚拟机，耗时大约要分钟级；&lt;/li&gt;
+&lt;li&gt;通过docker容器化部署的方式，感知异常自动重启容器，耗时大约在秒级；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;看上去现代运维方式一定程度上可以缓解这个问题，是，这也要分情况：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果内存泄露的代码路径不容易被触发，那可能要跑很久才能触发oom kill，如一周；但是如果代码路径在关键代码路径上，且请求量大，频繁触发内存泄露，那可能跑个几分钟就会挂掉；&lt;/li&gt;
+&lt;li&gt;跟每次内存泄露的内存大小也有关系，如果泄露的少，多苟活一阵子，反之容易暴毙；&lt;/li&gt;
+&lt;li&gt;进程一旦挂掉，这段时间就不能响应了，服务的健康监测、名字服务、负载均衡等措施需要一段时间才能感知到，如果请求量大，服务不可用依然会带来比较大的影响。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;服务质量保证是不变的，所以别管用了什么运维手段，问题终究是问题，也是要解决的。&lt;/p&gt;
+&lt;h2 id="go内存泄漏"&gt;Go内存泄漏 &lt;a href="#go%e5%86%85%e5%ad%98%e6%b3%84%e6%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="垃圾回收"&gt;垃圾回收 &lt;a href="#%e5%9e%83%e5%9c%be%e5%9b%9e%e6%94%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;自动内存管理减轻了开发人员管理内存的复杂性，不需要像C\C++开发者那样显示malloc、free，或者new、delete。垃圾回收借助于一些垃圾回收算法完成对无用内存的清理，垃圾回收算法有很多，比如：引用计数、标记清除、拷贝、分代等等。&lt;/p&gt;
+&lt;p&gt;Go中垃圾回收器采用的是“并发三色标记清除”算法，see:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;a href="https://www.ardanlabs.com/blog/2018/12/garbage-collection-in-go-part1-semantics.html"&gt;Garbage Collection In Go : Part I - Semantics&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://www.ardanlabs.com/blog/2019/05/garbage-collection-in-go-part2-gctraces.html"&gt;Garbage Collection In Go : Part II - GC Traces&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://www.ardanlabs.com/blog/2019/07/garbage-collection-in-go-part3-gcpacing.html"&gt;Garbage Collection In Go : Part III - GC Pacing&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Go语言支持自动内存管理，那还存在内存泄漏问题吗？&lt;/p&gt;</description></item><item><title>Visualizing Your Go Code</title><link>/blog/2020-10-06-visualizing-your-go-code/</link><pubDate>Tue, 06 Oct 2020 23:13:52 +0800</pubDate><guid>/blog/2020-10-06-visualizing-your-go-code/</guid><description>&lt;h3 id="代码可读性"&gt;代码可读性 &lt;a href="#%e4%bb%a3%e7%a0%81%e5%8f%af%e8%af%bb%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;作为一名开发人员，代码可读性是我们常常挂在嘴边的。代码写出来除了让计算机能够正常执行以外，终究还是要让人能够理解它，后续才能做进一步的维护工作。如果代码写出来，只有它的作者能够看得懂，那只能说明这个作者逻辑表达能力有问题，透过其代码难以看出解决问题的思路。这是软件工程中要尽力避免的。&lt;/p&gt;
+&lt;p&gt;在软件工程方法论指导下，为了尽可能让代码可读性达标，我们往往会根据一些最佳实践拟定一些大多数人认可的标准，让所有开发人员遵守，然后通过代码评审、代码规范检查、持续集成交付流水线等综合起来，以尽可能逼近这一目标。当绝大多数人能够在约定的框架下，保质保量提交代码时，我们已经在代码可读性、可维护性方面前进了一大步。&lt;/p&gt;
+&lt;p&gt;然而，这样足够了吗？我认为还不够。&lt;/p&gt;
+&lt;h3 id="代码是思维的表达"&gt;代码是思维的表达 &lt;a href="#%e4%bb%a3%e7%a0%81%e6%98%af%e6%80%9d%e7%bb%b4%e7%9a%84%e8%a1%a8%e8%be%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;代码，不过是通过一种大家都理解的语言书写出来的篇章。就好比写文章一样，要有中心思想，然后围绕中心思想要展开层层描述。写代码一样，中心思想就是我们要解决的问题，围绕中心思想的层层描述就是我们解决问题的思路。所以，代码没有什么神秘的，它是人类思维的表达。&lt;/p&gt;
+&lt;p&gt;我们是如何快速理解一篇文章的呢？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;先看标题，掌握其核心关键词；&lt;/li&gt;
+&lt;li&gt;看下第一段落的内容，往往第一段会引出问题；&lt;/li&gt;
+&lt;li&gt;看下其余段落的首句、末句，往往会给出该段落的中心思想；&lt;/li&gt;
+&lt;li&gt;看下最后一段的内容，一般会给出一个结论；&lt;/li&gt;
+&lt;li&gt;通篇串下，了解文章整体含义；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;为什么我们会通过这种方式？因为一篇好的文章一定有承上启下、过渡。这种循序渐进的方式，步步逼近中心思想。&lt;/p&gt;
+&lt;p&gt;那代码呢？某种程度上，代码也是类似的。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;以go语言为例，通常对于一个package，我们会提供package注释来表示当前package要解决的问题；&lt;/li&gt;
+&lt;li&gt;每个package内部又包含了不同的types、variables、functions，它们结合起来来解决一个问题；&lt;/li&gt;
+&lt;li&gt;每一个function内部又分为多个步骤，每一步完成一个小功能，为下一步做好准备；&lt;/li&gt;
+&lt;li&gt;每一个小功能、步骤可能是if-else, switch-case, for-loop……之类的语言结构；&lt;/li&gt;
+&lt;li&gt;同时，我们还会提供测试用例，来验证上述方案的正确性。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;有没有觉得很相似，或许我们应该采用已有的读书的经验来辅助更好地理解程序？&lt;/p&gt;
+&lt;h3 id="oop思想认识世界"&gt;OOP思想认识世界 &lt;a href="#oop%e6%80%9d%e6%83%b3%e8%ae%a4%e8%af%86%e4%b8%96%e7%95%8c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;代码，和文章不同的是，它虽然有明显的程序构造，但是却没有明显的段落之分。&lt;/p&gt;
+&lt;p&gt;那我如何才能借鉴多年来养成的还不错的阅读习惯，来帮助我理解代码呢？当然不能盲目套用，不过俗话说，能工摹形，巧匠窃意，思想很多地方还是可以相通的。&lt;/p&gt;
+&lt;p&gt;如何更好地理解这个世界，对各种各样的问题进行抽象呢？比如一辆摩托车，它有离合器、发动机、链条、轮毂、轮胎、减震、油箱、排气等很多部件构成，我听说宝马水鸟电子控制很厉害，可以实现无人驾驶，那可是两轮的400多斤的大机器。那它的电子控制系统怎么做到的？至少要能理解一个摩托车有核心部件，整体运转起来如何理解其状态，如何控制个别部件以影响其他部件进而控制整体状态。那它如何控制部件呢？电子操作或机械操作。&lt;/p&gt;
+&lt;p&gt;扯远了，我只是有点喜欢水鸟而已。整个世界可以看做是一个个对象及其之间的联系所构成，代码也不例外。&lt;/p&gt;
+&lt;p&gt;道法自然，OOP的思想不过是借鉴了人类认识世界的方式，将其运用到了软件工程领域，以更好地对问题进行抽象，从而构建出设计更合理的软件。那代码里面有哪些语言构造体现了OOP的思想呢。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;类型与对象，生物学里区分物种、种群、个体，那是因为它们既有共性，也有个性；&lt;/li&gt;
+&lt;li&gt;通信的方式，自然界个体之间的交互也有多种方式，比如雄狮撒泡尿标记领地也不管入侵者认不认同，或者低吼驱赶入侵者离开，人和人用听得懂的语言沟通；&lt;/li&gt;
+&lt;li&gt;隐私与距离，每个人都有自己的隐私，如果你的朋友跟你借100块钱你可能给了，但是他如果问是你老婆给的还是你自己的，你可能就不想借给他了，给你就行了你管那么多干嘛呢，我还不想拿自家的借你呢，说不定借你老婆的给你的呢。每个人在一副外表下总有些不愿意被人触碰、靠近的地方。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;了解一个人，其实你不需要深入他的家庭本身去了解，看看他天天接触什么人，说些什么话，你也就大致清楚了。感兴趣就继续了解，不感兴趣也就拉倒了。我想绝大多数人都不是窥视狂，在拥有一定判断力的基础上，通过一些局部的信息是可以了解大致的整体信息的。&lt;/p&gt;
+&lt;p&gt;理解代码有相同之处？&lt;/p&gt;
+&lt;h3 id="流程控制--组件交互"&gt;流程控制 + 组件交互 &lt;a href="#%e6%b5%81%e7%a8%8b%e6%8e%a7%e5%88%b6--%e7%bb%84%e4%bb%b6%e4%ba%a4%e4%ba%92" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;某种程度上，我认为理解代码也有相似之处。&lt;/p&gt;
+&lt;p&gt;如果能够拎出那些比较重要的对象（objects），以及他们之间的通信（function call, chan send/recv），或者他们的私密信息（注释），是不是也能够大致有个了解呢？&lt;/p&gt;
+&lt;p&gt;如果想更深入了解下，加上事情的脉络（控制结构，if-else, switch-case, for-loop）呢？&lt;/p&gt;
+&lt;p&gt;其他信息? 我相信还有其他有用的有用信息，能够通过一些更加有效率的方式呈现出来。&lt;/p&gt;
+&lt;h3 id="认识-goast"&gt;认识 go/ast &lt;a href="#%e8%ae%a4%e8%af%86-goast" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;计算机编程语言，有多少种？我认为只有一种，就是人类可以理解的语言。有趣的是，编程语言之多可以覆盖元素周期表，不信来瞧瞧。&lt;/p&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;img alt="languages" src="https://i.pinimg.com/originals/bb/3a/d0/bb3ad028960fb7345df89057ff071437.jpg" width="340px"&gt;&lt;/td&gt;
+&lt;td&gt;&lt;img alt="goast example" src="https://upload.wikimedia.org/wikipedia/commons/a/ac/Python_add5_parse.png" width="340px"&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;ul&gt;
+&lt;li&gt;语言是什么？语言有精确的数学定义，它不是胡编乱造，尤其是编程语言；&lt;/li&gt;
+&lt;li&gt;编程语言更精确？那倒未必，人类社会多姿多彩之处，就在于会演绎出更加丰富多彩的内容，包括对语言的破坏性“创造”，人脑纠错能力太强了，我们甚至没有察觉到自己犯了错误，如网上津津乐道的山东人倒装玩法；&lt;/li&gt;
+&lt;li&gt;我能发明一门语言吗？当然，只要你能给出严谨的数学定义，没有歧义，找到一群人学会并开始用它交流，姑且可以称为语言了，比如生活大爆炸谢耳朵他老婆；&lt;/li&gt;
+&lt;li&gt;语言不是主谓宾之类的吗？主谓宾也可以进一步形式化，数学之美也让我感到惊叹；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;So&amp;hellip;假如我用编程语言写了一段代码，如何知道我有没有犯错误呢？那就是编译器的工作，词法分析、语法分析、语义分析，一切OK之后会进入中间代码生成、代码优化、生成最终代码。通常一般在语法分析会构建语法分析树AST（Abstract Syntax Tree），如果能够正常构建出AST，表示代码是按照语言对应生成规则来写的，就没什么大问题，反之则可能又自我“发挥”犯错了。&lt;/p&gt;
+&lt;p&gt;以下面的go程序为例：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;package main
+import (
+&amp;quot;fmt&amp;quot;
+)
+func add(a, b int) int {
+return a + b
+}
+func main() {
+c := add(1, 2)
+fmt.Printf(&amp;quot;1 + 2 = %d\n&amp;quot;, c)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;以下是两个不错的ast可视化工具，可以将上述代码拷贝以下以查看对应的AST。&lt;/p&gt;</description></item><item><title>Visualizing Your Go Code</title><link>/blog/2020-10-06-visualizing-your-go-code/</link><pubDate>Tue, 06 Oct 2020 23:13:52 +0800</pubDate><guid>/blog/2020-10-06-visualizing-your-go-code/</guid><description>&lt;h3 id="代码可读性"&gt;代码可读性 &lt;a href="#%e4%bb%a3%e7%a0%81%e5%8f%af%e8%af%bb%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;作为一名开发人员，代码可读性是我们常常挂在嘴边的。代码写出来除了让计算机能够正常执行以外，终究还是要让人能够理解它，后续才能做进一步的维护工作。如果代码写出来，只有它的作者能够看得懂，那只能说明这个作者逻辑表达能力有问题，透过其代码难以看出解决问题的思路。这是软件工程中要尽力避免的。&lt;/p&gt;
+&lt;p&gt;在软件工程方法论指导下，为了尽可能让代码可读性达标，我们往往会根据一些最佳实践拟定一些大多数人认可的标准，让所有开发人员遵守，然后通过代码评审、代码规范检查、持续集成交付流水线等综合起来，以尽可能逼近这一目标。当绝大多数人能够在约定的框架下，保质保量提交代码时，我们已经在代码可读性、可维护性方面前进了一大步。&lt;/p&gt;
+&lt;p&gt;然而，这样足够了吗？我认为还不够。&lt;/p&gt;
+&lt;h3 id="代码是思维的表达"&gt;代码是思维的表达 &lt;a href="#%e4%bb%a3%e7%a0%81%e6%98%af%e6%80%9d%e7%bb%b4%e7%9a%84%e8%a1%a8%e8%be%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;代码，不过是通过一种大家都理解的语言书写出来的篇章。就好比写文章一样，要有中心思想，然后围绕中心思想要展开层层描述。写代码一样，中心思想就是我们要解决的问题，围绕中心思想的层层描述就是我们解决问题的思路。所以，代码没有什么神秘的，它是人类思维的表达。&lt;/p&gt;
+&lt;p&gt;我们是如何快速理解一篇文章的呢？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;先看标题，掌握其核心关键词；&lt;/li&gt;
+&lt;li&gt;看下第一段落的内容，往往第一段会引出问题；&lt;/li&gt;
+&lt;li&gt;看下其余段落的首句、末句，往往会给出该段落的中心思想；&lt;/li&gt;
+&lt;li&gt;看下最后一段的内容，一般会给出一个结论；&lt;/li&gt;
+&lt;li&gt;通篇串下，了解文章整体含义；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;为什么我们会通过这种方式？因为一篇好的文章一定有承上启下、过渡。这种循序渐进的方式，步步逼近中心思想。&lt;/p&gt;
+&lt;p&gt;那代码呢？某种程度上，代码也是类似的。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;以go语言为例，通常对于一个package，我们会提供package注释来表示当前package要解决的问题；&lt;/li&gt;
+&lt;li&gt;每个package内部又包含了不同的types、variables、functions，它们结合起来来解决一个问题；&lt;/li&gt;
+&lt;li&gt;每一个function内部又分为多个步骤，每一步完成一个小功能，为下一步做好准备；&lt;/li&gt;
+&lt;li&gt;每一个小功能、步骤可能是if-else, switch-case, for-loop……之类的语言结构；&lt;/li&gt;
+&lt;li&gt;同时，我们还会提供测试用例，来验证上述方案的正确性。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;有没有觉得很相似，或许我们应该采用已有的读书的经验来辅助更好地理解程序？&lt;/p&gt;
+&lt;h3 id="oop思想认识世界"&gt;OOP思想认识世界 &lt;a href="#oop%e6%80%9d%e6%83%b3%e8%ae%a4%e8%af%86%e4%b8%96%e7%95%8c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;代码，和文章不同的是，它虽然有明显的程序构造，但是却没有明显的段落之分。&lt;/p&gt;
+&lt;p&gt;那我如何才能借鉴多年来养成的还不错的阅读习惯，来帮助我理解代码呢？当然不能盲目套用，不过俗话说，能工摹形，巧匠窃意，思想很多地方还是可以相通的。&lt;/p&gt;
+&lt;p&gt;如何更好地理解这个世界，对各种各样的问题进行抽象呢？比如一辆摩托车，它有离合器、发动机、链条、轮毂、轮胎、减震、油箱、排气等很多部件构成，我听说宝马水鸟电子控制很厉害，可以实现无人驾驶，那可是两轮的400多斤的大机器。那它的电子控制系统怎么做到的？至少要能理解一个摩托车有核心部件，整体运转起来如何理解其状态，如何控制个别部件以影响其他部件进而控制整体状态。那它如何控制部件呢？电子操作或机械操作。&lt;/p&gt;
+&lt;p&gt;扯远了，我只是有点喜欢水鸟而已。整个世界可以看做是一个个对象及其之间的联系所构成，代码也不例外。&lt;/p&gt;
+&lt;p&gt;道法自然，OOP的思想不过是借鉴了人类认识世界的方式，将其运用到了软件工程领域，以更好地对问题进行抽象，从而构建出设计更合理的软件。那代码里面有哪些语言构造体现了OOP的思想呢。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;类型与对象，生物学里区分物种、种群、个体，那是因为它们既有共性，也有个性；&lt;/li&gt;
+&lt;li&gt;通信的方式，自然界个体之间的交互也有多种方式，比如雄狮撒泡尿标记领地也不管入侵者认不认同，或者低吼驱赶入侵者离开，人和人用听得懂的语言沟通；&lt;/li&gt;
+&lt;li&gt;隐私与距离，每个人都有自己的隐私，如果你的朋友跟你借100块钱你可能给了，但是他如果问是你老婆给的还是你自己的，你可能就不想借给他了，给你就行了你管那么多干嘛呢，我还不想拿自家的借你呢，说不定借你老婆的给你的呢。每个人在一副外表下总有些不愿意被人触碰、靠近的地方。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;了解一个人，其实你不需要深入他的家庭本身去了解，看看他天天接触什么人，说些什么话，你也就大致清楚了。感兴趣就继续了解，不感兴趣也就拉倒了。我想绝大多数人都不是窥视狂，在拥有一定判断力的基础上，通过一些局部的信息是可以了解大致的整体信息的。&lt;/p&gt;
+&lt;p&gt;理解代码有相同之处？&lt;/p&gt;
+&lt;h3 id="流程控制--组件交互"&gt;流程控制 + 组件交互 &lt;a href="#%e6%b5%81%e7%a8%8b%e6%8e%a7%e5%88%b6--%e7%bb%84%e4%bb%b6%e4%ba%a4%e4%ba%92" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;某种程度上，我认为理解代码也有相似之处。&lt;/p&gt;
+&lt;p&gt;如果能够拎出那些比较重要的对象（objects），以及他们之间的通信（function call, chan send/recv），或者他们的私密信息（注释），是不是也能够大致有个了解呢？&lt;/p&gt;
+&lt;p&gt;如果想更深入了解下，加上事情的脉络（控制结构，if-else, switch-case, for-loop）呢？&lt;/p&gt;
+&lt;p&gt;其他信息? 我相信还有其他有用的有用信息，能够通过一些更加有效率的方式呈现出来。&lt;/p&gt;
+&lt;h3 id="认识-goast"&gt;认识 go/ast &lt;a href="#%e8%ae%a4%e8%af%86-goast" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;计算机编程语言，有多少种？我认为只有一种，就是人类可以理解的语言。有趣的是，编程语言之多可以覆盖元素周期表，不信来瞧瞧。&lt;/p&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;img alt="languages" src="https://i.pinimg.com/originals/bb/3a/d0/bb3ad028960fb7345df89057ff071437.jpg" width="340px"&gt;&lt;/td&gt;
+&lt;td&gt;&lt;img alt="goast example" src="https://upload.wikimedia.org/wikipedia/commons/a/ac/Python_add5_parse.png" width="340px"&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;ul&gt;
+&lt;li&gt;语言是什么？语言有精确的数学定义，它不是胡编乱造，尤其是编程语言；&lt;/li&gt;
+&lt;li&gt;编程语言更精确？那倒未必，人类社会多姿多彩之处，就在于会演绎出更加丰富多彩的内容，包括对语言的破坏性“创造”，人脑纠错能力太强了，我们甚至没有察觉到自己犯了错误，如网上津津乐道的山东人倒装玩法；&lt;/li&gt;
+&lt;li&gt;我能发明一门语言吗？当然，只要你能给出严谨的数学定义，没有歧义，找到一群人学会并开始用它交流，姑且可以称为语言了，比如生活大爆炸谢耳朵他老婆；&lt;/li&gt;
+&lt;li&gt;语言不是主谓宾之类的吗？主谓宾也可以进一步形式化，数学之美也让我感到惊叹；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;So&amp;hellip;假如我用编程语言写了一段代码，如何知道我有没有犯错误呢？那就是编译器的工作，词法分析、语法分析、语义分析，一切OK之后会进入中间代码生成、代码优化、生成最终代码。通常一般在语法分析会构建语法分析树AST（Abstract Syntax Tree），如果能够正常构建出AST，表示代码是按照语言对应生成规则来写的，就没什么大问题，反之则可能又自我“发挥”犯错了。&lt;/p&gt;
+&lt;p&gt;以下面的go程序为例：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;package main
+import (
+&amp;quot;fmt&amp;quot;
+)
+func add(a, b int) int {
+return a + b
+}
+func main() {
+c := add(1, 2)
+fmt.Printf(&amp;quot;1 + 2 = %d\n&amp;quot;, c)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;以下是两个不错的ast可视化工具，可以将上述代码拷贝以下以查看对应的AST。&lt;/p&gt;</description></item><item><title>go源码剖析 - go命令</title><link>/blog/2020-09-28-go%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-go%E5%91%BD%E4%BB%A4/</link><pubDate>Mon, 28 Sep 2020 22:18:43 +0800</pubDate><guid>/blog/2020-09-28-go%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-go%E5%91%BD%E4%BB%A4/</guid><description>&lt;h2 id="1-本文简介"&gt;1. 本文简介 &lt;a href="#1-%e6%9c%ac%e6%96%87%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;首先我们看下go命令行有哪些功能，运行&lt;code&gt;go help&lt;/code&gt;可以查看go命令的详细帮助信息，go命令有很多子命令，每个子命令有特定的功能。go命令功能之丰富涵盖了源文件编译、汇编、连接、反汇编、逃逸分析、代码生成、模块解析等等非常系统性的功能，了解go命令的实现将有助于系统性掌握整个go编译工具链。本文介绍下go命令的详细功能及大致实现，供后续参考。&lt;/p&gt;
+&lt;h2 id="2-go子命令列表"&gt;2. go子命令列表 &lt;a href="#2-go%e5%ad%90%e5%91%bd%e4%bb%a4%e5%88%97%e8%a1%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;go支持的子命令列表如下，下面我们逐一来简单说下。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;bug, start a bug report&lt;/li&gt;
+&lt;li&gt;build, compile packages and dependencies&lt;/li&gt;
+&lt;li&gt;clean, remove object files and cached files&lt;/li&gt;
+&lt;li&gt;doc, show documentation for package or symbol&lt;/li&gt;
+&lt;li&gt;env, print Go environment information&lt;/li&gt;
+&lt;li&gt;fix, update packages to use new APIs&lt;/li&gt;
+&lt;li&gt;fmt, gofmt (reformat) package sources&lt;/li&gt;
+&lt;li&gt;generate, generate Go files by processing source&lt;/li&gt;
+&lt;li&gt;get, add dependencies to current module and install them&lt;/li&gt;
+&lt;li&gt;install, compile and install packages and dependencies&lt;/li&gt;
+&lt;li&gt;list, list packages or modules&lt;/li&gt;
+&lt;li&gt;mod, module maintenance&lt;/li&gt;
+&lt;li&gt;run, compile and run Go program&lt;/li&gt;
+&lt;li&gt;test, test packages&lt;/li&gt;
+&lt;li&gt;tool, run specified go tool&lt;/li&gt;
+&lt;li&gt;version, print Go version&lt;/li&gt;
+&lt;li&gt;vet, report likely mistakes in packages&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="3-go-subcmds"&gt;3. go subcmds &lt;a href="#3-go-subcmds" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="go-bug"&gt;go bug &lt;a href="#go-bug" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;go bug&lt;/code&gt;，用于快速创建bug report。&lt;/p&gt;</description></item><item><title>剖析go二进制文件</title><link>/blog/2020-09-06-%E5%89%96%E6%9E%90go%E4%BA%8C%E8%BF%9B%E5%88%B6%E6%96%87%E4%BB%B6/</link><pubDate>Sun, 06 Sep 2020 18:55:39 +0800</pubDate><guid>/blog/2020-09-06-%E5%89%96%E6%9E%90go%E4%BA%8C%E8%BF%9B%E5%88%B6%E6%96%87%E4%BB%B6/</guid><description>&lt;h2 id="为什么要反汇编"&gt;为什么要反汇编？ &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e8%a6%81%e5%8f%8d%e6%b1%87%e7%bc%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;这篇文章介绍下反汇编的基本概念，以及如何用go语言写一个简单的反汇编器。本文的目标就是为了尽可能描述下反汇编的的相关概念，以及让读者朋友们了解go二进制程序内部大致是什么样的。&lt;/p&gt;
+&lt;p&gt;汇编代码不会撒谎，阅读汇编代码能够让我们更细致地了解处理器执行的指令到底做了什么。这也是为什么反汇编很重要的原因之一。如果我们有一个二进制程序，并且怀疑它有一些恶意的行为，通过反汇编来研究它就是一种很好的途径。再或者，如果你分析代码难以发现性能瓶颈，那么反汇编也是一种可以简化分析的途径。&lt;/p&gt;
+&lt;p&gt;如果你担心能不能阅读x86_64汇编代码的问题，其实不用担心，我们大部分都不能很顺畅地阅读。你也没有必要为了搞懂这篇文章去阅读其他任何的汇编代码，不过如果有汇编基础的话确实会感觉更有意思点。这里有一篇介绍汇编基础的文章 &lt;a href="https://www.nayuki.io/page/a-fundamental-introduction-to-x86-assembly-programming"&gt;A fundamental introduction to x86 assembly programming&lt;/a&gt;。&lt;/p&gt;
+&lt;h2 id="什么是反汇编"&gt;什么是反汇编？ &lt;a href="#%e4%bb%80%e4%b9%88%e6%98%af%e5%8f%8d%e6%b1%87%e7%bc%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;那么，什么是反汇编呢？&lt;/p&gt;
+&lt;p&gt;反汇编，其实是将已经编译好的二进制程序，重新转换为汇编代码的过程。为了解释清楚，我们先考虑下从源代码编译构建的过程：&lt;/p&gt;
+&lt;p&gt;&lt;img src="https://www.grant.pizza/dissecting/CompilerDiagram.png" alt="assemble-process"&gt;&lt;/p&gt;
+&lt;p&gt;汇编代码，其实是一种介于源代码、机器指令之间的中间代码表示，虽然大多数汇编指令是和机器指令对应的，但是也不绝对，比如go汇编就是一种跟机器指令没有明显对应关系的汇编形式。详细地可以参考go assembler设计对应的go blog一文。ok，言归正传。编译器首先将源代码转换为OS/架构特定的汇编代码，然后再通过汇编器将汇编代码转换为机器指令。从字面上就可以看出disassemble是assemble的一个逆向的过程，俗称反汇编。&lt;/p&gt;
+&lt;p&gt;&lt;img src="https://www.grant.pizza/dissecting/DisassemblerDiagram.png" alt="disassemble-process"&gt;&lt;/p&gt;
+&lt;p&gt;庆幸地是，go语言有一个相对标准、完整的工具链，汇编、反汇编都会比较方便。我们可以直接将源码转换成汇编代码来查看，例如通过运行命令 &lt;code&gt;go build -gcflags -S program.go&lt;/code&gt;。如果我们已经有了一个编译构建好的二进制程序，这个时候想查看汇编代码的话，就得通过反汇编，可以运行命令 &lt;code&gt;go tool objdump binaryFile&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;如果想了解如何实现汇编、反汇编的话，这篇文章其实已经可以结束了。但是如果来解释下如何从0到1构建一个反汇编器的话，还是有意思的。&lt;/p&gt;
+&lt;h2 id="从0到1构建反汇编器"&gt;从0到1构建反汇编器？ &lt;a href="#%e4%bb%8e0%e5%88%b01%e6%9e%84%e5%bb%ba%e5%8f%8d%e6%b1%87%e7%bc%96%e5%99%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;首先，为了构建一个反汇编器，我们需要先知道二进制程序对应的目标机器架构包含的所有的机器指令。为了实现这个，我们可能要参考特定架构的手册来查阅到底有多少机器指令。如果对这个不熟悉，这个过程其实是比较困难的。其实，有很多种微处理器架构、汇编语法、指令集、编码模式，而且一直在变。光掌握这些不同机器架构包含的指令集就是一个很困难的事情，至于如何困难可以参考下这篇文章 &lt;a href="https://www.grant.pizza/DisassemblerDiagram.png"&gt;how many x86_64 instructions are there anyway&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;庆幸地是，这些繁重的工作应被解决了，反汇编框架Capstone就是干这个事情的。Capstone其实已经是一个事实上的标准了，在各种反汇编工具中应用广泛。重新实现一个反汇编框架，其实没必要，这个过程只会是一个学习性的、枯燥的、重复的任务，我们不会介绍如何实现一个Capstone反汇编框架，只会介绍如何借助Capstone来实现反汇编的能力。在go语言中使用Capstone也简单，有一个针对go的实现gapstone。&lt;/p&gt;
+&lt;p&gt;通过下面的代码我们可以初始化一个gapstone反汇编框架引擎，用它来执行后续的反汇编任务。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;engine, err := gapstone.New(
+gapstone.CS_ARCH_X86,
+gapstone.CS_MODE_64,
+)
+if err != nil {
+log.Fatal(err)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;例如，我们可以将下面的原始指令数据传递给Capstone反汇编框架，然后该反汇编框架将会将这些原始指令数据转换为对应的x86_64下的指令。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;0x64 0x48 0x8B 0xC 0x25 0xF8 0xFF 0xFF 0xFF
+|
+mov rcx, qword ptr fs:[0xfffffffffffffff8]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;把上面的操作放在一起，如下：&lt;/p&gt;</description></item><item><title>go程序如何实现热重启</title><link>/blog/2020-08-28-go%E7%A8%8B%E5%BA%8F%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%83%AD%E9%87%8D%E5%90%AF/</link><pubDate>Fri, 28 Aug 2020 03:36:59 +0800</pubDate><guid>/blog/2020-08-28-go%E7%A8%8B%E5%BA%8F%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%83%AD%E9%87%8D%E5%90%AF/</guid><description>&lt;p&gt;最近在优化公司框架trpc时发现了一个热重启相关的问题，优化之余也总结沉淀下，对go如何实现热重启这方面的内容做一个简单的梳理。&lt;/p&gt;
+&lt;h2 id="1什么是热重启"&gt;1.什么是热重启？ &lt;a href="#1%e4%bb%80%e4%b9%88%e6%98%af%e7%83%ad%e9%87%8d%e5%90%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;热重启（Hot Restart），是一项保证服务可用性的手段。它允许服务重启期间，不中断已经建立的连接，老服务进程不再接受新连接请求，新连接请求将在新服务进程中受理。对于原服务进程中已经建立的连接，也可以将其设为读关闭，等待平滑处理完连接上的请求及连接空闲后再行退出。通过这种方式，可以保证已建立的连接不中断，连接上的事务（请求、处理、响应）可以正常完成，新的服务进程也可以正常接受连接、处理连接上的请求。当然，热重启期间进程平滑退出涉及到的不止是连接上的事务，也有消息服务、自定义事务需要关注。&lt;/p&gt;
+&lt;p&gt;这是我理解的热重启的一个大致描述。热重启现在还有没有存在的必要？我的理解是看场景。&lt;/p&gt;
+&lt;p&gt;以后台开发为例，假如运维平台有能力在服务升级、重启时自动踢掉流量，服务就绪后又自动加回流量，假如能够合理预估服务QPS、请求处理时长，那么只要配置一个合理的停止前等待时间，是可以达到类似热重启的效果的。这样的话，在后台服务里面支持热重启就显得没什么必要。但是，如果我们开发一个微服务框架，不能对将来的部署平台、环境做这种假设，也有可能使用方只是部署在一两台物理机上，也没有其他的负载均衡设施，但不希望因为重启受干扰，热重启就很有必要。当然还有一些更复杂、要求更苛刻的场景，也需要热重启的能力。&lt;/p&gt;
+&lt;p&gt;热重启是比较重要的一项保证服务质量的手段，还是值得了解下的，这也是本文介绍的初衷。&lt;/p&gt;
+&lt;h2 id="2如何实现热重启"&gt;2.如何实现热重启？ &lt;a href="#2%e5%a6%82%e4%bd%95%e5%ae%9e%e7%8e%b0%e7%83%ad%e9%87%8d%e5%90%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;如何实现热重启，这里其实不能一概而论，要结合实际的场景来看（比如服务编程模型、对可用性要求的高低等）。大致的实现思路，可以先抛一下。&lt;/p&gt;
+&lt;p&gt;一般要实现热重启，大致要包括如下步骤：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;首先，要让老进程，这里称之为父进程了，先要fork出一个子进程来代替它工作；&lt;/li&gt;
+&lt;li&gt;然后，子进程就绪之后，通知父进程，正常接受新连接请求、处理连接上收到的请求；&lt;/li&gt;
+&lt;li&gt;再然后，父进程处理完已建立连接上的请求后、连接空闲后，平滑退出。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;听上去是挺简单的&amp;hellip;&lt;/p&gt;
+&lt;h3 id="21认识fork"&gt;2.1.认识fork &lt;a href="#21%e8%ae%a4%e8%af%86fork" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;大家都知道&lt;code&gt;fork()&lt;/code&gt; 系统调用，父进程调用fork会创建一个进程副本，代码中还可以通过fork返回值是否为0来区分是子进程还是父进程。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;int main(char **argv, int argc) {
+pid_t pid = fork();
+if (pid == 0) {
+printf(&amp;quot;i am child process&amp;quot;);
+} else {
+printf(&amp;quot;i am parent process, i have a child process named %d&amp;quot;, pid);
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;可能有些开发人员不知道fork的实现原理，或者不知道fork返回值为什么在父子进程中不同，或者不知道如何做到父子进程中返回值不同……了解这些是要有点知识积累的。&lt;/p&gt;
+&lt;h3 id="22返回值"&gt;2.2.返回值 &lt;a href="#22%e8%bf%94%e5%9b%9e%e5%80%bc" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;简单概括下，ABI定义了进行函数调用时的一些规范，如何传递参数，如何返回值等等，以x86为例，如果返回值是rax寄存器能够容的一般都是通过rax寄存器返回的。&lt;/p&gt;
+&lt;p&gt;如果rax寄存器位宽无法容纳下的返回值呢？也简单，编译器会安插些指令来完成这些神秘的操作，具体是什么指令，就跟语言编译器实现相关了。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;c语言，可能会将返回值的地址，传递到rdi或其他寄存器，被调函数内部呢，通过多条指令将返回值写入rdi代指的内存区；&lt;/li&gt;
+&lt;li&gt;c语言，也可能在被调函数内部，用多个寄存器rax,rdx&amp;hellip;一起暂存返回结果，函数返回时再将多个寄存器的值赋值到变量中；&lt;/li&gt;
+&lt;li&gt;也可能会像golang这样，通过栈内存来返回；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="23fork返回值"&gt;2.3.fork返回值 &lt;a href="#23fork%e8%bf%94%e5%9b%9e%e5%80%bc" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;fork系统调用的返回值，有点特殊，在父进程和子进程中，这个函数返回的值是不同的，如何做到的呢？&lt;/p&gt;
+&lt;p&gt;联想下父进程调用fork的时候，操作系统内核需要干些什么呢？分配进程控制块、分配pid、分配内存空间……肯定有很多东西啦，这里注意下进程的硬件上下文信息，这些是非常重要的，在进程被调度算法选中进行调度时，是需要还原硬件上下文信息的。&lt;/p&gt;
+&lt;p&gt;Linux fork的时候，会对子进程的硬件上下文进行一定的修改，我就是让你fork之后拿到的pid是0，怎么办呢？前面2.2节提过了，对于那些小整数，rax寄存器存下绰绰有余，fork返回时就是将操作系统分配的pid放到rax寄存器的。&lt;/p&gt;</description></item><item><title>delve调试器设计实现</title><link>/blog/2020-08-25-delve%E8%B0%83%E8%AF%95%E5%99%A8%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</link><pubDate>Tue, 25 Aug 2020 12:21:14 +0800</pubDate><guid>/blog/2020-08-25-delve%E8%B0%83%E8%AF%95%E5%99%A8%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</guid><description>&lt;p&gt;研究调试器设计实现有段时间了，前几天在调试一个程序时，发现go调试器go-delve/delve竟然不支持类似gdb的x/FMT格式，于是在之前工作上又优化了一下。CR期间，也学习到一些之前理解不深的地方，也顺便了解了下delve的整体架构设计、大致实现，今天就来说道说道。&lt;/p&gt;
+&lt;h1 id="delve简介"&gt;delve简介 &lt;a href="#delve%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;go-delve/delve是Derekparker发起的一个调试器项目，面向go语言的。为什么针对go语言要创建一个新的调试器呢？为什么不使用GDB呢？这里涉及到go的一些特性。&lt;/p&gt;
+&lt;p&gt;作为符号级调试器，要能正常实现源码级调试，有这么几个事情必须要做的：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;首先，就必须要有调试信息的支持，比如编译器、连接器在构建过程中插入DWARF相关的sections，以供后续调试器提取、解析以重建指令、地址与源码的映射关系，还有在活动记录中跳转等等。&lt;/li&gt;
+&lt;li&gt;此外，有了调试信息，还需要理解语言内部实现，比如go的类型系统、协程、运行时，这样你才能读写源码级的运行状态信息；&lt;/li&gt;
+&lt;li&gt;还没完，你还需要一些平台级实现相关的玩意，不同的语言在不同的平台上有不同的实现，调试器要理解这些差异并做针对性处理；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些工作，在GDB里扩展插件来实现，不一定能很好地实现的，比如GDB支持的DWARF标准版本问题，和go编译器没有对齐之类的，比如GDB里面Target层（对tracee）控制层考虑的大多是进程、线程级别的，没有对goroutine类似的控制能力，诸如此类。&lt;/p&gt;
+&lt;p&gt;Anyway，我们需要一款更理解go的调试器，delve就这么诞生了。现在大已经是go官方推荐的调试器了，也是GoLand、VSCode、vim-go中使用的调试器。能有幸了解一款调试器的实现、参与贡献还是很爽的一件事情。&lt;/p&gt;
+&lt;h1 id="delve整体架构"&gt;delve整体架构 &lt;a href="#delve%e6%95%b4%e4%bd%93%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h1 id="delve大致实现"&gt;delve大致实现 &lt;a href="#delve%e5%a4%a7%e8%87%b4%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;</description></item><item><title>Monkey Patching in Go</title><link>/blog/2020-08-23-monkey_patching_in_go/</link><pubDate>Sun, 23 Aug 2020 15:41:28 +0800</pubDate><guid>/blog/2020-08-23-monkey_patching_in_go/</guid><description>&lt;p&gt;前几天写了篇&lt;a href="https://hitzhangjie.github.io/blog/2020-08-20-x64%E6%B1%87%E7%BC%96%E5%BC%80%E5%8F%91%E4%BB%8B%E7%BB%8D/"&gt;x64汇编开发介绍&lt;/a&gt;的文章，当时有提到接下来会介绍下go中如何实现monkey patching，嗯，今天就来说下这个事情。&lt;/p&gt;
+&lt;h1 id="monkey-patching-简介"&gt;Monkey Patching 简介 &lt;a href="#monkey-patching-%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;monkey patching，一说到这个，很多熟悉go的同学可能会联想起gomonkey这个mock测试框架。该术语的定义取决于使用它的社区。在Ruby，Python 和许多其他动态编程语言中，“monkey patching”一词仅指在运行时对类或模块的动态修改，其目的是为了修补现有的第三方代码，以此作为解决方法。错误或功能无法正常运行。根据其不同的意图，在运行时修改类的其他形式也具有不同的名称。例如，在Zope和Plone中，安全补丁通常是使用动态类修改来提供的，但它们被称为热修补程序(hot fixes)。&lt;/p&gt;
+&lt;p&gt;monkey patching，它常用于如下场景：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;在运行时替换方法/类/属性/函数，例如在测试过程中取消功能；&lt;/li&gt;
+&lt;li&gt;修改/扩展第三方产品的行为，而无需维护源代码的私有副本；&lt;/li&gt;
+&lt;li&gt;在运行时将补丁程序的结果应用于内存中的状态，而不是磁盘上的源代码；&lt;/li&gt;
+&lt;li&gt;分发与原始源代码一起存在的安全性或行为修复程序（例如，将其作为Ruby on Rails平台的插件分发）；&lt;/li&gt;
+&lt;li&gt;探索各种自动修复程序以提供自我修复。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id="monkey-patching-in-go"&gt;Monkey Patching in Go &lt;a href="#monkey-patching-in-go" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;最近在写mock测试的时候，有些场景下用到了gomonkey，这个测试框架挺好用的，之前也简单了解过大致的实现，最近也在看些底层工具链相关的东西，就想整理分享下。&lt;/p&gt;
+&lt;p&gt;首先我会简单介绍下go函数的实现、指令patching的概念，然后看下反汇编、指令级调试如何帮助快速定位问题，然后通过几个简单的demo来演示下如何实现指令patch，然后我们再回到go实现monkey patching。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;如果不感兴趣就真的不要看了，就好像别人骑车摔破头也觉得很爽，但是有人觉得10几万的车也没啥吸引人的，所以我极少主动转发、群里推送这些文章，我更希望它是被主动发现的。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="go函数表示"&gt;Go函数表示 &lt;a href="#go%e5%87%bd%e6%95%b0%e8%a1%a8%e7%a4%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="demo1"&gt;demo1 &lt;a href="#demo1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;下面定义了一个简单的函数&lt;code&gt;a()&lt;/code&gt;，然后再main函数中调用它，然后调用通过print打印出它的返回值。&lt;/p&gt;
+&lt;p&gt;file: main.go&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;package main
+func a() int { return 1 }
+func main() {
+print(a())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这个函数非常简单，monkey patching离不开汇编，所以我们先看下其对应的汇编代码，了解这个程序干了些啥。&lt;/p&gt;
+&lt;p&gt;这里顺便推荐几个工具:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;dlv，适用于go的调试器&lt;/li&gt;
+&lt;li&gt;radare2，静态分析工具，类似的还有IDA、Hopper&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;我这里就先试用radare2（下文简称r2）来演示如何操作了。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;$ go build -gcflags=&amp;quot;all=-N -l&amp;quot; -o main main.go
+$ r2 ./main
+-- give | and &amp;gt; a try piping and redirection
+[0x00454330]&amp;gt; s sym.main.main
+[0x00459270]&amp;gt; af
+[0x00459270]&amp;gt; pdf
+; CODE XREF from sym.main.main @ 0x4592c2
+┌ 84: sym.main.main ();
+│ ; var int64_t var_10h @ rsp+0x8
+│ ; var int64_t var_8h @ rsp+0x10
+│ ┌─&amp;gt; 0x00459270 64488b0c25f8. mov rcx, qword fs:[0xfffffffffffffff8] ;; 这里是go函数栈检查
+│ ╎ 0x00459279 483b6110 cmp rsp, qword [rcx + 0x10]
+│ ┌──&amp;lt; 0x0045927d 763e jbe 0x4592bd
+│ │╎ 0x0045927f 4883ec18 sub rsp, 0x18 ;; 栈没问题开始执行
+│ │╎ 0x00459283 48896c2410 mov qword [var_8h], rbp
+│ │╎ 0x00459288 488d6c2410 lea rbp, qword [var_8h]
+│ │╎ 0x0045928d e8beffffff call sym.main.a ;; 调用函数sym.main.a
+│ │╎ 0x00459292 488b0424 mov rax, qword [rsp]
+│ │╎ 0x00459296 4889442408 mov qword [var_10h], rax
+│ │╎ 0x0045929b e83003fdff call sym.runtime.printlock
+│ │╎ 0x004592a0 488b442408 mov rax, qword [var_10h]
+│ │╎ 0x004592a5 48890424 mov qword [rsp], rax
+│ │╎ 0x004592a9 e8a20afdff call sym.runtime.printint
+│ │╎ 0x004592ae e89d03fdff call sym.runtime.printunlock
+│ │╎ 0x004592b3 488b6c2410 mov rbp, qword [var_8h]
+│ │╎ 0x004592b8 4883c418 add rsp, 0x18
+│ │╎ 0x004592bc c3 ret
+│ └──&amp;gt; 0x004592bd e83e7affff call sym.runtime.morestack_noctxt
+└ └─&amp;lt; 0x004592c2 ebac jmp sym.main.main
+[0x00459270]&amp;gt; s sym.main.a ;; 查看sym.main.a地址为0x00459250
+[0x00459250]&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;函数main中调用函数a的过程就这么简单&lt;code&gt;call sym.main.a&lt;/code&gt;，也就是call 0x00459250，再看下a这个函数，它很简单将返回值1存储到[arg_8h]中，就是前一个栈帧中的一个8字节空间，之后的我们就先不关心了。&lt;/p&gt;</description></item><item><title>选择合适的测试框架</title><link>/blog/2020-08-19-go%E5%BC%80%E5%8F%91%E5%A6%82%E4%BD%95%E5%81%9A%E6%B5%8B%E8%AF%95%E9%80%89%E6%8B%A9%E5%90%88%E9%80%82%E7%9A%84%E6%B5%8B%E8%AF%95%E6%A1%86%E6%9E%B6/</link><pubDate>Wed, 19 Aug 2020 00:40:31 +0800</pubDate><guid>/blog/2020-08-19-go%E5%BC%80%E5%8F%91%E5%A6%82%E4%BD%95%E5%81%9A%E6%B5%8B%E8%AF%95%E9%80%89%E6%8B%A9%E5%90%88%E9%80%82%E7%9A%84%E6%B5%8B%E8%AF%95%E6%A1%86%E6%9E%B6/</guid><description>&lt;p&gt;开发除了编写代码，也应该关注如何保证代码的可测试性，以及维护有效的测试用例。最近团队对单测要求不断提高，也将之前收集、积累的一点测试相关的内容记录分享下。这篇主要总结下常见的测试框架的优缺点。&lt;/p&gt;
+&lt;p&gt;如何做好测试，是一门系统性的方法学，而不只是一些零零散散的经验。根据测试目的的不同，对测试方法可以作如下分类：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;稳定性测试&lt;/li&gt;
+&lt;li&gt;压力测试&lt;/li&gt;
+&lt;li&gt;回归测试&lt;/li&gt;
+&lt;li&gt;冒烟测试&lt;/li&gt;
+&lt;li&gt;性能测试&lt;/li&gt;
+&lt;li&gt;功能测试&lt;/li&gt;
+&lt;li&gt;安全测试&lt;/li&gt;
+&lt;li&gt;可用性测试&lt;/li&gt;
+&lt;li&gt;&amp;hellip;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这么多的测试方法，最初我还是在填写一项IntelliJ IDEA发起的问卷调查时了解到的，后面在研发过程中也渐渐加深了对这些测试方法的认识。这里面的每一项测试，我认为开发都是应该去了解的。&lt;/p&gt;
+&lt;p&gt;很多测试方法是通用的，和具体语言无关，这篇文章只重点关注go开发如何做单元测试。这是每位开发首先应该掌握起来的，它是其他测试得以顺利展开的基础。&lt;/p&gt;
+&lt;p&gt;开发在编码阶段，应该在本地完成单测相关的工作，保证测试用例通过，在自动化构建阶段应该有能力执行一些跑单测、BVT测试的任务，通过后才允许提交给测试团队。当然现在EPC实行起来之后，大部分团队都是这么执行的了。&lt;/p&gt;
+&lt;p&gt;研发效能要求提升代码库的测试覆盖率，要提高测试的价值，我们得先学些下掌握比较好的测试的方法。&lt;/p&gt;
+&lt;p&gt;参考了下go测试的一些实践，业务中肯定会遇到如下这些情况，或多或少：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;新老服务都有比较多的外部依赖，比如网络调用、读db等&lt;/li&gt;
+&lt;li&gt;存量服务维护、开发，有些不适合大范围重构的&lt;/li&gt;
+&lt;li&gt;测试不要侵入业务代码，不能为了测试写太多不相干的东西&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;go单测中使用的比较多的，大致有如下这些选择， gomock+gostub+gomonkey+goconvey，现在go用的比较多的就是这几个，我比较推荐gomock、gomonkey，看情况，灵活组合使用吧，先总结下这几个的使用方式、优缺点。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;gomock是基于interface的，mockgen生成interface对应的mock桩代码，然后再去写mock代码。
+如果前期没这些interface设计的话，也不方便测试。有的话，看起来也不是特别方便。&lt;/li&gt;
+&lt;li&gt;gostub支持对变量、方法、过程进行mock，但是用上它，存量代码的话就要做些调整，对代码有侵入，
+因为它是基于变量去作mock，比如func Hello(&amp;hellip;)要改成var Hello=func(&amp;hellip;)才能用&lt;/li&gt;
+&lt;li&gt;gomonkey也支持对变量、方法、过程进行mock，我现在感觉这个比较好用，简单，对代码无侵入，
+和gostub实现原理不太一样，比如函数，它通过汇编调整跳转地址，这么着对内联函数就支持不到了，就得-gcflags=&amp;ldquo;all=-l&amp;quot;禁用内联&lt;/li&gt;
+&lt;li&gt;goconvey主要是用来更好地管理测试用例，可以根据情况用或者不用&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这里有几篇文章，感兴趣的可以先看下：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;组合灵活使用，gomock+gostub+gomonkey+goconvey：https://www.jianshu.com/p/2f675d5e334e&lt;/li&gt;
+&lt;li&gt;gomonkey实现原理：https://bouk.co/blog/monkey-patching-in-go/&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;在深度使用上述几个测试框架之后，个人感觉gomonkey+goconvery组合是比较合适的，goconvey也可以考虑用go testing框架t.Run代替来维护子测试。&lt;/p&gt;
+&lt;p&gt;很多同学对开发阶段写单测，多少还是有些抵触的，常见的理由大多是没时间写单测。我的理解是，这里有个因果倒置的问题，写单测的目的并不是为了写而写，写单侧的目的是为了验证你的逻辑或者测试先行驱动逻辑开发，甚至还会为后续的修改保驾护航。&lt;/p&gt;
+&lt;p&gt;在开发阶段写单测，客观上会花些时间，但是也会节省频繁提交构建、部署、测试的时间，开发阶段在上述操作中频繁切换的次数会大幅减少。&lt;/p&gt;
+&lt;p&gt;我的体验是这样的，仅供参考。&lt;/p&gt;</description></item><item><title>go开发如何做测试：表驱动测试</title><link>/blog/2020-08-19-go%E5%BC%80%E5%8F%91%E5%A6%82%E4%BD%95%E5%81%9A%E6%B5%8B%E8%AF%95%E8%A1%A8%E9%A9%B1%E5%8A%A8%E6%B5%8B%E8%AF%95/</link><pubDate>Wed, 19 Aug 2020 00:36:19 +0800</pubDate><guid>/blog/2020-08-19-go%E5%BC%80%E5%8F%91%E5%A6%82%E4%BD%95%E5%81%9A%E6%B5%8B%E8%AF%95%E8%A1%A8%E9%A9%B1%E5%8A%A8%E6%B5%8B%E8%AF%95/</guid><description>&lt;p&gt;开发除了编写代码，也应该关注如何保证代码的可测试性，以及维护有效的测试用例。最近团队对单测要求不断提高，也将之前收集、积累的一点测试相关的内容记录分享下。本文转自Dave Cheney的表驱动测试一文，这篇文章写得挺好的。&lt;/p&gt;
+&lt;h1 id="prefer-table-driven-tests"&gt;Prefer table driven tests &lt;a href="#prefer-table-driven-tests" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;I’m a big fan of testing, specifically &lt;a href="https://dave.cheney.net/2019/04/03/absolute-unit-test"&gt;unit testing&lt;/a&gt; and TDD (&lt;a href="https://www.youtube.com/watch?v=EZ05e7EMOLM"&gt;done correctly&lt;/a&gt;, of course). A practice that has grown around Go projects is the idea of a table driven test. This post explores the how and why of writing a table driven test.&lt;/p&gt;
+&lt;p&gt;Let’s say we have a function that splits strings:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;// Split slices s into all substrings separated by sep and
+// returns a slice of the substrings between those separators.
+func Split(s, sep string) []string {
+var result []string
+i := strings.Index(s, sep)
+for i &amp;gt; -1 {
+result = append(result, s[:i])
+s = s[i+len(sep):]
+i = strings.Index(s, sep)
+}
+return append(result, s)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In Go, unit tests are just regular Go functions (with a few rules) so we write a unit test for this function starting with a file in the same directory, with the same package name, &lt;code&gt;strings&lt;/code&gt;.&lt;/p&gt;</description></item><item><title>使用awgo开发alfred.workflow</title><link>/blog/2020-07-31-%E4%BD%BF%E7%94%A8awgo%E5%BC%80%E5%8F%91alfred.workflow/</link><pubDate>Fri, 31 Jul 2020 14:53:15 +0800</pubDate><guid>/blog/2020-07-31-%E4%BD%BF%E7%94%A8awgo%E5%BC%80%E5%8F%91alfred.workflow/</guid><description>&lt;style&gt;
+img {
+width: 680px;
+}
+&lt;/style&gt;
+&lt;h1 id="本文简介"&gt;本文简介 &lt;a href="#%e6%9c%ac%e6%96%87%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;该workflow主要是为了对 &amp;ldquo;时间戳&amp;rdquo; &amp;amp;&amp;amp; &amp;ldquo;格式化日期+时间字符串&amp;rdquo; 进行快速转换，方便使用。&lt;/p&gt;
+&lt;p&gt;开发人员，经常会涉及到时间相关的转换操作，有个趁手的工具还是很有必要的。&lt;/p&gt;
+&lt;p&gt;我平时使用alfred比较多，自然就想通过workflow的方式来实现，当然用hammerspoon、pet等其他工具也可以。&lt;/p&gt;
+&lt;p&gt;alfred workflow和alfred本身的交互是通过管道方式进行连接的：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;alfred将用户输入的信息转发给匹配的workflow；&lt;/li&gt;
+&lt;li&gt;workflow对接收到的参数进行处理，并将处理的结果按照指定格式输出到stdout；&lt;/li&gt;
+&lt;li&gt;alfred读取stdout中的数据作为响应展示到用户界面；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这里主要使用了awgo来编写workflow，实现逻辑可以参考下代码，逻辑很简单。下面主要介绍下如何使用。&lt;/p&gt;
+&lt;h1 id="如何安装"&gt;如何安装？ &lt;a href="#%e5%a6%82%e4%bd%95%e5%ae%89%e8%a3%85" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;下载项目下 &lt;a href="https://raw.githubusercontent.com/hitzhangjie/alfred-datetime-workflow/master/workflow/Date%20Formats%20Go.alfredworkflow"&gt;workflow/Date Formats Go.alfredworkflow&lt;/a&gt;，双击即可安装。&lt;/p&gt;
+&lt;h1 id="如何使用"&gt;如何使用？ &lt;a href="#%e5%a6%82%e4%bd%95%e4%bd%bf%e7%94%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;运行 &lt;code&gt;datex&lt;/code&gt; 唤起workflow&lt;br&gt;
+&lt;img alt="运行datex换起workflow" src="assets/alfred/1.jpg"/&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;常用转换操作: 获取当前时间对应的Unix时间戳，以及格式化字符串&lt;br&gt;
+&lt;code&gt;datex now&lt;/code&gt;，将当前时间转换为时间戳以及格式化后的字符串(多种日期格式)。&lt;br&gt;
+可以用上下键移动进行选择，当按下回车键时，会将对应的结果拷贝到剪贴板，方便粘贴使用。
+&lt;img alt="获取当前时间" src="assets/alfred/2.jpg"/&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;常用转换操作: 将时间戳转换为对应的格式化字符串&lt;br&gt;
+以时间戳1596137272为例，&lt;code&gt;datex 1596137272&lt;/code&gt;，此时会将时间戳转换为格式化后的字符串。&lt;br&gt;
+选择、复制数据操作类似。
+&lt;img alt="转换时间戳" src="assets/alfred/3.jpg"/&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;常用转换操作: 将格式化字符串转换为时间戳，或其他格式&lt;br&gt;
+以字符串&lt;code&gt;2020-07-30&lt;/code&gt;为例，&lt;code&gt;datex 2020-07-30&lt;/code&gt;，此时会先将其与候选的格式化字符串进行匹配。&lt;br&gt;
+并转换成一个有效的时间戳。 然后再根据此时间戳，转换为其他格式对应的字符串。选择、复制数据操作类似。
+&lt;img alt="转换字符串" src="assets/alfred/4.jpg"/&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;这大致就是该workflow的使用方式。&lt;/p&gt;
+&lt;p&gt;关于日期时间格式转换的workflow，github上已经有几个比较好的实现了，轮子不好用就得自己造。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;实现对timezone支持不好;&lt;/li&gt;
+&lt;li&gt;采用的时间格式不符合国人习惯;&lt;/li&gt;
+&lt;li&gt;掌握awgo开发alfred workflow以后可以写更多效率工具;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;希望这个小工具能帮助到有需要的同学，也给准备开发alfred workflow或使用awgo开发workflow的同学提供一个示例。&lt;/p&gt;
+&lt;h1 id="如何实现"&gt;如何实现？ &lt;a href="#%e5%a6%82%e4%bd%95%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="流程图梳理下逻辑"&gt;流程图梳理下逻辑 &lt;a href="#%e6%b5%81%e7%a8%8b%e5%9b%be%e6%a2%b3%e7%90%86%e4%b8%8b%e9%80%bb%e8%be%91" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;先画个流程图，简单理下思路，思路理清楚了，写代码就快了。&lt;/p&gt;
+&lt;img alt="流程图" src="assets/alfred/0.png"/&gt;
+&lt;h2 id="alfredworkflow编排"&gt;alfred.workflow编排 &lt;a href="#alfredworkflow%e7%bc%96%e6%8e%92" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;好，理清楚思路之后，我们开始尝试对worklow进行编排，如下所示：&lt;/p&gt;
+&lt;img alt="workflow编排" src="assets/alfred/5.jpg"/&gt;
+&lt;p&gt;workflow中包含2个节点：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;节点1，是一个script filter，我们可以配置一个关键字datex来激活它，当然还可以继续输入参数。激活该script filter之后，它将调用我们编写的时间转换程序alfred-datetime-workflow，程序返回的结果将在alfred界面上进行展示，展示的样式是列表。如我们输入datex now，将显示现在的时间戳以及其他格式的datetime字符串。&lt;br&gt;
+&lt;img alt="script filter配置" src="assets/alfred/8.jpg"/&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;节点2，是Copy to Clipboard，它干什么呢？节点1中显示了列表之后，用户选择一个列表项+回车之后，选中的列表项对应的参数值将被传递给该节点作为参数，Copy to Clipboard就是将参数拷贝到剪贴板；&lt;/p&gt;</description></item><item><title>如何在go二进制程序中打包静态资源文件</title><link>/blog/2020-07-25-%E5%A6%82%E4%BD%95%E5%9C%A8go%E4%BA%8C%E8%BF%9B%E5%88%B6%E7%A8%8B%E5%BA%8F%E4%B8%AD%E6%89%93%E5%8C%85%E9%9D%99%E6%80%81%E8%B5%84%E6%BA%90%E6%96%87%E4%BB%B6/</link><pubDate>Sat, 25 Jul 2020 17:26:01 +0800</pubDate><guid>/blog/2020-07-25-%E5%A6%82%E4%BD%95%E5%9C%A8go%E4%BA%8C%E8%BF%9B%E5%88%B6%E7%A8%8B%E5%BA%8F%E4%B8%AD%E6%89%93%E5%8C%85%E9%9D%99%E6%80%81%E8%B5%84%E6%BA%90%E6%96%87%E4%BB%B6/</guid><description>&lt;h1 id="why"&gt;Why? &lt;a href="#why" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;有时我们希望在go二进制程序中打包一些静态资源文件，目的可能有多种，比较常见的是为了简化安装。通常我们安装一个go编写的工具，更倾向于使用 &lt;code&gt;go get $repo&lt;/code&gt; 的方式来完成，这似乎已经成为了一种共识。当然，也有些项目还依赖一些静态资源文件，这些静态资源文件是不会被自动安装的，就需要借助其他方式来完成静态资源的安装，比如通过install.sh脚本，后者Makefile构建脚本等等。&lt;/p&gt;
+&lt;p&gt;今天，我想讨论下，如何简单快速地支持静态资源打包到二进制程序中，以及在二进制程序中对这些静态资源加以引用。&lt;/p&gt;
+&lt;h1 id="how"&gt;How? &lt;a href="#how" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;github上已经有不少开发者在探索，方法其实都比较雷同，大致思路就是：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;读取静态资源文件，转换成bytes数据；&lt;/li&gt;
+&lt;li&gt;内部提供一些类似文件系统的接口，提供文件名，返回文件数据；&lt;/li&gt;
+&lt;li&gt;blabla&amp;hellip;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;开发者的需求，可能不完全一致，比如：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;我想像遍历本地文件系统一样遍历文件目录，不只是提供一个文件名返回一个文件；&lt;/li&gt;
+&lt;li&gt;我的代码已经写完了，我只想做最小修改，将静态资源文件打包到二进制程序中，而后还原回文件系统；&lt;/li&gt;
+&lt;li&gt;我的代码不需要支持类似文件服务器的功能，不需要那么多华丽呼哨的功能；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;开发者提供了很多类似的实现，这里有篇文章可供参考：https://tech.townsourced.com/post/embedding-static-files-in-go/。能工模形，巧匠窃意。其实在大致了解了实现的方式之后，就懒得再去学如何使用这些五花八门的第三方工具了。说真的，真的没几个好用的，至少从我的角度来说。可能它设计的比较通用，但是与我来说没有用处，我追求极简。&lt;/p&gt;
+&lt;p&gt;而且，go官方是有意来支持打包静态资源的，关于这一点，已经有issue在跟进讨论：https://github.com/golang/go/issues/35950。&lt;/p&gt;
+&lt;p&gt;尽管现在的状态还是Proposal-Hold状态，但是我觉得这个feature的到来也不会等很久了，anyway，我不想在这些即将被淘汰的三方工具上浪费学习的时间、改写代码的时间。&lt;/p&gt;
+&lt;p&gt;所以呢，为什么不简单一点，自己写一个当下比较适用项目本身的？写这个东西花不了二十分钟时间！&lt;/p&gt;
+&lt;h1 id="lets-do-it"&gt;Let&amp;rsquo;s Do it! &lt;a href="#lets-do-it" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="功能分析"&gt;功能分析 &lt;a href="#%e5%8a%9f%e8%83%bd%e5%88%86%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;我理解实现打包静态资源文件，有这么几个点需要考虑：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;提供一个小工具，通过它可以反复执行类似的静态资源打包的操作；&lt;/li&gt;
+&lt;li&gt;可以指定一个文件或者目录，将其转换成一个go文件放入项目中，允许编译时连接；&lt;/li&gt;
+&lt;li&gt;go文件可以通过导出变量的形式，导出文件数据，允许在其他go代码中引用文件的内容；&lt;/li&gt;
+&lt;li&gt;静态资源文件可能有很多，希望能对文件内容进行压缩，以便减小go binary文件尺寸；&lt;/li&gt;
+&lt;li&gt;通常是本地组织好静态资源文件，写代码、测试ok、最后发布前希望将其打包到go binary，打包、解包、使用静态资源要最小化项目代码修改；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="功能实现"&gt;功能实现 &lt;a href="#%e5%8a%9f%e8%83%bd%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;我们先实现这个打包静态资源的工具，需要这几个参数：input、output，分别代表输入文件（or 目录）、输出文件名（go文件），gopkg代表输出go文件的包名（默认gobin）。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;package main
+var (
+input = flag.String(&amp;quot;input&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;read data from input, which could be a regular file or directory&amp;quot;)
+output = flag.String(&amp;quot;output&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;write transformed data to named *.go, which could be linked with binary&amp;quot;)
+gopkg = flag.String(&amp;quot;gopkg&amp;quot;, &amp;quot;gobin&amp;quot;, &amp;quot;write transformed data to *.go, whose package is $package&amp;quot;)
+)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;我们的工具将从input对应的文件中读取文件内容，并转换成一个output对应的go文件中的导出变量。如果input是一个目录呢，我们则需要对目录下文件进行遍历处理。由于静态资源文件数据可能较大，这里需要进行gzip压缩（对于文本压缩率可高达80%左右）有助于减少go binary文件尺寸。&lt;/p&gt;</description></item><item><title>开发者应掌握的系统性测试方法</title><link>/blog/2020-07-01-%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</link><pubDate>Wed, 01 Jul 2020 20:30:01 +0800</pubDate><guid>/blog/2020-07-01-%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</guid><description>&lt;style type="text/css" rel="stylesheet"&gt;
+/* Three image containers (use 25% for four, and 50% for two, etc) */
+.column {
+float: left;
+width: 50%;
+padding: 5px;
+}
+/* Clear floats after image containers */
+.row::after {
+content: "";
+clear: both;
+display: table;
+}
+.fixsize {
+width: 400px;
+}
+.fullsize {
+width: 680px;
+}
+&lt;/style&gt;
+&lt;p&gt;如何做好测试，是一门系统性的方法学，而不只是一些零零散散的经验。了解并掌握各种测试的目的、方法是非常有必要的。&lt;/p&gt;
+&lt;p&gt;最近工作中也在推动测试相关的一些事项，有一点感触，这里先简单总结下常见测试方法的目的，大致包括如下几类。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;1. 研发流程中构建环节&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;冒烟测试&lt;br&gt;
+该术语，取自集成电路开发领域，集成电路在测试之前，先要加电检查，如果没有冒烟才能进行后续的测试。冒烟测试并不是测试过程的一个阶段，它是软件构建过程中的一个环节，它包含一些非常基础的测试，如保证编译通过、部分核心用例通过，它随每次构建触发，处于持续集成的一个环节。英文表述为BVT测试，Build Verification Testing，从中更能感受的到。将其理解为测试的一个阶段，是一个巨大的误区。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;2. 功能性指标相关测试&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;功能测试&lt;br&gt;
+软件需求说明中对软件需要的功能进行了描述，软件需求分析阶段会对需求说明进行详细分析，并整理出相关的规格说明，包括每个用例的输入、输出等等。功能测试，其实也就是对这里的软件需求规格说明进行测试用例的覆盖，考察的是对各个点、异常路径的把控程度。在实际研发过程中，开发人员一般会先自测通过后，再转给测试团队进行进一步的测试。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;回归测试&lt;br&gt;
+之前已经测试过的用例，可以沉淀下来，供以后进行回归，已发现软件变更、升级期间是否引入了bug。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;其他&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;3. 非功能性指标相关测试&lt;/strong&gt;&lt;/p&gt;
+&lt;div class="row"&gt;
+&lt;div class="column"&gt;&lt;img class="fixsize" alt="性能测试曲线" src="assets/testing/性能测试曲线.png"/&gt;&lt;/div&gt;
+&lt;div class="column"&gt;&lt;img class="fixsize" alt="并发请求响应时间" src="assets/testing/并发请求响应时间.png"/&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;性能测试 (how much + how fast)&lt;br&gt;
+对软件的性能指标进行测试，以验证是否达到预期设计的性能要求。在软件设计之初，需求方一般会提出明确的性能要求，如希望支撑N个用户的并发访问请求，希望响应时间能控制在2s以内等等。除了用户提出的性能指标要求，软件设计人员在系统设计的时候，也会对系统中交互的各个子系统、组件之间的性能有一定要求，如各组件通信响应时间在100ms以内等。&lt;br&gt;
+性能测试，是对系统的一个检验，检验是否达到了预期的设计标准。性能测试，通常可以参考系统最大吞吐量时的请求量级、响应时间，来确定系统的最佳运行点，科学合理地部署设备资源来平衡性能和成本。&lt;br&gt;
+性能测试，通常会和负载测试、压力测试等结合起来，以获得系统的最佳运行点、系统最大负载点、系统崩溃点。&lt;/p&gt;</description></item><item><title>如何高效开发一个命令行工具</title><link>/blog/2020-06-26-%E5%A6%82%E4%BD%95%E9%AB%98%E6%95%88%E5%BC%80%E5%8F%91%E4%B8%80%E4%B8%AA%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%B7%A5%E5%85%B7/</link><pubDate>Fri, 26 Jun 2020 10:38:34 +0800</pubDate><guid>/blog/2020-06-26-%E5%A6%82%E4%BD%95%E9%AB%98%E6%95%88%E5%BC%80%E5%8F%91%E4%B8%80%E4%B8%AA%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%B7%A5%E5%85%B7/</guid><description>&lt;p&gt;我经常会开发一些命令行工具来协助处理一些事情，如开发一个代码生成工具快速生成服务代码，或者开发一个工具来方便管理github上的工具，或者开发一个工具rm来替换掉不安全的rm，等等。&lt;/p&gt;
+&lt;p&gt;命令行工具开发过程中，比较常见的一个问题就是对功能进行分组，开发多个命令不利于使用，在命令中支持子命令是一个更常见、更友好的做法，如go build，go tool，go pprof，等等。我们还希望为不同的子命令添加不同的命令行选项，如&lt;code&gt;go build -gcflags=&lt;/code&gt;，&lt;code&gt;go pprof --seconds=&lt;/code&gt;，等等。&lt;/p&gt;
+&lt;h3 id="如何支持子命令字呢"&gt;如何支持子命令字呢？ &lt;a href="#%e5%a6%82%e4%bd%95%e6%94%af%e6%8c%81%e5%ad%90%e5%91%bd%e4%bb%a4%e5%ad%97%e5%91%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;假如我们开发一个命令行程序 &lt;code&gt;gox&lt;/code&gt;，我们希望能为它添加一个子命令&lt;code&gt;gox create&lt;/code&gt;来创建一个完整的服务工程，包括自动生成工程下的代码。&lt;/p&gt;
+&lt;p&gt;那如何为命令行程序&lt;code&gt;gox&lt;/code&gt;添加这个子命令字呢？&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;gox&lt;/code&gt;是shell搜索路径定位到的程序，&lt;code&gt;create&lt;/code&gt;只能是shell传递给进程的一个普通参数，在&lt;code&gt;gox&lt;/code&gt;程序启动之后只能从&lt;code&gt;os.Args&lt;/code&gt;来获取该参数，以及后续&lt;code&gt;gox create -protofile= -protodir&lt;/code&gt;的参数&lt;code&gt;-protofile&lt;/code&gt;及&lt;code&gt;-protodir&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;然后呢，为了方便以后扩展其他子命令，我们最好将subcmd进行一下抽象，通过一个&lt;code&gt;Command interface{}&lt;/code&gt;约定好一个subcmd必须要完成那些操作。接口并不是为了抽象而抽象，而是用来清晰地表明要做什么。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;// Command what does a command do
+type Command interface{
+// PreRun run before the command logic execution
+PreRun() error
+// Run run the command logic
+Run() error
+// PostRun run after the command logic execution
+PostRun() error
+}
+// BaseCommand basic implemention
+//
+// this BaseCommand could be embeded into a customized subcmd
+type BaseCommand struct{
+}
+func (bc *BaseCommand) PreRun() error {
+return nil
+}
+func (bc *BaseCommand) Run() error {
+panic(&amp;quot;implement me&amp;quot;)
+}
+func (bc *BaseCommand) PostRun() error {
+return nil
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Command接口定义了一个command应该干什么，然后也可以提供一个基本的Command实现BaseCommand，它提供了一些基本的操作可以供后续复用，后面我们要扩展其他子命令字的时候，通过将该BaseCommand嵌入，可以少实现几个函数，这也是go里面提倡的通过组合来实现继承。&lt;/p&gt;</description></item><item><title>go源码剖析-gotest实现</title><link>/blog/2020-02-23-go%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-gotest%E5%AE%9E%E7%8E%B0/</link><pubDate>Sun, 23 Feb 2020 16:54:07 +0800</pubDate><guid>/blog/2020-02-23-go%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90-gotest%E5%AE%9E%E7%8E%B0/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在go1.13出来后不久，有不少同学遇到了go test报错的问题 “flag -test.timeout provided but not defined”。这个问题是如何引起的呢？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;公司微服务代码，通常是借助代码生成工具统一生成的，包括针对接口的测试用例；&lt;/li&gt;
+&lt;li&gt;在生成单元测试文件时，如helloworld_test.go中，在该文件中定义了一些测试选项如-timeout、-service、-method、-target、-req、-rsp等；
+上述定义的选项，在helloworld_test.go中的func init()中执行flag.Parse()操作完成选项解析。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这是被测试代码的一点背景信息，上述测试代码在go1.12中是没有问题的，但是当升级到go1.13后，就出现了上述“flag &amp;hellip; provided but not defined”的错误。&lt;/p&gt;
+&lt;h2 id="实现细节"&gt;实现细节 &lt;a href="#%e5%ae%9e%e7%8e%b0%e7%bb%86%e8%8a%82" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;go test实现细节，需要跟踪一下命令go test的执行过程，具体对应这个源文件：src/cmd/go/internal/test/test.go。&lt;/p&gt;
+&lt;p&gt;假如现在，我们创建一个package名为xxxx的go文件，然后创建一个package名为xxxx_test的_test文件，如：&lt;/p&gt;
+&lt;p&gt;file: helloworld_test.go&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;package xxxx_test
+import &amp;quot;testing&amp;quot;
+import &amp;quot;xxxx&amp;quot;
+func TestHelloWorld(t *testing.T) {
+xxxx.Hello()
+}
+/*
+func init() {
+flag.Parse()
+}
+*/
+/*
+func TestMain(m *testing.M) {
+os.Exit(m.Run())
+}
+*/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;file: helloworld.go&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;package xxxx
+func Hello() {
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这里的实例代码，做了适当的简化，方便大家查看。为了更好地跟踪go test过程，我们可以以调试模式运行go test，如&lt;code&gt;GOTMPDIR=$(pwd)/xxx dlv exec $(which go) -- test -c&lt;/code&gt;：&lt;/p&gt;</description></item><item><title>别用float作为map的key</title><link>/blog/2019-05-23-%E5%88%AB%E7%94%A8float%E4%BD%9C%E4%B8%BAmap%E7%9A%84key/</link><pubDate>Thu, 23 May 2019 00:16:36 +0800</pubDate><guid>/blog/2019-05-23-%E5%88%AB%E7%94%A8float%E4%BD%9C%E4%B8%BAmap%E7%9A%84key/</guid><description>&lt;p&gt;遇到个好玩的问题，使用float类型作为go map的key，示例代码如下：
+&lt;img src="assets/gomap/1558586114_21.png" alt="use-float64-as-map-key"&gt;&lt;/p&gt;
+&lt;p&gt;其实就是浮点数精度的问题，随手翻了下go map的源码，备忘下。这里要涉及到几个问题：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;golang如何针对key计算hash的，阅读源码后发现就是有个key *_type，h.key.alg.hash(key)来计算得到hash，问题就出在这里的hash计算过程，可以阅读下alg.go，里面针对不同的key类型定义了计算hash的方法：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;var algarray = [alg_max]typeAlg{
+alg_NOEQ: {nil, nil},
+alg_MEM0: {memhash0, memequal0},
+alg_MEM8: {memhash8, memequal8},
+alg_MEM16: {memhash16, memequal16},
+alg_MEM32: {memhash32, memequal32},
+alg_MEM64: {memhash64, memequal64},
+alg_MEM128: {memhash128, memequal128},
+alg_STRING: {strhash, strequal},
+alg_INTER: {interhash, interequal},
+alg_NILINTER: {nilinterhash, nilinterequal},
+alg_FLOAT32: {f32hash, f32equal},
+alg_FLOAT64: {f64hash, f64equal},
+alg_CPLX64: {c64hash, c64equal},
+alg_CPLX128: {c128hash, c128equal},
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;float64就是要使用&lt;code&gt;f64hash&lt;/code&gt;这个方法来计算hash值。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;golang里面利用计算得到的hash值的后5位作为hmap的bucket index，先定位到bucket，然后再根据hash的前8位作为与bucket内部&amp;lt;k,v&amp;gt; entries的hash进行比较找到对应的entry。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;下面我们看下f64hash的实现：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;func f64hash(p unsafe.Pointer, h uintptr) uintptr {
+f := *(*float64)(p)
+switch {
+case f == 0:
+return c1 * (c0 ^ h) // +0, -0
+case f != f:
+return c1 * (c0 ^ h ^ uintptr(fastrand())) // any kind of NaN
+default:
+return memhash(p, h, 8)
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;f==0或者f!=f是两种极端情况，不考虑直接看f64hash里面调用方法memhash(p, h, 8)，memhash实现，省略无关代码：&lt;/p&gt;</description></item><item><title>godoc文档</title><link>/blog/2018-06-29-godoc%E6%96%87%E6%A1%A3/</link><pubDate>Fri, 29 Jun 2018 22:39:03 +0800</pubDate><guid>/blog/2018-06-29-godoc%E6%96%87%E6%A1%A3/</guid><description>&lt;h1 id="godoc文档"&gt;godoc文档 &lt;a href="#godoc%e6%96%87%e6%a1%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="标准库文档"&gt;标准库文档 &lt;a href="#%e6%a0%87%e5%87%86%e5%ba%93%e6%96%87%e6%a1%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当要查看go标准库文档时，可借助godoc命令进行查询，如&lt;code&gt;godoc container/list&lt;/code&gt;，也可以在本地开启一个web服务来查询，如&lt;code&gt;godoc -http=:6060&lt;/code&gt;。&lt;/p&gt;
+&lt;h2 id="非标注库文档"&gt;非标注库文档 &lt;a href="#%e9%9d%9e%e6%a0%87%e6%b3%a8%e5%ba%93%e6%96%87%e6%a1%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当要查看非标准库（如自建项目）的文档时，我们也是借助godoc来查看，但是执行godoc命令之前需要做些准备工作。&lt;/p&gt;
+&lt;h3 id="希望在文档中看到什么信息"&gt;希望在文档中看到什么信息 &lt;a href="#%e5%b8%8c%e6%9c%9b%e5%9c%a8%e6%96%87%e6%a1%a3%e4%b8%ad%e7%9c%8b%e5%88%b0%e4%bb%80%e4%b9%88%e4%bf%a1%e6%81%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;package介绍&lt;/li&gt;
+&lt;li&gt;type介绍&lt;/li&gt;
+&lt;li&gt;func介绍&lt;/li&gt;
+&lt;li&gt;示例代码&lt;/li&gt;
+&lt;li&gt;针对package的示例代码&lt;/li&gt;
+&lt;li&gt;针对type的示例代码&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;上述几种希望看到的信息，我们首先需要在代码中按照godoc约定的方式提供上述信息，godoc才能找到这些信息展示出来。下面就分别描述下如何在代码中包含上述信息。&lt;/p&gt;
+&lt;h3 id="package--type--func-介绍"&gt;package &amp;amp; type &amp;amp; func 介绍 &lt;a href="#package--type--func-%e4%bb%8b%e7%bb%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;这里对package、type、func的介绍是以leading comments的方式在代码中直接提供的，就是package声明、type声明、func声明前面紧邻的注释，该注释与声明之间没有空行分隔。&lt;/p&gt;
+&lt;p&gt;以如下文件$GOPATH/src/kisslulu/conf/conf.go为例：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-golang"&gt;// Package conf provides support for loading json, ini, properties configuration.
+package conf
+// JsonCfg
+type JsonCfg struct {
+}
+// IniCfg
+type IniCfg struct {
+}
+// PropCfg
+type PropCfg struct {
+}
+// Load json config from filepath
+func LoadJsonCfg(filepath string) (*JsonCfg, error) {
+}
+// Load Ini config from filePath
+func LoadIniCfg(filepath string) (*IniCfg, error) {
+}
+// Load PropCfg from filepath
+func LoadPropCfg(filepath string) (*PropCfg, error) {
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;运行&lt;code&gt;godoc -http=:6060&lt;/code&gt;找到对应的package kisslulu/conf即可预览文档中对package、type、func的介绍。&lt;/p&gt;</description></item><item><title>golang method receiver-type的梗</title><link>/blog/2018-05-21-golang-method-receiver-type%E7%9A%84%E6%A2%97/</link><pubDate>Mon, 21 May 2018 12:33:23 +0800</pubDate><guid>/blog/2018-05-21-golang-method-receiver-type%E7%9A%84%E6%A2%97/</guid><description>&lt;p&gt;这里来聊聊method receiver type为什么不能是pointer和interface类型。&lt;/p&gt;
+&lt;h1 id="1-receiver-type必须满足的条件"&gt;1 receiver-type必须满足的条件 &lt;a href="#1-receiver-type%e5%bf%85%e9%a1%bb%e6%bb%a1%e8%b6%b3%e7%9a%84%e6%9d%a1%e4%bb%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;golang里面提供了一定的面向对象支持，比如我们可以为类型T或者*T定义成员方法（类型T称为成员方法的receiver-type），但是这里的类型T必须满足如下几个条件：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;T必须是已经定义过的类型；&lt;/li&gt;
+&lt;li&gt;T与当前方法定义必须在同一个package下面；&lt;/li&gt;
+&lt;li&gt;T不能是指针；&lt;/li&gt;
+&lt;li&gt;T不能是接口类型；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;前面两点都比较容易理解，下面两点是什么梗？为什么就不能在指针类型上添加方法？为什么就不能在interface上添加方法？当然可以一句话待过，golang不支持，但是我想问下为什么？&lt;/p&gt;
+&lt;h1 id="2-receiver-type为什么不能是指针类型"&gt;2 receiver-type为什么不能是指针类型？ &lt;a href="#2-receiver-type%e4%b8%ba%e4%bb%80%e4%b9%88%e4%b8%8d%e8%83%bd%e6%98%af%e6%8c%87%e9%92%88%e7%b1%bb%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;golang允许为 &lt;strong&gt;类型指针*T&lt;/strong&gt; 添加方法，但是不允许为 &lt;strong&gt;指针类型本身&lt;/strong&gt; 添加方法。&lt;strong&gt;按现有golang的实现方式，为指针类型添加方法会导致方法调用时的歧义&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;看下面这个示例程序。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-golang"&gt;type T int
+func (t *T) Get() T {
+return *t + 1
+}
+type P *T
+func (p P) Get() T {
+return *p + 2
+}
+func F() {
+var v1 T
+var v2 = &amp;amp;v1
+var v3 P = &amp;amp;v1
+fmt.Println(v1.Get(), v2.Get(), v3.Get())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;示例程序中 &lt;code&gt;v3.Get()&lt;/code&gt; 存在调用歧义，编译器不知道该调用哪个方法了。如果要支持在指针这种receiver-type上定义方法，golang编译器势必要实现地更复杂才能支持到，指针本来就比较容易破坏可读性，还要在一种指针类型上定义方法，对使用者、编译器开发者而言可能都是件费力不讨好的事情。&lt;/p&gt;</description></item><item><title>golang function-closure 实现机制</title><link>/blog/2018-05-19-golang-function-closure%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/</link><pubDate>Sat, 19 May 2018 19:55:15 +0800</pubDate><guid>/blog/2018-05-19-golang-function-closure%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/</guid><description>&lt;p&gt;golang里面函数时first-class citizen，可以作为值进行参数传递，不管是普通函数“func abc()”，还是成员方法“func (x X) xxx()”，还是一个闭包“func () { return func(){&amp;hellip;.}}”……看上去很方便，不禁要问，golang里面funciton和closure是如何实现的呢？扒拉了下源码，这里简单总结下。&lt;/p&gt;
+&lt;h1 id="1-golang中函数内部表示是什么样子的"&gt;1 golang中函数内部表示是什么样子的？ &lt;a href="#1-golang%e4%b8%ad%e5%87%bd%e6%95%b0%e5%86%85%e9%83%a8%e8%a1%a8%e7%a4%ba%e6%98%af%e4%bb%80%e4%b9%88%e6%a0%b7%e5%ad%90%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;看下golang cmd/compile/internal/types/type.go中对Func类型的定义：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-golang"&gt;// Func contains Type fields specific to func types.
+type Func struct {
+Receiver *Type // function receiver，接受者类型，每个函数定义都包括该字段，可以为nil或non-nil
+Results *Type // function results，返回值类型
+Params *Type // function params，参数列表类型
+Nname *Node // function name，函数名
+// Argwid is the total width of the function receiver, params, and results.
+// It gets calculated via a temporary TFUNCARGS type.
+// Note that TFUNC's Width is Widthptr.
+Argwid int64
+Outnamed bool // 是否是可导出的？
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;通过这个Func定义来看，其可以覆盖golang里面所有的函数类型声明了，不管是普通函数，还是成员方法等等。&lt;/p&gt;</description></item><item><title>golang select-case 实现机制</title><link>/blog/2018-05-19-golang-select-case%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/</link><pubDate>Sat, 19 May 2018 19:21:11 +0800</pubDate><guid>/blog/2018-05-19-golang-select-case%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/</guid><description>&lt;h1 id="1-chan操作规则"&gt;1 chan操作规则 &lt;a href="#1-chan%e6%93%8d%e4%bd%9c%e8%a7%84%e5%88%99" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在介绍select-case实现机制之前，最好先了解下chan操作规则，明白goroutine何时阻塞，又在什么时机被唤醒，这对后续理解select-case实现有帮助。所以接下来先介绍chan操作规则，然后再介绍select-case的实现。&lt;/p&gt;
+&lt;h2 id="11-chan操作规则1"&gt;1.1 chan操作规则1 &lt;a href="#11-chan%e6%93%8d%e4%bd%9c%e8%a7%84%e5%88%991" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当一个goroutine要从一个non-nil &amp;amp; non-closed chan上接收数据时，goroutine首先会去获取chan上的锁，然后执行如下操作直到某个条件被满足：&lt;/p&gt;
+&lt;p&gt;1）如果chan上的value buffer不空，这也意味着chan上的recv goroutine queue也一定是空的，该接收goroutine将从value buffer中unshift出一个value。这个时候，如果send goroutine队列不空的情况下，因为刚才value buffer中空出了一个位置，有位置可写，所以这个时候会从send goroutine queue中unshift出一个发送goroutine并让其恢复执行，让其执行把数据写入chan的操作，实际上是恢复该发送该goroutine执行，并把该发送goroutine要发送的数据push到value buffer中。然后呢，该接收goroutine也拿到了数据了，就继续执行。这种情景，channel的接收操作称为non-blocking操作。&lt;/p&gt;
+&lt;p&gt;2）另一种情况，如果value buffer是空的，但是send goroutine queue不空，这种情况下，该chan一定是unbufferred chan，不然value buffer肯定有数据嘛，这个时候接收goroutine将从send goroutine queue中unshift出一个发送goroutine，并将该发送goroutine要发送的数据接收过来（两个goroutine一个有发送数据地址，一个有接收数据地址，拷贝过来就ok），然后这个取出的发送goroutine将恢复执行，这个接收goroutine也可以继续执行。这种情况下，chan接收操作也是non-blocking操作。&lt;/p&gt;
+&lt;p&gt;3）另一种情况，如果value buffer和send goroutine queue都是空的，没有数据可接收，将把该接收goroutine push到chan的recv goroutine queue，该接收goroutine将转入blocking状态，什么时候恢复期执行呢，要等到有一个goroutine尝试向chan发送数据的时候了。这种场景下，chan接收操作是blocking操作。&lt;/p&gt;
+&lt;h2 id="12-chan操作规则2"&gt;1.2 chan操作规则2 &lt;a href="#12-chan%e6%93%8d%e4%bd%9c%e8%a7%84%e5%88%992" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当一个goroutine常识向一个non-nil &amp;amp; non-closed chan发送数据的时候，该goroutine将先尝试获取chan上的锁，然后执行如下操作直到满足其中一种情况。&lt;/p&gt;
+&lt;p&gt;1）如果chan的recv goroutine queue不空，这种情况下，value buffer一定是空的。发送goroutine将从recv goroutine queue中unshift出一个recv goroutine，然后直接将自己要发送的数据拷贝到该recv goroutine的接收地址处，然后恢复该recv goroutine的运行，当前发送goroutine也继续执行。这种情况下，chan send操作是non-blocking操作。&lt;/p&gt;
+&lt;p&gt;2）如果chan的recv goroutine queue是空的，并且value buffer不满，这种情况下，send goroutine queue一定是空的，因为value buffer不满发送goroutine可以发送完成不可能会阻塞。该发送goroutine将要发送的数据push到value buffer中然后继续执行。这种情况下，chan send操作是non-blocking操作。&lt;/p&gt;
+&lt;p&gt;3）如果chan的recv goroutine queue是空的，并且value buffer是满的，发送goroutine将被push到send goroutine queue中进入阻塞状态。等到有其他goroutine尝试从chan接收数据的时候才能将其唤醒恢复执行。这种情况下，chan send操作是blocking操作。&lt;/p&gt;
+&lt;h2 id="13-chan操作规则3"&gt;1.3 chan操作规则3 &lt;a href="#13-chan%e6%93%8d%e4%bd%9c%e8%a7%84%e5%88%993" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当一个goroutine尝试close一个non-nil &amp;amp; non-closed chan的时候，close操作将依次执行如下操作。&lt;/p&gt;</description></item></channel></rss>

@@ -1,18 +1,70 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>network on</title><link>/tags/network/</link><description>Recent content in network on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 25 Jun 2026 10:00:00 +0800</lastBuildDate><atom:link href="/tags/network/index.xml" rel="self" type="application/rss+xml"/><item><title>TCP send 返回成功，真的意味着对端收到了吗？</title><link>/blog/2026-06-25-tcp-send-reliability-myth/</link><pubDate>Thu, 25 Jun 2026 10:00:00 +0800</pubDate><guid>/blog/2026-06-25-tcp-send-reliability-myth/</guid><description>TCP 连接 send 返回成功，真的意味着对端收到/处理了吗？先说结论，不光可能没处理，甚至收到都不一定收到。很多人说TCP不是可靠的吗？为什么像golang tcpconn.Write 返回了nil，竟然还有可能发送不成功呢？
-这是很多开发者的TCP认知误区。现如今很多网络服务器开发都是基于开发框架、RPC桩代码生成，网络通信被简化成了一个桩代码函数调用，开发者的技能也从系统调用、libev库之类的较深的理解慢慢会话为了RPC桩代码call boy :)
-背景 # 前几天同事问了我一个问题：我们框架里通过 send 通知对方服务，如果 send 没有返回失败，能不能 100% 确定对端收到了这个包？
-先对齐下概念：这里的send，是RPC时只发req但是不返回rsp给上层调用，在有些框架里也会用选项notify或者sendonly来标识；与send一应的还有一个call，这里的call指的是发送req并且返回rsp给上层调用，有些框架里会用选项sendrcv来标识。
-答案是不能。这个问题其实触及了一个非常经典的认知误区——很多开发者把&amp;quot;系统调用没报错&amp;quot;等同于&amp;quot;对端进程收到了数据&amp;quot;。这个误区之所以普遍，是因为它跨越了多个抽象层次：从应用层 buffer 到内核协议栈，从网卡队列到网络传输，再到对端操作系统和业务进程，每一层都有&amp;quot;你以为成功了但其实还没有&amp;quot;的环节。
-下面我们从几个层次来拆解这个问题。
-问题一：系统调用成功 ≠ 数据送达 # 层层缓存：everything is cache # 当你调用 tcpconn.Write(buf) 并且没有返回 error 时，这个&amp;quot;成功&amp;quot;到底意味着什么？答案是：它只意味着数据从应用层的 buffer 拷贝到了内核的 socket buffer。后面的路还很长：
-应用层 buffer ↓ tcpconn.Write (系统调用) 内核 socket buffer ← 系统调用到这里就返回了 ↓ TCP 协议栈（分段、拥塞控制、重传……） 网卡 TX queue (NIC buffer) ↓ 物理层 网络 ↓ 对端网卡 → 内核 → 应用层 系统调用的语义是&amp;quot;数据已提交给内核&amp;quot;，它不会等待数据通过网卡发送出去，更不会等待对端的 TCP ACK。这是有意为之的设计——如果每个 write 都要等到对端确认，那么一次 RTT 就会阻塞调用线程，性能将完全不可接受（后面还会细说）。</description></item><item><title>TCP/IP网络安全篇</title><link>/blog/2013-09-30-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8tcpipnetworksecurity/</link><pubDate>Mon, 30 Sep 2013 02:08:29 +0800</pubDate><guid>/blog/2013-09-30-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8tcpipnetworksecurity/</guid><description>《TCP/IP 网络安全篇》，作者是日本的寺田真敏 萱岛 信。
-感谢作者理论与实践结合的教学方式，简单地介绍了网络安全的方方面面，让 我学起来也是很有兴趣，真诚地向寺田真敏先生道一声谢谢。
-下面是我对本书学习过程中的一个总结，难免有理解偏差之处，还需在以后的 学习实践过程中，进一步体会、纠正。
-1 TCP/IP的基础知识 # 1.1 TCP/IP与因特网 # OSI 7-layer model
-Host layers: applications Message presentation session -------------------------- transport Message segment -------------------------- media layer: network packet/datagram -------------------------- data link frame -------------------------- physical bit 用于分组交换的设备，IMP（Interface Message Processor）接口报文处理机 的第一号机被设计制成。
-TCP/IP协议，是以tcp协议和ip协议为中心，构成的协议族的总称。 TCP/IP协议，从最底层开始，是由网络接口层、网络层、传输层、应用层构成。 像这样的构成层次，可以使开发工作形成模块式开发。
-1.2 IP # IP地址与网络分类 # IP数据包的数据最大长度为65535字节。
-IP地址由网络号与主机号组成。可以类对网络进行划分，根据网络的规模，从 A类到C类，也存在用于多播通信的D类，其他用于实验的地址还有E类。
-但是在目前，为了有效利用已经濒临枯竭的IPv4地址，采用了不依赖于类的IP 地址分配方法——CIDR（Classless Inter Domain Routing，无类域间路由）。 而且为了解决IPv4地址的资源枯竭问题，也开发了具有128位长度的IPv6。
-无类域间路由CIDR # 无类域间路由中关键的就是子网掩码。子网掩码，是为了改变网络号与主机号的分界位置而采用的方法，如192.168.0.0/24，表示网络号24位，主机号8位，这个子网掩码设置就比之前分类的方式要灵活多了。
-特殊的IP地址: 1)本地环路地址:linux下常见的回环接口lo，地址127.0.0.1，其ip地址可以 根据需要任意设定，也称为localhost。常被用于同一计算机上的通信。 2)广播地址:主机号字段全部为1。 3)多播地址:224.0.0.0～239.255.255.255,常被用于特定工作组中的通信。 4)私有IP地址:限定于内部网络使用而分配的地址，rfc1597中，建议使用以下 的地址段: A类中，10.</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Network on</title><link>/tags/network/</link><description>Recent content in Network on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 25 Jun 2026 10:00:00 +0800</lastBuildDate><atom:link href="/tags/network/index.xml" rel="self" type="application/rss+xml"/><item><title>TCP send 返回成功，真的意味着对端收到了吗？</title><link>/blog/2026-06-25-tcp-send-reliability-myth/</link><pubDate>Thu, 25 Jun 2026 10:00:00 +0800</pubDate><guid>/blog/2026-06-25-tcp-send-reliability-myth/</guid><description>&lt;p&gt;TCP 连接 send 返回成功，真的意味着对端收到/处理了吗？先说结论，不光可能没处理，甚至收到都不一定收到。很多人说TCP不是可靠的吗？为什么像golang &lt;code&gt;tcpconn.Write&lt;/code&gt; 返回了nil，竟然还有可能发送不成功呢？&lt;/p&gt;
+&lt;p&gt;这是很多开发者的TCP认知误区。现如今很多网络服务器开发都是基于开发框架、RPC桩代码生成，网络通信被简化成了一个桩代码函数调用，开发者的技能也从系统调用、libev库之类的较深的理解慢慢会话为了RPC桩代码call boy :)&lt;/p&gt;
+&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;前几天同事问了我一个问题：我们框架里通过 &lt;code&gt;send&lt;/code&gt; 通知对方服务，如果 &lt;code&gt;send&lt;/code&gt; 没有返回失败，能不能 100% 确定对端收到了这个包？&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;先对齐下概念：这里的send，是RPC时只发req但是不返回rsp给上层调用，在有些框架里也会用选项notify或者sendonly来标识；与send一应的还有一个call，这里的call指的是发送req并且返回rsp给上层调用，有些框架里会用选项sendrcv来标识。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;答案是不能。这个问题其实触及了一个非常经典的认知误区——很多开发者把&amp;quot;系统调用没报错&amp;quot;等同于&amp;quot;对端进程收到了数据&amp;quot;。这个误区之所以普遍，是因为它跨越了多个抽象层次：从应用层 buffer 到内核协议栈，从网卡队列到网络传输，再到对端操作系统和业务进程，每一层都有&amp;quot;你以为成功了但其实还没有&amp;quot;的环节。&lt;/p&gt;
+&lt;p&gt;下面我们从几个层次来拆解这个问题。&lt;/p&gt;
+&lt;h1 id="问题一系统调用成功--数据送达"&gt;问题一：系统调用成功 ≠ 数据送达 &lt;a href="#%e9%97%ae%e9%a2%98%e4%b8%80%e7%b3%bb%e7%bb%9f%e8%b0%83%e7%94%a8%e6%88%90%e5%8a%9f--%e6%95%b0%e6%8d%ae%e9%80%81%e8%be%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="层层缓存everything-is-cache"&gt;层层缓存：everything is cache &lt;a href="#%e5%b1%82%e5%b1%82%e7%bc%93%e5%ad%98everything-is-cache" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当你调用 &lt;code&gt;tcpconn.Write(buf)&lt;/code&gt; 并且没有返回 error 时，这个&amp;quot;成功&amp;quot;到底意味着什么？答案是：&lt;strong&gt;它只意味着数据从应用层的 buffer 拷贝到了内核的 socket buffer&lt;/strong&gt;。后面的路还很长：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;应用层 buffer
+↓ tcpconn.Write (系统调用)
+内核 socket buffer ← 系统调用到这里就返回了
+↓ TCP 协议栈（分段、拥塞控制、重传……）
+网卡 TX queue (NIC buffer)
+↓ 物理层
+网络
+↓
+对端网卡 → 内核 → 应用层
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;系统调用的语义是&amp;quot;数据已提交给内核&amp;quot;，它&lt;strong&gt;不会&lt;/strong&gt;等待数据通过网卡发送出去，更不会等待对端的 TCP ACK。这是有意为之的设计——如果每个 &lt;code&gt;write&lt;/code&gt; 都要等到对端确认，那么一次 RTT 就会阻塞调用线程，性能将完全不可接受（后面还会细说）。&lt;/p&gt;</description></item><item><title>TCP/IP网络安全篇</title><link>/blog/2013-09-30-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8tcpipnetworksecurity/</link><pubDate>Mon, 30 Sep 2013 02:08:29 +0800</pubDate><guid>/blog/2013-09-30-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8tcpipnetworksecurity/</guid><description>&lt;p&gt;《TCP/IP 网络安全篇》，作者是日本的寺田真敏 萱岛 信。&lt;/p&gt;
+&lt;p&gt;感谢作者理论与实践结合的教学方式，简单地介绍了网络安全的方方面面，让
+我学起来也是很有兴趣，真诚地向寺田真敏先生道一声谢谢。&lt;/p&gt;
+&lt;p&gt;下面是我对本书学习过程中的一个总结，难免有理解偏差之处，还需在以后的
+学习实践过程中，进一步体会、纠正。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h1 id="1-tcpip的基础知识"&gt;1 TCP/IP的基础知识 &lt;a href="#1-tcpip%e7%9a%84%e5%9f%ba%e7%a1%80%e7%9f%a5%e8%af%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="11-tcpip与因特网"&gt;1.1 TCP/IP与因特网 &lt;a href="#11-tcpip%e4%b8%8e%e5%9b%a0%e7%89%b9%e7%bd%91" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;OSI 7-layer model&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-markdown"&gt;
+Host layers: applications Message
+presentation
+session
+--------------------------
+transport Message segment
+--------------------------
+media layer: network packet/datagram
+--------------------------
+data link frame
+--------------------------
+physical bit
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;用于分组交换的设备，IMP（Interface Message Processor）接口报文处理机
+的第一号机被设计制成。&lt;/p&gt;
+&lt;p&gt;TCP/IP协议，是以tcp协议和ip协议为中心，构成的协议族的总称。
+TCP/IP协议，从最底层开始，是由网络接口层、网络层、传输层、应用层构成。
+像这样的构成层次，可以使开发工作形成模块式开发。&lt;/p&gt;
+&lt;h2 id="12-ip"&gt;1.2 IP &lt;a href="#12-ip" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="ip地址与网络分类"&gt;IP地址与网络分类 &lt;a href="#ip%e5%9c%b0%e5%9d%80%e4%b8%8e%e7%bd%91%e7%bb%9c%e5%88%86%e7%b1%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;IP数据包的数据最大长度为65535字节。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;IP地址由网络号与主机号组成&lt;/strong&gt;。可以类对网络进行划分，根据网络的规模，从
+A类到C类，也存在用于多播通信的D类，其他用于实验的地址还有E类。&lt;/p&gt;
+&lt;p&gt;但是在目前，为了有效利用已经濒临枯竭的IPv4地址，采用了不依赖于类的IP
+地址分配方法——&lt;strong&gt;CIDR（Classless Inter Domain Routing，无类域间路由）&lt;/strong&gt;。
+而且为了解决IPv4地址的资源枯竭问题，也开发了具有128位长度的IPv6。&lt;/p&gt;
+&lt;h3 id="无类域间路由cidr"&gt;无类域间路由CIDR &lt;a href="#%e6%97%a0%e7%b1%bb%e5%9f%9f%e9%97%b4%e8%b7%af%e7%94%b1cidr" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;无类域间路由中关键的就是子网掩码。&lt;strong&gt;子网掩码，是为了改变网络号与主机号的分界位置&lt;/strong&gt;而采用的方法，如192.168.0.0/24，表示网络号24位，主机号8位，这个子网掩码设置就比之前分类的方式要灵活多了。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;特殊的IP地址:&lt;/strong&gt;
+&lt;strong&gt;1)本地环路地址&lt;/strong&gt;:linux下常见的回环接口lo，地址127.0.0.1，其ip地址可以
+根据需要任意设定，也称为localhost。常被用于同一计算机上的通信。
+&lt;strong&gt;2)广播地址&lt;/strong&gt;:主机号字段全部为1。
+&lt;strong&gt;3)多播地址&lt;/strong&gt;:224.0.0.0～239.255.255.255,常被用于特定工作组中的通信。
+&lt;strong&gt;4)私有IP地址&lt;/strong&gt;:限定于内部网络使用而分配的地址，rfc1597中，建议使用以下
+的地址段:
+A类中，10.0.0.0～10.255.255.255
+B类中，172.16.0.0～172.31.255.255
+C类中，192.168.0.0～192.168.255.255
+与私有IP地址相对，对于那些只使用于因特网上的IP地址，我们称为全局IP地址。&lt;/p&gt;</description></item></channel></rss>

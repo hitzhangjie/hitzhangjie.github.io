@@ -1,8 +1,59 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>ci/cd on</title><link>/tags/ci/cd/</link><description>Recent content in ci/cd on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><atom:link href="/tags/ci/cd/index.xml" rel="self" type="application/rss+xml"/><item><title>CI 与 CD 的本质区别：为什么 CI 不包含 CD</title><link>/blog/2026-07-01-ci-cd-difference/</link><pubDate>Wed, 01 Jul 2026 20:02:36 +0800</pubDate><guid>/blog/2026-07-01-ci-cd-difference/</guid><description>工作在现代软件开发团队中，你一定对 &amp;ldquo;CI/CD&amp;rdquo; 这个词不陌生。然而，在日常交流中，我们经常会听到诸如&amp;quot;我们的 CI 流水线挂了&amp;quot;、&amp;ldquo;这个项目的 CD 做得不好&amp;quot;等说法。久而久之，很多人会产生一种模糊的印象：CI 和 CD 是一回事，或者 CI 包含了 CD。
-严格来说，CI（持续集成）并不包含 CD（持续交付/持续部署）。 它们是 DevOps 流水线中紧密衔接但职责不同的两个独立阶段。本文将为你深度拆解 CI 与 CD 的本质区别、各自的核心任务，以及它们是如何协同工作，共同打造高效的现代软件交付流水线的。
-1. 什么是 CI（Continuous Integration，持续集成）？ # CI 的核心关注点是代码的集成与质量验证。它的终点通常是生成一个可部署的产物（如 Jar 包、Docker 镜像等）。
-当开发者提交代码到代码仓库（如 GitLab、GitHub）后，CI 流程会自动触发：
-代码拉取与编译： 确保新代码没有语法错误，能跑得通。 运行单元测试（Unit Tests）： 验证业务逻辑是否被破坏。 代码质量扫描： 检查代码规范和潜在的安全漏洞。 构建产物： 把代码打包成制品（Artifact）。 2. 什么是 CD（持续交付 / 持续部署）？ # CD 接收 CI 生成的产物，并负责把它们安全地带到各个运行环境中。CD 实际上包含两个层次：
-Continuous Delivery（持续交付）： 代码通过了 CI 的自动化测试后，会自动部署到测试环境或预发环境。但是否发布到生产环境，需要人工点击按钮来触发（手动决策）。 Continuous Deployment（持续部署）： 比持续交付更进一步。代码只要通过了 CI 和所有自动化测试，就不需要任何人工干预，直接由系统全自动部署到生产环境。 3.</description></item><item><title>GitHub Actions 中的认证方式：GITHUB_TOKEN、PAT 与 Deploy Key</title><link>/blog/2026-06-11-github-actions-auth-tokens/</link><pubDate>Thu, 11 Jun 2026 12:00:00 +0800</pubDate><guid>/blog/2026-06-11-github-actions-auth-tokens/</guid><description>背景 # 我的个人博客采用 Hugo 构建，源代码放在私有仓库 hitzhangjie/myspace，构建产物需要部署到公开仓库 hitzhangjie/hitzhangjie.github.io。原先的 workflow 部署在目标仓库上，每次 push 源仓库后还需要手动推一次目标仓库，很痛苦。
-迁移 workflow 到源仓库（myspace）时，发现 GITHUB_TOKEN 无法完成跨仓库推送。这引出了一个问题：GitHub Actions 中到底有哪几种认证方式？它们分别怎么配置、作用域是什么？
-三种认证方式速览 # 认证方式 谁来生成 作用域 适用场景 GITHUB_TOKEN GitHub 自动注入 当前仓库 同仓库内操作（checkout、发 release、写 PR 评论等） Personal Access Token (PAT) 用户手动创建 用户有权访问的所有仓库 跨仓库操作、需要比 GITHUB_TOKEN 更广的权限 SSH Deploy Key 用户手动生成 单个仓库（写权限可选） 跨仓库推送（如部署静态站点到另一个仓库） GITHUB_TOKEN # 它是什么 # GITHUB_TOKEN 是 GitHub Actions 在每次 workflow 运行时自动生成的一个临时令牌。你不需要、也没办法手动配置它——在任何仓库的 Settings → Secrets and variables 或 Settings → Deploy keys 里都找不到它。</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Ci/Cd on</title><link>/tags/ci/cd/</link><description>Recent content in Ci/Cd on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 01 Jul 2026 20:02:36 +0800</lastBuildDate><atom:link href="/tags/ci/cd/index.xml" rel="self" type="application/rss+xml"/><item><title>CI 与 CD 的本质区别：为什么 CI 不包含 CD</title><link>/blog/2026-07-01-ci-cd-difference/</link><pubDate>Wed, 01 Jul 2026 20:02:36 +0800</pubDate><guid>/blog/2026-07-01-ci-cd-difference/</guid><description>&lt;p&gt;工作在现代软件开发团队中，你一定对 &amp;ldquo;CI/CD&amp;rdquo; 这个词不陌生。然而，在日常交流中，我们经常会听到诸如&amp;quot;我们的 CI 流水线挂了&amp;quot;、&amp;ldquo;这个项目的 CD 做得不好&amp;quot;等说法。久而久之，很多人会产生一种模糊的印象：CI 和 CD 是一回事，或者 CI 包含了 CD。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;严格来说，CI（持续集成）并不包含 CD（持续交付/持续部署）。&lt;/strong&gt; 它们是 DevOps 流水线中&lt;strong&gt;紧密衔接但职责不同&lt;/strong&gt;的两个独立阶段。本文将为你深度拆解 CI 与 CD 的本质区别、各自的核心任务，以及它们是如何协同工作，共同打造高效的现代软件交付流水线的。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-什么是-cicontinuous-integration持续集成"&gt;1. 什么是 CI（Continuous Integration，持续集成）？ &lt;a href="#1-%e4%bb%80%e4%b9%88%e6%98%af-cicontinuous-integration%e6%8c%81%e7%bb%ad%e9%9b%86%e6%88%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;CI 的核心关注点是&lt;strong&gt;代码的集成与质量验证&lt;/strong&gt;。它的终点通常是&lt;strong&gt;生成一个可部署的产物&lt;/strong&gt;（如 Jar 包、Docker 镜像等）。&lt;/p&gt;
+&lt;p&gt;当开发者提交代码到代码仓库（如 GitLab、GitHub）后，CI 流程会自动触发：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;代码拉取与编译：&lt;/strong&gt; 确保新代码没有语法错误，能跑得通。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;运行单元测试（Unit Tests）：&lt;/strong&gt; 验证业务逻辑是否被破坏。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;代码质量扫描：&lt;/strong&gt; 检查代码规范和潜在的安全漏洞。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;构建产物：&lt;/strong&gt; 把代码打包成制品（Artifact）。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="2-什么是-cd持续交付--持续部署"&gt;2. 什么是 CD（持续交付 / 持续部署）？ &lt;a href="#2-%e4%bb%80%e4%b9%88%e6%98%af-cd%e6%8c%81%e7%bb%ad%e4%ba%a4%e4%bb%98--%e6%8c%81%e7%bb%ad%e9%83%a8%e7%bd%b2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;CD 接收 CI 生成的产物，并负责把它们&lt;strong&gt;安全地带到各个运行环境&lt;/strong&gt;中。CD 实际上包含两个层次：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Continuous Delivery（持续交付）：&lt;/strong&gt; 代码通过了 CI 的自动化测试后，会自动部署到测试环境或预发环境。但&lt;strong&gt;是否发布到生产环境，需要人工点击按钮来触发&lt;/strong&gt;（手动决策）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Continuous Deployment（持续部署）：&lt;/strong&gt; 比持续交付更进一步。代码只要通过了 CI 和所有自动化测试，就&lt;strong&gt;不需要任何人工干预，直接由系统全自动部署到生产环境&lt;/strong&gt;。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="3-一图看懂-ci-与-cd-的界限与联系"&gt;3. 一图看懂 CI 与 CD 的界限与联系 &lt;a href="#3-%e4%b8%80%e5%9b%be%e7%9c%8b%e6%87%82-ci-%e4%b8%8e-cd-%e7%9a%84%e7%95%8c%e9%99%90%e4%b8%8e%e8%81%94%e7%b3%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;我们可以用一个经典的流水线来表示它们的分工：&lt;/p&gt;</description></item><item><title>GitHub Actions 中的认证方式：GITHUB_TOKEN、PAT 与 Deploy Key</title><link>/blog/2026-06-11-github-actions-auth-tokens/</link><pubDate>Thu, 11 Jun 2026 12:00:00 +0800</pubDate><guid>/blog/2026-06-11-github-actions-auth-tokens/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;我的个人博客采用 Hugo 构建，源代码放在私有仓库 &lt;code&gt;hitzhangjie/myspace&lt;/code&gt;，构建产物需要部署到公开仓库 &lt;code&gt;hitzhangjie/hitzhangjie.github.io&lt;/code&gt;。原先的 workflow 部署在目标仓库上，每次 push 源仓库后还需要手动推一次目标仓库，很痛苦。&lt;/p&gt;
+&lt;p&gt;迁移 workflow 到源仓库（myspace）时，发现 &lt;code&gt;GITHUB_TOKEN&lt;/code&gt; 无法完成跨仓库推送。这引出了一个问题：GitHub Actions 中到底有哪几种认证方式？它们分别怎么配置、作用域是什么？&lt;/p&gt;
+&lt;h1 id="三种认证方式速览"&gt;三种认证方式速览 &lt;a href="#%e4%b8%89%e7%a7%8d%e8%ae%a4%e8%af%81%e6%96%b9%e5%bc%8f%e9%80%9f%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;认证方式&lt;/th&gt;
+&lt;th&gt;谁来生成&lt;/th&gt;
+&lt;th&gt;作用域&lt;/th&gt;
+&lt;th&gt;适用场景&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;GITHUB_TOKEN&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;GitHub &lt;strong&gt;自动&lt;/strong&gt;注入&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;当前仓库&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;同仓库内操作（checkout、发 release、写 PR 评论等）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Personal Access Token (PAT)&lt;/td&gt;
+&lt;td&gt;用户&lt;strong&gt;手动&lt;/strong&gt;创建&lt;/td&gt;
+&lt;td&gt;用户有权访问的&lt;strong&gt;所有仓库&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;跨仓库操作、需要比 GITHUB_TOKEN 更广的权限&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;SSH Deploy Key&lt;/td&gt;
+&lt;td&gt;用户&lt;strong&gt;手动&lt;/strong&gt;生成&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;单个仓库&lt;/strong&gt;（写权限可选）&lt;/td&gt;
+&lt;td&gt;跨仓库推送（如部署静态站点到另一个仓库）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h1 id="github_token"&gt;GITHUB_TOKEN &lt;a href="#github_token" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="它是什么"&gt;它是什么 &lt;a href="#%e5%ae%83%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;GITHUB_TOKEN&lt;/code&gt; 是 GitHub Actions 在&lt;strong&gt;每次 workflow 运行时自动生成&lt;/strong&gt;的一个临时令牌。你&lt;strong&gt;不需要、也没办法&lt;/strong&gt;手动配置它——在任何仓库的 Settings → Secrets and variables 或 Settings → Deploy keys 里都找不到它。&lt;/p&gt;
+&lt;p&gt;它由 GitHub 在 workflow 启动时注入，workflow 结束后立即失效。&lt;/p&gt;</description></item></channel></rss>

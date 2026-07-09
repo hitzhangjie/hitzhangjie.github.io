@@ -1,5 +1,24 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>抢占调度 on</title><link>/tags/%E6%8A%A2%E5%8D%A0%E8%B0%83%E5%BA%A6/</link><description>Recent content in 抢占调度 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 26 Jun 2026 18:42:00 +0800</lastBuildDate><atom:link href="/tags/%E6%8A%A2%E5%8D%A0%E8%B0%83%E5%BA%A6/index.xml" rel="self" type="application/rss+xml"/><item><title>深入浅出 Go Safepoints：从编译账本到抢占调度及精确式GC的底层真相</title><link>/blog/2026-06-26-go-safepoints/</link><pubDate>Fri, 26 Jun 2026 18:42:00 +0800</pubDate><guid>/blog/2026-06-26-go-safepoints/</guid><description>深度解密 Go 语言的 Safepoint：从编译账本到抢占调度的底层真相 # 在探讨 Go 语言的高性能并发时，我们经常会听到“非协作式抢占调度”和“精确式垃圾回收（Precise GC）”。而这两个底层特性的交汇点，正是 Safepoint（安全点）。 如果你去查阅资料，往往只能得到一句宏观的定义：“Safepoint 是程序执行中的一些特定位置，此时状态确定，可以安全暂停。” 但这并不能解开我们心中的疑惑：Safepoint 到底是什么？它是怎么记录的？为什么有些位置可以被抢占，而有些地方强行抢占就会导致系统崩溃？ 今天我们抛开宏观理论，用底层的眼光重新拆解 Safepoint。
-一、 为什么需要 Safepoint？CPU 眼中的“迷茫” # 在高级语言中，我们能一眼分清什么是普通数值，什么是对象指针：
-a := 10 // 普通整数 b := &amp;amp;User{} // 对象指针 然而，当 Go 编译器把这段代码翻译成二进制机器码后，在 CPU 的世界里，它们都只是寄存器（如 RAX, RBX）或栈内存里的一个 64 位的数字。 当垃圾回收（GC）需要扫描内存，或者系统发出信号想抢占这个 Goroutine 时，问题来了： 如果此时 CPU 寄存器 RAX 里的值是 0x00007f9c，GC 该不该顺着这个地址去追踪并标记内存？
-如果它其实是一个普通整数（比如一个时间戳），GC 却误把它当指针去追踪，程序就会因为访问非法地址而瞬间崩溃（Panic/段错误）。 如果它其实是一个真指针，GC 却漏掉了它，这块内存就会被提前释放，引发严重的内存悬空。 为了让 GC 能够在任意需要的时候，精准地辨别出寄存器和栈里“哪个是普通数据，哪个是指针”，Safepoint 机制应运而生。
-二、 Safepoint 的本质：编译期写死的“只读账本” # Safepoint 在底层根本不是一段拦截代码，也不是一个特殊的函数，它只是一个“位置记录”——也就是一个由编译器在编译期计算好，并打包放进可执行文件中的“位置与活动指针映射表”。 在编译阶段，编译器在生成机器码的同时，在后台偷偷拿一个小本本（静态存活分析，Liveness Analysis），把每一条核心机器指令的位置，以及在这个位置上，哪个寄存器/栈空间放的是活跃的指针，全部记录下来。 这个“账本”在编译完成后，会固化在可执行文件的只读数据段中（如 .</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>抢占调度 on</title><link>/tags/%E6%8A%A2%E5%8D%A0%E8%B0%83%E5%BA%A6/</link><description>Recent content in 抢占调度 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 26 Jun 2026 18:42:00 +0800</lastBuildDate><atom:link href="/tags/%E6%8A%A2%E5%8D%A0%E8%B0%83%E5%BA%A6/index.xml" rel="self" type="application/rss+xml"/><item><title>深入浅出 Go Safepoints：从编译账本到抢占调度及精确式GC的底层真相</title><link>/blog/2026-06-26-go-safepoints/</link><pubDate>Fri, 26 Jun 2026 18:42:00 +0800</pubDate><guid>/blog/2026-06-26-go-safepoints/</guid><description>&lt;h2 id="深度解密-go-语言的-safepoint从编译账本到抢占调度的底层真相"&gt;深度解密 Go 语言的 Safepoint：从编译账本到抢占调度的底层真相 &lt;a href="#%e6%b7%b1%e5%ba%a6%e8%a7%a3%e5%af%86-go-%e8%af%ad%e8%a8%80%e7%9a%84-safepoint%e4%bb%8e%e7%bc%96%e8%af%91%e8%b4%a6%e6%9c%ac%e5%88%b0%e6%8a%a2%e5%8d%a0%e8%b0%83%e5%ba%a6%e7%9a%84%e5%ba%95%e5%b1%82%e7%9c%9f%e7%9b%b8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在探讨 Go 语言的高性能并发时，我们经常会听到“非协作式抢占调度”和“精确式垃圾回收（Precise GC）”。而这两个底层特性的交汇点，正是 Safepoint（安全点）。
+如果你去查阅资料，往往只能得到一句宏观的定义：“Safepoint 是程序执行中的一些特定位置，此时状态确定，可以安全暂停。”
+但这并不能解开我们心中的疑惑：Safepoint 到底是什么？它是怎么记录的？为什么有些位置可以被抢占，而有些地方强行抢占就会导致系统崩溃？
+今天我们抛开宏观理论，用底层的眼光重新拆解 Safepoint。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="一-为什么需要-safepointcpu-眼中的迷茫"&gt;一、 为什么需要 Safepoint？CPU 眼中的“迷茫” &lt;a href="#%e4%b8%80-%e4%b8%ba%e4%bb%80%e4%b9%88%e9%9c%80%e8%a6%81-safepointcpu-%e7%9c%bc%e4%b8%ad%e7%9a%84%e8%bf%b7%e8%8c%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在高级语言中，我们能一眼分清什么是普通数值，什么是对象指针：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;a := 10 // 普通整数
+b := &amp;amp;User{} // 对象指针
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;然而，当 Go 编译器把这段代码翻译成二进制机器码后，在 CPU 的世界里，它们都只是寄存器（如 RAX, RBX）或栈内存里的一个 64 位的数字。
+当垃圾回收（GC）需要扫描内存，或者系统发出信号想抢占这个 Goroutine 时，问题来了：
+如果此时 CPU 寄存器 RAX 里的值是 0x00007f9c，GC 该不该顺着这个地址去追踪并标记内存？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果它其实是一个普通整数（比如一个时间戳），GC 却误把它当指针去追踪，程序就会因为访问非法地址而瞬间崩溃（Panic/段错误）。&lt;/li&gt;
+&lt;li&gt;如果它其实是一个真指针，GC 却漏掉了它，这块内存就会被提前释放，引发严重的内存悬空。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;为了让 GC 能够在任意需要的时候，精准地辨别出寄存器和栈里“哪个是普通数据，哪个是指针”，Safepoint 机制应运而生。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="二-safepoint-的本质编译期写死的只读账本"&gt;二、 Safepoint 的本质：编译期写死的“只读账本” &lt;a href="#%e4%ba%8c-safepoint-%e7%9a%84%e6%9c%ac%e8%b4%a8%e7%bc%96%e8%af%91%e6%9c%9f%e5%86%99%e6%ad%bb%e7%9a%84%e5%8f%aa%e8%af%bb%e8%b4%a6%e6%9c%ac" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Safepoint 在底层根本不是一段拦截代码，也不是一个特殊的函数，它只是一个“位置记录”——也就是一个由编译器在编译期计算好，并打包放进可执行文件中的“位置与活动指针映射表”。
+在编译阶段，编译器在生成机器码的同时，在后台偷偷拿一个小本本（静态存活分析，Liveness Analysis），把每一条核心机器指令的位置，以及在这个位置上，哪个寄存器/栈空间放的是活跃的指针，全部记录下来。
+这个“账本”在编译完成后，会固化在可执行文件的只读数据段中（如 .gclocals 和 .pclntab 符号表）。运行时（Runtime）只有读取权限。&lt;/p&gt;</description></item></channel></rss>

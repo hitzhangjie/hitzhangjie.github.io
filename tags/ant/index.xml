@@ -1,10 +1,82 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>ant on</title><link>/tags/ant/</link><description>Recent content in ant on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 01 Apr 2017 17:45:40 +0800</lastBuildDate><atom:link href="/tags/ant/index.xml" rel="self" type="application/rss+xml"/><item><title>学习Apache Ant</title><link>/blog/2017-04-01-%E5%AD%A6%E4%B9%A0apache-ant/</link><pubDate>Sat, 01 Apr 2017 17:45:40 +0800</pubDate><guid>/blog/2017-04-01-%E5%AD%A6%E4%B9%A0apache-ant/</guid><description>Apache Ant是由Apache开发的基于Java的构建工具，本文对tutorialspoint上面的Apache Ant教程进行简要总结。
-1 为什么需要这样一个构建工具？ # Ant是Another Neat Tool的缩写形式，为什么需要这样一个工具呢？跟它的名字一样，就是希望我们开发人员的工作能够更加neat！
-开发人员有些琐碎的、重复性的工作，包括：编译代码、打包可执行程序、部署程序到测试服务器、测试改变、拷贝代码到不同的地方。Ant可以帮助我们自动化上面列举的这几个步骤，简化我们的工作。
-Ant是tomcat的作者开发出来的，最初适用于构建tomcat的，并且作为tomcat的一部分，之所以开发它是为了弥补当初Apache Make工具（没有在apache项目列表中搜索到该项目）的不足之处，2000年的时候Ant从tomcat项目中独立出来作为一个独立的项目开发。
-至于Apache Ant的优势具体在哪，这个我们最后在给出来，目的是让大家结合自身工作经历，根据Apache Ant的功能自己主动去发现它的优势。
-2 Ant build.xml # Ant的构建脚本默认是build.xml，也可以用其他的文件名。build.xml里面通常包括tag ，这里name指定了工程的名字，default是默认名字，basedir指定了工程的根目录。另外还包括多个tag ，其中name指定了目标动作的名字，例如compile、package、clean等等，它们之间存在某种依赖关系，可以通过depends指定。例如package依赖clean、compile，就可以指定depends=&amp;ldquo;clean,package&amp;rdquo;，注意依赖先后顺序，不要写成depends=&amp;ldquo;package,clean&amp;rdquo;。
-示例1：
-&amp;lt;?xml version=&amp;quot;1.0&amp;quot;?&amp;gt; &amp;lt;project name=&amp;quot;Hello World Project&amp;quot; default=&amp;quot;info&amp;quot;&amp;gt; &amp;lt;target name=&amp;quot;info&amp;quot;&amp;gt; &amp;lt;echo&amp;gt;Hello World - Welcome to Apache Ant!&amp;lt;/echo&amp;gt; &amp;lt;/target&amp;gt; &amp;lt;/project&amp;gt; 示例2：
-&amp;lt;target name=&amp;quot;deploy&amp;quot; depends=&amp;quot;package&amp;quot;&amp;gt; .... &amp;lt;/target&amp;gt; &amp;lt;target name=&amp;quot;package&amp;quot; depends=&amp;quot;clean,compile&amp;quot;&amp;gt; .... &amp;lt;/target&amp;gt; &amp;lt;target name=&amp;quot;clean&amp;quot; &amp;gt; .... &amp;lt;/target&amp;gt; &amp;lt;target name=&amp;quot;compile&amp;quot; &amp;gt; .... &amp;lt;/target&amp;gt; build.xml里面可以使用ant预先定义的一些变量，例如：
-property desc ant.</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Ant on</title><link>/tags/ant/</link><description>Recent content in Ant on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 01 Apr 2017 17:45:40 +0800</lastBuildDate><atom:link href="/tags/ant/index.xml" rel="self" type="application/rss+xml"/><item><title>学习Apache Ant</title><link>/blog/2017-04-01-%E5%AD%A6%E4%B9%A0apache-ant/</link><pubDate>Sat, 01 Apr 2017 17:45:40 +0800</pubDate><guid>/blog/2017-04-01-%E5%AD%A6%E4%B9%A0apache-ant/</guid><description>&lt;p&gt;Apache Ant是由Apache开发的基于Java的构建工具，本文对tutorialspoint上面的Apache Ant教程进行简要总结。&lt;/p&gt;
+&lt;h3 id="1-为什么需要这样一个构建工具"&gt;1 为什么需要这样一个构建工具？ &lt;a href="#1-%e4%b8%ba%e4%bb%80%e4%b9%88%e9%9c%80%e8%a6%81%e8%bf%99%e6%a0%b7%e4%b8%80%e4%b8%aa%e6%9e%84%e5%bb%ba%e5%b7%a5%e5%85%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Ant是Another Neat Tool的缩写形式，为什么需要这样一个工具呢？跟它的名字一样，就是希望我们开发人员的工作能够更加neat！&lt;/p&gt;
+&lt;p&gt;开发人员有些琐碎的、重复性的工作，包括：编译代码、打包可执行程序、部署程序到测试服务器、测试改变、拷贝代码到不同的地方。Ant可以帮助我们自动化上面列举的这几个步骤，简化我们的工作。&lt;/p&gt;
+&lt;p&gt;Ant是tomcat的作者开发出来的，最初适用于构建tomcat的，并且作为tomcat的一部分，之所以开发它是为了弥补当初Apache Make工具（没有在apache项目列表中搜索到该项目）的不足之处，2000年的时候Ant从tomcat项目中独立出来作为一个独立的项目开发。&lt;/p&gt;
+&lt;p&gt;至于Apache Ant的优势具体在哪，这个我们最后在给出来，目的是让大家结合自身工作经历，根据Apache Ant的功能自己主动去发现它的优势。&lt;/p&gt;
+&lt;h3 id="2-ant-buildxml"&gt;2 Ant build.xml &lt;a href="#2-ant-buildxml" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Ant的构建脚本默认是build.xml，也可以用其他的文件名。build.xml里面通常包括tag &lt;project name="" default="" basedir=""/&gt;，这里name指定了工程的名字，default是默认名字，basedir指定了工程的根目录。另外还包括多个tag &lt;target name="" depends=""/&gt;，其中name指定了目标动作的名字，例如compile、package、clean等等，它们之间存在某种依赖关系，可以通过depends指定。例如package依赖clean、compile，就可以指定depends=&amp;ldquo;clean,package&amp;rdquo;，注意依赖先后顺序，不要写成depends=&amp;ldquo;package,clean&amp;rdquo;。&lt;/p&gt;
+&lt;p&gt;示例1：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;&amp;lt;?xml version=&amp;quot;1.0&amp;quot;?&amp;gt;
+&amp;lt;project name=&amp;quot;Hello World Project&amp;quot; default=&amp;quot;info&amp;quot;&amp;gt;
+&amp;lt;target name=&amp;quot;info&amp;quot;&amp;gt;
+&amp;lt;echo&amp;gt;Hello World - Welcome to Apache Ant!&amp;lt;/echo&amp;gt;
+&amp;lt;/target&amp;gt;
+&amp;lt;/project&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;示例2：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;&amp;lt;target name=&amp;quot;deploy&amp;quot; depends=&amp;quot;package&amp;quot;&amp;gt;
+....
+&amp;lt;/target&amp;gt;
+&amp;lt;target name=&amp;quot;package&amp;quot; depends=&amp;quot;clean,compile&amp;quot;&amp;gt;
+....
+&amp;lt;/target&amp;gt;
+&amp;lt;target name=&amp;quot;clean&amp;quot; &amp;gt;
+....
+&amp;lt;/target&amp;gt;
+&amp;lt;target name=&amp;quot;compile&amp;quot; &amp;gt;
+....
+&amp;lt;/target&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;build.xml里面可以使用ant预先定义的一些变量，例如：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style="text-align: left"&gt;property&lt;/th&gt;
+&lt;th style="text-align: left"&gt;desc&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;ant.file&lt;/td&gt;
+&lt;td style="text-align: left"&gt;The full location of the build file.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;ant.version&lt;/td&gt;
+&lt;td style="text-align: left"&gt;The version of the Apache Ant installation.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;basedir&lt;/td&gt;
+&lt;td style="text-align: left"&gt;The basedir of the build, as specified in the basedir attribute of the project element.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;ant.java.version&lt;/td&gt;
+&lt;td style="text-align: left"&gt;The version of the JDK that is used by Ant.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;ant.project.name&lt;/td&gt;
+&lt;td style="text-align: left"&gt;The name of the project, as specified in the name atrribute of the project element.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;ant.project.default-target&lt;/td&gt;
+&lt;td style="text-align: left"&gt;The default target of the current project.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;ant.project.invoked-targets&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Comma separated list of the targets that were invoked in the current project.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;ant.core.lib&lt;/td&gt;
+&lt;td style="text-align: left"&gt;The full location of the Ant jar file.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;ant.home&lt;/td&gt;
+&lt;td style="text-align: left"&gt;The home directory of Ant installation.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;ant.library.dir&lt;/td&gt;
+&lt;td style="text-align: left"&gt;The home directory for Ant library files - typically ANT_HOME/lib folder.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;示例1：&lt;/p&gt;</description></item></channel></rss>

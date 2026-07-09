@@ -1,20 +1,95 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>devops on</title><link>/tags/devops/</link><description>Recent content in devops on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 07 Jul 2026 12:12:28 +0800</lastBuildDate><atom:link href="/tags/devops/index.xml" rel="self" type="application/rss+xml"/><item><title>重读《持续交付2.0》：从EPC到AI Harness工程，隐性工程能力从未改变</title><link>/blog/2026-07-07-%E6%8C%81%E7%BB%AD%E4%BA%A4%E4%BB%982.0-ai%E6%97%B6%E4%BB%A3%E9%9A%90%E6%80%A7%E5%B7%A5%E7%A8%8B%E8%83%BD%E5%8A%9B%E4%BB%8E%E6%9C%AA%E6%94%B9%E5%8F%98/</link><pubDate>Tue, 07 Jul 2026 12:12:28 +0800</pubDate><guid>/blog/2026-07-07-%E6%8C%81%E7%BB%AD%E4%BA%A4%E4%BB%982.0-ai%E6%97%B6%E4%BB%A3%E9%9A%90%E6%80%A7%E5%B7%A5%E7%A8%8B%E8%83%BD%E5%8A%9B%E4%BB%8E%E6%9C%AA%E6%94%B9%E5%8F%98/</guid><description>背景 # 2019 年到 2022 年，我深度参与了腾讯侧的技术治理工作：微服务框架、研发效能提升、统一协议托管、DevOps、测试左移、一站式研发发布平台……那几年对「软件工程」和「技术沉淀」的理解被拉高了一截。2022 年因团队变动，结合个人意愿，我加入了天美某在研的游戏后台团队，项目管理上实践良好，但是团队后台工程实践上 …… 也算是让我打开眼界了。
-近几年 AI 大火，公司、团队、个人都在追问 AI 的能力边界，并希望把能力赋能到个人与组织——行业如此。我从 2021 年 GitHub Copilot 发布起就持续跟踪；ChatGPT 之后的一系列现象级产品与重大进展，常常让我生出「要不要 ALL IN AI」的冲动。从 Prompt 工程到 Context 工程，再到 Harness 工程，实践很热，但真正能驾驭 AI 的团队极其少见，营销反而更多。从 AI Assist 到 AI First，远不只是「把 Harness 搭好」这么简单。若真这么简单，Agent 内置软件工程领域的 SKILL 便可横扫一切——现实是没有任何一个 Agent 能独自搞定所有领域。也许需要时间，也许需要专用 Agent 的协作与编排；无论如何，至今还没有哪家企业能拍着胸脯说已经把 AI 用得很好，但这件事我认为会被实现，我这里欲扬先抑一下。
-与此同时，常听到一种论调：「AI 总有搞不定的领域。」这不意外——对量化别人的产出，很多人毫无概念，要么笼统判断，要么在专业领域沉淀不够，找不到合理量化指标。「一切皆可计算」：若不能计算，人的活动便既盲目又冒险；审视研发是否科学，就是量化、发现问题、改进、再量化的循环。乔梁老师在《持续交付 2.0：引领业务的 DevOps 精要》里，对这条主线讲得系统而具体。当然，这里的量化指标是用来验证我们的假设，改进我们的流程，而不是我们的终极目标。
-不少参与过研发效能（EPC，工程效能胜任力）落地的人，对乔梁老师存在很深误解：理念死板、理论大于实践、花架子。多年之后，当我思考如何做出更好的 AI Agent、如何驾驭 Agent 时，突然发现：研发活动里的种种 SKILL，与过去沉淀的一些隐形技能之间，存在清晰映射。于是从书架取下这本书——当年还是腾讯技术副总裁曾宇与腾讯特邀专家乔梁老师亲笔签名本——耐着性子读了两周。越往后感触越深：过去的判断更详实了，也修正了一些认识误区。内网仍可搜到曾宇关于服务器开发的 PPT，言简意赅、有洞见，很多 2026 年的高级工程师也未必能写出那种密度。
-有人说他们「空有其表」——在我看来，说这话的人才是真正的傲慢与无知。若真要埋怨，应埋怨当年 EPC 落地中某些团队的务虚作风，而不是理念本身。时至今日，这些理念对许多业务仍有牵引、指导作用。理念像水，没有绝对最好，只有更合适；唯一不变的是变：持续优化可维护性是变，满足于现状沦为屎山也是变。有洞见的 TL 能观察微妙变化，立规矩、建流程与质量门禁，让隐晦不可见的风险点变得可见，并专注培养人与提振技术氛围。若连学习进步的欲望都没有，工程上的怠惰难免迁移到业务领域探索优化上的怠惰。和大范围用 AI 一样，我们工作不只为了解决问题，也在培养与传承。许多感动用户的设计与高可用，是在思辨进步的氛围里一点点夯出来的——AI 不会给你一切；若本身不是那块材料，即便 AI 给出更好方案，也不敢采纳，因为已超出认知。</description></item><item><title>CI 与 CD 的本质区别：为什么 CI 不包含 CD</title><link>/blog/2026-07-01-ci-cd-difference/</link><pubDate>Wed, 01 Jul 2026 20:02:36 +0800</pubDate><guid>/blog/2026-07-01-ci-cd-difference/</guid><description>工作在现代软件开发团队中，你一定对 &amp;ldquo;CI/CD&amp;rdquo; 这个词不陌生。然而，在日常交流中，我们经常会听到诸如&amp;quot;我们的 CI 流水线挂了&amp;quot;、&amp;ldquo;这个项目的 CD 做得不好&amp;quot;等说法。久而久之，很多人会产生一种模糊的印象：CI 和 CD 是一回事，或者 CI 包含了 CD。
-严格来说，CI（持续集成）并不包含 CD（持续交付/持续部署）。 它们是 DevOps 流水线中紧密衔接但职责不同的两个独立阶段。本文将为你深度拆解 CI 与 CD 的本质区别、各自的核心任务，以及它们是如何协同工作，共同打造高效的现代软件交付流水线的。
-1. 什么是 CI（Continuous Integration，持续集成）？ # CI 的核心关注点是代码的集成与质量验证。它的终点通常是生成一个可部署的产物（如 Jar 包、Docker 镜像等）。
-当开发者提交代码到代码仓库（如 GitLab、GitHub）后，CI 流程会自动触发：
-代码拉取与编译： 确保新代码没有语法错误，能跑得通。 运行单元测试（Unit Tests）： 验证业务逻辑是否被破坏。 代码质量扫描： 检查代码规范和潜在的安全漏洞。 构建产物： 把代码打包成制品（Artifact）。 2. 什么是 CD（持续交付 / 持续部署）？ # CD 接收 CI 生成的产物，并负责把它们安全地带到各个运行环境中。CD 实际上包含两个层次：
-Continuous Delivery（持续交付）： 代码通过了 CI 的自动化测试后，会自动部署到测试环境或预发环境。但是否发布到生产环境，需要人工点击按钮来触发（手动决策）。 Continuous Deployment（持续部署）： 比持续交付更进一步。代码只要通过了 CI 和所有自动化测试，就不需要任何人工干预，直接由系统全自动部署到生产环境。 3.</description></item><item><title>告别线上"灵异事件"：系统性理解与治理配置漂移（Configuration Drift）</title><link>/blog/2026-07-01-%E9%85%8D%E7%BD%AE%E6%BC%82%E7%A7%BB%E9%97%AE%E9%A2%98%E6%B2%BB%E7%90%86/</link><pubDate>Wed, 01 Jul 2026 15:30:00 +0800</pubDate><guid>/blog/2026-07-01-%E9%85%8D%E7%BD%AE%E6%BC%82%E7%A7%BB%E9%97%AE%E9%A2%98%E6%B2%BB%E7%90%86/</guid><description>告别线上&amp;quot;灵异事件&amp;quot;：系统性理解与治理配置漂移（Configuration Drift） # 在运维和 DevOps 的日常工作中，你可能也经历过这样的&amp;quot;鬼故事&amp;quot;：
-&amp;ldquo;这段代码在测试环境跑得好好的，为什么一上生产就崩了？&amp;quot; &amp;ldquo;两台配置一模一样的服务器，为什么流量一高，其中一台的 CPU 就会提前被打满？&amp;quot; &amp;ldquo;半年前写的扩容脚本，今天自动化执行时竟然翻车了。&amp;quot; 这些让人抓狂的线上不一致问题，背后的核心罪魁祸首往往指向同一个隐形杀手——配置漂移（Configuration Drift）。
-本文将从问题背景出发，带你系统性拆解什么是配置漂移，以及在现代云原生时代，我们该如何彻底治理它。
-一、 问题背景：温水煮青蛙的&amp;quot;手工运维&amp;rdquo; # 在传统的 IT 运维模式中，环境的部署往往依赖于编写好的初始文档或基础镜像。在刚交付的那一刻，所有服务器的状态是最干净、最标准的。
-然而，随着系统进入长期的维护期，以下场景便开始频繁上演：
-应急的外科手术： 线上突发性能瓶颈，突发流量导致连接数爆满。为了紧急止损，运维人员直接 SSH 登录到生产机，执行了 sysctl -w net.core.somaxconn=1024，随后排查完毕，大家举杯庆祝，却忘了将这个参数写入持久化配置文件中。 不经意的日常微调： 研发为了排查一个网络连通性问题，在云控制台上给某台实例的安全组临时开了一个 8080 端口。问题解决后，这个端口就被遗忘在了角落。 无序的系统更新： 某些机器因为触发了自动安全补丁更新，或者被手动 apt-get upgrade 了一下，导致其基础库版本（如 OpenSSL）略领先于同集群的其他机器。 这些零散的、未经标准流程审计的手动变更、临时调整和系统微调，随着时间的推移不断累积。服务器开始产生&amp;quot;个体差异&amp;rdquo;，最终演变成无法被完全复制的&amp;quot;艺术品&amp;quot;或&amp;quot;黑盒&amp;rdquo;。
-二、 概念提炼：什么是配置漂移？ # 1. 核心定义 # 配置漂移（Configuration Drift）是指基础设施、操作系统或应用环境的实际运行状态（Actual State），随着时间的推移，逐渐偏离了原本定义的标准或预期状态（Desired State）的现象。
-2. 走出误区：&amp;ldquo;配置&amp;quot;不仅仅是配置文件 # 很多人容易把&amp;quot;配置&amp;quot;窄义地理解为 .conf、.yaml 或 .ini 文件。事实上，在配置漂移的语境下，&amp;ldquo;配置&amp;quot;代表的是整个环境的最终运行状态（State）。它包含但不限于：
-文件系统： 配置文件内容、应用版本、临时脚本、SSL 证书。 内核与系统参数： 环境变量、内核网络参数（如 sysctl）、用户权限与组（如 chmod 变更）。 网络与安全： 防火墙规则（iptables）、云平台安全组端口、路由表条目。 云资源拓扑： 磁盘挂载容量、虚拟机规格、负载均衡器的权重分配。 只要实际环境的任何一项指标与当初的设计蓝图产生了偏差，配置漂移就已经发生了。</description></item><item><title>GitHub Actions 中的认证方式：GITHUB_TOKEN、PAT 与 Deploy Key</title><link>/blog/2026-06-11-github-actions-auth-tokens/</link><pubDate>Thu, 11 Jun 2026 12:00:00 +0800</pubDate><guid>/blog/2026-06-11-github-actions-auth-tokens/</guid><description>背景 # 我的个人博客采用 Hugo 构建，源代码放在私有仓库 hitzhangjie/myspace，构建产物需要部署到公开仓库 hitzhangjie/hitzhangjie.github.io。原先的 workflow 部署在目标仓库上，每次 push 源仓库后还需要手动推一次目标仓库，很痛苦。
-迁移 workflow 到源仓库（myspace）时，发现 GITHUB_TOKEN 无法完成跨仓库推送。这引出了一个问题：GitHub Actions 中到底有哪几种认证方式？它们分别怎么配置、作用域是什么？
-三种认证方式速览 # 认证方式 谁来生成 作用域 适用场景 GITHUB_TOKEN GitHub 自动注入 当前仓库 同仓库内操作（checkout、发 release、写 PR 评论等） Personal Access Token (PAT) 用户手动创建 用户有权访问的所有仓库 跨仓库操作、需要比 GITHUB_TOKEN 更广的权限 SSH Deploy Key 用户手动生成 单个仓库（写权限可选） 跨仓库推送（如部署静态站点到另一个仓库） GITHUB_TOKEN # 它是什么 # GITHUB_TOKEN 是 GitHub Actions 在每次 workflow 运行时自动生成的一个临时令牌。你不需要、也没办法手动配置它——在任何仓库的 Settings → Secrets and variables 或 Settings → Deploy keys 里都找不到它。</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Devops on</title><link>/tags/devops/</link><description>Recent content in Devops on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 07 Jul 2026 12:12:28 +0800</lastBuildDate><atom:link href="/tags/devops/index.xml" rel="self" type="application/rss+xml"/><item><title>重读《持续交付2.0》：从EPC到AI Harness工程，隐性工程能力从未改变</title><link>/blog/2026-07-07-%E6%8C%81%E7%BB%AD%E4%BA%A4%E4%BB%982.0-ai%E6%97%B6%E4%BB%A3%E9%9A%90%E6%80%A7%E5%B7%A5%E7%A8%8B%E8%83%BD%E5%8A%9B%E4%BB%8E%E6%9C%AA%E6%94%B9%E5%8F%98/</link><pubDate>Tue, 07 Jul 2026 12:12:28 +0800</pubDate><guid>/blog/2026-07-07-%E6%8C%81%E7%BB%AD%E4%BA%A4%E4%BB%982.0-ai%E6%97%B6%E4%BB%A3%E9%9A%90%E6%80%A7%E5%B7%A5%E7%A8%8B%E8%83%BD%E5%8A%9B%E4%BB%8E%E6%9C%AA%E6%94%B9%E5%8F%98/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;2019 年到 2022 年，我深度参与了腾讯侧的技术治理工作：微服务框架、研发效能提升、统一协议托管、DevOps、测试左移、一站式研发发布平台……那几年对「软件工程」和「技术沉淀」的理解被拉高了一截。2022 年因团队变动，结合个人意愿，我加入了天美某在研的游戏后台团队，项目管理上实践良好，但是团队后台工程实践上 …… 也算是让我打开眼界了。&lt;/p&gt;
+&lt;p&gt;近几年 AI 大火，公司、团队、个人都在追问 AI 的能力边界，并希望把能力赋能到个人与组织——行业如此。我从 2021 年 GitHub Copilot 发布起就持续跟踪；ChatGPT 之后的一系列现象级产品与重大进展，常常让我生出「要不要 ALL IN AI」的冲动。从 Prompt 工程到 Context 工程，再到 Harness 工程，实践很热，但&lt;strong&gt;真正能驾驭 AI 的团队极其少见&lt;/strong&gt;，营销反而更多。从 AI Assist 到 AI First，远不只是「把 Harness 搭好」这么简单。若真这么简单，Agent 内置软件工程领域的 SKILL 便可横扫一切——现实是没有任何一个 Agent 能独自搞定所有领域。也许需要时间，也许需要专用 Agent 的协作与编排；无论如何，&lt;strong&gt;至今还没有哪家企业能拍着胸脯说已经把 AI 用得很好&lt;/strong&gt;，但这件事我认为会被实现，我这里欲扬先抑一下。&lt;/p&gt;
+&lt;p&gt;与此同时，常听到一种论调：「AI 总有搞不定的领域。」这不意外——对量化别人的产出，很多人毫无概念，要么笼统判断，要么在专业领域沉淀不够，找不到合理量化指标。&lt;strong&gt;「一切皆可计算」&lt;/strong&gt;：若不能计算，人的活动便既盲目又冒险；审视研发是否科学，就是量化、发现问题、改进、再量化的循环。乔梁老师在《持续交付 2.0：引领业务的 DevOps 精要》里，对这条主线讲得系统而具体。当然，这里的量化指标是用来验证我们的假设，改进我们的流程，而不是我们的终极目标。&lt;/p&gt;
+&lt;p&gt;不少参与过研发效能（EPC，工程效能胜任力）落地的人，对乔梁老师存在很深误解：理念死板、理论大于实践、花架子。多年之后，当我思考如何做出更好的 AI Agent、如何&lt;strong&gt;驾驭&lt;/strong&gt; Agent 时，突然发现：研发活动里的种种 &lt;strong&gt;SKILL&lt;/strong&gt;，与过去沉淀的一些&lt;strong&gt;隐形技能&lt;/strong&gt;之间，存在清晰映射。于是从书架取下这本书——当年还是&lt;strong&gt;腾讯技术副总裁曾宇&lt;/strong&gt;与&lt;strong&gt;腾讯特邀专家乔梁老师&lt;/strong&gt;亲笔签名本——耐着性子读了两周。越往后感触越深：过去的判断更详实了，也修正了一些认识误区。内网仍可搜到曾宇关于服务器开发的 PPT，言简意赅、有洞见，很多 2026 年的高级工程师也未必能写出那种密度。&lt;/p&gt;
+&lt;p&gt;有人说他们「空有其表」——在我看来，说这话的人才是真正的傲慢与无知。若真要埋怨，应埋怨当年 EPC 落地中某些团队的务虚作风，而不是理念本身。时至今日，这些理念对许多业务仍有牵引、指导作用。理念像水，没有绝对最好，只有更合适；唯一不变的是变：持续优化可维护性是变，满足于现状沦为屎山也是变。有洞见的 TL 能观察微妙变化，立规矩、建流程与质量门禁，让隐晦不可见的风险点变得可见，并专注培养人与提振技术氛围。若连学习进步的欲望都没有，工程上的怠惰难免迁移到业务领域探索优化上的怠惰。和大范围用 AI 一样，&lt;strong&gt;我们工作不只为了解决问题，也在培养与传承&lt;/strong&gt;。许多感动用户的设计与高可用，是在思辨进步的氛围里一点点夯出来的——AI 不会给你一切；若本身不是那块材料，即便 AI 给出更好方案，也不敢采纳，因为已超出认知。&lt;/p&gt;</description></item><item><title>CI 与 CD 的本质区别：为什么 CI 不包含 CD</title><link>/blog/2026-07-01-ci-cd-difference/</link><pubDate>Wed, 01 Jul 2026 20:02:36 +0800</pubDate><guid>/blog/2026-07-01-ci-cd-difference/</guid><description>&lt;p&gt;工作在现代软件开发团队中，你一定对 &amp;ldquo;CI/CD&amp;rdquo; 这个词不陌生。然而，在日常交流中，我们经常会听到诸如&amp;quot;我们的 CI 流水线挂了&amp;quot;、&amp;ldquo;这个项目的 CD 做得不好&amp;quot;等说法。久而久之，很多人会产生一种模糊的印象：CI 和 CD 是一回事，或者 CI 包含了 CD。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;严格来说，CI（持续集成）并不包含 CD（持续交付/持续部署）。&lt;/strong&gt; 它们是 DevOps 流水线中&lt;strong&gt;紧密衔接但职责不同&lt;/strong&gt;的两个独立阶段。本文将为你深度拆解 CI 与 CD 的本质区别、各自的核心任务，以及它们是如何协同工作，共同打造高效的现代软件交付流水线的。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-什么是-cicontinuous-integration持续集成"&gt;1. 什么是 CI（Continuous Integration，持续集成）？ &lt;a href="#1-%e4%bb%80%e4%b9%88%e6%98%af-cicontinuous-integration%e6%8c%81%e7%bb%ad%e9%9b%86%e6%88%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;CI 的核心关注点是&lt;strong&gt;代码的集成与质量验证&lt;/strong&gt;。它的终点通常是&lt;strong&gt;生成一个可部署的产物&lt;/strong&gt;（如 Jar 包、Docker 镜像等）。&lt;/p&gt;
+&lt;p&gt;当开发者提交代码到代码仓库（如 GitLab、GitHub）后，CI 流程会自动触发：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;代码拉取与编译：&lt;/strong&gt; 确保新代码没有语法错误，能跑得通。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;运行单元测试（Unit Tests）：&lt;/strong&gt; 验证业务逻辑是否被破坏。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;代码质量扫描：&lt;/strong&gt; 检查代码规范和潜在的安全漏洞。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;构建产物：&lt;/strong&gt; 把代码打包成制品（Artifact）。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="2-什么是-cd持续交付--持续部署"&gt;2. 什么是 CD（持续交付 / 持续部署）？ &lt;a href="#2-%e4%bb%80%e4%b9%88%e6%98%af-cd%e6%8c%81%e7%bb%ad%e4%ba%a4%e4%bb%98--%e6%8c%81%e7%bb%ad%e9%83%a8%e7%bd%b2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;CD 接收 CI 生成的产物，并负责把它们&lt;strong&gt;安全地带到各个运行环境&lt;/strong&gt;中。CD 实际上包含两个层次：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Continuous Delivery（持续交付）：&lt;/strong&gt; 代码通过了 CI 的自动化测试后，会自动部署到测试环境或预发环境。但&lt;strong&gt;是否发布到生产环境，需要人工点击按钮来触发&lt;/strong&gt;（手动决策）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Continuous Deployment（持续部署）：&lt;/strong&gt; 比持续交付更进一步。代码只要通过了 CI 和所有自动化测试，就&lt;strong&gt;不需要任何人工干预，直接由系统全自动部署到生产环境&lt;/strong&gt;。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="3-一图看懂-ci-与-cd-的界限与联系"&gt;3. 一图看懂 CI 与 CD 的界限与联系 &lt;a href="#3-%e4%b8%80%e5%9b%be%e7%9c%8b%e6%87%82-ci-%e4%b8%8e-cd-%e7%9a%84%e7%95%8c%e9%99%90%e4%b8%8e%e8%81%94%e7%b3%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;我们可以用一个经典的流水线来表示它们的分工：&lt;/p&gt;</description></item><item><title>告别线上"灵异事件"：系统性理解与治理配置漂移（Configuration Drift）</title><link>/blog/2026-07-01-%E9%85%8D%E7%BD%AE%E6%BC%82%E7%A7%BB%E9%97%AE%E9%A2%98%E6%B2%BB%E7%90%86/</link><pubDate>Wed, 01 Jul 2026 15:30:00 +0800</pubDate><guid>/blog/2026-07-01-%E9%85%8D%E7%BD%AE%E6%BC%82%E7%A7%BB%E9%97%AE%E9%A2%98%E6%B2%BB%E7%90%86/</guid><description>&lt;h1 id="告别线上灵异事件系统性理解与治理配置漂移configuration-drift"&gt;告别线上&amp;quot;灵异事件&amp;quot;：系统性理解与治理配置漂移（Configuration Drift） &lt;a href="#%e5%91%8a%e5%88%ab%e7%ba%bf%e4%b8%8a%e7%81%b5%e5%bc%82%e4%ba%8b%e4%bb%b6%e7%b3%bb%e7%bb%9f%e6%80%a7%e7%90%86%e8%a7%a3%e4%b8%8e%e6%b2%bb%e7%90%86%e9%85%8d%e7%bd%ae%e6%bc%82%e7%a7%bbconfiguration-drift" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在运维和 DevOps 的日常工作中，你可能也经历过这样的&amp;quot;鬼故事&amp;quot;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;em&gt;&amp;ldquo;这段代码在测试环境跑得好好的，为什么一上生产就崩了？&amp;rdquo;&lt;/em&gt;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;&amp;ldquo;两台配置一模一样的服务器，为什么流量一高，其中一台的 CPU 就会提前被打满？&amp;rdquo;&lt;/em&gt;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;&amp;ldquo;半年前写的扩容脚本，今天自动化执行时竟然翻车了。&amp;rdquo;&lt;/em&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些让人抓狂的线上不一致问题，背后的核心罪魁祸首往往指向同一个隐形杀手——&lt;strong&gt;配置漂移（Configuration Drift）&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;本文将从问题背景出发，带你系统性拆解什么是配置漂移，以及在现代云原生时代，我们该如何彻底治理它。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="一-问题背景温水煮青蛙的手工运维"&gt;一、 问题背景：温水煮青蛙的&amp;quot;手工运维&amp;quot; &lt;a href="#%e4%b8%80-%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af%e6%b8%a9%e6%b0%b4%e7%85%ae%e9%9d%92%e8%9b%99%e7%9a%84%e6%89%8b%e5%b7%a5%e8%bf%90%e7%bb%b4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在传统的 IT 运维模式中，环境的部署往往依赖于编写好的初始文档或基础镜像。在刚交付的那一刻，所有服务器的状态是最干净、最标准的。&lt;/p&gt;
+&lt;p&gt;然而，随着系统进入长期的维护期，以下场景便开始频繁上演：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;应急的外科手术：&lt;/strong&gt; 线上突发性能瓶颈，突发流量导致连接数爆满。为了紧急止损，运维人员直接 SSH 登录到生产机，执行了 &lt;code&gt;sysctl -w net.core.somaxconn=1024&lt;/code&gt;，随后排查完毕，大家举杯庆祝，却忘了将这个参数写入持久化配置文件中。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;不经意的日常微调：&lt;/strong&gt; 研发为了排查一个网络连通性问题，在云控制台上给某台实例的安全组临时开了一个 &lt;code&gt;8080&lt;/code&gt; 端口。问题解决后，这个端口就被遗忘在了角落。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;无序的系统更新：&lt;/strong&gt; 某些机器因为触发了自动安全补丁更新，或者被手动 &lt;code&gt;apt-get upgrade&lt;/code&gt; 了一下，导致其基础库版本（如 OpenSSL）略领先于同集群的其他机器。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;这些零散的、未经标准流程审计的&lt;strong&gt;手动变更、临时调整和系统微调&lt;/strong&gt;，随着时间的推移不断累积。服务器开始产生&amp;quot;个体差异&amp;quot;，最终演变成无法被完全复制的&amp;quot;艺术品&amp;quot;或&amp;quot;黑盒&amp;quot;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="二-概念提炼什么是配置漂移"&gt;二、 概念提炼：什么是配置漂移？ &lt;a href="#%e4%ba%8c-%e6%a6%82%e5%bf%b5%e6%8f%90%e7%82%bc%e4%bb%80%e4%b9%88%e6%98%af%e9%85%8d%e7%bd%ae%e6%bc%82%e7%a7%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="1-核心定义"&gt;1. 核心定义 &lt;a href="#1-%e6%a0%b8%e5%bf%83%e5%ae%9a%e4%b9%89" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;配置漂移（Configuration Drift）&lt;strong&gt;是指基础设施、操作系统或应用环境的&lt;/strong&gt;实际运行状态（Actual State）&lt;/strong&gt;，随着时间的推移，逐渐偏离了原本定义的标准或预期状态（Desired State）的现象。&lt;/p&gt;
+&lt;h3 id="2-走出误区配置不仅仅是配置文件"&gt;2. 走出误区：&amp;ldquo;配置&amp;quot;不仅仅是配置文件 &lt;a href="#2-%e8%b5%b0%e5%87%ba%e8%af%af%e5%8c%ba%e9%85%8d%e7%bd%ae%e4%b8%8d%e4%bb%85%e4%bb%85%e6%98%af%e9%85%8d%e7%bd%ae%e6%96%87%e4%bb%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;很多人容易把&amp;quot;配置&amp;quot;窄义地理解为 &lt;code&gt;.conf&lt;/code&gt;、&lt;code&gt;.yaml&lt;/code&gt; 或 &lt;code&gt;.ini&lt;/code&gt; 文件。事实上，在配置漂移的语境下，&lt;strong&gt;&amp;ldquo;配置&amp;quot;代表的是整个环境的最终运行状态（State）&lt;/strong&gt;。它包含但不限于：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;文件系统：&lt;/strong&gt; 配置文件内容、应用版本、临时脚本、SSL 证书。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;内核与系统参数：&lt;/strong&gt; 环境变量、内核网络参数（如 &lt;code&gt;sysctl&lt;/code&gt;）、用户权限与组（如 &lt;code&gt;chmod&lt;/code&gt; 变更）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;网络与安全：&lt;/strong&gt; 防火墙规则（&lt;code&gt;iptables&lt;/code&gt;）、云平台安全组端口、路由表条目。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;云资源拓扑：&lt;/strong&gt; 磁盘挂载容量、虚拟机规格、负载均衡器的权重分配。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;只要实际环境的任何一项指标与当初的设计蓝图产生了偏差，配置漂移就已经发生了。&lt;/p&gt;</description></item><item><title>GitHub Actions 中的认证方式：GITHUB_TOKEN、PAT 与 Deploy Key</title><link>/blog/2026-06-11-github-actions-auth-tokens/</link><pubDate>Thu, 11 Jun 2026 12:00:00 +0800</pubDate><guid>/blog/2026-06-11-github-actions-auth-tokens/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;我的个人博客采用 Hugo 构建，源代码放在私有仓库 &lt;code&gt;hitzhangjie/myspace&lt;/code&gt;，构建产物需要部署到公开仓库 &lt;code&gt;hitzhangjie/hitzhangjie.github.io&lt;/code&gt;。原先的 workflow 部署在目标仓库上，每次 push 源仓库后还需要手动推一次目标仓库，很痛苦。&lt;/p&gt;
+&lt;p&gt;迁移 workflow 到源仓库（myspace）时，发现 &lt;code&gt;GITHUB_TOKEN&lt;/code&gt; 无法完成跨仓库推送。这引出了一个问题：GitHub Actions 中到底有哪几种认证方式？它们分别怎么配置、作用域是什么？&lt;/p&gt;
+&lt;h1 id="三种认证方式速览"&gt;三种认证方式速览 &lt;a href="#%e4%b8%89%e7%a7%8d%e8%ae%a4%e8%af%81%e6%96%b9%e5%bc%8f%e9%80%9f%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;认证方式&lt;/th&gt;
+&lt;th&gt;谁来生成&lt;/th&gt;
+&lt;th&gt;作用域&lt;/th&gt;
+&lt;th&gt;适用场景&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;GITHUB_TOKEN&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;GitHub &lt;strong&gt;自动&lt;/strong&gt;注入&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;当前仓库&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;同仓库内操作（checkout、发 release、写 PR 评论等）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Personal Access Token (PAT)&lt;/td&gt;
+&lt;td&gt;用户&lt;strong&gt;手动&lt;/strong&gt;创建&lt;/td&gt;
+&lt;td&gt;用户有权访问的&lt;strong&gt;所有仓库&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;跨仓库操作、需要比 GITHUB_TOKEN 更广的权限&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;SSH Deploy Key&lt;/td&gt;
+&lt;td&gt;用户&lt;strong&gt;手动&lt;/strong&gt;生成&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;单个仓库&lt;/strong&gt;（写权限可选）&lt;/td&gt;
+&lt;td&gt;跨仓库推送（如部署静态站点到另一个仓库）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h1 id="github_token"&gt;GITHUB_TOKEN &lt;a href="#github_token" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="它是什么"&gt;它是什么 &lt;a href="#%e5%ae%83%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;GITHUB_TOKEN&lt;/code&gt; 是 GitHub Actions 在&lt;strong&gt;每次 workflow 运行时自动生成&lt;/strong&gt;的一个临时令牌。你&lt;strong&gt;不需要、也没办法&lt;/strong&gt;手动配置它——在任何仓库的 Settings → Secrets and variables 或 Settings → Deploy keys 里都找不到它。&lt;/p&gt;
+&lt;p&gt;它由 GitHub 在 workflow 启动时注入，workflow 结束后立即失效。&lt;/p&gt;</description></item></channel></rss>

@@ -1,10 +1,370 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>go设计实现 on</title><link>/categories/go%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</link><description>Recent content in go设计实现 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 26 Jun 2026 18:42:00 +0800</lastBuildDate><atom:link href="/categories/go%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/index.xml" rel="self" type="application/rss+xml"/><item><title>深入浅出 Go Safepoints：从编译账本到抢占调度及精确式GC的底层真相</title><link>/blog/2026-06-26-go-safepoints/</link><pubDate>Fri, 26 Jun 2026 18:42:00 +0800</pubDate><guid>/blog/2026-06-26-go-safepoints/</guid><description>深度解密 Go 语言的 Safepoint：从编译账本到抢占调度的底层真相 # 在探讨 Go 语言的高性能并发时，我们经常会听到“非协作式抢占调度”和“精确式垃圾回收（Precise GC）”。而这两个底层特性的交汇点，正是 Safepoint（安全点）。 如果你去查阅资料，往往只能得到一句宏观的定义：“Safepoint 是程序执行中的一些特定位置，此时状态确定，可以安全暂停。” 但这并不能解开我们心中的疑惑：Safepoint 到底是什么？它是怎么记录的？为什么有些位置可以被抢占，而有些地方强行抢占就会导致系统崩溃？ 今天我们抛开宏观理论，用底层的眼光重新拆解 Safepoint。
-一、 为什么需要 Safepoint？CPU 眼中的“迷茫” # 在高级语言中，我们能一眼分清什么是普通数值，什么是对象指针：
-a := 10 // 普通整数 b := &amp;amp;User{} // 对象指针 然而，当 Go 编译器把这段代码翻译成二进制机器码后，在 CPU 的世界里，它们都只是寄存器（如 RAX, RBX）或栈内存里的一个 64 位的数字。 当垃圾回收（GC）需要扫描内存，或者系统发出信号想抢占这个 Goroutine 时，问题来了： 如果此时 CPU 寄存器 RAX 里的值是 0x00007f9c，GC 该不该顺着这个地址去追踪并标记内存？
-如果它其实是一个普通整数（比如一个时间戳），GC 却误把它当指针去追踪，程序就会因为访问非法地址而瞬间崩溃（Panic/段错误）。 如果它其实是一个真指针，GC 却漏掉了它，这块内存就会被提前释放，引发严重的内存悬空。 为了让 GC 能够在任意需要的时候，精准地辨别出寄存器和栈里“哪个是普通数据，哪个是指针”，Safepoint 机制应运而生。
-二、 Safepoint 的本质：编译期写死的“只读账本” # Safepoint 在底层根本不是一段拦截代码，也不是一个特殊的函数，它只是一个“位置记录”——也就是一个由编译器在编译期计算好，并打包放进可执行文件中的“位置与活动指针映射表”。 在编译阶段，编译器在生成机器码的同时，在后台偷偷拿一个小本本（静态存活分析，Liveness Analysis），把每一条核心机器指令的位置，以及在这个位置上，哪个寄存器/栈空间放的是活跃的指针，全部记录下来。 这个“账本”在编译完成后，会固化在可执行文件的只读数据段中（如 .</description></item><item><title>深入浅出 Go 非协作式抢占</title><link>/blog/2026-06-26-%E8%BF%90%E8%A1%8C%E6%97%B6%E8%B0%83%E5%BA%A6_go%E9%9D%9E%E5%8D%8F%E4%BD%9C%E5%BC%8F%E6%8A%A2%E5%8D%A0/</link><pubDate>Fri, 26 Jun 2026 18:01:57 +0800</pubDate><guid>/blog/2026-06-26-%E8%BF%90%E8%A1%8C%E6%97%B6%E8%B0%83%E5%BA%A6_go%E9%9D%9E%E5%8D%8F%E4%BD%9C%E5%BC%8F%E6%8A%A2%E5%8D%A0/</guid><description>在 Go 1.14 之前，Go 语言的调度器采用的是协作式抢占。这种机制存在一个致命的缺陷：如果一个 Goroutine 陷入了没有函数调用的死循环（例如纯 CPU 计算），它就会永久霸占线程，导致其他 Goroutine 饿死，甚至触发程序卡死或垃圾回收（GC）无法完成。
-为了解决这个问题，Go 1.14 引入了基于 SIGURG 信号的非协作式抢占（Non-cooperative Preemption）机制。本文将系统性地拆解这一机制的底层原理。
-1. 为什么被称为&amp;quot;非协作式&amp;quot;？ # 为了理解非协作式抢占，我们需要先对比它与传统协作式抢占的区别：
-特性 协作式抢占 (Go 1.14 之前) 非协作式抢占 (Go 1.14 及之后) 触发前提 依赖 Goroutine 主动配合。 强制执行，无需 Goroutine 配合。 检查时机 发生函数调用或内存分配时，检查栈溢出标志。 随时随地，由操作系统信号直接中断。 死循环应对 无法解决纯计算死循环（如for {}），会导致饿死。 完美解决，可在 10ms 内强行剥夺 CPU 执行权。 核心痛点：协作式抢占就像坐公交车，乘客（Goroutine）必须走到站台（函数调用点）才能下车。而非协作式抢占则像直升机索降，无论你在哪里，调度器都能直接把你&amp;quot;抓&amp;quot;走。
-2. 核心大招：基于 SIGURG 信号的底层看板 # 非协作式抢占的整个流程由系统监控线程、操作系统内核以及 Go 运行时（Runtime）共同协作完成：</description></item><item><title>内存管理：Go GC停顿时间优化</title><link>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%81%9C%E9%A1%BF%E6%97%B6%E9%97%B4%E4%BC%98%E5%8C%96/</link><pubDate>Wed, 17 Jun 2026 07:39:00 +0800</pubDate><guid>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%81%9C%E9%A1%BF%E6%97%B6%E9%97%B4%E4%BC%98%E5%8C%96/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: -170px; }</description></item><item><title>内存管理 - Go GC 写屏障演进</title><link>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%86%99%E5%B1%8F%E9%9A%9C%E6%BC%94%E8%BF%9B/</link><pubDate>Wed, 17 Jun 2026 07:28:00 +0800</pubDate><guid>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%86%99%E5%B1%8F%E9%9A%9C%E6%BC%94%E8%BF%9B/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: -170px; }</description></item><item><title>内存管理：GC Barriers 读屏障 vs. 写屏障</title><link>/blog/2026-06-16-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gc_barriers/</link><pubDate>Tue, 16 Jun 2026 00:14:00 +0800</pubDate><guid>/blog/2026-06-16-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gc_barriers/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: -170px; }</description></item><item><title>内存管理：Go 如何压制内存碎片</title><link>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_go%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B9%8B%E7%A2%8E%E7%89%87%E6%8E%A7%E5%88%B6/</link><pubDate>Mon, 15 Jun 2026 19:40:00 +0800</pubDate><guid>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_go%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B9%8B%E7%A2%8E%E7%89%87%E6%8E%A7%E5%88%B6/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: -170px; }</description></item><item><title>内存管理：Linux Buddy Allocator</title><link>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_linuxbuddyallocator/</link><pubDate>Mon, 15 Jun 2026 19:00:00 +0800</pubDate><guid>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_linuxbuddyallocator/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: -170px; }</description></item><item><title>内存管理：Go 如何从OS申请内存</title><link>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_go%E5%A6%82%E4%BD%95%E4%BB%8Eos%E7%94%B3%E8%AF%B7%E5%86%85%E5%AD%98/</link><pubDate>Mon, 15 Jun 2026 08:00:00 +0800</pubDate><guid>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_go%E5%A6%82%E4%BD%95%E4%BB%8Eos%E7%94%B3%E8%AF%B7%E5%86%85%E5%AD%98/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: -170px; }</description></item><item><title>内存管理：从Go外部碎片优化到Linux透明巨页</title><link>/blog/2026-06-13-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B9%8B%E9%80%8F%E6%98%8E%E5%B7%A8%E9%A1%B5/</link><pubDate>Sat, 13 Jun 2026 10:00:00 +0800</pubDate><guid>/blog/2026-06-13-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B9%8B%E9%80%8F%E6%98%8E%E5%B7%A8%E9%A1%B5/</guid><description>THP（Transparent Huge Pages）是 Linux 内核中的一项内存管理技术。要理解它，我们得先聊聊 Linux 默认的内存管理方式。
-.iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: -170px; }</description></item><item><title>内存管理：Go垃圾回收之混合写屏障</title><link>/blog/2026-06-11-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/</link><pubDate>Thu, 11 Jun 2026 15:00:00 +0800</pubDate><guid>/blog/2026-06-11-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: -170px; }</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Go设计实现 on</title><link>/categories/go%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</link><description>Recent content in Go设计实现 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 26 Jun 2026 18:42:00 +0800</lastBuildDate><atom:link href="/categories/go%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/index.xml" rel="self" type="application/rss+xml"/><item><title>深入浅出 Go Safepoints：从编译账本到抢占调度及精确式GC的底层真相</title><link>/blog/2026-06-26-go-safepoints/</link><pubDate>Fri, 26 Jun 2026 18:42:00 +0800</pubDate><guid>/blog/2026-06-26-go-safepoints/</guid><description>&lt;h2 id="深度解密-go-语言的-safepoint从编译账本到抢占调度的底层真相"&gt;深度解密 Go 语言的 Safepoint：从编译账本到抢占调度的底层真相 &lt;a href="#%e6%b7%b1%e5%ba%a6%e8%a7%a3%e5%af%86-go-%e8%af%ad%e8%a8%80%e7%9a%84-safepoint%e4%bb%8e%e7%bc%96%e8%af%91%e8%b4%a6%e6%9c%ac%e5%88%b0%e6%8a%a2%e5%8d%a0%e8%b0%83%e5%ba%a6%e7%9a%84%e5%ba%95%e5%b1%82%e7%9c%9f%e7%9b%b8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在探讨 Go 语言的高性能并发时，我们经常会听到“非协作式抢占调度”和“精确式垃圾回收（Precise GC）”。而这两个底层特性的交汇点，正是 Safepoint（安全点）。
+如果你去查阅资料，往往只能得到一句宏观的定义：“Safepoint 是程序执行中的一些特定位置，此时状态确定，可以安全暂停。”
+但这并不能解开我们心中的疑惑：Safepoint 到底是什么？它是怎么记录的？为什么有些位置可以被抢占，而有些地方强行抢占就会导致系统崩溃？
+今天我们抛开宏观理论，用底层的眼光重新拆解 Safepoint。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="一-为什么需要-safepointcpu-眼中的迷茫"&gt;一、 为什么需要 Safepoint？CPU 眼中的“迷茫” &lt;a href="#%e4%b8%80-%e4%b8%ba%e4%bb%80%e4%b9%88%e9%9c%80%e8%a6%81-safepointcpu-%e7%9c%bc%e4%b8%ad%e7%9a%84%e8%bf%b7%e8%8c%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在高级语言中，我们能一眼分清什么是普通数值，什么是对象指针：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;a := 10 // 普通整数
+b := &amp;amp;User{} // 对象指针
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;然而，当 Go 编译器把这段代码翻译成二进制机器码后，在 CPU 的世界里，它们都只是寄存器（如 RAX, RBX）或栈内存里的一个 64 位的数字。
+当垃圾回收（GC）需要扫描内存，或者系统发出信号想抢占这个 Goroutine 时，问题来了：
+如果此时 CPU 寄存器 RAX 里的值是 0x00007f9c，GC 该不该顺着这个地址去追踪并标记内存？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果它其实是一个普通整数（比如一个时间戳），GC 却误把它当指针去追踪，程序就会因为访问非法地址而瞬间崩溃（Panic/段错误）。&lt;/li&gt;
+&lt;li&gt;如果它其实是一个真指针，GC 却漏掉了它，这块内存就会被提前释放，引发严重的内存悬空。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;为了让 GC 能够在任意需要的时候，精准地辨别出寄存器和栈里“哪个是普通数据，哪个是指针”，Safepoint 机制应运而生。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="二-safepoint-的本质编译期写死的只读账本"&gt;二、 Safepoint 的本质：编译期写死的“只读账本” &lt;a href="#%e4%ba%8c-safepoint-%e7%9a%84%e6%9c%ac%e8%b4%a8%e7%bc%96%e8%af%91%e6%9c%9f%e5%86%99%e6%ad%bb%e7%9a%84%e5%8f%aa%e8%af%bb%e8%b4%a6%e6%9c%ac" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Safepoint 在底层根本不是一段拦截代码，也不是一个特殊的函数，它只是一个“位置记录”——也就是一个由编译器在编译期计算好，并打包放进可执行文件中的“位置与活动指针映射表”。
+在编译阶段，编译器在生成机器码的同时，在后台偷偷拿一个小本本（静态存活分析，Liveness Analysis），把每一条核心机器指令的位置，以及在这个位置上，哪个寄存器/栈空间放的是活跃的指针，全部记录下来。
+这个“账本”在编译完成后，会固化在可执行文件的只读数据段中（如 .gclocals 和 .pclntab 符号表）。运行时（Runtime）只有读取权限。&lt;/p&gt;</description></item><item><title>深入浅出 Go 非协作式抢占</title><link>/blog/2026-06-26-%E8%BF%90%E8%A1%8C%E6%97%B6%E8%B0%83%E5%BA%A6_go%E9%9D%9E%E5%8D%8F%E4%BD%9C%E5%BC%8F%E6%8A%A2%E5%8D%A0/</link><pubDate>Fri, 26 Jun 2026 18:01:57 +0800</pubDate><guid>/blog/2026-06-26-%E8%BF%90%E8%A1%8C%E6%97%B6%E8%B0%83%E5%BA%A6_go%E9%9D%9E%E5%8D%8F%E4%BD%9C%E5%BC%8F%E6%8A%A2%E5%8D%A0/</guid><description>&lt;p&gt;在 Go 1.14 之前，Go 语言的调度器采用的是协作式抢占。这种机制存在一个致命的缺陷：如果一个 Goroutine 陷入了没有函数调用的死循环（例如纯 CPU 计算），它就会永久霸占线程，导致其他 Goroutine 饿死，甚至触发程序卡死或垃圾回收（GC）无法完成。&lt;/p&gt;
+&lt;p&gt;为了解决这个问题，Go 1.14 引入了基于 SIGURG 信号的非协作式抢占（Non-cooperative Preemption）机制。本文将系统性地拆解这一机制的底层原理。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-为什么被称为非协作式"&gt;1. 为什么被称为&amp;quot;非协作式&amp;quot;？ &lt;a href="#1-%e4%b8%ba%e4%bb%80%e4%b9%88%e8%a2%ab%e7%a7%b0%e4%b8%ba%e9%9d%9e%e5%8d%8f%e4%bd%9c%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;为了理解非协作式抢占，我们需要先对比它与传统协作式抢占的区别：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;特性&lt;/th&gt;
+&lt;th&gt;协作式抢占 (Go 1.14 之前)&lt;/th&gt;
+&lt;th&gt;非协作式抢占 (Go 1.14 及之后)&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;触发前提&lt;/td&gt;
+&lt;td&gt;依赖 Goroutine 主动配合。&lt;/td&gt;
+&lt;td&gt;强制执行，无需 Goroutine 配合。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;检查时机&lt;/td&gt;
+&lt;td&gt;发生函数调用或内存分配时，检查栈溢出标志。&lt;/td&gt;
+&lt;td&gt;随时随地，由操作系统信号直接中断。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;死循环应对&lt;/td&gt;
+&lt;td&gt;无法解决纯计算死循环（如&lt;code&gt;for {}&lt;/code&gt;），会导致饿死。&lt;/td&gt;
+&lt;td&gt;完美解决，可在 10ms 内强行剥夺 CPU 执行权。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;核心痛点：协作式抢占就像坐公交车，乘客（Goroutine）必须走到站台（函数调用点）才能下车。而非协作式抢占则像直升机索降，无论你在哪里，调度器都能直接把你&amp;quot;抓&amp;quot;走。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="2-核心大招基于-sigurg-信号的底层看板"&gt;2. 核心大招：基于 SIGURG 信号的底层看板 &lt;a href="#2-%e6%a0%b8%e5%bf%83%e5%a4%a7%e6%8b%9b%e5%9f%ba%e4%ba%8e-sigurg-%e4%bf%a1%e5%8f%b7%e7%9a%84%e5%ba%95%e5%b1%82%e7%9c%8b%e6%9d%bf" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;非协作式抢占的整个流程由系统监控线程、操作系统内核以及 Go 运行时（Runtime）共同协作完成：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;+------------------+ 超过 10ms +-------------------+
+| | -----------------&amp;gt; | |
+| sysmon 监控线程 | | 向目标线程发送信号 |
+| | | |
++------------------+ +-------------------+
+|
+(发送 SIGURG)
+v
++------------------+ 修改 PC 寄存器 +-------------------+
+| | | |
+| 恢复执行用户代码 | &amp;lt;----------------- | sighandler 阶段 |
+| | | |
++------------------+ +-------------------+
+|
+(流向改变)
+v
++------------------+ 保存现场 &amp;amp; 挂起 +-------------------+
+| | | |
+| asyncPreempt() | -----------------&amp;gt; | 调度器切换新协程 |
+| | | |
++------------------+ +-------------------+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="详细步骤"&gt;详细步骤 &lt;a href="#%e8%af%a6%e7%bb%86%e6%ad%a5%e9%aa%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;触发检测&lt;/strong&gt;：Go 语言的后台监控线程 &lt;code&gt;sysmon&lt;/code&gt; 周期性运行。如果发现某个 Goroutine 占用单线程时间超过 10ms，就会将其标记为可抢占，并获取其绑定的操作系统线程（M）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;发送信号&lt;/strong&gt;：&lt;code&gt;sysmon&lt;/code&gt; 调用系统调用，向该线程发送一个 &lt;code&gt;SIGURG&lt;/code&gt;（紧急带外数据信号）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;信号捕获&lt;/strong&gt;：操作系统中断当前线程的执行，将控制权交给 Go 运行时提前注册好的信号处理函数 &lt;code&gt;sighandler&lt;/code&gt;。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id="为什么选择-sigurg-信号"&gt;为什么选择 SIGURG 信号？ &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e9%80%89%e6%8b%a9-sigurg-%e4%bf%a1%e5%8f%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在 Unix/Linux 系统中，&lt;code&gt;SIGALRM&lt;/code&gt; 常用于定时器，但容易与 CGO 或用户自定义计时器冲突。而 &lt;code&gt;SIGURG&lt;/code&gt; 在标准应用中极少被显式使用，且各大操作系统对其支持非常成熟，不会触发默认的进程终止，因此是绝佳的&amp;quot;内鬼信号&amp;quot;。&lt;/p&gt;</description></item><item><title>内存管理：Go GC停顿时间优化</title><link>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%81%9C%E9%A1%BF%E6%97%B6%E9%97%B4%E4%BC%98%E5%8C%96/</link><pubDate>Wed, 17 Jun 2026 07:39:00 +0800</pubDate><guid>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%81%9C%E9%A1%BF%E6%97%B6%E9%97%B4%E4%BC%98%E5%8C%96/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/aio/DYmJzY0RsRWVUTnd6"/&gt;
+&lt;/div&gt;</description></item><item><title>内存管理 - Go GC 写屏障演进</title><link>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%86%99%E5%B1%8F%E9%9A%9C%E6%BC%94%E8%BF%9B/</link><pubDate>Wed, 17 Jun 2026 07:28:00 +0800</pubDate><guid>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%86%99%E5%B1%8F%E9%9A%9C%E6%BC%94%E8%BF%9B/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/aio/DYmVqUm5Od2puT2Z6"/&gt;
+&lt;/div&gt;</description></item><item><title>内存管理：GC Barriers 读屏障 vs. 写屏障</title><link>/blog/2026-06-16-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gc_barriers/</link><pubDate>Tue, 16 Jun 2026 00:14:00 +0800</pubDate><guid>/blog/2026-06-16-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gc_barriers/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/doc/DYnRXSnJCb3RNdHJG"/&gt;
+&lt;/div&gt;</description></item><item><title>内存管理：Go 如何压制内存碎片</title><link>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_go%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B9%8B%E7%A2%8E%E7%89%87%E6%8E%A7%E5%88%B6/</link><pubDate>Mon, 15 Jun 2026 19:40:00 +0800</pubDate><guid>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_go%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B9%8B%E7%A2%8E%E7%89%87%E6%8E%A7%E5%88%B6/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/aio/DYmJLWHhFa292SmtH"/&gt;
+&lt;/div&gt;</description></item><item><title>内存管理：Linux Buddy Allocator</title><link>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_linuxbuddyallocator/</link><pubDate>Mon, 15 Jun 2026 19:00:00 +0800</pubDate><guid>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_linuxbuddyallocator/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/aio/DYkVwV21VSG5QYUxh"/&gt;
+&lt;/div&gt;</description></item><item><title>内存管理：Go 如何从OS申请内存</title><link>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_go%E5%A6%82%E4%BD%95%E4%BB%8Eos%E7%94%B3%E8%AF%B7%E5%86%85%E5%AD%98/</link><pubDate>Mon, 15 Jun 2026 08:00:00 +0800</pubDate><guid>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_go%E5%A6%82%E4%BD%95%E4%BB%8Eos%E7%94%B3%E8%AF%B7%E5%86%85%E5%AD%98/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/aio/DYmhQdEVDUXNxSnB0"/&gt;
+&lt;/div&gt;</description></item><item><title>内存管理：从Go外部碎片优化到Linux透明巨页</title><link>/blog/2026-06-13-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B9%8B%E9%80%8F%E6%98%8E%E5%B7%A8%E9%A1%B5/</link><pubDate>Sat, 13 Jun 2026 10:00:00 +0800</pubDate><guid>/blog/2026-06-13-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_linux%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B9%8B%E9%80%8F%E6%98%8E%E5%B7%A8%E9%A1%B5/</guid><description>&lt;p&gt;THP（Transparent Huge Pages）是 Linux 内核中的一项内存管理技术。要理解它，我们得先聊聊 Linux 默认的内存管理方式。&lt;/p&gt;
+&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/aio/DYnZ4VVVSVkxjbHFG"/&gt;
+&lt;/div&gt;</description></item><item><title>内存管理：Go垃圾回收之混合写屏障</title><link>/blog/2026-06-11-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/</link><pubDate>Thu, 11 Jun 2026 15:00:00 +0800</pubDate><guid>/blog/2026-06-11-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/doc/DYmZKd0NVQU9ObHRL"/&gt;
+&lt;/div&gt;</description></item><item><title>GoTalk - Go Execution Tracer</title><link>/blog/2025-11-08-go_execution_tracer/</link><pubDate>Sat, 08 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/2025-11-08-go_execution_tracer/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 90%;
+border: none;
+position: absolute;
+top: -200px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/slide/DYnVocFl6dHhWdnBO"/&gt;
+&lt;/div&gt;</description></item><item><title>GoTalk - Go内存管理</title><link>/blog/2025-11-08-go_memory_management/</link><pubDate>Sat, 08 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/2025-11-08-go_memory_management/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 90%;
+border: none;
+position: absolute;
+top: -200px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/slide/DYlNsdU1GQ3ZKeEdZ"/&gt;
+&lt;/div&gt;</description></item><item><title>Go sync.Mutex 设计实现</title><link>/blog/2021-04-19-go-sync.mutex%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</link><pubDate>Mon, 19 Apr 2021 00:00:00 +0800</pubDate><guid>/blog/2021-04-19-go-sync.mutex%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</guid><description>&lt;p&gt;终于来到了go语言相关的设计实现，go中sync.Mutex的设计有很多设计方面的考虑。&lt;/p&gt;
+&lt;p&gt;我们看下对应的加锁解锁部分，对应的源码 see https://sourcegraph.com/github.com/golang/go/-/blob/src/sync/mutex.go#L72&lt;/p&gt;
+&lt;p&gt;首先，了解下锁的定义，我们看到里面有个state字段，这个字段表示的是锁的状态，为0表示锁是解锁状态，其他状态可以参考下源码中的定义。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;// A Mutex is a mutual exclusion lcok.
+// The zero value for a Mutex is an unlocked mutex.
+//
+// A Mutex must not be copied after first use.
+type Mutext struct {
+state int32
+sema uint32
+}
+const (
+mutexLocked = 1 &amp;lt;&amp;lt; iota // mutex is locked
+mutexWoken
+mutexStarving
+mutexWaiterShift = iota
+)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;下面看下加解锁实现，多注意下state相关的逻辑，比较容易好理解。&lt;/p&gt;
+&lt;h3 id="mutexlock"&gt;mutex.Lock() &lt;a href="#mutexlock" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;h4 id="fastpath"&gt;fastpath &lt;a href="#fastpath" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;首先，会执行fastpath，会尝试CAS加锁一次，如果没有很多锁竞争，且锁处于未加锁状态（state=0），大概率会加锁成功（state=1）成功返回。&lt;/p&gt;
+&lt;p&gt;如果fastpath加锁失败了，比如尝试加锁前state != 0：&lt;/p&gt;</description></item><item><title>Locks实现:背后不为人知的故事</title><link>/blog/2021-04-17-locks%E5%AE%9E%E7%8E%B0%E9%82%A3%E4%BA%9B%E4%B8%8D%E4%B8%BA%E4%BA%BA%E7%9F%A5%E7%9A%84%E6%95%85%E4%BA%8B/</link><pubDate>Sat, 17 Apr 2021 11:32:36 +0800</pubDate><guid>/blog/2021-04-17-locks%E5%AE%9E%E7%8E%B0%E9%82%A3%E4%BA%9B%E4%B8%8D%E4%B8%BA%E4%BA%BA%E7%9F%A5%E7%9A%84%E6%95%85%E4%BA%8B/</guid><description>&lt;p&gt;从事软件开发多年的你，真的理解locks背后的那些故事吗？锁是如何实现的，无锁指的又是什么，无锁真的移除了任何同步操作吗？为什么大家总是谈锁色变，锁的开销真的有那么大吗，平时编码中又该注意些什么呢？本文将结合go sync.Mutex对这些问题进行讨论。&lt;/p&gt;
+&lt;h2 id="并发我们关心什么"&gt;并发：我们关心什么 &lt;a href="#%e5%b9%b6%e5%8f%91%e6%88%91%e4%bb%ac%e5%85%b3%e5%bf%83%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;并发编程，开发人员应该对原子性、指令重排有深刻的认识。&lt;/p&gt;
+&lt;h3 id="原子性"&gt;原子性 &lt;a href="#%e5%8e%9f%e5%ad%90%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;大家都了解过数据库事务的原子性，类似地，程序中也经常有些操作也需要达到类似的效果——被某种类似事务的机制“保护”起来，要么全部执行要么全部不执行。通常我们将这样需要保护的代码段称为临界区。我们希望临界区内的代码要么全部执行要么全部不执行，达到这种原子性的效果。&lt;/p&gt;
+&lt;p&gt;其实不只是代码段，给一个int变量赋值，也需要考虑原子性，因为在不同的操作系统、处理器平台上，可能一个简单的int变量赋值需要涉及多条机器指令，而在多条指令执行期间，则可能发生各种事件，比如被其他CPU核的赋值指令写乱了同一变量的数据。设想下一个int变量4字节，但是处理器平台只有16位mov指令。再或者执行i++（i为int类型）操作，实际上是包含了read-modify-write三个操作，这几个操作中间也可能插入其他指令执行。当然一条机器指令也可能不是原子的，比如 &lt;code&gt;add src, dst&lt;/code&gt;，src和dst都是内存地址，这里就涉及到读取src和dst、计算、写回dst的多个操作……更不用说一个包含了多个字段的struct结构体的赋值了。&lt;/p&gt;
+&lt;p&gt;这类原子性问题，可以通过一些相当低级的原子操作来保证，如int变量i++，可以考虑lock add指令（假定操作数位宽和int变量相同），稍复杂的数据结构（如struct）也可以使用一些“高级锁”来做同步保证，如go中的sync.Mutex。&lt;/p&gt;
+&lt;h3 id="指令重排"&gt;指令重排 &lt;a href="#%e6%8c%87%e4%bb%a4%e9%87%8d%e6%8e%92" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;指令重排的根源在于CPU的设计，古老的CPU只有一条取指、译码、执行、访存、写回的功能电路。联想下假如一个单线程程序执行阻塞网络IO的时候会发生什么，整个程序全阻塞在这里干不了其他的。CPU也存在类似问题，假如一条指令执行过程中因为数据没ready的问题不能执行，或者碰到多CPU多核间cache一致性同步，那CPU会stall，后续的指令都无法执行。&lt;/p&gt;
+&lt;p&gt;所以CPU为了提高指令吞吐，增加了多条流水线设计，可以同时执行多条指令的取指、译码、执行、访存、写回，当然这其中有些指令是有数据依赖的，现代处理器支持寄存器重命名、指令乱序执行、重排序缓冲等功能，都是保证CPU执行效率的常用手段。如果想了解这方面的内容，see &lt;a href="https://youtu.be/XuCu9EEHBtk?t=1087"&gt;Computer Architecture: Dynamic Execution Core&lt;/a&gt;及系列课程&lt;a href="https://www.youtube.com/playlist?list=PLYqt8zMAiKeb64Z6_BK2fwHajO7Qoo0IE"&gt;Computer Architecture&lt;/a&gt;。这里贴一张超标量处理器的简图，方便大家理解这些优化手段所在的位置：&lt;/p&gt;
+&lt;div style="width:100%;text-align:center;"&gt;
+&lt;img alt="cpu0" class="myimg" src="assets/locks/cpu0.png"/&gt;
+&lt;/div&gt;
+&lt;p&gt;&lt;strong&gt;为什么要指令重排：&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;为什么要指令重排呢？&lt;/p&gt;
+&lt;p&gt;因为希望提高cpu指令吞吐，就要并行执行指令，要并行执行指令，就要分析出哪些指令之间有数据依赖的，表面上一个架构寄存器RAX可能被相邻多条指令使用，但是可能是一个伪数据依赖，就需要通过分析、寄存器重命名（如RAX重命名为物理寄存器R11）来消除伪数据依赖，从而允许其在执行阶段并行执行（out-of-order）。&lt;/p&gt;
+&lt;p&gt;一条指令的执行过程，会分为多个阶段，有些阶段是按序执行的（in-order），有些则是乱序执行的（out-of-order）。在指令乱序执行之后，可能会对程序正确性造成影响？影响究竟有多大，就需要参考硬件内存一致性模型，比如Intel x86处理器采用的是TSO模型（Total Store Order）, see &lt;a href="https://www.cl.cam.ac.uk/~pes20/weakmemory/cacm.pdf"&gt;x86-TSO: A Rigorous and Usable Programmer's Model for x86 Multiprocessors&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;指令重排带来的问题：&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;指令在CPU乱序执行，在某些并发场景下，可能会带来一些微妙的问题。比如：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;type num struct {
+a int
+b int
+}
+n := &amp;amp;num{}
+go func() { n.a = 1; n.b = 2; }() // g1
+go func() { n.a = 2; n.b = 1; }() // g2
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;你们说最终n.a，n.b的结果是多少呢？不确定的，虽然go现在支持64位系统，现在处理器基本也都有64位mov指令，对a、b单独赋值都是原子的，但是对n整体的赋值不是。由于没有对n做保护，g1、g2中的赋值指令也没有什么数据一来，到时候乱序执行，g1 g2执行完成后，&amp;lt;n.a,n.b&amp;gt;的可能结果是：&amp;lt;1, 2&amp;gt; &amp;lt;1, 1&amp;gt; &amp;lt;2,1&amp;gt; &amp;lt;2,2&amp;gt;，这几种都有可能，而不只是有&amp;lt;1,2&amp;gt; &amp;lt;2,1&amp;gt;两种可能。&lt;/p&gt;</description></item><item><title>如何看待gopanic及异常处理</title><link>/blog/2021-04-16-%E5%A6%82%E4%BD%95%E7%9C%8B%E5%BE%85gopanic%E5%8F%8A%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86/</link><pubDate>Fri, 16 Apr 2021 13:47:21 +0800</pubDate><guid>/blog/2021-04-16-%E5%A6%82%E4%BD%95%E7%9C%8B%E5%BE%85gopanic%E5%8F%8A%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86/</guid><description>&lt;h2 id="background"&gt;Background &lt;a href="#background" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;最近有同学提问，大意是：&lt;strong&gt;“go中什么时候用panic、什么时候用error，能不能像其他语言中的try-catch一样用panic-recover来代替层层return err，或者应不应该recover一个panic之后转换为error？”&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这个问题引起了广泛的讨论，在对这几个问题的理解上，我本以为大家应该会认识到位的，没想到很多人认识很模糊。当然，好的地方就是总有有见识的同学站出来指出大家的问题。&lt;/p&gt;
+&lt;p&gt;对于那些有灵性的同学，勤实践勤思考的同学，他会自然而然意识到哪种error handling pattern更好，也会有意识地去区分不同pattern的定位和应用场景。这类同学虽然没有什么理论术语支撑，但是他们的“经验”是贴近更好的设计思想、最佳实践的。如果更进一步，能愿意接受一些设计思想的洗礼，则可以&lt;strong&gt;将“经验”上升到“模式”&lt;/strong&gt;，以指导更多人。&lt;/p&gt;
+&lt;h2 id="panic--exception"&gt;panic != exception &lt;a href="#panic--exception" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;go panic不同于其他语言中的exception，在设计、定位上是有明确的区别的，see: https://dave.cheney.net/2012/01/18/why-go-gets-exceptions-right。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;panics are always fatal to your program. In panicing you never assume that your caller can solve the problem. Hence panic is only used in exceptional circumstances, ones where it is not possible for your code, or anyone integrating your code to continue.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;go panic是用来表示程序出现了十分致命的错误，并且你不能假定这个错误能被解决。所以panic只在很少的场景下才会被用到，并且出现panic时，你的代码解决不了，引用这部分代码的其他代码也解决不了。&lt;/p&gt;
+&lt;p&gt;所以，&lt;strong&gt;panic并非一般意义上的error，更不能用panic-recover代替层层向上传递error&lt;/strong&gt;！&lt;/p&gt;
+&lt;p&gt;对于，为了自身程序的健壮性，而在启动新的goroutine时，或者调用外部依赖的导出函数、方法时，可能选择recover一些预料之外的panic，并转换为error处理。&lt;/p&gt;
+&lt;p&gt;有追求的开发人员，在panic的使用上应该始终遵循go设计理念，同时在程序的健壮性上也会采用些防御性编程的手段。&lt;/p&gt;
+&lt;h2 id="panic-vs-exception"&gt;panic vs exception &lt;a href="#panic-vs-exception" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;我们很多开发人员都接触过多门语言，比如Java、C++，等等，这类语言都有异常处理机制，遇到一些意外事件时可以抛出一个异常，异常通常由try-catch block捕获并处理。&lt;/p&gt;
+&lt;p&gt;初学者阶段，很多同学会努力去学习异常处理的正确编码方式，甚至是异常处理的实现原理，对性能的影响，等等，但是由于实际缺乏实际的大规模工程供锻炼实践，也很少有人会去思考一些问题，比如：&lt;/p&gt;</description></item><item><title>golang method receiver-type的梗</title><link>/blog/2018-05-21-golang-method-receiver-type%E7%9A%84%E6%A2%97/</link><pubDate>Mon, 21 May 2018 12:33:23 +0800</pubDate><guid>/blog/2018-05-21-golang-method-receiver-type%E7%9A%84%E6%A2%97/</guid><description>&lt;p&gt;这里来聊聊method receiver type为什么不能是pointer和interface类型。&lt;/p&gt;
+&lt;h1 id="1-receiver-type必须满足的条件"&gt;1 receiver-type必须满足的条件 &lt;a href="#1-receiver-type%e5%bf%85%e9%a1%bb%e6%bb%a1%e8%b6%b3%e7%9a%84%e6%9d%a1%e4%bb%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;golang里面提供了一定的面向对象支持，比如我们可以为类型T或者*T定义成员方法（类型T称为成员方法的receiver-type），但是这里的类型T必须满足如下几个条件：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;T必须是已经定义过的类型；&lt;/li&gt;
+&lt;li&gt;T与当前方法定义必须在同一个package下面；&lt;/li&gt;
+&lt;li&gt;T不能是指针；&lt;/li&gt;
+&lt;li&gt;T不能是接口类型；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;前面两点都比较容易理解，下面两点是什么梗？为什么就不能在指针类型上添加方法？为什么就不能在interface上添加方法？当然可以一句话待过，golang不支持，但是我想问下为什么？&lt;/p&gt;
+&lt;h1 id="2-receiver-type为什么不能是指针类型"&gt;2 receiver-type为什么不能是指针类型？ &lt;a href="#2-receiver-type%e4%b8%ba%e4%bb%80%e4%b9%88%e4%b8%8d%e8%83%bd%e6%98%af%e6%8c%87%e9%92%88%e7%b1%bb%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;golang允许为 &lt;strong&gt;类型指针*T&lt;/strong&gt; 添加方法，但是不允许为 &lt;strong&gt;指针类型本身&lt;/strong&gt; 添加方法。&lt;strong&gt;按现有golang的实现方式，为指针类型添加方法会导致方法调用时的歧义&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;看下面这个示例程序。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-golang"&gt;type T int
+func (t *T) Get() T {
+return *t + 1
+}
+type P *T
+func (p P) Get() T {
+return *p + 2
+}
+func F() {
+var v1 T
+var v2 = &amp;amp;v1
+var v3 P = &amp;amp;v1
+fmt.Println(v1.Get(), v2.Get(), v3.Get())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;示例程序中 &lt;code&gt;v3.Get()&lt;/code&gt; 存在调用歧义，编译器不知道该调用哪个方法了。如果要支持在指针这种receiver-type上定义方法，golang编译器势必要实现地更复杂才能支持到，指针本来就比较容易破坏可读性，还要在一种指针类型上定义方法，对使用者、编译器开发者而言可能都是件费力不讨好的事情。&lt;/p&gt;</description></item><item><title>golang function-closure 实现机制</title><link>/blog/2018-05-19-golang-function-closure%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/</link><pubDate>Sat, 19 May 2018 19:55:15 +0800</pubDate><guid>/blog/2018-05-19-golang-function-closure%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/</guid><description>&lt;p&gt;golang里面函数时first-class citizen，可以作为值进行参数传递，不管是普通函数“func abc()”，还是成员方法“func (x X) xxx()”，还是一个闭包“func () { return func(){&amp;hellip;.}}”……看上去很方便，不禁要问，golang里面funciton和closure是如何实现的呢？扒拉了下源码，这里简单总结下。&lt;/p&gt;
+&lt;h1 id="1-golang中函数内部表示是什么样子的"&gt;1 golang中函数内部表示是什么样子的？ &lt;a href="#1-golang%e4%b8%ad%e5%87%bd%e6%95%b0%e5%86%85%e9%83%a8%e8%a1%a8%e7%a4%ba%e6%98%af%e4%bb%80%e4%b9%88%e6%a0%b7%e5%ad%90%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;看下golang cmd/compile/internal/types/type.go中对Func类型的定义：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-golang"&gt;// Func contains Type fields specific to func types.
+type Func struct {
+Receiver *Type // function receiver，接受者类型，每个函数定义都包括该字段，可以为nil或non-nil
+Results *Type // function results，返回值类型
+Params *Type // function params，参数列表类型
+Nname *Node // function name，函数名
+// Argwid is the total width of the function receiver, params, and results.
+// It gets calculated via a temporary TFUNCARGS type.
+// Note that TFUNC's Width is Widthptr.
+Argwid int64
+Outnamed bool // 是否是可导出的？
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;通过这个Func定义来看，其可以覆盖golang里面所有的函数类型声明了，不管是普通函数，还是成员方法等等。&lt;/p&gt;</description></item><item><title>golang select-case 实现机制</title><link>/blog/2018-05-19-golang-select-case%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/</link><pubDate>Sat, 19 May 2018 19:21:11 +0800</pubDate><guid>/blog/2018-05-19-golang-select-case%E5%AE%9E%E7%8E%B0%E6%9C%BA%E5%88%B6/</guid><description>&lt;h1 id="1-chan操作规则"&gt;1 chan操作规则 &lt;a href="#1-chan%e6%93%8d%e4%bd%9c%e8%a7%84%e5%88%99" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在介绍select-case实现机制之前，最好先了解下chan操作规则，明白goroutine何时阻塞，又在什么时机被唤醒，这对后续理解select-case实现有帮助。所以接下来先介绍chan操作规则，然后再介绍select-case的实现。&lt;/p&gt;
+&lt;h2 id="11-chan操作规则1"&gt;1.1 chan操作规则1 &lt;a href="#11-chan%e6%93%8d%e4%bd%9c%e8%a7%84%e5%88%991" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当一个goroutine要从一个non-nil &amp;amp; non-closed chan上接收数据时，goroutine首先会去获取chan上的锁，然后执行如下操作直到某个条件被满足：&lt;/p&gt;
+&lt;p&gt;1）如果chan上的value buffer不空，这也意味着chan上的recv goroutine queue也一定是空的，该接收goroutine将从value buffer中unshift出一个value。这个时候，如果send goroutine队列不空的情况下，因为刚才value buffer中空出了一个位置，有位置可写，所以这个时候会从send goroutine queue中unshift出一个发送goroutine并让其恢复执行，让其执行把数据写入chan的操作，实际上是恢复该发送该goroutine执行，并把该发送goroutine要发送的数据push到value buffer中。然后呢，该接收goroutine也拿到了数据了，就继续执行。这种情景，channel的接收操作称为non-blocking操作。&lt;/p&gt;
+&lt;p&gt;2）另一种情况，如果value buffer是空的，但是send goroutine queue不空，这种情况下，该chan一定是unbufferred chan，不然value buffer肯定有数据嘛，这个时候接收goroutine将从send goroutine queue中unshift出一个发送goroutine，并将该发送goroutine要发送的数据接收过来（两个goroutine一个有发送数据地址，一个有接收数据地址，拷贝过来就ok），然后这个取出的发送goroutine将恢复执行，这个接收goroutine也可以继续执行。这种情况下，chan接收操作也是non-blocking操作。&lt;/p&gt;
+&lt;p&gt;3）另一种情况，如果value buffer和send goroutine queue都是空的，没有数据可接收，将把该接收goroutine push到chan的recv goroutine queue，该接收goroutine将转入blocking状态，什么时候恢复期执行呢，要等到有一个goroutine尝试向chan发送数据的时候了。这种场景下，chan接收操作是blocking操作。&lt;/p&gt;
+&lt;h2 id="12-chan操作规则2"&gt;1.2 chan操作规则2 &lt;a href="#12-chan%e6%93%8d%e4%bd%9c%e8%a7%84%e5%88%992" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当一个goroutine常识向一个non-nil &amp;amp; non-closed chan发送数据的时候，该goroutine将先尝试获取chan上的锁，然后执行如下操作直到满足其中一种情况。&lt;/p&gt;
+&lt;p&gt;1）如果chan的recv goroutine queue不空，这种情况下，value buffer一定是空的。发送goroutine将从recv goroutine queue中unshift出一个recv goroutine，然后直接将自己要发送的数据拷贝到该recv goroutine的接收地址处，然后恢复该recv goroutine的运行，当前发送goroutine也继续执行。这种情况下，chan send操作是non-blocking操作。&lt;/p&gt;
+&lt;p&gt;2）如果chan的recv goroutine queue是空的，并且value buffer不满，这种情况下，send goroutine queue一定是空的，因为value buffer不满发送goroutine可以发送完成不可能会阻塞。该发送goroutine将要发送的数据push到value buffer中然后继续执行。这种情况下，chan send操作是non-blocking操作。&lt;/p&gt;
+&lt;p&gt;3）如果chan的recv goroutine queue是空的，并且value buffer是满的，发送goroutine将被push到send goroutine queue中进入阻塞状态。等到有其他goroutine尝试从chan接收数据的时候才能将其唤醒恢复执行。这种情况下，chan send操作是blocking操作。&lt;/p&gt;
+&lt;h2 id="13-chan操作规则3"&gt;1.3 chan操作规则3 &lt;a href="#13-chan%e6%93%8d%e4%bd%9c%e8%a7%84%e5%88%993" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当一个goroutine尝试close一个non-nil &amp;amp; non-closed chan的时候，close操作将依次执行如下操作。&lt;/p&gt;</description></item></channel></rss>

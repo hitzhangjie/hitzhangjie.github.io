@@ -1,7 +1,66 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>debug on</title><link>/tags/debug/</link><description>Recent content in debug on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 25 Aug 2020 12:21:14 +0800</lastBuildDate><atom:link href="/tags/debug/index.xml" rel="self" type="application/rss+xml"/><item><title>delve调试器设计实现</title><link>/blog/2020-08-25-delve%E8%B0%83%E8%AF%95%E5%99%A8%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</link><pubDate>Tue, 25 Aug 2020 12:21:14 +0800</pubDate><guid>/blog/2020-08-25-delve%E8%B0%83%E8%AF%95%E5%99%A8%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</guid><description>研究调试器设计实现有段时间了，前几天在调试一个程序时，发现go调试器go-delve/delve竟然不支持类似gdb的x/FMT格式，于是在之前工作上又优化了一下。CR期间，也学习到一些之前理解不深的地方，也顺便了解了下delve的整体架构设计、大致实现，今天就来说道说道。
-delve简介 # go-delve/delve是Derekparker发起的一个调试器项目，面向go语言的。为什么针对go语言要创建一个新的调试器呢？为什么不使用GDB呢？这里涉及到go的一些特性。
-作为符号级调试器，要能正常实现源码级调试，有这么几个事情必须要做的：
-首先，就必须要有调试信息的支持，比如编译器、连接器在构建过程中插入DWARF相关的sections，以供后续调试器提取、解析以重建指令、地址与源码的映射关系，还有在活动记录中跳转等等。 此外，有了调试信息，还需要理解语言内部实现，比如go的类型系统、协程、运行时，这样你才能读写源码级的运行状态信息； 还没完，你还需要一些平台级实现相关的玩意，不同的语言在不同的平台上有不同的实现，调试器要理解这些差异并做针对性处理； 这些工作，在GDB里扩展插件来实现，不一定能很好地实现的，比如GDB支持的DWARF标准版本问题，和go编译器没有对齐之类的，比如GDB里面Target层（对tracee）控制层考虑的大多是进程、线程级别的，没有对goroutine类似的控制能力，诸如此类。
-Anyway，我们需要一款更理解go的调试器，delve就这么诞生了。现在大已经是go官方推荐的调试器了，也是GoLand、VSCode、vim-go中使用的调试器。能有幸了解一款调试器的实现、参与贡献还是很爽的一件事情。
-delve整体架构 # delve大致实现 #</description></item><item><title>gdb调试常用操作</title><link>/blog/2022-07-09-gdb%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/</link><pubDate>Sun, 28 May 2017 23:56:48 +0800</pubDate><guid>/blog/2022-07-09-gdb%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/</guid><description>迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是gdb调试的常用操作。
-### execute and trace step by step help &amp;lt;topic/cmd&amp;gt; list list - : list lines before last printed list + : list lines after last printed list 3 list 3,7 list filename:3,7 list function list filename:function list *address n/ni/next : next s/si/step : next exactly rni : reverse ni, see also mozilla rr sni : reverse si, see also mozilla rr r/run start finish : finish current function bt/backtrace : look stack frame and parameters f/frame 2 : select stack frame i/info locals : show local vars p/print var/expression : print var value set var varname=value ### breakpoints display var undisplay varNum b/break lineNum/function b/break lineNum/function [if expression] delete breakpoints : delete all breakpoints delete breakpoints bpNum : delete specified breakpoint disable breakpoints bpNum enable breakpoints bpNum c/continue info breakpoints ### watchpoints x/7b baseAddress : print mem data watch varName/expression i/info watchpoints ### backtrace segmentation faults generally are caused by addresses of memory spaces.</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Debug on</title><link>/tags/debug/</link><description>Recent content in Debug on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 25 Aug 2020 12:21:14 +0800</lastBuildDate><atom:link href="/tags/debug/index.xml" rel="self" type="application/rss+xml"/><item><title>delve调试器设计实现</title><link>/blog/2020-08-25-delve%E8%B0%83%E8%AF%95%E5%99%A8%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</link><pubDate>Tue, 25 Aug 2020 12:21:14 +0800</pubDate><guid>/blog/2020-08-25-delve%E8%B0%83%E8%AF%95%E5%99%A8%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</guid><description>&lt;p&gt;研究调试器设计实现有段时间了，前几天在调试一个程序时，发现go调试器go-delve/delve竟然不支持类似gdb的x/FMT格式，于是在之前工作上又优化了一下。CR期间，也学习到一些之前理解不深的地方，也顺便了解了下delve的整体架构设计、大致实现，今天就来说道说道。&lt;/p&gt;
+&lt;h1 id="delve简介"&gt;delve简介 &lt;a href="#delve%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;go-delve/delve是Derekparker发起的一个调试器项目，面向go语言的。为什么针对go语言要创建一个新的调试器呢？为什么不使用GDB呢？这里涉及到go的一些特性。&lt;/p&gt;
+&lt;p&gt;作为符号级调试器，要能正常实现源码级调试，有这么几个事情必须要做的：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;首先，就必须要有调试信息的支持，比如编译器、连接器在构建过程中插入DWARF相关的sections，以供后续调试器提取、解析以重建指令、地址与源码的映射关系，还有在活动记录中跳转等等。&lt;/li&gt;
+&lt;li&gt;此外，有了调试信息，还需要理解语言内部实现，比如go的类型系统、协程、运行时，这样你才能读写源码级的运行状态信息；&lt;/li&gt;
+&lt;li&gt;还没完，你还需要一些平台级实现相关的玩意，不同的语言在不同的平台上有不同的实现，调试器要理解这些差异并做针对性处理；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些工作，在GDB里扩展插件来实现，不一定能很好地实现的，比如GDB支持的DWARF标准版本问题，和go编译器没有对齐之类的，比如GDB里面Target层（对tracee）控制层考虑的大多是进程、线程级别的，没有对goroutine类似的控制能力，诸如此类。&lt;/p&gt;
+&lt;p&gt;Anyway，我们需要一款更理解go的调试器，delve就这么诞生了。现在大已经是go官方推荐的调试器了，也是GoLand、VSCode、vim-go中使用的调试器。能有幸了解一款调试器的实现、参与贡献还是很爽的一件事情。&lt;/p&gt;
+&lt;h1 id="delve整体架构"&gt;delve整体架构 &lt;a href="#delve%e6%95%b4%e4%bd%93%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h1 id="delve大致实现"&gt;delve大致实现 &lt;a href="#delve%e5%a4%a7%e8%87%b4%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;</description></item><item><title>gdb调试常用操作</title><link>/blog/2022-07-09-gdb%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/</link><pubDate>Sun, 28 May 2017 23:56:48 +0800</pubDate><guid>/blog/2022-07-09-gdb%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是gdb调试的常用操作。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;### execute and trace step by step
+help &amp;lt;topic/cmd&amp;gt;
+list
+list - : list lines before last printed
+list + : list lines after last printed
+list 3
+list 3,7
+list filename:3,7
+list function
+list filename:function
+list *address
+n/ni/next : next
+s/si/step : next exactly
+rni : reverse ni, see also mozilla rr
+sni : reverse si, see also mozilla rr
+r/run
+start
+finish : finish current function
+bt/backtrace : look stack frame and parameters
+f/frame 2 : select stack frame
+i/info locals : show local vars
+p/print var/expression : print var value
+set var varname=value
+### breakpoints
+display var
+undisplay varNum
+b/break lineNum/function
+b/break lineNum/function [if expression]
+delete breakpoints : delete all breakpoints
+delete breakpoints bpNum : delete specified breakpoint
+disable breakpoints bpNum
+enable breakpoints bpNum
+c/continue
+info breakpoints
+### watchpoints
+x/7b baseAddress : print mem data
+watch varName/expression
+i/info watchpoints
+### backtrace
+segmentation faults generally are caused by addresses of memory spaces.
+bt/backtrace : to find out which stack frame caused the error
+#0,#1,#2,...,#N : #N call some function,then #N-1 created,...,#1 call some function,then #0 created,...,
+if error occur in #0,it maybe caused in #1,#2,or #3,...,or #N.
+### trace and debug multi-process app
+fork(): how to trace and debug multi-process app
+gdb:
+(1) set follow-fork-mode child
+(2) break linenumber
+note: before 'run',finish (1)(2),then 'run',we can see the output information of parent process after '(gdb)' prompt.
+but app is interrupted by breakpoints of child process,now we can use 'n','c',... to debug the child process.
+similarly,we can use 'set follow-fork-mode parent' to trace the parent process.
+ps: sometimes, we may find the proper function name. `strace` may help us trace all system calls, its parameters and returned values: `strace ./a.out`.
+&lt;/code&gt;&lt;/pre&gt;</description></item></channel></rss>

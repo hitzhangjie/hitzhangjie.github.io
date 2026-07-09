@@ -1,2 +1,64 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>欢迎来到 Kn's Space on</title><link>/</link><description>Recent content in 欢迎来到 Kn's Space on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:47:36 +0000</lastBuildDate><atom:link href="/index.xml" rel="self" type="application/rss+xml"/><item><title>Blog</title><link>/blog/</link><pubDate>Tue, 06 Oct 2020 08:49:55 +0000</pubDate><guid>/blog/</guid><description>🎶 欢迎来到 Kn&amp;rsquo;s Blog&amp;hellip; 这里记录着我的认识和思考
-👀 所有分类 | 👀 所有标签</description></item><item><title>Journey</title><link>/journey/</link><pubDate>Tue, 06 Oct 2020 08:48:23 +0000</pubDate><guid>/journey/</guid><description>CNCF Cloud Native Landscape Row 1 Col 1 Row 2 Col 1 Row 3 Col 1 Row 4 Col 1 Row 5 Col 1 Row 1 Col 2 Row 2 Col 2 Row 3 Col 2 Row 1 Col 3 Row 2 Col 3 Row 3 Col 3 Row 4 Col 3 .flex-container { display: flex; } div.w1 { flex: 1; } div.w2 { flex: 2; } div.</description></item><item><title>My Books</title><link>/books/</link><pubDate>Tue, 06 Oct 2020 08:48:23 +0000</pubDate><guid>/books/</guid><description/></item><item><title>Landscape</title><link>/landscape/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/landscape/</guid><description> iframe { width: 100%; height: 100%; } .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { position: absolute; top: -170px; left: -40px; border: none; width: 100%; height: 98%; }</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>欢迎来到 Kn's Space on</title><link>/</link><description>Recent content in 欢迎来到 Kn's Space on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:47:36 +0000</lastBuildDate><atom:link href="/index.xml" rel="self" type="application/rss+xml"/><item><title>Landscape</title><link>/landscape/</link><pubDate>Sat, 25 Nov 2023 21:33:02 +0800</pubDate><guid>/landscape/</guid><description>&lt;style&gt;
+iframe {
+width: 100%;
+height: 100%;
+}
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+position: absolute;
+top: -170px;
+left: -40px;
+border: none;
+width: 100%;
+height: 98%;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/sheet/DYkFNaHV5Qm9UakNr?tab=BB08J2"/&gt;
+&lt;/div&gt;</description></item><item><title>Blog</title><link>/blog/</link><pubDate>Tue, 06 Oct 2020 08:49:55 +0000</pubDate><guid>/blog/</guid><description>&lt;p&gt;&amp;#x1f3b6; &lt;strong&gt;欢迎来到 Kn&amp;rsquo;s Blog&amp;hellip; 这里记录着我的认识和思考&lt;/strong&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;&amp;#x1f440; &lt;a href="/categories"&gt;所有分类&lt;/a&gt;   |   &amp;#x1f440; &lt;a href="/tags"&gt;所有标签&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;</description></item><item><title>Journey</title><link>/journey/</link><pubDate>Tue, 06 Oct 2020 08:48:23 +0000</pubDate><guid>/journey/</guid><description>&lt;h1&gt;CNCF Cloud Native Landscape&lt;/h1&gt;
+&lt;div class="flex-container"&gt;
+&lt;div class="w2"&gt;
+&lt;div class="row color1"&gt;Row 1 Col 1&lt;/div&gt;
+&lt;div class="row color2"&gt;Row 2 Col 1&lt;/div&gt;
+&lt;div class="row color3"&gt;Row 3 Col 1&lt;/div&gt;
+&lt;div class="row color4"&gt;Row 4 Col 1&lt;/div&gt;
+&lt;div class="row color5"&gt;Row 5 Col 1&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="w1"&gt;
+&lt;div class="row"&gt;Row 1 Col 2&lt;/div&gt;
+&lt;div class="row"&gt;Row 2 Col 2&lt;/div&gt;
+&lt;div class="row"&gt;Row 3 Col 2&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="w1"&gt;
+&lt;div class="row"&gt;Row 1 Col 3&lt;/div&gt;
+&lt;div class="row"&gt;Row 2 Col 3&lt;/div&gt;
+&lt;div class="row"&gt;Row 3 Col 3&lt;/div&gt;
+&lt;div class="row"&gt;Row 4 Col 3&lt;/div&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+&lt;style&gt;
+.flex-container {
+display: flex;
+}
+div.w1 { flex: 1; }
+div.w2 { flex: 2; }
+div.w3 { flex: 3; }
+.column {
+flex: 1;
+}
+.row {
+display: flex;
+}
+.color1 { background-color: #6d3d8f; }
+.color2 { background-color: #255625; }
+.color3 { background-color: #8f583d; }
+.color4 { background-color: #2e616b; }
+.color5 { background-color: #b34d4d; }
+&lt;/style&gt;</description></item><item><title>My Books</title><link>/books/</link><pubDate>Tue, 06 Oct 2020 08:48:23 +0000</pubDate><guid>/books/</guid><description/></item></channel></rss>

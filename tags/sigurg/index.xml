@@ -1,5 +1,65 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>sigurg on</title><link>/tags/sigurg/</link><description>Recent content in sigurg on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 26 Jun 2026 18:01:57 +0800</lastBuildDate><atom:link href="/tags/sigurg/index.xml" rel="self" type="application/rss+xml"/><item><title>深入浅出 Go 非协作式抢占</title><link>/blog/2026-06-26-%E8%BF%90%E8%A1%8C%E6%97%B6%E8%B0%83%E5%BA%A6_go%E9%9D%9E%E5%8D%8F%E4%BD%9C%E5%BC%8F%E6%8A%A2%E5%8D%A0/</link><pubDate>Fri, 26 Jun 2026 18:01:57 +0800</pubDate><guid>/blog/2026-06-26-%E8%BF%90%E8%A1%8C%E6%97%B6%E8%B0%83%E5%BA%A6_go%E9%9D%9E%E5%8D%8F%E4%BD%9C%E5%BC%8F%E6%8A%A2%E5%8D%A0/</guid><description>在 Go 1.14 之前，Go 语言的调度器采用的是协作式抢占。这种机制存在一个致命的缺陷：如果一个 Goroutine 陷入了没有函数调用的死循环（例如纯 CPU 计算），它就会永久霸占线程，导致其他 Goroutine 饿死，甚至触发程序卡死或垃圾回收（GC）无法完成。
-为了解决这个问题，Go 1.14 引入了基于 SIGURG 信号的非协作式抢占（Non-cooperative Preemption）机制。本文将系统性地拆解这一机制的底层原理。
-1. 为什么被称为&amp;quot;非协作式&amp;quot;？ # 为了理解非协作式抢占，我们需要先对比它与传统协作式抢占的区别：
-特性 协作式抢占 (Go 1.14 之前) 非协作式抢占 (Go 1.14 及之后) 触发前提 依赖 Goroutine 主动配合。 强制执行，无需 Goroutine 配合。 检查时机 发生函数调用或内存分配时，检查栈溢出标志。 随时随地，由操作系统信号直接中断。 死循环应对 无法解决纯计算死循环（如for {}），会导致饿死。 完美解决，可在 10ms 内强行剥夺 CPU 执行权。 核心痛点：协作式抢占就像坐公交车，乘客（Goroutine）必须走到站台（函数调用点）才能下车。而非协作式抢占则像直升机索降，无论你在哪里，调度器都能直接把你&amp;quot;抓&amp;quot;走。
-2. 核心大招：基于 SIGURG 信号的底层看板 # 非协作式抢占的整个流程由系统监控线程、操作系统内核以及 Go 运行时（Runtime）共同协作完成：</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Sigurg on</title><link>/tags/sigurg/</link><description>Recent content in Sigurg on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 26 Jun 2026 18:01:57 +0800</lastBuildDate><atom:link href="/tags/sigurg/index.xml" rel="self" type="application/rss+xml"/><item><title>深入浅出 Go 非协作式抢占</title><link>/blog/2026-06-26-%E8%BF%90%E8%A1%8C%E6%97%B6%E8%B0%83%E5%BA%A6_go%E9%9D%9E%E5%8D%8F%E4%BD%9C%E5%BC%8F%E6%8A%A2%E5%8D%A0/</link><pubDate>Fri, 26 Jun 2026 18:01:57 +0800</pubDate><guid>/blog/2026-06-26-%E8%BF%90%E8%A1%8C%E6%97%B6%E8%B0%83%E5%BA%A6_go%E9%9D%9E%E5%8D%8F%E4%BD%9C%E5%BC%8F%E6%8A%A2%E5%8D%A0/</guid><description>&lt;p&gt;在 Go 1.14 之前，Go 语言的调度器采用的是协作式抢占。这种机制存在一个致命的缺陷：如果一个 Goroutine 陷入了没有函数调用的死循环（例如纯 CPU 计算），它就会永久霸占线程，导致其他 Goroutine 饿死，甚至触发程序卡死或垃圾回收（GC）无法完成。&lt;/p&gt;
+&lt;p&gt;为了解决这个问题，Go 1.14 引入了基于 SIGURG 信号的非协作式抢占（Non-cooperative Preemption）机制。本文将系统性地拆解这一机制的底层原理。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-为什么被称为非协作式"&gt;1. 为什么被称为&amp;quot;非协作式&amp;quot;？ &lt;a href="#1-%e4%b8%ba%e4%bb%80%e4%b9%88%e8%a2%ab%e7%a7%b0%e4%b8%ba%e9%9d%9e%e5%8d%8f%e4%bd%9c%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;为了理解非协作式抢占，我们需要先对比它与传统协作式抢占的区别：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;特性&lt;/th&gt;
+&lt;th&gt;协作式抢占 (Go 1.14 之前)&lt;/th&gt;
+&lt;th&gt;非协作式抢占 (Go 1.14 及之后)&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;触发前提&lt;/td&gt;
+&lt;td&gt;依赖 Goroutine 主动配合。&lt;/td&gt;
+&lt;td&gt;强制执行，无需 Goroutine 配合。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;检查时机&lt;/td&gt;
+&lt;td&gt;发生函数调用或内存分配时，检查栈溢出标志。&lt;/td&gt;
+&lt;td&gt;随时随地，由操作系统信号直接中断。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;死循环应对&lt;/td&gt;
+&lt;td&gt;无法解决纯计算死循环（如&lt;code&gt;for {}&lt;/code&gt;），会导致饿死。&lt;/td&gt;
+&lt;td&gt;完美解决，可在 10ms 内强行剥夺 CPU 执行权。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;核心痛点：协作式抢占就像坐公交车，乘客（Goroutine）必须走到站台（函数调用点）才能下车。而非协作式抢占则像直升机索降，无论你在哪里，调度器都能直接把你&amp;quot;抓&amp;quot;走。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="2-核心大招基于-sigurg-信号的底层看板"&gt;2. 核心大招：基于 SIGURG 信号的底层看板 &lt;a href="#2-%e6%a0%b8%e5%bf%83%e5%a4%a7%e6%8b%9b%e5%9f%ba%e4%ba%8e-sigurg-%e4%bf%a1%e5%8f%b7%e7%9a%84%e5%ba%95%e5%b1%82%e7%9c%8b%e6%9d%bf" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;非协作式抢占的整个流程由系统监控线程、操作系统内核以及 Go 运行时（Runtime）共同协作完成：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;+------------------+ 超过 10ms +-------------------+
+| | -----------------&amp;gt; | |
+| sysmon 监控线程 | | 向目标线程发送信号 |
+| | | |
++------------------+ +-------------------+
+|
+(发送 SIGURG)
+v
++------------------+ 修改 PC 寄存器 +-------------------+
+| | | |
+| 恢复执行用户代码 | &amp;lt;----------------- | sighandler 阶段 |
+| | | |
++------------------+ +-------------------+
+|
+(流向改变)
+v
++------------------+ 保存现场 &amp;amp; 挂起 +-------------------+
+| | | |
+| asyncPreempt() | -----------------&amp;gt; | 调度器切换新协程 |
+| | | |
++------------------+ +-------------------+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="详细步骤"&gt;详细步骤 &lt;a href="#%e8%af%a6%e7%bb%86%e6%ad%a5%e9%aa%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;触发检测&lt;/strong&gt;：Go 语言的后台监控线程 &lt;code&gt;sysmon&lt;/code&gt; 周期性运行。如果发现某个 Goroutine 占用单线程时间超过 10ms，就会将其标记为可抢占，并获取其绑定的操作系统线程（M）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;发送信号&lt;/strong&gt;：&lt;code&gt;sysmon&lt;/code&gt; 调用系统调用，向该线程发送一个 &lt;code&gt;SIGURG&lt;/code&gt;（紧急带外数据信号）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;信号捕获&lt;/strong&gt;：操作系统中断当前线程的执行，将控制权交给 Go 运行时提前注册好的信号处理函数 &lt;code&gt;sighandler&lt;/code&gt;。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id="为什么选择-sigurg-信号"&gt;为什么选择 SIGURG 信号？ &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e9%80%89%e6%8b%a9-sigurg-%e4%bf%a1%e5%8f%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在 Unix/Linux 系统中，&lt;code&gt;SIGALRM&lt;/code&gt; 常用于定时器，但容易与 CGO 或用户自定义计时器冲突。而 &lt;code&gt;SIGURG&lt;/code&gt; 在标准应用中极少被显式使用，且各大操作系统对其支持非常成熟，不会触发默认的进程终止，因此是绝佳的&amp;quot;内鬼信号&amp;quot;。&lt;/p&gt;</description></item></channel></rss>

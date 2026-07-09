@@ -1,34 +1,226 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>runtime on</title><link>/tags/runtime/</link><description>Recent content in runtime on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 26 Jun 2026 18:42:00 +0800</lastBuildDate><atom:link href="/tags/runtime/index.xml" rel="self" type="application/rss+xml"/><item><title>深入浅出 Go Safepoints：从编译账本到抢占调度及精确式GC的底层真相</title><link>/blog/2026-06-26-go-safepoints/</link><pubDate>Fri, 26 Jun 2026 18:42:00 +0800</pubDate><guid>/blog/2026-06-26-go-safepoints/</guid><description>深度解密 Go 语言的 Safepoint：从编译账本到抢占调度的底层真相 # 在探讨 Go 语言的高性能并发时，我们经常会听到“非协作式抢占调度”和“精确式垃圾回收（Precise GC）”。而这两个底层特性的交汇点，正是 Safepoint（安全点）。 如果你去查阅资料，往往只能得到一句宏观的定义：“Safepoint 是程序执行中的一些特定位置，此时状态确定，可以安全暂停。” 但这并不能解开我们心中的疑惑：Safepoint 到底是什么？它是怎么记录的？为什么有些位置可以被抢占，而有些地方强行抢占就会导致系统崩溃？ 今天我们抛开宏观理论，用底层的眼光重新拆解 Safepoint。
-一、 为什么需要 Safepoint？CPU 眼中的“迷茫” # 在高级语言中，我们能一眼分清什么是普通数值，什么是对象指针：
-a := 10 // 普通整数 b := &amp;amp;User{} // 对象指针 然而，当 Go 编译器把这段代码翻译成二进制机器码后，在 CPU 的世界里，它们都只是寄存器（如 RAX, RBX）或栈内存里的一个 64 位的数字。 当垃圾回收（GC）需要扫描内存，或者系统发出信号想抢占这个 Goroutine 时，问题来了： 如果此时 CPU 寄存器 RAX 里的值是 0x00007f9c，GC 该不该顺着这个地址去追踪并标记内存？
-如果它其实是一个普通整数（比如一个时间戳），GC 却误把它当指针去追踪，程序就会因为访问非法地址而瞬间崩溃（Panic/段错误）。 如果它其实是一个真指针，GC 却漏掉了它，这块内存就会被提前释放，引发严重的内存悬空。 为了让 GC 能够在任意需要的时候，精准地辨别出寄存器和栈里“哪个是普通数据，哪个是指针”，Safepoint 机制应运而生。
-二、 Safepoint 的本质：编译期写死的“只读账本” # Safepoint 在底层根本不是一段拦截代码，也不是一个特殊的函数，它只是一个“位置记录”——也就是一个由编译器在编译期计算好，并打包放进可执行文件中的“位置与活动指针映射表”。 在编译阶段，编译器在生成机器码的同时，在后台偷偷拿一个小本本（静态存活分析，Liveness Analysis），把每一条核心机器指令的位置，以及在这个位置上，哪个寄存器/栈空间放的是活跃的指针，全部记录下来。 这个“账本”在编译完成后，会固化在可执行文件的只读数据段中（如 .</description></item><item><title>深入浅出 Go 非协作式抢占</title><link>/blog/2026-06-26-%E8%BF%90%E8%A1%8C%E6%97%B6%E8%B0%83%E5%BA%A6_go%E9%9D%9E%E5%8D%8F%E4%BD%9C%E5%BC%8F%E6%8A%A2%E5%8D%A0/</link><pubDate>Fri, 26 Jun 2026 18:01:57 +0800</pubDate><guid>/blog/2026-06-26-%E8%BF%90%E8%A1%8C%E6%97%B6%E8%B0%83%E5%BA%A6_go%E9%9D%9E%E5%8D%8F%E4%BD%9C%E5%BC%8F%E6%8A%A2%E5%8D%A0/</guid><description>在 Go 1.14 之前，Go 语言的调度器采用的是协作式抢占。这种机制存在一个致命的缺陷：如果一个 Goroutine 陷入了没有函数调用的死循环（例如纯 CPU 计算），它就会永久霸占线程，导致其他 Goroutine 饿死，甚至触发程序卡死或垃圾回收（GC）无法完成。
-为了解决这个问题，Go 1.14 引入了基于 SIGURG 信号的非协作式抢占（Non-cooperative Preemption）机制。本文将系统性地拆解这一机制的底层原理。
-1. 为什么被称为&amp;quot;非协作式&amp;quot;？ # 为了理解非协作式抢占，我们需要先对比它与传统协作式抢占的区别：
-特性 协作式抢占 (Go 1.14 之前) 非协作式抢占 (Go 1.14 及之后) 触发前提 依赖 Goroutine 主动配合。 强制执行，无需 Goroutine 配合。 检查时机 发生函数调用或内存分配时，检查栈溢出标志。 随时随地，由操作系统信号直接中断。 死循环应对 无法解决纯计算死循环（如for {}），会导致饿死。 完美解决，可在 10ms 内强行剥夺 CPU 执行权。 核心痛点：协作式抢占就像坐公交车，乘客（Goroutine）必须走到站台（函数调用点）才能下车。而非协作式抢占则像直升机索降，无论你在哪里，调度器都能直接把你&amp;quot;抓&amp;quot;走。
-2. 核心大招：基于 SIGURG 信号的底层看板 # 非协作式抢占的整个流程由系统监控线程、操作系统内核以及 Go 运行时（Runtime）共同协作完成：</description></item><item><title>GoTalk - Go Execution Tracer</title><link>/blog/2025-11-08-go_execution_tracer/</link><pubDate>Sat, 08 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/2025-11-08-go_execution_tracer/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 90%; border: none; position: absolute; top: -200px; }</description></item><item><title>syscall：how does go runtime handles syscall</title><link>/blog/2021-06-06-how-go-handles-syscall/</link><pubDate>Sun, 06 Jun 2021 10:17:34 +0800</pubDate><guid>/blog/2021-06-06-how-go-handles-syscall/</guid><description>1 How go runtime handle syscall ? # 最近遇到个线上服务频繁陷入系统调用导致go运行时创建了大量线程，影响到了服务质量，定位、解决问题之后，希望能进一步探究go运行时处理系统调用的过程，以便加深理解。参考了不少网友的分享，特别是知乎Golang Inernal专栏，结合个人的学习理解在此整理记录一下，与大家分享。
-1.1 前言 # 在开始结合源码进行分析之前，先做下简单的介绍，方便先从整体上把握go对系统调用的处理过程，然后从第二部分开始，再结合源码介绍具体的细节。
-系统调用分为阻塞系统调用、非阻塞系统调用，go里面对这些系统调用有归类整理，详见源文件：/src/syscall/syscall_linux_amd64.go。
-如下图所示，sys开头的表示的是阻塞系统调用，会调用Syscall，以sysnb开头的是非阻塞系统调用，会调用RawSyscall，关于Syscall和RawSyscall的区别下面整理。阻塞型的系统调用本身会阻塞线程，为了避免线程阻塞导致协程不可调度，golang运行时要感知这样的系统调用并做特殊处理，非阻塞的系统调用直接调即可，不需要golang运行时参与。 Syscall定义在asm_linux_amd64.s里面，代码中有runtime.entersyscall(SB)和runtime.exitsyscall(SB)函数调用，这个是与golang运行时进行交互的，用于通知golang运行时我即将发起或者退出一个系统调用。
-对于会导致阻塞的系统调用，都要通过Syscall来调用来通知golang运行时，以便golang运行时做处理，如创建新的物理线程调度器其它的goroutine，避免整个进程无线程可调度而最终被sysmon杀死进程。 对于某些非阻塞的系统调用，就不必再与golang运行时交互了，直接调用就可以，这样可以减少两次与golang运行时交互的函数调用开销，这里就掉的是RawSyscall： 网络io操作本来也是阻塞的，但是因为socket fd会被设置为non-blocking，系统调用虽然还是阻塞的系统调用，但是已经不会阻塞调用线程了，所以也无所谓了。
-有个脚本mksyscall.pl根据syscall_linux_amd64.go里面定义的系通调用列表，就是第一张图那些带注释的部分，这个pl脚本会负责生成与之相关的系统调用函数，生成在syscall/zsyscall_linux_amd64.go里面。可以找几个有代表性的来看下生成的系统调用函数：
-比如sendfile是阻塞的系统调用： 比如settimeofday是非阻塞的系统调用： epoll相关的epollwait也是阻塞的，但是网络socket fd在go里面都统一设置为了nonblocking fd处理了，因此并不会阻塞。 1.2 开始分析源码 # 在讲述系统调用发生的协程调度之前，让我们看看go是如何进入系统调用的，理解了这个让我们不会对后面所说的一些东西感到很陌生。
-golang对操作系统的系统调用作了封装，提供了syscall这样的库让我们执行系统调用。例如，Read系统调用实现如下：
-func Read(fd int, p []byte) (n int, err error) { n, err = read(fd, p) if raceenabled { if n &amp;gt; 0 { ...... } ...... } return } // 最终封装了Syscall func read(fd int, p []byte) (n int, err error) { var _p0 unsafe.</description></item><item><title>how goroutine created and started</title><link>/blog/2021-05-24-how-goroutine-created-and-started/</link><pubDate>Mon, 24 May 2021 00:14:01 +0800</pubDate><guid>/blog/2021-05-24-how-goroutine-created-and-started/</guid><description>goroutine创建：runtime.newproc(siz int32, fn *funcval)
-go fn()，传递给fn的参数实际上是紧跟着存在fn压栈后的地址后面，在newproc1的栈帧里面，但是不出现在签名参数列表中，因为这些参数类型、数量不一样，也无法出现在签名参数列表中； newproc1创建g； getg().m.p.ptr()拿到当前p； runqput将当前g放入p的local queue中，如果满则放到global queue中； g等待被调度器调度执行； 大致创建执行goroutine的逻辑是这样的，下面的逻辑都是切到系统栈上去执行的。
-1 newproc1逻辑
-查看源码发现，goroutine初始创建时对函数参数大小是有限制的，如果参数占内存空间很大，比如超过初始栈帧大小2KB，那么goroutine创建会失败：&amp;ldquo;fatal error: newproc: function arguments too large for new goroutine&amp;rdquo;，比如，go func(a [1024]int) {}([1024]int{})。
-每个p内部都有一个空闲goroutine队列gFree，这个就是用来执行fn的goroutine，是可以复用的，不用的时候可以丢给调度器schedt.gFree供其他p复用。这里空闲的goroutines，一部分存在于p.gFree，如果gfput(p, gp)时发现p.gFree队列太长说明过剩了，就转移一部分到调度器schedt.gFree中供其他p复用。
-goroutine执行完毕后运行时并不急于将其销毁，而是会考虑goroutine的复用，gfput，前面提过了。希望go func()通过协程执行时，也不必每次创建新的goroutine，gfget，可以复用p.gFree中的goroutine，如果p.gFree空或者过少（32）且调度器schedt.gFree中有空闲，则转移一部分过来给p复用。但是goroutine的栈有可能会被销毁，如果复用到栈被销毁的goroutine就需要stackalloc重新为其分配新栈帧。
-如果没有空闲的g可供复用，那就只能malg从头新建一个goroutine了。
-goroutine创建成功、栈空间也ok了之后，就要把goroutine要执行的函数对应的函数参数给拷贝到这个栈空间里面来，通过memmove(spArg, argp, uintptr(narg))来完成。完成后调整newg的调度上下文相关的寄存器值，等调度器调度它时，还原其中的上下文信息，pc就指向其对应的函数地址了，对应的数据也会指向其对应的栈空间。
-然后，通过gostartcallfn→gostartcall(buf, fn, ctxt)，之前已经拷贝了函数fn的参数到goroutine栈空间了，这里面再继续在栈内设置fn返回地址、gobuf.sp+gobuf.pc信息。
-上述调整完成之后，将goroutine的状态从_Gdead调整为_Grunnable，等待调度器调度。新创建的时候其状态是_Gidle，一定会将其调整为_Gdead然后再进行上述准备工作，一切就绪后才调整为_Grunnable让其参与调度。
-2 runqput(p, gp, next) 这里的逻辑是，希望将gp放到p的local queue中，但是也有头插、尾插两种方式。
-如果next为true，可以认为是头插，其实是放到p.runnext中，比p.queue中的得到优先调度。如果之前p.runnext有值，还要该值对应的g放入p.queue中； 如果next为false，则尝试将其放置到p.queue中，这里也有快慢两种情况，快的情况就是，因为p.queue这个本地队列长度最大为256，如果有空余位置放入就返回，这是快的情况。慢的情况就是如果p.queue满了就要先转移1/2到调度器全局队列schedt.queue中，然后再放入，这个过程就慢一些。 放置过程中，如果p.runqueue满了怎么办，将其放置到调度器schedt.queue这个全局队列中。
-3 wakeup()逻辑
-这个函数内部执行startm(p, spinning)，来找一个m来执行goroutine，具体是怎么做的呢？
-如果没有指定p，比如新建goroutine时，此时会尝试检查有没有空闲的p，没有的话就直接返回了，相当于当前一次没有执行成功，那么只能下次调度的时候再执行这个新建的goroutine了；
-现在有空闲的p，我们还缺什么，m！然后mget找一个空闲的m，如果没有空闲的，就newm创建一个新的，本质上是通过clone系统调用创建的新的线程。然后将这个m和这个p关联起来，m.nextp = p。值得一提的是clone出来的线程对应的线程处理函数是mstart，mstart使用汇编写的，内部实际调用的是mstart0，它内部又请求mstart1，获取当前g：
-如果g.m==&amp;amp;m0，则执行mstartm0完成信号处理注册，继续执行其他；
-获取当前m.</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Runtime on</title><link>/tags/runtime/</link><description>Recent content in Runtime on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 26 Jun 2026 18:42:00 +0800</lastBuildDate><atom:link href="/tags/runtime/index.xml" rel="self" type="application/rss+xml"/><item><title>深入浅出 Go Safepoints：从编译账本到抢占调度及精确式GC的底层真相</title><link>/blog/2026-06-26-go-safepoints/</link><pubDate>Fri, 26 Jun 2026 18:42:00 +0800</pubDate><guid>/blog/2026-06-26-go-safepoints/</guid><description>&lt;h2 id="深度解密-go-语言的-safepoint从编译账本到抢占调度的底层真相"&gt;深度解密 Go 语言的 Safepoint：从编译账本到抢占调度的底层真相 &lt;a href="#%e6%b7%b1%e5%ba%a6%e8%a7%a3%e5%af%86-go-%e8%af%ad%e8%a8%80%e7%9a%84-safepoint%e4%bb%8e%e7%bc%96%e8%af%91%e8%b4%a6%e6%9c%ac%e5%88%b0%e6%8a%a2%e5%8d%a0%e8%b0%83%e5%ba%a6%e7%9a%84%e5%ba%95%e5%b1%82%e7%9c%9f%e7%9b%b8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在探讨 Go 语言的高性能并发时，我们经常会听到“非协作式抢占调度”和“精确式垃圾回收（Precise GC）”。而这两个底层特性的交汇点，正是 Safepoint（安全点）。
+如果你去查阅资料，往往只能得到一句宏观的定义：“Safepoint 是程序执行中的一些特定位置，此时状态确定，可以安全暂停。”
+但这并不能解开我们心中的疑惑：Safepoint 到底是什么？它是怎么记录的？为什么有些位置可以被抢占，而有些地方强行抢占就会导致系统崩溃？
+今天我们抛开宏观理论，用底层的眼光重新拆解 Safepoint。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="一-为什么需要-safepointcpu-眼中的迷茫"&gt;一、 为什么需要 Safepoint？CPU 眼中的“迷茫” &lt;a href="#%e4%b8%80-%e4%b8%ba%e4%bb%80%e4%b9%88%e9%9c%80%e8%a6%81-safepointcpu-%e7%9c%bc%e4%b8%ad%e7%9a%84%e8%bf%b7%e8%8c%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在高级语言中，我们能一眼分清什么是普通数值，什么是对象指针：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;a := 10 // 普通整数
+b := &amp;amp;User{} // 对象指针
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;然而，当 Go 编译器把这段代码翻译成二进制机器码后，在 CPU 的世界里，它们都只是寄存器（如 RAX, RBX）或栈内存里的一个 64 位的数字。
+当垃圾回收（GC）需要扫描内存，或者系统发出信号想抢占这个 Goroutine 时，问题来了：
+如果此时 CPU 寄存器 RAX 里的值是 0x00007f9c，GC 该不该顺着这个地址去追踪并标记内存？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果它其实是一个普通整数（比如一个时间戳），GC 却误把它当指针去追踪，程序就会因为访问非法地址而瞬间崩溃（Panic/段错误）。&lt;/li&gt;
+&lt;li&gt;如果它其实是一个真指针，GC 却漏掉了它，这块内存就会被提前释放，引发严重的内存悬空。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;为了让 GC 能够在任意需要的时候，精准地辨别出寄存器和栈里“哪个是普通数据，哪个是指针”，Safepoint 机制应运而生。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="二-safepoint-的本质编译期写死的只读账本"&gt;二、 Safepoint 的本质：编译期写死的“只读账本” &lt;a href="#%e4%ba%8c-safepoint-%e7%9a%84%e6%9c%ac%e8%b4%a8%e7%bc%96%e8%af%91%e6%9c%9f%e5%86%99%e6%ad%bb%e7%9a%84%e5%8f%aa%e8%af%bb%e8%b4%a6%e6%9c%ac" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Safepoint 在底层根本不是一段拦截代码，也不是一个特殊的函数，它只是一个“位置记录”——也就是一个由编译器在编译期计算好，并打包放进可执行文件中的“位置与活动指针映射表”。
+在编译阶段，编译器在生成机器码的同时，在后台偷偷拿一个小本本（静态存活分析，Liveness Analysis），把每一条核心机器指令的位置，以及在这个位置上，哪个寄存器/栈空间放的是活跃的指针，全部记录下来。
+这个“账本”在编译完成后，会固化在可执行文件的只读数据段中（如 .gclocals 和 .pclntab 符号表）。运行时（Runtime）只有读取权限。&lt;/p&gt;</description></item><item><title>深入浅出 Go 非协作式抢占</title><link>/blog/2026-06-26-%E8%BF%90%E8%A1%8C%E6%97%B6%E8%B0%83%E5%BA%A6_go%E9%9D%9E%E5%8D%8F%E4%BD%9C%E5%BC%8F%E6%8A%A2%E5%8D%A0/</link><pubDate>Fri, 26 Jun 2026 18:01:57 +0800</pubDate><guid>/blog/2026-06-26-%E8%BF%90%E8%A1%8C%E6%97%B6%E8%B0%83%E5%BA%A6_go%E9%9D%9E%E5%8D%8F%E4%BD%9C%E5%BC%8F%E6%8A%A2%E5%8D%A0/</guid><description>&lt;p&gt;在 Go 1.14 之前，Go 语言的调度器采用的是协作式抢占。这种机制存在一个致命的缺陷：如果一个 Goroutine 陷入了没有函数调用的死循环（例如纯 CPU 计算），它就会永久霸占线程，导致其他 Goroutine 饿死，甚至触发程序卡死或垃圾回收（GC）无法完成。&lt;/p&gt;
+&lt;p&gt;为了解决这个问题，Go 1.14 引入了基于 SIGURG 信号的非协作式抢占（Non-cooperative Preemption）机制。本文将系统性地拆解这一机制的底层原理。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-为什么被称为非协作式"&gt;1. 为什么被称为&amp;quot;非协作式&amp;quot;？ &lt;a href="#1-%e4%b8%ba%e4%bb%80%e4%b9%88%e8%a2%ab%e7%a7%b0%e4%b8%ba%e9%9d%9e%e5%8d%8f%e4%bd%9c%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;为了理解非协作式抢占，我们需要先对比它与传统协作式抢占的区别：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;特性&lt;/th&gt;
+&lt;th&gt;协作式抢占 (Go 1.14 之前)&lt;/th&gt;
+&lt;th&gt;非协作式抢占 (Go 1.14 及之后)&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;触发前提&lt;/td&gt;
+&lt;td&gt;依赖 Goroutine 主动配合。&lt;/td&gt;
+&lt;td&gt;强制执行，无需 Goroutine 配合。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;检查时机&lt;/td&gt;
+&lt;td&gt;发生函数调用或内存分配时，检查栈溢出标志。&lt;/td&gt;
+&lt;td&gt;随时随地，由操作系统信号直接中断。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;死循环应对&lt;/td&gt;
+&lt;td&gt;无法解决纯计算死循环（如&lt;code&gt;for {}&lt;/code&gt;），会导致饿死。&lt;/td&gt;
+&lt;td&gt;完美解决，可在 10ms 内强行剥夺 CPU 执行权。&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;核心痛点：协作式抢占就像坐公交车，乘客（Goroutine）必须走到站台（函数调用点）才能下车。而非协作式抢占则像直升机索降，无论你在哪里，调度器都能直接把你&amp;quot;抓&amp;quot;走。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="2-核心大招基于-sigurg-信号的底层看板"&gt;2. 核心大招：基于 SIGURG 信号的底层看板 &lt;a href="#2-%e6%a0%b8%e5%bf%83%e5%a4%a7%e6%8b%9b%e5%9f%ba%e4%ba%8e-sigurg-%e4%bf%a1%e5%8f%b7%e7%9a%84%e5%ba%95%e5%b1%82%e7%9c%8b%e6%9d%bf" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;非协作式抢占的整个流程由系统监控线程、操作系统内核以及 Go 运行时（Runtime）共同协作完成：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;+------------------+ 超过 10ms +-------------------+
+| | -----------------&amp;gt; | |
+| sysmon 监控线程 | | 向目标线程发送信号 |
+| | | |
++------------------+ +-------------------+
+|
+(发送 SIGURG)
+v
++------------------+ 修改 PC 寄存器 +-------------------+
+| | | |
+| 恢复执行用户代码 | &amp;lt;----------------- | sighandler 阶段 |
+| | | |
++------------------+ +-------------------+
+|
+(流向改变)
+v
++------------------+ 保存现场 &amp;amp; 挂起 +-------------------+
+| | | |
+| asyncPreempt() | -----------------&amp;gt; | 调度器切换新协程 |
+| | | |
++------------------+ +-------------------+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="详细步骤"&gt;详细步骤 &lt;a href="#%e8%af%a6%e7%bb%86%e6%ad%a5%e9%aa%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;触发检测&lt;/strong&gt;：Go 语言的后台监控线程 &lt;code&gt;sysmon&lt;/code&gt; 周期性运行。如果发现某个 Goroutine 占用单线程时间超过 10ms，就会将其标记为可抢占，并获取其绑定的操作系统线程（M）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;发送信号&lt;/strong&gt;：&lt;code&gt;sysmon&lt;/code&gt; 调用系统调用，向该线程发送一个 &lt;code&gt;SIGURG&lt;/code&gt;（紧急带外数据信号）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;信号捕获&lt;/strong&gt;：操作系统中断当前线程的执行，将控制权交给 Go 运行时提前注册好的信号处理函数 &lt;code&gt;sighandler&lt;/code&gt;。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id="为什么选择-sigurg-信号"&gt;为什么选择 SIGURG 信号？ &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e9%80%89%e6%8b%a9-sigurg-%e4%bf%a1%e5%8f%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在 Unix/Linux 系统中，&lt;code&gt;SIGALRM&lt;/code&gt; 常用于定时器，但容易与 CGO 或用户自定义计时器冲突。而 &lt;code&gt;SIGURG&lt;/code&gt; 在标准应用中极少被显式使用，且各大操作系统对其支持非常成熟，不会触发默认的进程终止，因此是绝佳的&amp;quot;内鬼信号&amp;quot;。&lt;/p&gt;</description></item><item><title>GoTalk - Go Execution Tracer</title><link>/blog/2025-11-08-go_execution_tracer/</link><pubDate>Sat, 08 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/2025-11-08-go_execution_tracer/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 90%;
+border: none;
+position: absolute;
+top: -200px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/slide/DYnVocFl6dHhWdnBO"/&gt;
+&lt;/div&gt;</description></item><item><title>syscall：how does go runtime handles syscall</title><link>/blog/2021-06-06-how-go-handles-syscall/</link><pubDate>Sun, 06 Jun 2021 10:17:34 +0800</pubDate><guid>/blog/2021-06-06-how-go-handles-syscall/</guid><description>&lt;h1 id="1-how-go-runtime-handle-syscall-"&gt;1 How go runtime handle syscall ? &lt;a href="#1-how-go-runtime-handle-syscall-" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;最近遇到个线上服务频繁陷入系统调用导致go运行时创建了大量线程，影响到了服务质量，定位、解决问题之后，希望能进一步探究go运行时处理系统调用的过程，以便加深理解。参考了不少网友的分享，特别是知乎Golang Inernal专栏，结合个人的学习理解在此整理记录一下，与大家分享。&lt;/p&gt;
+&lt;h2 id="11-前言"&gt;1.1 前言 &lt;a href="#11-%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在开始结合源码进行分析之前，先做下简单的介绍，方便先从整体上把握go对系统调用的处理过程，然后从第二部分开始，再结合源码介绍具体的细节。&lt;/p&gt;
+&lt;p&gt;系统调用分为阻塞系统调用、非阻塞系统调用，go里面对这些系统调用有归类整理，详见源文件：&lt;code&gt;/src/syscall/syscall_linux_amd64.go&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;如下图所示，sys开头的表示的是阻塞系统调用，会调用Syscall，以sysnb开头的是非阻塞系统调用，会调用RawSyscall，关于Syscall和RawSyscall的区别下面整理。阻塞型的系统调用本身会阻塞线程，为了避免线程阻塞导致协程不可调度，golang运行时要感知这样的系统调用并做特殊处理，非阻塞的系统调用直接调即可，不需要golang运行时参与。
+&lt;img alt="系统调用列表节选" src="assets/syscall/1545292741_96.png" class="myimg"&gt;&lt;/p&gt;
+&lt;p&gt;Syscall定义在asm_linux_amd64.s里面，代码中有&lt;code&gt;runtime.entersyscall(SB)&lt;/code&gt;和&lt;code&gt;runtime.exitsyscall(SB)&lt;/code&gt;函数调用，这个是与golang运行时进行交互的，用于通知golang运行时我即将发起或者退出一个系统调用。&lt;/p&gt;
+&lt;p&gt;对于会导致阻塞的系统调用，都要通过Syscall来调用来通知golang运行时，以便golang运行时做处理，如创建新的物理线程调度器其它的goroutine，避免整个进程无线程可调度而最终被sysmon杀死进程。
+&lt;img alt="Syscall" src="assets/syscall/1545292975_48.png" class="myimg"&gt;&lt;/p&gt;
+&lt;p&gt;对于某些非阻塞的系统调用，就不必再与golang运行时交互了，直接调用就可以，这样可以减少两次与golang运行时交互的函数调用开销，这里就掉的是RawSyscall：
+&lt;img alt="RawSyscall" src="assets/syscall/1545293027_28.png" class="myimg"&gt;&lt;/p&gt;
+&lt;p&gt;网络io操作本来也是阻塞的，但是因为socket fd会被设置为non-blocking，系统调用虽然还是阻塞的系统调用，但是已经不会阻塞调用线程了，所以也无所谓了。&lt;/p&gt;
+&lt;p&gt;有个脚本mksyscall.pl根据syscall_linux_amd64.go里面定义的系通调用列表，就是第一张图那些带注释的部分，这个pl脚本会负责生成与之相关的系统调用函数，生成在syscall/zsyscall_linux_amd64.go里面。可以找几个有代表性的来看下生成的系统调用函数：&lt;/p&gt;
+&lt;p&gt;比如sendfile是阻塞的系统调用：
+&lt;img alt="sendfile" src="assets/syscall/1545293113_49.png" class="myimg"&gt;&lt;/p&gt;
+&lt;p&gt;比如settimeofday是非阻塞的系统调用：
+&lt;img alt="gettimeofday" src="assets/syscall/1545293136_67.png" class="myimg"&gt;&lt;/p&gt;
+&lt;p&gt;epoll相关的epollwait也是阻塞的，但是网络socket fd在go里面都统一设置为了nonblocking fd处理了，因此并不会阻塞。
+&lt;img alt="image-20181211095200708" src="assets/syscall/image-20181211095200708-4493120.png" class="myimg"&gt;&lt;/p&gt;
+&lt;h2 id="12-开始分析源码"&gt;1.2 开始分析源码 &lt;a href="#12-%e5%bc%80%e5%a7%8b%e5%88%86%e6%9e%90%e6%ba%90%e7%a0%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在讲述系统调用发生的协程调度之前，让我们看看go是如何进入系统调用的，理解了这个让我们不会对后面所说的一些东西感到很陌生。&lt;/p&gt;
+&lt;p&gt;golang对操作系统的系统调用作了封装，提供了syscall这样的库让我们执行系统调用。例如，Read系统调用实现如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;func Read(fd int, p []byte) (n int, err error) {
+n, err = read(fd, p)
+if raceenabled {
+if n &amp;gt; 0 {
+......
+}
+......
+}
+return
+}
+// 最终封装了Syscall
+func read(fd int, p []byte) (n int, err error) {
+var _p0 unsafe.Pointer
+if len(p) &amp;gt; 0 {
+_p0 = unsafe.Pointer(&amp;amp;p[0])
+} else {
+_p0 = unsafe.Pointer(&amp;amp;_zero)
+}
+r0, _, e1 := Syscall(SYS_READ, uintptr(fd), uintptr(_p0), uintptr(len(p)))
+n = int(r0)
+if e1 != 0 {
+err = e1
+}
+return
+}
+// 我们只关心进入系统调用时调用的runtime·entersyscall
+// 和退出时调用的runtime·exitsyscall
+TEXT ·Syscall(SB),NOSPLIT,$0-56
+CALL runtime·entersyscall(SB)
+MOVQ 16(SP), DI
+MOVQ 24(SP), SI
+MOVQ 32(SP), DX
+MOVQ $0, R10 s
+MOVQ $0, R8
+MOVQ $0, R9
+MOVQ 8(SP), AX // syscall entry
+SYSCALL
+CMPQ AX, $0xfffffffffffff001
+JLS ok
+MOVQ $-1, 40(SP) // r1
+MOVQ $0, 48(SP) // r2
+NEGQ AX
+MOVQ AX, 56(SP) // errno
+CALL runtime·exitsyscall(SB)
+RET
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;我们并不关心系统调用到底怎么实现。我们只关心系统调用过程与调度器相关内容，因为Golang自己接管系统调用，调度器便可以在进出系统调用时做一些你所不明白的优化，这里我要带你弄清楚调度器怎么做优化的。&lt;/p&gt;</description></item><item><title>how goroutine created and started</title><link>/blog/2021-05-24-how-goroutine-created-and-started/</link><pubDate>Mon, 24 May 2021 00:14:01 +0800</pubDate><guid>/blog/2021-05-24-how-goroutine-created-and-started/</guid><description>&lt;p&gt;goroutine创建：runtime.newproc(siz int32, fn *funcval)&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;go fn()，传递给fn的参数实际上是紧跟着存在fn压栈后的地址后面，在newproc1的栈帧里面，但是不出现在签名参数列表中，因为这些参数类型、数量不一样，也无法出现在签名参数列表中；&lt;/li&gt;
+&lt;li&gt;newproc1创建g；&lt;/li&gt;
+&lt;li&gt;getg().m.p.ptr()拿到当前p；&lt;/li&gt;
+&lt;li&gt;runqput将当前g放入p的local queue中，如果满则放到global queue中；&lt;/li&gt;
+&lt;li&gt;g等待被调度器调度执行；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;大致创建执行goroutine的逻辑是这样的，下面的逻辑都是切到系统栈上去执行的。&lt;/p&gt;
+&lt;p&gt;1 newproc1逻辑&lt;/p&gt;
+&lt;p&gt;查看源码发现，goroutine初始创建时对函数参数大小是有限制的，如果参数占内存空间很大，比如超过初始栈帧大小2KB，那么goroutine创建会失败：&amp;ldquo;fatal error: newproc: function arguments too large for new goroutine&amp;rdquo;，比如，&lt;code&gt;go func(a [1024]int) {}([1024]int{})&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;每个p内部都有一个空闲goroutine队列gFree，这个就是用来执行fn的goroutine，是可以复用的，不用的时候可以丢给调度器schedt.gFree供其他p复用。这里空闲的goroutines，一部分存在于p.gFree，如果gfput(p, gp)时发现p.gFree队列太长说明过剩了，就转移一部分到调度器schedt.gFree中供其他p复用。&lt;/p&gt;
+&lt;p&gt;goroutine执行完毕后运行时并不急于将其销毁，而是会考虑goroutine的复用，gfput，前面提过了。希望go func()通过协程执行时，也不必每次创建新的goroutine，gfget，可以复用p.gFree中的goroutine，如果p.gFree空或者过少（32）且调度器schedt.gFree中有空闲，则转移一部分过来给p复用。但是goroutine的栈有可能会被销毁，如果复用到栈被销毁的goroutine就需要stackalloc重新为其分配新栈帧。&lt;/p&gt;
+&lt;p&gt;如果没有空闲的g可供复用，那就只能malg从头新建一个goroutine了。&lt;/p&gt;
+&lt;p&gt;goroutine创建成功、栈空间也ok了之后，就要把goroutine要执行的函数对应的函数参数给拷贝到这个栈空间里面来，通过memmove(spArg, argp, uintptr(narg))来完成。完成后调整newg的调度上下文相关的寄存器值，等调度器调度它时，还原其中的上下文信息，pc就指向其对应的函数地址了，对应的数据也会指向其对应的栈空间。&lt;/p&gt;
+&lt;p&gt;然后，通过gostartcallfn→gostartcall(buf, fn, ctxt)，之前已经拷贝了函数fn的参数到goroutine栈空间了，这里面再继续在栈内设置fn返回地址、gobuf.sp+gobuf.pc信息。&lt;/p&gt;
+&lt;p&gt;上述调整完成之后，将goroutine的状态从_Gdead调整为_Grunnable，等待调度器调度。新创建的时候其状态是_Gidle，一定会将其调整为_Gdead然后再进行上述准备工作，一切就绪后才调整为_Grunnable让其参与调度。&lt;/p&gt;
+&lt;p&gt;2 runqput(p, gp, next)
+这里的逻辑是，希望将gp放到p的local queue中，但是也有头插、尾插两种方式。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果next为true，可以认为是头插，其实是放到p.runnext中，比p.queue中的得到优先调度。如果之前p.runnext有值，还要该值对应的g放入p.queue中；&lt;/li&gt;
+&lt;li&gt;如果next为false，则尝试将其放置到p.queue中，这里也有快慢两种情况，快的情况就是，因为p.queue这个本地队列长度最大为256，如果有空余位置放入就返回，这是快的情况。慢的情况就是如果p.queue满了就要先转移1/2到调度器全局队列schedt.queue中，然后再放入，这个过程就慢一些。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;放置过程中，如果p.runqueue满了怎么办，将其放置到调度器schedt.queue这个全局队列中。&lt;/p&gt;
+&lt;p&gt;3 wakeup()逻辑&lt;/p&gt;
+&lt;p&gt;这个函数内部执行startm(p, spinning)，来找一个m来执行goroutine，具体是怎么做的呢？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;如果没有指定p，比如新建goroutine时，此时会尝试检查有没有空闲的p，没有的话就直接返回了，相当于当前一次没有执行成功，那么只能下次调度的时候再执行这个新建的goroutine了；&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;现在有空闲的p，我们还缺什么，m！然后mget找一个空闲的m，如果没有空闲的，就newm创建一个新的，本质上是通过clone系统调用创建的新的线程。然后将这个m和这个p关联起来，m.nextp = p。值得一提的是clone出来的线程对应的线程处理函数是mstart，mstart使用汇编写的，内部实际调用的是mstart0，它内部又请求mstart1，获取当前g：&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;如果g.m==&amp;amp;m0，则执行mstartm0完成信号处理注册，继续执行其他；&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;获取当前m.mstartfn，即线程处理函数，执行该函数，如果该函数会执行结束那还要继续执行；&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;如果当前g.m不是m0，那么要将g.m.nextp与当前m关联起来，为什么呢？m执行调度时用这个p呗，执行它的queue中的goroutine呗；&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;执行调度schedule()逻辑，这个函数调用一次就是执行一轮调度，逻辑就是寻找一个可运行的goroutine然后执行。这个函数比较有意思了，有些goroutine是通过lockOSThread绑定了执行它的线程的，这样的goroutine只能用那个绑定的m来执行，未绑定的则无此限制。
+lockedg：这个schedule函数先获取当前g，如果发现当前g.m.lockedg不为0，表示有一个g通过lockOSThread绑定到了g.m，这个时候先停掉当前m，让其把p交出来，等下次有线程schedule里面调度执行lockedg时再唤醒该m，此时m被parked，p被空出来了。再调用execute(lockedg, inheritTime)，将该lockedg设置为当前g.m.curg，并修改装改为_Grunning，然后下面gogo(&amp;amp;gp.sched)恢复该待执行goroutine的上下文，执行之，execute函数never returns。可以想象下，如果一个m有g locked，那么每次调度都会先优先执行该goroutine？
+剩下的逻辑：获取当前g.m.p，&amp;hellip;..一堆有的没的逻辑，会通过findRunnable找一个可以运行的g来执行，最后也是调用execute来执行gp。
+netpoller：值得一提的是这个函数里面会通过findRunnable来查找一个可执行的g，除了从p.queue、schedt.queue、其他p.queue中找可运行的goroutine外，也包括从netpoller中获取等待网络IO事件就绪的g。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;到这里就可以算是结束了，到这里基本就了解了整个goroutine从创建到执行的完整逻辑了。当然这个后面还有点逻辑，目前也没搞懂写来干嘛的，先不管后面这个逻辑吧。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;然后notewakeup唤醒阻塞在&amp;amp;m.park上的一个proc，这个是做什么呢？意思是说，如果之前m执行（执行某个goroutine的代码）时，因为某个原因阻塞了（这个原因通常用目标对象的事件地址来表示，如&amp;amp;m.park），现在这个条件满足了，现在将其唤醒继续执行。我们不禁想问，这里的&amp;amp;m.park表示的是什么呢？&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;ps：这里用到了futex来实现轻量级地锁获取+获取失败阻塞、锁释放+唤醒阻塞线程操作，see https://lwn.net/Articles/360699/。&lt;/p&gt;</description></item></channel></rss>

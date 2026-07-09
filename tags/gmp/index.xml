@@ -1,22 +1,106 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>GMP on</title><link>/tags/gmp/</link><description>Recent content in GMP on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 08 Nov 2025 08:00:00 +0800</lastBuildDate><atom:link href="/tags/gmp/index.xml" rel="self" type="application/rss+xml"/><item><title>GoTalk - Go内存管理</title><link>/blog/2025-11-08-go_memory_management/</link><pubDate>Sat, 08 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/2025-11-08-go_memory_management/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 90%; border: none; position: absolute; top: -200px; }</description></item><item><title>Linux任务调度(8): 任务越多调度就越频繁吗</title><link>/blog/2025-04-22-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6-8/</link><pubDate>Tue, 22 Apr 2025 12:36:00 +0800</pubDate><guid>/blog/2025-04-22-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6-8/</guid><description>Linux任务调度(8): 任务越多调度就越频繁吗 # 本文将讲述一个曾经困扰在我们项目组心头的关于go进程混部时的担忧，以及由此引出的多进程混部时的隔离性问题。比如，个别程序不健壮创建大量进程，是否会推高上下文切换次数导致无谓的CPU开销的问题。我们将结合工具perf、bpftrace来深入观察并分析，以加深了对真实负载场景下任务调度的深层理解。
-Go运行时引发的思考 # 一个线上问题 # 对CFS的深入思考，一个直接原因是因为go程序中GOMAXPROCS设置不合理，母机上有128个CPU核心，但是虚拟化技术下容器里分配的只有2个cpus。
-此时go进程检测到GOMAXPROCS=128（go不会自动感知到实际上只分配了2个cpus），此时runtime会误认为最多可以创建128个P（GMP中的P，Processor），后果就是进程中最多会创建128个P。比如随着goroutines增多如果当前P处理不过来，就会激活更多的空闲P，对应的创建更多的线程M并轮询绑定的P上的的localrunq、全局的globalrunq以及定时器事件、网络IO事件就绪的goroutines并调度。这里的轮询操作就会导致较高的CPU开销，容易导致CPU throttling（节流）从而导致程序性能下降。
-GMP调度是如何初始化的 # go运行时是这样创建GMP的
-进程启动的时候会根据GOMAXPROCS先创建出对应数量的P，详见 schedinit()-&amp;gt;procresize()，但是还是没有创建M个这么多线程的； 上述创建出来的一堆P，除了当前g.m.p是在用状态，其他都是idle状态；M也不会预先创建出来，而是根据设计负载情况动态去创建、去激活P去执行的； 具体来说就是当创建一堆goroutines后，这些goroutine会先往 p.runq放，放不下了就会考虑 injectglist(...)，这个其实就是放到全局队列 sched.runq，放的时候： 如果当前M有关联一个P，就先放 npidle个G到 sched.runq，并且启动 npdile个M去激活 npdile个P，去尝试从goroutine抢G然后执行。然后剩下的放到 p.runq； 如果当前M没有关联一个P，这种情况下怎么会发生呢（有多种情况可能会发生，比如GC、系统调用阻塞、初始化阶段等）？这种情况下会全部放到 sched.runq，然后启动最多npidle个（即 min(goroutineQSize, npdile)）个M去激活P并执行； 简单总结就是：“如果短时间内创建大量goroutines，当前p.runq full（或者M解绑了P）就会往sched.runq放。然后会启动最多npidle个M去抢P激活，然后workstealing的方式从sched.runq抢goroutines执行。”
-如果这种情况一旦出现了，这些大量创建出来的M，后续无goroutines执行时，也会不断地执行一些轮询 p.runq、sched.runq、netpoller、stealing、timer事件，这个无谓的轮询过程中就容易推高CPU占用。而实际的 --cpus 配额很少，就更容易达到CPU配额限制，进而被虚拟化管理软件给节流（CPU throttling），进而导致程序性能出现整体性的下降 (程序正常逻辑还没怎么执行，全被这些多出来的M轮询消耗掉了)。
-一时负载高创建的M能退出吗 # 那有没有办法，让这些创建出来的大量M退出呢？创建出来的M退出只有一种办法，runtime.LockOSThread()，这种情况下，goroutine会和M绑定，goroutine执行完毕退出时，M也会被销毁。但是正常情况下是不会调用这个函数的（调试器tracer会调用该函数），所以多创建出来的M不会退出，进而就导致了这里的问题。
-实际上，go程序中解决这个问题，很简单，读取下cgroups的cpu配额即可。可以直接 import _ &amp;quot;github.com/uber-go/automaxprocs&amp;quot; 来解决。
-更多任务会导致更频繁上下文切换吗 # 上面go运行时错误设置GOMAXPROCS导致过多P、M创建出来导致了轮询的CPU开销，这个点我们已经明确了，并且了解到了对应的解决方案。
-我们还有一个顾虑：
-1）同一个机器上，有多个进程，其中一个go进程因为上述原因创建了大量的线程，CFS调度器任务切换频率会不会也被推高？我们都知道上下文切换有开销。 2）同一个机器上，如果有多个进程，如果我想避免某个进程对其他进程的影响，或者某个用户下的所有进程对其他用户下的进程的影响？该如何做。
-这几个问题，其实就是我深入研究CFS调度器的根本原因，因为我像搞明白混部的影响及问题边界，这对保证服务乃至系统的可用性至关重要。当然你可以不混部来绕过这些弯弯绕绕的细节。
-让我来尝试会大下上面两个问题，其中2）我们已经知道了，CFS可以通过组调度来解决这类问题，但是不会自动构建不同用户的任务组，一个进程包括多个线程也不会作为一个任务组进行限制，可以理解成系统默认有更多线程有更多处理能力，除非你们的系统管理员显示设置。
-OK, 那现在，我们只需要搞清楚1），如果任务数增多会导致上下文切换更频率吗？
-假设CFS的设计实现果真如此，那这就是个巨大的风险点。现代Linux系统可以创建非常多的任务出来。现代Linux系统不是早些年的时候由CS 13bits索引范围限制了GDT/LDT表长度了，2^13/2=4096个进程（每个进程占GDT表的2项），早期版本最多支持这么多个任务。但是后面Linux版本对此做了修改，解除了这里的限制。每个处理器核心只在GDT中记录它当前运行的任务的表项信息，而任务队列则交给每个处理器核心的cfs_rq，可以创建的任务数量不再受CS 13bits索引、GDT/LDT表长度限制了。Linux系统可以支持的任务数只受限于pid_max、内核配置项、系统资源了。
-而如果随着任务数增多，上下文切换频率就变高，这样大量的CPU资源会被浪费在上下文切换上。所以调度器是绝对不会这样实现的，这种设计太蠢了。如果任务数很多，我们可以接受不饿死的前提下、允许一定的调度延时、允许降低一定的交互性，但是不能降低系统调度的吞吐量、不能导致CPU资源巨大浪费、完全不可用。
-所以我们的判断应该是，No！更多任务不会导致更频繁的上下文切换！这里的更多任务是指的非常多任务，而不是说从1到2，从2到4，从4到8，从8到16，从16到32这种程度，我们讨论的是从128到256，从1024到2048，从2048到4096这种程度。
-谨慎评估下上下文切换频率 # 根据前面的介绍，任务切换 __schedule(preempt)的时机有3个，任务阻塞主动让出CPU、任务抢占、任务唤醒被重新加入run-queue。结合我们下面的测试用例，任务阻塞到被唤醒，我们创建的线程不会主动阻塞，只会被抢占，所以我们只需要分析任务抢占这个路径即可，scheduler_tick()-&amp;gt;task_tick()-&amp;gt;check_preempt_tick()，这里面会检查当前任务是否应该被抢占，发生抢占才会发生上下文切换。</description></item><item><title>Linux任务调度(7): CFS调度器源码分析1</title><link>/blog/2024-06-27-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6-7-v2/</link><pubDate>Thu, 27 Jun 2024 12:36:00 +0800</pubDate><guid>/blog/2024-06-27-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6-7-v2/</guid><description>Linux任务调度(7): CFS调度器源码分析 # 前面几篇文章介绍了Linux下调度器的演进过程，也对CFS调度器的大致工作原理进行了介绍，本文在CFS源码层面进行深入分析，帮助大家更深刻地理解CFS调度器的实现细节。Linux从开始引入CFS调度器到现在，已经发展了近20年的时间。在这一段时间里，CFS调度器经历了多次演进，我们选择相对比较新的版本 v5.12 版本内核为例进行说明。现在主流云厂商提供的Linux发行版内核都还有这个版本，我们的分析仍然具有一定的时效性方面的价值。OK，我们开始。
-核心概念及源码分析 # 对“公平”的理解 # CFS的目标是为所有任务提供公平的CPU时间分配，这里要先好好理解下 “公平” 的含义：
-1）如果多个任务具有相同的优先级，那么它们理应获得相同的调度机会； 2）如果多个任务优先级有高低之分，那么它们在调度上要有对应的体现，优先级高的要获得更多的调度机会； 3）要防止高优先级任务始终霸占CPU，导致低优先级任务饿死（starvation）； 4）对于响应式任务、非响应式任务，要有必要的奖励和惩罚机制，以改善用户体验； 5）要有能力在用户层级、任务组层级、具体任务层级，建立这种“公平性”； 6）这种公平性在多CPU核心上，除了100%保证单CPU核心上的公平，也需要考虑负载均衡和任务迁移，尽力去做到多CPU核心上的整体调度的相对公平；
-这是我对CFS中“公平性”的理解，接下来我们将结合CFS的源码来分析是如何做到的，让大家知其然知其所以然。
-核心数据结构 # 被调度的具体任务，或者用户组、任务组，它们都用可调度实体来抽象表示，即 sched_entity； struct sched_entity { /* For load-balancing: */ struct load_weight load; struct rb_node run_node; struct list_head group_node; unsigned int on_rq; u64 exec_start; u64 sum_exec_runtime; u64 vruntime; u64 prev_sum_exec_runtime; u64 nr_migrations; struct sched_statistics exec_statistics; #ifdef CONFIG_FAIR_GROUP_SCHED int depth; struct sched_entity *parent; /* rq on which this entity is (to be) queued: */ struct cfs_rq *cfs_rq; /* rq &amp;quot;owned&amp;quot; by this entity/group: */ struct cfs_rq *my_q; /* cached value of my_q-&amp;gt;h_nr_running */ unsigned long runnable_weight; #endif #ifdef CONFIG_SMP /* * Per entity load average tracking.</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Gmp on</title><link>/tags/gmp/</link><description>Recent content in Gmp on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 08 Nov 2025 08:00:00 +0800</lastBuildDate><atom:link href="/tags/gmp/index.xml" rel="self" type="application/rss+xml"/><item><title>GoTalk - Go内存管理</title><link>/blog/2025-11-08-go_memory_management/</link><pubDate>Sat, 08 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/2025-11-08-go_memory_management/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 90%;
+border: none;
+position: absolute;
+top: -200px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/slide/DYlNsdU1GQ3ZKeEdZ"/&gt;
+&lt;/div&gt;</description></item><item><title>Linux任务调度(8): 任务越多调度就越频繁吗</title><link>/blog/2025-04-22-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6-8/</link><pubDate>Tue, 22 Apr 2025 12:36:00 +0800</pubDate><guid>/blog/2025-04-22-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6-8/</guid><description>&lt;h2 id="linux任务调度8-任务越多调度就越频繁吗"&gt;Linux任务调度(8): 任务越多调度就越频繁吗 &lt;a href="#linux%e4%bb%bb%e5%8a%a1%e8%b0%83%e5%ba%a68-%e4%bb%bb%e5%8a%a1%e8%b6%8a%e5%a4%9a%e8%b0%83%e5%ba%a6%e5%b0%b1%e8%b6%8a%e9%a2%91%e7%b9%81%e5%90%97" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;本文将讲述一个曾经困扰在我们项目组心头的关于go进程混部时的担忧，以及由此引出的多进程混部时的隔离性问题。比如，个别程序不健壮创建大量进程，是否会推高上下文切换次数导致无谓的CPU开销的问题。我们将结合工具perf、bpftrace来深入观察并分析，以加深了对真实负载场景下任务调度的深层理解。&lt;/p&gt;
+&lt;h3 id="go运行时引发的思考"&gt;Go运行时引发的思考 &lt;a href="#go%e8%bf%90%e8%a1%8c%e6%97%b6%e5%bc%95%e5%8f%91%e7%9a%84%e6%80%9d%e8%80%83" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;h4 id="一个线上问题"&gt;一个线上问题 &lt;a href="#%e4%b8%80%e4%b8%aa%e7%ba%bf%e4%b8%8a%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;对CFS的深入思考，一个直接原因是因为go程序中GOMAXPROCS设置不合理，母机上有128个CPU核心，但是虚拟化技术下容器里分配的只有2个cpus。&lt;/p&gt;
+&lt;p&gt;此时go进程检测到GOMAXPROCS=128（go不会自动感知到实际上只分配了2个cpus），此时runtime会误认为最多可以创建128个P（GMP中的P，Processor），后果就是进程中最多会创建128个P。比如随着goroutines增多如果当前P处理不过来，就会激活更多的空闲P，对应的创建更多的线程M并轮询绑定的P上的的localrunq、全局的globalrunq以及定时器事件、网络IO事件就绪的goroutines并调度。这里的轮询操作就会导致较高的CPU开销，容易导致CPU throttling（节流）从而导致程序性能下降。&lt;/p&gt;
+&lt;h4 id="gmp调度是如何初始化的"&gt;GMP调度是如何初始化的 &lt;a href="#gmp%e8%b0%83%e5%ba%a6%e6%98%af%e5%a6%82%e4%bd%95%e5%88%9d%e5%a7%8b%e5%8c%96%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;go运行时是这样创建GMP的&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;进程启动的时候会根据GOMAXPROCS先创建出对应数量的P，详见 &lt;code&gt;schedinit()-&amp;gt;procresize()&lt;/code&gt;，但是还是没有创建M个这么多线程的；&lt;/li&gt;
+&lt;li&gt;上述创建出来的一堆P，除了当前g.m.p是在用状态，其他都是idle状态；M也不会预先创建出来，而是根据设计负载情况动态去创建、去激活P去执行的；&lt;/li&gt;
+&lt;li&gt;具体来说就是当创建一堆goroutines后，这些goroutine会先往 &lt;code&gt;p.runq&lt;/code&gt;放，放不下了就会考虑 &lt;code&gt;injectglist(...)&lt;/code&gt;，这个其实就是放到全局队列 &lt;code&gt;sched.runq&lt;/code&gt;，放的时候：
+&lt;ul&gt;
+&lt;li&gt;如果当前M有关联一个P，就先放 &lt;code&gt;npidle&lt;/code&gt;个G到 &lt;code&gt;sched.runq&lt;/code&gt;，并且启动 &lt;code&gt;npdile&lt;/code&gt;个M去激活 &lt;code&gt;npdile&lt;/code&gt;个P，去尝试从goroutine抢G然后执行。然后剩下的放到 &lt;code&gt;p.runq&lt;/code&gt;；&lt;/li&gt;
+&lt;li&gt;如果当前M没有关联一个P，这种情况下怎么会发生呢（有多种情况可能会发生，比如GC、系统调用阻塞、初始化阶段等）？这种情况下会全部放到 &lt;code&gt;sched.runq&lt;/code&gt;，然后启动最多npidle个（即 &lt;code&gt;min(goroutineQSize, npdile)&lt;/code&gt;）个M去激活P并执行；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;简单总结就是：“&lt;strong&gt;如果短时间内创建大量goroutines，当前p.runq full（或者M解绑了P）就会往sched.runq放。然后会启动最多npidle个M去抢P激活，然后workstealing的方式从sched.runq抢goroutines执行。&lt;/strong&gt;”&lt;/p&gt;
+&lt;p&gt;如果这种情况一旦出现了，这些大量创建出来的M，后续无goroutines执行时，也会不断地执行一些轮询 p.runq、sched.runq、netpoller、stealing、timer事件，这个无谓的轮询过程中就容易推高CPU占用。而实际的 &lt;code&gt;--cpus&lt;/code&gt; 配额很少，就更容易达到CPU配额限制，进而被虚拟化管理软件给节流（CPU throttling），进而导致程序性能出现整体性的下降 (程序正常逻辑还没怎么执行，全被这些多出来的M轮询消耗掉了)。&lt;/p&gt;
+&lt;h4 id="一时负载高创建的m能退出吗"&gt;一时负载高创建的M能退出吗 &lt;a href="#%e4%b8%80%e6%97%b6%e8%b4%9f%e8%bd%bd%e9%ab%98%e5%88%9b%e5%bb%ba%e7%9a%84m%e8%83%bd%e9%80%80%e5%87%ba%e5%90%97" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;那有没有办法，让这些创建出来的大量M退出呢？创建出来的M退出只有一种办法，&lt;code&gt;runtime.LockOSThread()&lt;/code&gt;，这种情况下，goroutine会和M绑定，goroutine执行完毕退出时，M也会被销毁。但是正常情况下是不会调用这个函数的（调试器tracer会调用该函数），所以多创建出来的M不会退出，进而就导致了这里的问题。&lt;/p&gt;
+&lt;p&gt;实际上，go程序中解决这个问题，很简单，读取下cgroups的cpu配额即可。可以直接 &lt;code&gt;import _ &amp;quot;github.com/uber-go/automaxprocs&amp;quot;&lt;/code&gt; 来解决。&lt;/p&gt;
+&lt;h4 id="更多任务会导致更频繁上下文切换吗"&gt;更多任务会导致更频繁上下文切换吗 &lt;a href="#%e6%9b%b4%e5%a4%9a%e4%bb%bb%e5%8a%a1%e4%bc%9a%e5%af%bc%e8%87%b4%e6%9b%b4%e9%a2%91%e7%b9%81%e4%b8%8a%e4%b8%8b%e6%96%87%e5%88%87%e6%8d%a2%e5%90%97" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;上面go运行时错误设置GOMAXPROCS导致过多P、M创建出来导致了轮询的CPU开销，这个点我们已经明确了，并且了解到了对应的解决方案。&lt;/p&gt;
+&lt;p&gt;我们还有一个顾虑：&lt;/p&gt;
+&lt;p&gt;1）同一个机器上，有多个进程，其中一个go进程因为上述原因创建了大量的线程，CFS调度器任务切换频率会不会也被推高？我们都知道上下文切换有开销。
+2）同一个机器上，如果有多个进程，如果我想避免某个进程对其他进程的影响，或者某个用户下的所有进程对其他用户下的进程的影响？该如何做。&lt;/p&gt;
+&lt;p&gt;这几个问题，其实就是我深入研究CFS调度器的根本原因，因为我像搞明白混部的影响及问题边界，这对保证服务乃至系统的可用性至关重要。当然你可以不混部来绕过这些弯弯绕绕的细节。&lt;/p&gt;
+&lt;p&gt;让我来尝试会大下上面两个问题，其中2）我们已经知道了，CFS可以通过组调度来解决这类问题，但是不会自动构建不同用户的任务组，一个进程包括多个线程也不会作为一个任务组进行限制，可以理解成系统默认有更多线程有更多处理能力，除非你们的系统管理员显示设置。&lt;/p&gt;
+&lt;p&gt;OK, 那现在，我们只需要搞清楚1），&lt;strong&gt;如果任务数增多会导致上下文切换更频率吗&lt;/strong&gt;？&lt;/p&gt;
+&lt;p&gt;假设CFS的设计实现果真如此，那这就是个巨大的风险点。现代Linux系统可以创建非常多的任务出来。现代Linux系统不是早些年的时候由CS 13bits索引范围限制了GDT/LDT表长度了，2^13/2=4096个进程（每个进程占GDT表的2项），早期版本最多支持这么多个任务。但是后面Linux版本对此做了修改，解除了这里的限制。每个处理器核心只在GDT中记录它当前运行的任务的表项信息，而任务队列则交给每个处理器核心的cfs_rq，可以创建的任务数量不再受CS 13bits索引、GDT/LDT表长度限制了。Linux系统可以支持的任务数只受限于pid_max、内核配置项、系统资源了。&lt;/p&gt;
+&lt;p&gt;而如果随着任务数增多，上下文切换频率就变高，这样大量的CPU资源会被浪费在上下文切换上。所以调度器是绝对不会这样实现的，这种设计太蠢了。如果任务数很多，我们可以接受不饿死的前提下、允许一定的调度延时、允许降低一定的交互性，但是不能降低系统调度的吞吐量、不能导致CPU资源巨大浪费、完全不可用。&lt;/p&gt;
+&lt;p&gt;所以我们的判断应该是，No！更多任务不会导致更频繁的上下文切换！这里的更多任务是指的非常多任务，而不是说从1到2，从2到4，从4到8，从8到16，从16到32这种程度，我们讨论的是从128到256，从1024到2048，从2048到4096这种程度。&lt;/p&gt;
+&lt;h4 id="谨慎评估下上下文切换频率"&gt;谨慎评估下上下文切换频率 &lt;a href="#%e8%b0%a8%e6%85%8e%e8%af%84%e4%bc%b0%e4%b8%8b%e4%b8%8a%e4%b8%8b%e6%96%87%e5%88%87%e6%8d%a2%e9%a2%91%e7%8e%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;根据前面的介绍，任务切换 &lt;code&gt;__schedule(preempt)&lt;/code&gt;的时机有3个，任务阻塞主动让出CPU、任务抢占、任务唤醒被重新加入run-queue。结合我们下面的测试用例，任务阻塞到被唤醒，我们创建的线程不会主动阻塞，只会被抢占，所以我们只需要分析任务抢占这个路径即可，&lt;code&gt;scheduler_tick()-&amp;gt;task_tick()-&amp;gt;check_preempt_tick()&lt;/code&gt;，这里面会检查当前任务是否应该被抢占，发生抢占才会发生上下文切换。&lt;/p&gt;
+&lt;p&gt;但是：
+1）其他任务可能会涉及到阻塞、唤醒，也会涉及到奖励、惩罚导致的动态优先级、动态时间片调整。
+2）我们创建的线程也是系统的一部分，它的时间片也会因为其他进程动态优先级变化而变化。
+3）而且即使我们确定了任务的执行时间片，抢占检测时，只要有vruntime比它小一个时间片的，就可以被抢占，不一定执行完自己的时间片。&lt;/p&gt;</description></item><item><title>Linux任务调度(7): CFS调度器源码分析1</title><link>/blog/2024-06-27-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6-7-v2/</link><pubDate>Thu, 27 Jun 2024 12:36:00 +0800</pubDate><guid>/blog/2024-06-27-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6-7-v2/</guid><description>&lt;h1 id="linux任务调度7-cfs调度器源码分析"&gt;Linux任务调度(7): CFS调度器源码分析 &lt;a href="#linux%e4%bb%bb%e5%8a%a1%e8%b0%83%e5%ba%a67-cfs%e8%b0%83%e5%ba%a6%e5%99%a8%e6%ba%90%e7%a0%81%e5%88%86%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;前面几篇文章介绍了Linux下调度器的演进过程，也对CFS调度器的大致工作原理进行了介绍，本文在CFS源码层面进行深入分析，帮助大家更深刻地理解CFS调度器的实现细节。Linux从开始引入CFS调度器到现在，已经发展了近20年的时间。在这一段时间里，CFS调度器经历了多次演进，我们选择相对比较新的版本 v5.12 版本内核为例进行说明。现在主流云厂商提供的Linux发行版内核都还有这个版本，我们的分析仍然具有一定的时效性方面的价值。OK，我们开始。&lt;/p&gt;
+&lt;h3 id="核心概念及源码分析"&gt;核心概念及源码分析 &lt;a href="#%e6%a0%b8%e5%bf%83%e6%a6%82%e5%bf%b5%e5%8f%8a%e6%ba%90%e7%a0%81%e5%88%86%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;h4 id="对公平的理解"&gt;对“公平”的理解 &lt;a href="#%e5%af%b9%e5%85%ac%e5%b9%b3%e7%9a%84%e7%90%86%e8%a7%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;CFS的目标是为所有任务提供公平的CPU时间分配，这里要先好好理解下 “&lt;strong&gt;公平&lt;/strong&gt;” 的含义：&lt;/p&gt;
+&lt;p&gt;1）如果多个任务具有相同的优先级，那么它们理应获得相同的调度机会；
+2）如果多个任务优先级有高低之分，那么它们在调度上要有对应的体现，优先级高的要获得更多的调度机会；
+3）要防止高优先级任务始终霸占CPU，导致低优先级任务饿死（starvation）；
+4）对于响应式任务、非响应式任务，要有必要的奖励和惩罚机制，以改善用户体验；
+5）要有能力在用户层级、任务组层级、具体任务层级，建立这种“公平性”；
+6）这种公平性在多CPU核心上，除了100%保证单CPU核心上的公平，也需要考虑负载均衡和任务迁移，尽力去做到多CPU核心上的整体调度的相对公平；&lt;/p&gt;
+&lt;p&gt;这是我对CFS中“公平性”的理解，接下来我们将结合CFS的源码来分析是如何做到的，让大家知其然知其所以然。&lt;/p&gt;
+&lt;h4 id="核心数据结构"&gt;核心数据结构 &lt;a href="#%e6%a0%b8%e5%bf%83%e6%95%b0%e6%8d%ae%e7%bb%93%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;ol&gt;
+&lt;li&gt;被调度的具体任务，或者用户组、任务组，它们都用可调度实体来抽象表示，即 &lt;code&gt;sched_entity&lt;/code&gt;；
+&lt;pre&gt;&lt;code class="language-c"&gt;struct sched_entity {
+/* For load-balancing: */
+struct load_weight load;
+struct rb_node run_node;
+struct list_head group_node;
+unsigned int on_rq;
+u64 exec_start;
+u64 sum_exec_runtime;
+u64 vruntime;
+u64 prev_sum_exec_runtime;
+u64 nr_migrations;
+struct sched_statistics exec_statistics;
+#ifdef CONFIG_FAIR_GROUP_SCHED
+int depth;
+struct sched_entity *parent;
+/* rq on which this entity is (to be) queued: */
+struct cfs_rq *cfs_rq;
+/* rq &amp;quot;owned&amp;quot; by this entity/group: */
+struct cfs_rq *my_q;
+/* cached value of my_q-&amp;gt;h_nr_running */
+unsigned long runnable_weight;
+#endif
+#ifdef CONFIG_SMP
+/*
+* Per entity load average tracking.
+*
+* Put into separate cache line so it does not
+* collide with read-mostly values above.
+*/
+struct sched_avg avg;
+#endif
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;2）每个处理器独立维护一个任务队列cfs_rq，避免1个全局队列的方式导致竞争问题：&lt;/p&gt;</description></item></channel></rss>

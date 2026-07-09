@@ -1,5 +1,24 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>generics on</title><link>/tags/generics/</link><description>Recent content in generics on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 11 Nov 2022 01:00:44 +0800</lastBuildDate><atom:link href="/tags/generics/index.xml" rel="self" type="application/rss+xml"/><item><title>go1.18泛型支持</title><link>/blog/2022-11-10-go1.18%E6%B3%9B%E5%9E%8B%E6%94%AF%E6%8C%81/</link><pubDate>Fri, 11 Nov 2022 01:00:44 +0800</pubDate><guid>/blog/2022-11-10-go1.18%E6%B3%9B%E5%9E%8B%E6%94%AF%E6%8C%81/</guid><description>go1.18 泛型支持 # 关于泛型编程 # 首先什么是泛型呢？ # Generic programming is a style of computer programming in which algorithms are written in terms of types to-be-specified-later that are then instantiated when needed for specific types provided as parameters.
-泛型编程有啥好处呢？ # cleaner code and simpler API (not always) improve code exectution performance (not always) 没有泛型的日子 # 如何应付的 # go1.18之前苦于没有范型编程，开发人员一般会这么做：
-go编译器对内置类型有一定的范型支持，比如new、make、len、cap go支持reflection和interace，通过这两个一定程度上可以模拟范型的能力 go支持//go:generate，通过自定义工具可以生成一些“重复”代码 痛点依然在 # 即便是通过反射、interface来模拟也把风险从编译时类型安全推到了运行时检查部分，生成代码也会有大量重复性代码……所以痛点依然存在。
-go1.18中终于解决了这个问题，虽然现在来看还没那么尽善尽美，但是总算在路上了。
-go泛型知识点 # go1.</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Generics on</title><link>/tags/generics/</link><description>Recent content in Generics on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 11 Nov 2022 01:00:44 +0800</lastBuildDate><atom:link href="/tags/generics/index.xml" rel="self" type="application/rss+xml"/><item><title>go1.18泛型支持</title><link>/blog/2022-11-10-go1.18%E6%B3%9B%E5%9E%8B%E6%94%AF%E6%8C%81/</link><pubDate>Fri, 11 Nov 2022 01:00:44 +0800</pubDate><guid>/blog/2022-11-10-go1.18%E6%B3%9B%E5%9E%8B%E6%94%AF%E6%8C%81/</guid><description>&lt;h1 id="go118-泛型支持"&gt;go1.18 泛型支持 &lt;a href="#go118-%e6%b3%9b%e5%9e%8b%e6%94%af%e6%8c%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="关于泛型编程"&gt;关于泛型编程 &lt;a href="#%e5%85%b3%e4%ba%8e%e6%b3%9b%e5%9e%8b%e7%bc%96%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="首先什么是泛型呢"&gt;首先什么是泛型呢？ &lt;a href="#%e9%a6%96%e5%85%88%e4%bb%80%e4%b9%88%e6%98%af%e6%b3%9b%e5%9e%8b%e5%91%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Generic programming is &lt;strong&gt;a style of computer programming in which algorithms are written in terms of types to-be-specified-later that are then instantiated when needed for specific types provided as parameters&lt;/strong&gt;.&lt;/p&gt;
+&lt;h3 id="泛型编程有啥好处呢"&gt;泛型编程有啥好处呢？ &lt;a href="#%e6%b3%9b%e5%9e%8b%e7%bc%96%e7%a8%8b%e6%9c%89%e5%95%a5%e5%a5%bd%e5%a4%84%e5%91%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;cleaner code and simpler API (not always)&lt;/li&gt;
+&lt;li&gt;improve code exectution performance (not always)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="没有泛型的日子"&gt;没有泛型的日子 &lt;a href="#%e6%b2%a1%e6%9c%89%e6%b3%9b%e5%9e%8b%e7%9a%84%e6%97%a5%e5%ad%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="如何应付的"&gt;如何应付的 &lt;a href="#%e5%a6%82%e4%bd%95%e5%ba%94%e4%bb%98%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;go1.18之前苦于没有范型编程，开发人员一般会这么做：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;go编译器对内置类型有一定的范型支持，比如new、make、len、cap&lt;/li&gt;
+&lt;li&gt;go支持reflection和interace，通过这两个一定程度上可以模拟范型的能力&lt;/li&gt;
+&lt;li&gt;go支持//go:generate，通过自定义工具可以生成一些“重复”代码&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="痛点依然在"&gt;痛点依然在 &lt;a href="#%e7%97%9b%e7%82%b9%e4%be%9d%e7%84%b6%e5%9c%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;即便是通过反射、interface来模拟也把风险从编译时类型安全推到了运行时检查部分，生成代码也会有大量重复性代码……所以痛点依然存在。&lt;/p&gt;
+&lt;p&gt;go1.18中终于解决了这个问题，虽然现在来看还没那么尽善尽美，但是总算在路上了。&lt;/p&gt;
+&lt;h2 id="go泛型知识点"&gt;go泛型知识点 &lt;a href="#go%e6%b3%9b%e5%9e%8b%e7%9f%a5%e8%af%86%e7%82%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;go1.19当前范型设计实现，也还没完全实现提案&lt;a href="https://go.googlesource.com/proposal/+/refs/heads/master/design/43651-type-parameters.md"&gt;type parameters proposal&lt;/a&gt;，这个提案也并非未来go泛型实现的天花板，会一步步完善。尽管还不尽善尽美，但是将来go泛型编程应该有较大的应用场景。现在有些库已经在用泛型重写了。&lt;/p&gt;
+&lt;h3 id="自定义泛型"&gt;自定义泛型： &lt;a href="#%e8%87%aa%e5%ae%9a%e4%b9%89%e6%b3%9b%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;1.18支持了自定义范型（customized generics），这个提法是为了与内置的泛型支持区分开。所说的内置泛型，指的是类似new、make、len、cap这样的一些函数，或者map[k]v这样的数据结构类型，这些有泛型的思想和支持。&lt;/p&gt;</description></item></channel></rss>

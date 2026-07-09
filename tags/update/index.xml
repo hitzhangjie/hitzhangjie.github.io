@@ -1,24 +1,99 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>update on</title><link>/tags/update/</link><description>Recent content in update on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 17 Apr 2021 13:44:00 +0800</lastBuildDate><atom:link href="/tags/update/index.xml" rel="self" type="application/rss+xml"/><item><title>02一条SQL更新语句是如何执行的</title><link>/blog/02%E6%97%A5%E5%BF%97%E7%B3%BB%E7%BB%9F%E4%B8%80%E6%9D%A1sql%E6%9B%B4%E6%96%B0%E8%AF%AD%E5%8F%A5%E6%98%AF%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E7%9A%84/</link><pubDate>Sat, 17 Apr 2021 13:44:00 +0800</pubDate><guid>/blog/02%E6%97%A5%E5%BF%97%E7%B3%BB%E7%BB%9F%E4%B8%80%E6%9D%A1sql%E6%9B%B4%E6%96%B0%E8%AF%AD%E5%8F%A5%E6%98%AF%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E7%9A%84/</guid><description>这里涉及的日志类型：
-执行引擎层：innodb redolog
-mysql服务层：mysql binlog
-买东西赊账为例，老板通常有个账本，上面记录了所有人总的赊账情况，但是忙的时候是来不及查、计算的，可能就会在一个粉板上记录当前次的赊账情况，等打烊之后再去算，算完更新到账本上。
-mysql的设计者，采用了类似老板记账的方式，来提高更新效率。
-WAL：write ahead log，关键点就是：
-先写日志，再写磁盘 也就是先写粉板，不忙的时候再写账本； WAL log写操作基本只是追加，磁盘顺序写，效率高；写记录到磁盘还要考虑B+树特性、磁盘特性，要找到在哪里插入，涉及到多次随机读，效率是比较差的。
-所以说先写WAL这里是提高更新效率是没有问题的，当然了，也提供了崩溃后恢复的一种保证。
-具体说，就是innodb引擎会：
-先把记录写到redo log里面； 再更新内存，（这个时候就算更新完成了）； 然后比较空闲的时候再写回磁盘。 但是如果粉板写满了怎么办呢？老板只能停下手中的活，先把粉板上的赊账记录算完腾到账本上，然后擦掉粉板腾出新的空间，然后再继续赊账。
-类似地，innodb的redo log也是固定大小的（和粉板类似），从头到尾写满了，就得再从头写。redolog维护了两个指针：
-write pos，写最新赊账记录的位置，++，到头后再开始； checkpoint，表示已经将对应操作同步到磁盘数据文件的位置，相当于腾空的粉板位置，可以继续记录赊账位置。 当writepos追上checkpoint的时候，表示写满了，这时候mysql就得和老板一样停下来算账，不能接受新的更新请求，这样把checkpoint推进以下之后，再继续接受更新请求。
-这样即使数据库运行期间崩溃了，但是有了这个redolog，就可以将之前的操作全部恢复，不会丢失，这个能力称之为crash-safe。
-这里的write pos、checkpoint的作用，是为了提高更新效率，延时写入磁盘用的。
-一个更新操作是如何执行的？
-当执行一个更新操作时，执行器找到记录对应的行，请求执行引擎返回行数据，如果行数据在内存中，执行引擎就从内存直接返回，反之还需要从磁盘上读回来返回。执行器拿到行数据之后完成更新，比如某列N=N+1，并请求执行引擎更新行数据。
-执行引擎将数据更新到内存中，然后写redo log，然后返回给执行引擎成功，表示进入prepare状态，随时可提交。
-为什么不先写redolog，再写内存？
-没有实质区别吧，不都写了内存嘛。是担心数据不一致问题吗？别担心，mysql用了MVCC的，（可重复读级别）不会出现不可重复读的。
-执行器收到正常响应后，生成binlog并写入磁盘binlog文件，然后对刚才的操作继续请求置引擎发起commit操作。
-如果写binlog失败会怎样？mysql中有个选项binlog_error_action，用来控制如果binlog写失败：
-上述变量，其默认值是ABORT_SERVER，即mysqld退出。需要排除binlog写失败原因（如磁盘满、inode耗光等）后再启动起来。
-还可以将上述变量设置为IGNORE_ERROR，就是写binlog失败就失败，继续执行，此时就会导致没有生成binlog，无法同步给slave，master-slave数据就会变得不一致。而且也会影响到数据备份。一般是不太能接受的。
-重启后，innodb中有prepare阶段的redo log（未commited），这个时候binlog中又没有对应的binlog，此时就会rollback掉。</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Update on</title><link>/tags/update/</link><description>Recent content in Update on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 17 Apr 2021 13:44:00 +0800</lastBuildDate><atom:link href="/tags/update/index.xml" rel="self" type="application/rss+xml"/><item><title>02一条SQL更新语句是如何执行的</title><link>/blog/02%E6%97%A5%E5%BF%97%E7%B3%BB%E7%BB%9F%E4%B8%80%E6%9D%A1sql%E6%9B%B4%E6%96%B0%E8%AF%AD%E5%8F%A5%E6%98%AF%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E7%9A%84/</link><pubDate>Sat, 17 Apr 2021 13:44:00 +0800</pubDate><guid>/blog/02%E6%97%A5%E5%BF%97%E7%B3%BB%E7%BB%9F%E4%B8%80%E6%9D%A1sql%E6%9B%B4%E6%96%B0%E8%AF%AD%E5%8F%A5%E6%98%AF%E5%A6%82%E4%BD%95%E6%89%A7%E8%A1%8C%E7%9A%84/</guid><description>&lt;p&gt;这里涉及的日志类型：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;执行引擎层：innodb redolog&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;mysql服务层：mysql binlog&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;买东西赊账为例，老板通常有个账本，上面记录了所有人总的赊账情况，但是忙的时候是来不及查、计算的，可能就会在一个粉板上记录当前次的赊账情况，等打烊之后再去算，算完更新到账本上。&lt;/p&gt;
+&lt;p&gt;mysql的设计者，采用了类似老板记账的方式，来提高更新效率。&lt;/p&gt;
+&lt;p&gt;WAL：write ahead log，关键点就是：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;先写日志，再写磁盘&lt;/li&gt;
+&lt;li&gt;也就是先写粉板，不忙的时候再写账本；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;WAL log写操作基本只是追加，磁盘顺序写，效率高；写记录到磁盘还要考虑B+树特性、磁盘特性，要找到在哪里插入，涉及到多次随机读，效率是比较差的。&lt;/p&gt;
+&lt;p&gt;所以说先写WAL这里是提高更新效率是没有问题的，当然了，也提供了崩溃后恢复的一种保证。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;具体说，就是innodb引擎会：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;先把记录写到redo log里面；&lt;/li&gt;
+&lt;li&gt;再更新内存，（这个时候就算更新完成了）；&lt;/li&gt;
+&lt;li&gt;然后比较空闲的时候再写回磁盘。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;但是如果粉板写满了怎么办呢？老板只能停下手中的活，先把粉板上的赊账记录算完腾到账本上，然后擦掉粉板腾出新的空间，然后再继续赊账。&lt;/p&gt;
+&lt;p&gt;类似地，innodb的redo log也是固定大小的（和粉板类似），从头到尾写满了，就得再从头写。redolog维护了两个指针：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;write pos，写最新赊账记录的位置，++，到头后再开始；&lt;/li&gt;
+&lt;li&gt;checkpoint，表示已经将对应操作同步到磁盘数据文件的位置，相当于腾空的粉板位置，可以继续记录赊账位置。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;当writepos追上checkpoint的时候，表示写满了，这时候mysql就得和老板一样停下来算账，不能接受新的更新请求，这样把checkpoint推进以下之后，再继续接受更新请求。&lt;/p&gt;
+&lt;p&gt;这样即使数据库运行期间崩溃了，但是有了这个redolog，就可以将之前的操作全部恢复，不会丢失，这个能力称之为crash-safe。&lt;/p&gt;
+&lt;p&gt;这里的write pos、checkpoint的作用，是为了提高更新效率，延时写入磁盘用的。&lt;/p&gt;
+&lt;p&gt;一个更新操作是如何执行的？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;当执行一个更新操作时，执行器找到记录对应的行，请求执行引擎返回行数据，如果行数据在内存中，执行引擎就从内存直接返回，反之还需要从磁盘上读回来返回。执行器拿到行数据之后完成更新，比如某列N=N+1，并请求执行引擎更新行数据。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;执行引擎将数据更新到内存中，然后写redo log，然后返回给执行引擎成功，表示进入prepare状态，随时可提交。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;为什么不先写redolog，再写内存？&lt;/p&gt;
+&lt;p&gt;没有实质区别吧，不都写了内存嘛。是担心数据不一致问题吗？别担心，mysql用了MVCC的，（可重复读级别）不会出现不可重复读的。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;执行器收到正常响应后，生成binlog并写入磁盘binlog文件，然后对刚才的操作继续请求置引擎发起commit操作。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;如果写binlog失败会怎样？mysql中有个选项&lt;strong&gt;binlog_error_action&lt;/strong&gt;，用来控制如果binlog写失败：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;上述变量，其默认值是&lt;strong&gt;ABORT_SERVER&lt;/strong&gt;，即mysqld退出。需要排除binlog写失败原因（如磁盘满、inode耗光等）后再启动起来。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;还可以将上述变量设置为&lt;strong&gt;IGNORE_ERROR&lt;/strong&gt;，就是写binlog失败就失败，继续执行，此时就会导致没有生成binlog，无法同步给slave，master-slave数据就会变得不一致。而且也会影响到数据备份。一般是不太能接受的。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;重启后，innodb中有prepare阶段的redo log（未commited），这个时候binlog中又没有对应的binlog，此时就会rollback掉。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;执行引擎把刚才写入的redolog的状态修改为commit状态，更新完成。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;万一这一步执行的时候，服务crash了怎么办？这个时候innodb也写了redo log了，服务层也写了binlog了，怎么办呢？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;如果redo log里面已经修改成commited了，重启后，crash recover的时候innodb是可以恢复这个数据的；&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;如果redo log里面没有改成commited呢？以为都是两阶段提交，因为binlog里面有记录，但是redo log没有改成commited，所以可能要服务层发起commit操作？&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;fixme 以后再确定下这个问题吧！&lt;/strong&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;执行引擎在合适的（通常是空闲的）时候将redolog中数据同步到磁盘数据文件。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;注意这里将 redolog 拆成两部分prepare+commit，这就是典型的两阶段提交。为什么要两阶段提交，是为了保持两份日志文件的完整性，让两份日志文件之间的逻辑一致。&lt;/p&gt;
+&lt;p&gt;不妨从恢复数据库到半个月内任意一秒t的状态，从这个角度来思考这个问题？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如何恢复？首先t之前的最近的一次全量备份，先恢复到临时数据库中，然后找这次全量备份之后t之前的binlog，并恢复到临时数据库中。然后将临时数据库中的数据恢复到线上。&lt;/li&gt;
+&lt;li&gt;再看为什么用两阶段提交？不用就不能保证两个日志文件的完整性（c=c+1）：
+&lt;ul&gt;
+&lt;li&gt;假如先写完redolog再写binlog，redolog将c=0改成了1，但是binlog写成功前挂掉了，这样本地数据是c=1，但是归档日志同步给别人后丢了一个事务操作，或者自己重启后恢复的时候也丢了一个操作c变成了0。&lt;/li&gt;
+&lt;li&gt;假如先写完binlog后再写redolog，binlog中记录了c=c+1=1，但是redolog写失败了，此时库中数据其实是0，如果binlog同步给别人，按binlog恢复出的数据是1，而不是0，也不一致。如果是挂掉之后恢复，能一致都是1。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;可见如果不适用prepare-commit两阶段提交的话，日志中记录的状态和真实的存储情况就会出现不一致。&lt;/p&gt;
+&lt;p&gt;不只是数据库误删表之类的才会有恢复的需要，其实mysql集群扩容，比如多加几个读副本，也是需要这里的全量备份+binlog同步来完成“数据恢复”的。&lt;/p&gt;
+&lt;p&gt;binlog是mysql服务层面记录的原始操作日志，比如给某列+1，innodb的redolog是物理日志，记录的是在哪个物理页上写什么数据，binlog才是master-slave同步用的，这个在功能上是和raft中的wal log功能定位一致的。&lt;/p&gt;
+&lt;p&gt;relog的初衷，只是为了提高更新的效率，而非实现master-slave的数据一致性。binlog才是为了追求数据一致性的。wal只是一种操作上的描述，raft中的也是叫wal，但是也应该看到都叫wal，但是这只是一种策略，实现出来的实际功能、定位可能是完全不同的。&lt;/p&gt;
+&lt;p&gt;redolog空间是有限的，毕竟它是为了提高更新效率用的，mysql是追加写的，写完一个binlog文件继续写下一个binlog文件，不会覆盖以前的，它的定位是要实现主从节点的数据同步，所以binlog日志也称为归档日志，是归档用的，用来实现主从间数据同步的。&lt;/p&gt;
+&lt;p&gt;举一反三：&lt;/p&gt;
+&lt;p&gt;联想到了raft算法中，为了保证数据强一致的效果，也采取了WAL的方式。比如master收到一个更新请求的时候，它会写本地log，并维护了几个索引值nextIndex、commitIndex，nextIndex是下次准备同步给slave节点的日志的索引位置，但是同步给很多slave节点的过程是并发的，可能有的日志索引项在某些节点上有冲突，没有收到多数投票，或者master更新比较快，这都会导致master这边的commitIndex&amp;lt;nextIndex。commitIndex表示收到了多数的投票master已经提交到状态机的日志项的索引位置。commitIndex也会同步给其他的节点，其他节点可以把commitIndex当做为一个可以可靠的对本地log进行持久化的参考值，commitIndex之前的日志项都可以提交到状态机，写入到磁盘数据文件，完成持久化。而commitIndex之后的日志条目，都是有可能会被作为的，这通常和分布式系统中出现分区有关系。&lt;/p&gt;</description></item></channel></rss>

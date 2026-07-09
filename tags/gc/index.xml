@@ -1,36 +1,270 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>GC on</title><link>/tags/gc/</link><description>Recent content in GC on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 26 Jun 2026 18:42:00 +0800</lastBuildDate><atom:link href="/tags/gc/index.xml" rel="self" type="application/rss+xml"/><item><title>深入浅出 Go Safepoints：从编译账本到抢占调度及精确式GC的底层真相</title><link>/blog/2026-06-26-go-safepoints/</link><pubDate>Fri, 26 Jun 2026 18:42:00 +0800</pubDate><guid>/blog/2026-06-26-go-safepoints/</guid><description>深度解密 Go 语言的 Safepoint：从编译账本到抢占调度的底层真相 # 在探讨 Go 语言的高性能并发时，我们经常会听到“非协作式抢占调度”和“精确式垃圾回收（Precise GC）”。而这两个底层特性的交汇点，正是 Safepoint（安全点）。 如果你去查阅资料，往往只能得到一句宏观的定义：“Safepoint 是程序执行中的一些特定位置，此时状态确定，可以安全暂停。” 但这并不能解开我们心中的疑惑：Safepoint 到底是什么？它是怎么记录的？为什么有些位置可以被抢占，而有些地方强行抢占就会导致系统崩溃？ 今天我们抛开宏观理论，用底层的眼光重新拆解 Safepoint。
-一、 为什么需要 Safepoint？CPU 眼中的“迷茫” # 在高级语言中，我们能一眼分清什么是普通数值，什么是对象指针：
-a := 10 // 普通整数 b := &amp;amp;User{} // 对象指针 然而，当 Go 编译器把这段代码翻译成二进制机器码后，在 CPU 的世界里，它们都只是寄存器（如 RAX, RBX）或栈内存里的一个 64 位的数字。 当垃圾回收（GC）需要扫描内存，或者系统发出信号想抢占这个 Goroutine 时，问题来了： 如果此时 CPU 寄存器 RAX 里的值是 0x00007f9c，GC 该不该顺着这个地址去追踪并标记内存？
-如果它其实是一个普通整数（比如一个时间戳），GC 却误把它当指针去追踪，程序就会因为访问非法地址而瞬间崩溃（Panic/段错误）。 如果它其实是一个真指针，GC 却漏掉了它，这块内存就会被提前释放，引发严重的内存悬空。 为了让 GC 能够在任意需要的时候，精准地辨别出寄存器和栈里“哪个是普通数据，哪个是指针”，Safepoint 机制应运而生。
-二、 Safepoint 的本质：编译期写死的“只读账本” # Safepoint 在底层根本不是一段拦截代码，也不是一个特殊的函数，它只是一个“位置记录”——也就是一个由编译器在编译期计算好，并打包放进可执行文件中的“位置与活动指针映射表”。 在编译阶段，编译器在生成机器码的同时，在后台偷偷拿一个小本本（静态存活分析，Liveness Analysis），把每一条核心机器指令的位置，以及在这个位置上，哪个寄存器/栈空间放的是活跃的指针，全部记录下来。 这个“账本”在编译完成后，会固化在可执行文件的只读数据段中（如 .</description></item><item><title>内存管理：Go GC停顿时间优化</title><link>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%81%9C%E9%A1%BF%E6%97%B6%E9%97%B4%E4%BC%98%E5%8C%96/</link><pubDate>Wed, 17 Jun 2026 07:39:00 +0800</pubDate><guid>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%81%9C%E9%A1%BF%E6%97%B6%E9%97%B4%E4%BC%98%E5%8C%96/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: -170px; }</description></item><item><title>内存管理 - Go GC 写屏障演进</title><link>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%86%99%E5%B1%8F%E9%9A%9C%E6%BC%94%E8%BF%9B/</link><pubDate>Wed, 17 Jun 2026 07:28:00 +0800</pubDate><guid>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%86%99%E5%B1%8F%E9%9A%9C%E6%BC%94%E8%BF%9B/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: -170px; }</description></item><item><title>内存管理：GC Barriers 读屏障 vs. 写屏障</title><link>/blog/2026-06-16-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gc_barriers/</link><pubDate>Tue, 16 Jun 2026 00:14:00 +0800</pubDate><guid>/blog/2026-06-16-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gc_barriers/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: -170px; }</description></item><item><title>内存管理：Go垃圾回收之混合写屏障</title><link>/blog/2026-06-11-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/</link><pubDate>Thu, 11 Jun 2026 15:00:00 +0800</pubDate><guid>/blog/2026-06-11-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/</guid><description> .iframe-container { position: relative; height: 100vh; overflow: hidden; } .iframe-container iframe { width: 100%; height: 100%; border: none; position: absolute; top: -170px; }</description></item><item><title>go如何触发垃圾回收的</title><link>/blog/2022-11-20-go%E5%A6%82%E4%BD%95%E8%A7%A6%E5%8F%91%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</link><pubDate>Sun, 20 Nov 2022 20:39:22 +0800</pubDate><guid>/blog/2022-11-20-go%E5%A6%82%E4%BD%95%E8%A7%A6%E5%8F%91%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</guid><description>前言 # go触发GC有这么几个时机，内存分配时触发mallogc，定时触发sysmon，手动触发runtime.GC、debug.FreeOSMemory，其中内存分配时触发是go是重中之重，go runtime以此来平衡好内存分配、内存回收的节奏以让内存占用维持在一个合适的水准。本文对内存分配过程中触发GC的一些设计考量进行了总结梳理。
-应该听过“mark assist” # gc过程中mutator分配内存时可能会被搞去做assistg,去辅助扫描标记一些对象是否该回收的工作,当我的辅助标记内存数量减去要申请的内存数,如果为负数时,相当于我申请的比辅助标记的多,相当于欠债了,这个时候我就得去做些辅助标记的工作 gcAssistBytes:
-然后根据当前内存使用情况\扫描情况\下次GC的heapgoal,计算出我应该辅助标记多少,才能保证达到堆大小时GC标记工作恰好能完成,让我去干活 这个时候干活之前会先检查下bgMarkWorker因为扫描工作贡献的信用分,然后我可以借用这个信用分来偿还债务,以减少扫描工作,或者完全避免扫描工作 如果依旧欠债,那就干活呗,后面会执行到gcDrainN,去执行一些标记类的工作 这些标记类的工作从何而来呢,比如写屏障记录下来的一些需要去扫描的对象 执行完了这个扫描之后,这个assistG.gcAssistBytes就会加上扫描的字节数,相当于攒的一点信用分 干完这些之后,才允许你申请内存\分配对象,哈哈哈! goroutine可以去做些mark assist之类的工作的前提是，GC已经进入了GCMark阶段，那内存分配期间GC是什么如何被触发的呢？
-GC什么情况下被触发的 # 关于什么时候触发GC，严谨一点，内存分配期间何时触发的GC，这里不考虑sysmon触发、手动runtime.GC()触发，ok。
-GOGC\GOMEMLIMIT\heapGoal # 我们应该都这样的认识阶段，通过GOGC、GOMEMLIMIT可以计算出下次GC时的heapGoal，等堆内存占用达到这个heapGoal时会触发GC。
-但是严格来讲，理解成接下来内存占用达到heapGoal才触发GC，是不正确的。
-引入GC Trigger # 为了触发GC，还有一个概念，叫GC trigger，它的值heapGoal要小些，在GCOff阶段，内存分配过程中会检查当前heapLive大小是否超过了这个trigger，是则启动gc（gcStart） 那个协程来负责检查是否启动gc，可以理解成所有的协程，协程如果是申请大内存（&amp;gt;32K）则一定会做上述检查，小内存为了效率则不一定每次检查，当如果申请小内存（tiny or small）如果过程中span不足发生了refill也会做上述检查（shouldhelpgc） 当启动了GC之后，接下来goroutines如果涉及到内存分配，就会转入markAssist阶段，要分配多少，先要干一定量的标记扫描的活才行（内存debt/assist设计） 那么heapGoal干嘛用的呢，前面提到的内存debt/assist设计，就是为了在当前堆大小达到heapGoal时尽量完成内存的标记扫描，将markbits改成allocbits，未使用的就可以复用或者等下个GC cycle阶段回收 所以从GC trigger到heapGoal，这中间是有一些考量的，如果只认为GC heapGoal控制GC的触发，其实是认识不到位的。ps：可能在这这个提案 GC pacer redesign 实现之前确实是根据heapGoal来触发的，但是这会导致内存的不受限制的增长。
-GC Trigger计算 # 那么这个GC trigger是如何计算的呢？
-首先它不能比heapGoal小很多，那可能会导致GC启动过早，写屏障打开后程序latency会上升，而且如果内存分配比较快GC一直触发运行，期间分配的对象会一直标记为black，Rss会上升 也不能过晚触发，可能导致标记扫描阶段assistG的工作量过大，latency会比较明显，而且会堆大小增长会超出预期。 至于如何计算的，可以先看下上面这个提案中关于GC trigger的设计，然后翻下源码瞧瞧……额，还是简单总结下吧：
-明确下目标，GC trigger是用来确定何时触发GC的一个值，当内存分配导致堆大小变化时会检查当前heapLive&amp;gt;trigger来决定是否触发GC（申请大内存必检查，申请小内存为了效率一般不检查，但在span不足refill后检查） GC trigger如何计算出来的： 首先根据GOGC、GOMEMLIMIT算出下次GC的heapGoal， 然后根据minTrigger=heapMarked+(heapGoal-heapMarked)*0.7， 然后maxTrigger=heapMarked+(heapGoal-heapMarked)*.0.95，如果堆比较小就用这里算出的值意味着总有一个buffer来赶在内存占用达到heapGoal之前启动GC。如果堆比较大但是有没有多少扫描工作，就用heapGoal-defaultHeapMinimum(4MB)来作为maxTrigger，这也是一种优化。 ps: 这里的heapMarked表示上轮GC标记结束时堆大小。这两个值，相当于确定了一个候选的触发GC的heapLive范围，最终trigger值一定要大于等于minTrigger，一定要小于等于maxTrigger。 确定trigger： 确定runway，根据上轮GC过程记录的consMark（程序分配内存、扫描内存量的比值）、实际的扫描内存的量（heap+stack+global）以及并发标记执行阶段mutator:collector的CPU执行时间的比值3:1，可以大致算出下一轮GC期间内存使用量能涨到多少，这个源码中选了个词叫runway，意思是我们内存使用量能走多远。 很明显如果这个值如果大于heapGoal说明我们很可能会让堆占用走高，此时需要更激进地触发GC，所以此时的trigger就选下界minTrigger。 如果这个值比比heapGoal小，那就用goal-runway作为trigger，但是这个值表示的时啥？如果这个值比minTrigger小就用minTrigger。 前面还算了个最大trigger，如果这里的trigger值比maxTrigger还大，那trigger要改成maxTrigger。 Put it together # OK，现在知道了trigger值是怎么详细计算的了，好，我们继续串一下：</description></item><item><title>go垃圾回收调优</title><link>/blog/2022-11-10-go%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E8%B0%83%E4%BC%98/</link><pubDate>Thu, 10 Nov 2022 10:54:26 +0800</pubDate><guid>/blog/2022-11-10-go%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E8%B0%83%E4%BC%98/</guid><description>相关背景 # 在go1.19之前，go程序内存调优的方式主要是通过环境变量GOGC（或者debug.SetGCPercent(?)）来控制，
-它的效果是影响go runtime计算nextGC heapGoal的大小：
-较早的版本计算方式为：heapGoal = heapMarked + (heapMarked) * GOGC / 100， 后续go迭代时发现非堆内存也是有影响的，于是go1.18完善了下 heapGoal = heapMarked + (heapMarked + GCROOTs) * GOGC/100，这里的GCROOTS=(gstacks+globals) GC pacer的目的就是为了根据上述公式计算下次GC的heapGoal，然后在必要时（比如malloc时）决定是否要GC。
-默认初始heapGoal大小为4MB，如果靠GOGC来控制的话，会比较频繁触发GC，对绝大多数server程序而言频繁GC占比较多CPU，程序整体吞吐、响应延迟会受一定影响。
-所以业界一般会通过两种方式来调优：
-ballast，利用一块不用的大内存（比如1GB），来推高下次GC的heapGoal，通过这种方式来降低GC频率 GC tuner，动态设置GOGC，定义一个对象为其设置finalizer，每轮GC结束时触发它并检查当前进程当前的内存占用情况，并与允许的最大内存占用进行比较，并计算出达到最大内存占用才触发GC时GOGC应该设定的值（其思路和go1.19 GOMEMLIMIT类似） 项目以前的方案 # 项目以前使用的是go1.16.5，这个版本中也只有GOGC一个控制GC的选项，使用的是ballast的方案：
-在服务初始化阶段去初始化一个大内存而推高下次GC时的heapGoal 不同程序可能对内存需求不同，配置文件中允许自定义ballast大小，默认为1GB 包括业界在内都是介绍了ballast如何使用：
-全局变量声明，垃圾回收器会认为其在整个进程生命周期内reachable 局部变量声明，通过runtime.KeepAlive(&amp;hellip;)来欺骗垃圾回收器这之前对象reachable 但是，好像只看到了一派祥和，我们使用时却遇到了Rss占用问题。
-问题1：ballast占物理内存 # 在测试环境（很多套测试环境）都有比较大概率发现服务在几乎空闲时，物理内存占用竟然高达1.1g…这很不符合常理。
-通过pprof跟踪内存分配，发现内存分配比较大的路径就是这个压舱石（pprof mem采样是看的虚拟内存）。
-然后top、pmap等跟踪可疑进程发现其确实存在1GB左右的anon区域，且该区域为dirty**（其实gdb把内存dump一看全是0，就很容易联想到类似对象分配后memset的操作）**。
-根据了解的go GC、内存分配器相关的知识，了解到go向操作系统申请内存时通过mmap的方式，释放内存是通过madvise+MADV_DONTNEED/MADV_FREE的方式。
-go1.12的时候改成了FREE默认代替DONTNEED，这两个选项是有区别的，详细的可以看下man手册（man 2 madvise），FREE的效率更好一点，但是也有一些不好的副作用。
-go1.</description></item><item><title>GC: prioritizing low latency and simplicity</title><link>/blog/2021-05-01-gogc-prioritizing-low-latency-and-simplicity/</link><pubDate>Sat, 01 May 2021 11:17:56 +0800</pubDate><guid>/blog/2021-05-01-gogc-prioritizing-low-latency-and-simplicity/</guid><description>原文地址：https://blog.golang.org/go15gc
-介绍了当前软硬件大规模发展的趋势以及go GC需要优先解决的问题：低延迟和简单性（通过一个参数就可以控制，而非像JVM调参那样）。
-go团队的目标是设计一个面向未来十年的垃圾回收器，借鉴了十几年前发明的算法。go GC使用的是并发三色标记清除算法（concurrent, tri-color, mark-sweep collector），由Dijkstra在1978年提出。该算法与现在大多数企业级的GC实现不同，但是go团队认为该算法更适合于现代硬件的发展，也更有助于实现现代软件的GC低延迟目标。
-该GC算法中，每个对象只能是white、grey、black中的其中一种，heap可以看做是互相连接的对象构成的一个graph。GC算法流程是：
-GC开始时，所有对象都是white； GC遍历所有的roots对象（比如全局变量、栈变量）将其标记为灰色； 然后GC选择一个grey对象，将其标记为black，并扫描（scan）该对象检查它内部的指向其他对象的指针。如果发现有指针指向其他white对象，将white对象标记为grey； 该过程重复执行，直到没有任何的灰色对象； 最后，剩下的白色对象即认为是不可达对象，可以被回收再利用； GC过程和应用程序执行是并发进行的，应用程序也称为mutator，它会在GC运行期间修改一些指针的值。mutator必须遵循这样一条规则，就是不允许出现一个黑色对象指向一个白色对象，这样会导致对象被错误地回收。为了保证该规则成立，就需要引入写屏障（write barrier），它是编译阶段由编译器对mutator指针操作安插的一些特殊指令，用来跟踪对指针的修改，write barrier如果发现当前黑色对象的内部指针字段指向了外部的一个白色对象，则会将白色对象染色为grey，避免其被错误地GC掉，也保证其可以被继续扫描。
-有些GC相关的问题：
-什么时候启动GC？ 通过哪些指标来判断要启动GC？ GC应该如何与scheduler进行交互？ 如何暂停一个mutator线程足够长时间，以扫描器stack？ 如何表示white、grey和black三种颜色来实现高效地查找、扫描grey对象？ 如何知道roots对象在哪里？ 如何知道一个指向对象的指针的位置？ 如何最小化内存碎片？ 如何解决cache性能问题？ heap应该设置为多大？ 等等。 上述问题有些与内存分配有关，有些与可达对象分析有关，有些与goroutine调度有关，有些与性能有关，关于这些内容的讨论远远超出本文篇幅，可以自己参考相关的材料。
-为了解决GC性能问题，可以考虑为每一种优化加个参数来控制，开发人员可以自己调整这里的参数来达到想要的优化效果。但是这种做法时间久了之后会发现有非常多的参数，调优就会变得非常困难，比如JVM调优。go团队不想走这样的老路，力求简单高效。
-go通过GOGC这个环境变量来控制整个堆大小相对于现阶段可达对象大小的比例。GOGC默认值是100%，意味着当堆大小增长了当前可达对象大小的1倍时（2倍大小），就会触发GC；200%则意味着继续增长了当前可达对象的2倍时触发GC（3倍大小）。
-如果想降低GC花费的时间，就把这个值设置的大一点，因为这样不容易频繁触发GC； 如果愿意花费更多的GC时间来换取更少的内存占用，就把这个值设置的小一点，因为这样能够更加频繁地GC； 前面提到go团队要设计一个面向未来十年的垃圾回收器，未来十年机器内存容量可能会翻倍或者成倍增长，简单地将GOGC设置为一定倍率也可以很好地工作，也不用像JVM调优那样重新设置一堆地参数，调参大军好惨。go团队也可以倾听用户真正地诉求在运行时方面做更多的优化。</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Gc on</title><link>/tags/gc/</link><description>Recent content in Gc on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 26 Jun 2026 18:42:00 +0800</lastBuildDate><atom:link href="/tags/gc/index.xml" rel="self" type="application/rss+xml"/><item><title>深入浅出 Go Safepoints：从编译账本到抢占调度及精确式GC的底层真相</title><link>/blog/2026-06-26-go-safepoints/</link><pubDate>Fri, 26 Jun 2026 18:42:00 +0800</pubDate><guid>/blog/2026-06-26-go-safepoints/</guid><description>&lt;h2 id="深度解密-go-语言的-safepoint从编译账本到抢占调度的底层真相"&gt;深度解密 Go 语言的 Safepoint：从编译账本到抢占调度的底层真相 &lt;a href="#%e6%b7%b1%e5%ba%a6%e8%a7%a3%e5%af%86-go-%e8%af%ad%e8%a8%80%e7%9a%84-safepoint%e4%bb%8e%e7%bc%96%e8%af%91%e8%b4%a6%e6%9c%ac%e5%88%b0%e6%8a%a2%e5%8d%a0%e8%b0%83%e5%ba%a6%e7%9a%84%e5%ba%95%e5%b1%82%e7%9c%9f%e7%9b%b8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在探讨 Go 语言的高性能并发时，我们经常会听到“非协作式抢占调度”和“精确式垃圾回收（Precise GC）”。而这两个底层特性的交汇点，正是 Safepoint（安全点）。
+如果你去查阅资料，往往只能得到一句宏观的定义：“Safepoint 是程序执行中的一些特定位置，此时状态确定，可以安全暂停。”
+但这并不能解开我们心中的疑惑：Safepoint 到底是什么？它是怎么记录的？为什么有些位置可以被抢占，而有些地方强行抢占就会导致系统崩溃？
+今天我们抛开宏观理论，用底层的眼光重新拆解 Safepoint。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="一-为什么需要-safepointcpu-眼中的迷茫"&gt;一、 为什么需要 Safepoint？CPU 眼中的“迷茫” &lt;a href="#%e4%b8%80-%e4%b8%ba%e4%bb%80%e4%b9%88%e9%9c%80%e8%a6%81-safepointcpu-%e7%9c%bc%e4%b8%ad%e7%9a%84%e8%bf%b7%e8%8c%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在高级语言中，我们能一眼分清什么是普通数值，什么是对象指针：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;a := 10 // 普通整数
+b := &amp;amp;User{} // 对象指针
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;然而，当 Go 编译器把这段代码翻译成二进制机器码后，在 CPU 的世界里，它们都只是寄存器（如 RAX, RBX）或栈内存里的一个 64 位的数字。
+当垃圾回收（GC）需要扫描内存，或者系统发出信号想抢占这个 Goroutine 时，问题来了：
+如果此时 CPU 寄存器 RAX 里的值是 0x00007f9c，GC 该不该顺着这个地址去追踪并标记内存？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果它其实是一个普通整数（比如一个时间戳），GC 却误把它当指针去追踪，程序就会因为访问非法地址而瞬间崩溃（Panic/段错误）。&lt;/li&gt;
+&lt;li&gt;如果它其实是一个真指针，GC 却漏掉了它，这块内存就会被提前释放，引发严重的内存悬空。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;为了让 GC 能够在任意需要的时候，精准地辨别出寄存器和栈里“哪个是普通数据，哪个是指针”，Safepoint 机制应运而生。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="二-safepoint-的本质编译期写死的只读账本"&gt;二、 Safepoint 的本质：编译期写死的“只读账本” &lt;a href="#%e4%ba%8c-safepoint-%e7%9a%84%e6%9c%ac%e8%b4%a8%e7%bc%96%e8%af%91%e6%9c%9f%e5%86%99%e6%ad%bb%e7%9a%84%e5%8f%aa%e8%af%bb%e8%b4%a6%e6%9c%ac" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Safepoint 在底层根本不是一段拦截代码，也不是一个特殊的函数，它只是一个“位置记录”——也就是一个由编译器在编译期计算好，并打包放进可执行文件中的“位置与活动指针映射表”。
+在编译阶段，编译器在生成机器码的同时，在后台偷偷拿一个小本本（静态存活分析，Liveness Analysis），把每一条核心机器指令的位置，以及在这个位置上，哪个寄存器/栈空间放的是活跃的指针，全部记录下来。
+这个“账本”在编译完成后，会固化在可执行文件的只读数据段中（如 .gclocals 和 .pclntab 符号表）。运行时（Runtime）只有读取权限。&lt;/p&gt;</description></item><item><title>内存管理：Go GC停顿时间优化</title><link>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%81%9C%E9%A1%BF%E6%97%B6%E9%97%B4%E4%BC%98%E5%8C%96/</link><pubDate>Wed, 17 Jun 2026 07:39:00 +0800</pubDate><guid>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%81%9C%E9%A1%BF%E6%97%B6%E9%97%B4%E4%BC%98%E5%8C%96/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/aio/DYmJzY0RsRWVUTnd6"/&gt;
+&lt;/div&gt;</description></item><item><title>内存管理 - Go GC 写屏障演进</title><link>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%86%99%E5%B1%8F%E9%9A%9C%E6%BC%94%E8%BF%9B/</link><pubDate>Wed, 17 Jun 2026 07:28:00 +0800</pubDate><guid>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%86%99%E5%B1%8F%E9%9A%9C%E6%BC%94%E8%BF%9B/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/aio/DYmVqUm5Od2puT2Z6"/&gt;
+&lt;/div&gt;</description></item><item><title>内存管理：GC Barriers 读屏障 vs. 写屏障</title><link>/blog/2026-06-16-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gc_barriers/</link><pubDate>Tue, 16 Jun 2026 00:14:00 +0800</pubDate><guid>/blog/2026-06-16-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gc_barriers/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/doc/DYnRXSnJCb3RNdHJG"/&gt;
+&lt;/div&gt;</description></item><item><title>内存管理：Go垃圾回收之混合写屏障</title><link>/blog/2026-06-11-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/</link><pubDate>Thu, 11 Jun 2026 15:00:00 +0800</pubDate><guid>/blog/2026-06-11-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/doc/DYmZKd0NVQU9ObHRL"/&gt;
+&lt;/div&gt;</description></item><item><title>go如何触发垃圾回收的</title><link>/blog/2022-11-20-go%E5%A6%82%E4%BD%95%E8%A7%A6%E5%8F%91%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</link><pubDate>Sun, 20 Nov 2022 20:39:22 +0800</pubDate><guid>/blog/2022-11-20-go%E5%A6%82%E4%BD%95%E8%A7%A6%E5%8F%91%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</guid><description>&lt;h2 id="前言"&gt;前言 &lt;a href="#%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;go触发GC有这么几个时机，内存分配时触发mallogc，定时触发sysmon，手动触发runtime.GC、debug.FreeOSMemory，其中内存分配时触发是go是重中之重，go runtime以此来平衡好内存分配、内存回收的节奏以让内存占用维持在一个合适的水准。本文对内存分配过程中触发GC的一些设计考量进行了总结梳理。&lt;/p&gt;
+&lt;h2 id="应该听过mark-assist"&gt;应该听过“mark assist” &lt;a href="#%e5%ba%94%e8%af%a5%e5%90%ac%e8%bf%87mark-assist" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;gc过程中mutator分配内存时可能会被搞去做assistg,去辅助扫描标记一些对象是否该回收的工作,当我的辅助标记内存数量减去要申请的内存数,如果为负数时,相当于我申请的比辅助标记的多,相当于欠债了,这个时候我就得去做些辅助标记的工作 gcAssistBytes:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;然后根据当前内存使用情况\扫描情况\下次GC的heapgoal,计算出我应该辅助标记多少,才能保证达到堆大小时GC标记工作恰好能完成,让我去干活&lt;/li&gt;
+&lt;li&gt;这个时候干活之前会先检查下bgMarkWorker因为扫描工作贡献的信用分,然后我可以借用这个信用分来偿还债务,以减少扫描工作,或者完全避免扫描工作&lt;/li&gt;
+&lt;li&gt;如果依旧欠债,那就干活呗,后面会执行到gcDrainN,去执行一些标记类的工作
+&lt;ul&gt;
+&lt;li&gt;这些标记类的工作从何而来呢,比如写屏障记录下来的一些需要去扫描的对象&lt;/li&gt;
+&lt;li&gt;执行完了这个扫描之后,这个assistG.gcAssistBytes就会加上扫描的字节数,相当于攒的一点信用分&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;干完这些之后,才允许你申请内存\分配对象,哈哈哈!&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;goroutine可以去做些mark assist之类的工作的前提是，GC已经进入了GCMark阶段，那内存分配期间GC是什么如何被触发的呢？&lt;/p&gt;
+&lt;h2 id="gc什么情况下被触发的"&gt;GC什么情况下被触发的 &lt;a href="#gc%e4%bb%80%e4%b9%88%e6%83%85%e5%86%b5%e4%b8%8b%e8%a2%ab%e8%a7%a6%e5%8f%91%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;关于什么时候触发GC，严谨一点，内存分配期间何时触发的GC，这里不考虑sysmon触发、手动runtime.GC()触发，ok。&lt;/p&gt;
+&lt;h3 id="gogcgomemlimitheapgoal"&gt;GOGC\GOMEMLIMIT\heapGoal &lt;a href="#gogcgomemlimitheapgoal" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;我们应该都这样的认识阶段，通过GOGC、GOMEMLIMIT可以计算出下次GC时的heapGoal，等堆内存占用达到这个heapGoal时会触发GC。&lt;/p&gt;
+&lt;p&gt;但是严格来讲，理解成接下来内存占用达到heapGoal才触发GC，是不正确的。&lt;/p&gt;
+&lt;h3 id="引入gc-trigger"&gt;引入GC Trigger &lt;a href="#%e5%bc%95%e5%85%a5gc-trigger" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;为了触发GC，还有一个概念，叫GC trigger，它的值heapGoal要小些，在GCOff阶段，内存分配过程中会检查当前heapLive大小是否超过了这个trigger，是则启动gc（gcStart）&lt;/li&gt;
+&lt;li&gt;那个协程来负责检查是否启动gc，可以理解成所有的协程，协程如果是申请大内存（&amp;gt;32K）则一定会做上述检查，小内存为了效率则不一定每次检查，当如果申请小内存（tiny or small）如果过程中span不足发生了refill也会做上述检查（shouldhelpgc）&lt;/li&gt;
+&lt;li&gt;当启动了GC之后，接下来goroutines如果涉及到内存分配，就会转入markAssist阶段，要分配多少，先要干一定量的标记扫描的活才行（内存debt/assist设计）&lt;/li&gt;
+&lt;li&gt;那么heapGoal干嘛用的呢，前面提到的内存debt/assist设计，就是为了在当前堆大小达到heapGoal时尽量完成内存的标记扫描，将markbits改成allocbits，未使用的就可以复用或者等下个GC cycle阶段回收&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;所以从GC trigger到heapGoal，这中间是有一些考量的，如果只认为GC heapGoal控制GC的触发，其实是认识不到位的。ps：可能在这这个提案 &lt;a href="https://go.googlesource.com/proposal/+/a216b56e743c5b6b300b3ef1673ee62684b5b63b/design/44167-gc-pacer-redesign.md"&gt;GC pacer redesign&lt;/a&gt; 实现之前确实是根据heapGoal来触发的，但是这会导致内存的不受限制的增长。&lt;/p&gt;
+&lt;h2 id="gc-trigger计算"&gt;GC Trigger计算 &lt;a href="#gc-trigger%e8%ae%a1%e7%ae%97" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;那么这个GC trigger是如何计算的呢？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;首先它不能比heapGoal小很多，那可能会导致GC启动过早，写屏障打开后程序latency会上升，而且如果内存分配比较快GC一直触发运行，期间分配的对象会一直标记为black，Rss会上升&lt;/li&gt;
+&lt;li&gt;也不能过晚触发，可能导致标记扫描阶段assistG的工作量过大，latency会比较明显，而且会堆大小增长会超出预期。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;至于如何计算的，可以先看下上面这个提案中关于GC trigger的设计，然后翻下源码瞧瞧……额，还是简单总结下吧：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;明确下目标，GC trigger是用来确定何时触发GC的一个值，当内存分配导致堆大小变化时会检查当前heapLive&amp;gt;trigger来决定是否触发GC（申请大内存必检查，申请小内存为了效率一般不检查，但在span不足refill后检查）&lt;/li&gt;
+&lt;li&gt;GC trigger如何计算出来的：
+&lt;ul&gt;
+&lt;li&gt;首先根据GOGC、GOMEMLIMIT算出下次GC的heapGoal，&lt;/li&gt;
+&lt;li&gt;然后根据minTrigger=heapMarked+(heapGoal-heapMarked)*0.7，&lt;/li&gt;
+&lt;li&gt;然后maxTrigger=heapMarked+(heapGoal-heapMarked)*.0.95，如果堆比较小就用这里算出的值意味着总有一个buffer来赶在内存占用达到heapGoal之前启动GC。如果堆比较大但是有没有多少扫描工作，就用heapGoal-defaultHeapMinimum(4MB)来作为maxTrigger，这也是一种优化。
+ps: 这里的heapMarked表示上轮GC标记结束时堆大小。这两个值，相当于确定了一个候选的触发GC的heapLive范围，最终trigger值一定要大于等于minTrigger，一定要小于等于maxTrigger。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;确定trigger：
+&lt;ul&gt;
+&lt;li&gt;确定runway，根据上轮GC过程记录的consMark（程序分配内存、扫描内存量的比值）、实际的扫描内存的量（heap+stack+global）以及并发标记执行阶段mutator:collector的CPU执行时间的比值3:1，可以大致算出下一轮GC期间内存使用量能涨到多少，这个源码中选了个词叫runway，意思是我们内存使用量能走多远。&lt;/li&gt;
+&lt;li&gt;很明显如果这个值如果大于heapGoal说明我们很可能会让堆占用走高，此时需要更激进地触发GC，所以此时的trigger就选下界minTrigger。&lt;/li&gt;
+&lt;li&gt;如果这个值比比heapGoal小，那就用goal-runway作为trigger，但是这个值表示的时啥？如果这个值比minTrigger小就用minTrigger。&lt;/li&gt;
+&lt;li&gt;前面还算了个最大trigger，如果这里的trigger值比maxTrigger还大，那trigger要改成maxTrigger。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="put-it-together"&gt;Put it together &lt;a href="#put-it-together" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;OK，现在知道了trigger值是怎么详细计算的了，好，我们继续串一下：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果当前没有触发GC，当前goroutine正在执行内存分配
+&lt;ul&gt;
+&lt;li&gt;根据当前内存分配的量来确定是否shouldhelpgc（&amp;gt;32K一定为true，反之则要根据是否有span不足refill）
+&lt;ul&gt;
+&lt;li&gt;如果否就分配完内存该干嘛干嘛去就完了&lt;/li&gt;
+&lt;li&gt;如果需要辅助gc，首先先计算下当前trigger（上面详细描述了如何计算的），然后比较下当前heapLive、trigger的大小
+&lt;ul&gt;
+&lt;li&gt;如果heapLive &amp;lt; trigger，不用触发GC，该干嘛干嘛&lt;/li&gt;
+&lt;li&gt;如果heapLive &amp;gt; trigger，发起GC，即调用gcStart()，这里其实是发起一轮完整的GC，等它完成后再返回来该干嘛干嘛&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;当有其他goroutine发起了GC，进入GCMark阶段后gcBlackenEnabled=1表示其他mutator要把新分配对象标记为黑，可以理解成当前进入GC阶段了
+&lt;ul&gt;
+&lt;li&gt;每一个goroutine都要维护一个账本，自己分配了多少内存，自己辅助标记了多少内存&lt;/li&gt;
+&lt;li&gt;如果自己分配的内存没有超过辅助标记的内存，gcAssistBytes&amp;gt;0，没欠债该干嘛干嘛去&lt;/li&gt;
+&lt;li&gt;如果自己分配的内存超过自己辅助标记的内存，表示自己欠债了，欠债了怎么办？就得还债，还债就得去辅助标记内存，这就是我们说的markAssist
+&lt;ul&gt;
+&lt;li&gt;如果我要分配npages的内存，那么要辅助扫描多少内存呢，这个运行时有个计算规则，总的目标是在GC发起后、内存占用达到heapGoal之前我能把所有的内存扫描完&lt;/li&gt;
+&lt;li&gt;确定了要扫描多少内存后，就可以去干活了？等等，当前goroutine欠的债，也可以先找大佬帮还一下，这就是bgMarkWorker攒的credit（bytes），如果一次还不完，欠多少就是多少，自己去扫描就完了
+ps: 这样有个好处，当前goroutine可以不用引入扫描内存的开销就可以继续干自己该干的事情。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;这个阶段会更新当前goroutine的这个账本，如果当前GC Cycle内它还有动作，就可以继续拿来秋后算账&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;当一轮GC Cycle结束时，go runtime会将当前的gcMarkBits作为gcAllocBits，意思就是这些没有被标记的内存都可以在后续分配内存对象时复用了，实在没用的就可以还给操作系统了。&lt;/p&gt;</description></item><item><title>go垃圾回收调优</title><link>/blog/2022-11-10-go%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E8%B0%83%E4%BC%98/</link><pubDate>Thu, 10 Nov 2022 10:54:26 +0800</pubDate><guid>/blog/2022-11-10-go%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E8%B0%83%E4%BC%98/</guid><description>&lt;h3 id="相关背景"&gt;&lt;strong&gt;相关背景&lt;/strong&gt; &lt;a href="#%e7%9b%b8%e5%85%b3%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在go1.19之前，go程序内存调优的方式主要是通过环境变量GOGC（或者debug.SetGCPercent(?)）来控制，&lt;/p&gt;
+&lt;p&gt;它的效果是影响go runtime计算nextGC heapGoal的大小：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;较早的版本计算方式为：&lt;strong&gt;heapGoal = heapMarked + (heapMarked) * GOGC / 100&lt;/strong&gt;，&lt;/li&gt;
+&lt;li&gt;后续go迭代时发现非堆内存也是有影响的，于是go1.18完善了下 &lt;strong&gt;heapGoal = heapMarked + (heapMarked + GCROOTs) * GOGC/100&lt;/strong&gt;，这里的&lt;strong&gt;GCROOTS=(gstacks+globals)&lt;/strong&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;GC pacer的目的就是为了根据上述公式计算下次GC的heapGoal，然后在必要时（比如malloc时）决定是否要GC。&lt;/p&gt;
+&lt;p&gt;默认初始heapGoal大小为4MB，如果靠GOGC来控制的话，会比较频繁触发GC，对绝大多数server程序而言频繁GC占比较多CPU，程序整体吞吐、响应延迟会受一定影响。&lt;/p&gt;
+&lt;p&gt;所以业界一般会通过两种方式来调优：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;ballast，利用一块不用的大内存（比如1GB），来推高下次GC的heapGoal，通过这种方式来降低GC频率&lt;/li&gt;
+&lt;li&gt;GC tuner，动态设置GOGC，定义一个对象为其设置finalizer，每轮GC结束时触发它并检查当前进程当前的内存占用情况，并与允许的最大内存占用进行比较，并计算出达到最大内存占用才触发GC时GOGC应该设定的值（其思路和go1.19 GOMEMLIMIT类似）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="项目以前的方案"&gt;项目以前的方案 &lt;a href="#%e9%a1%b9%e7%9b%ae%e4%bb%a5%e5%89%8d%e7%9a%84%e6%96%b9%e6%a1%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;项目以前使用的是go1.16.5，这个版本中也只有GOGC一个控制GC的选项，使用的是ballast的方案：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;在服务初始化阶段去初始化一个大内存而推高下次GC时的heapGoal&lt;/li&gt;
+&lt;li&gt;不同程序可能对内存需求不同，配置文件中允许自定义ballast大小，默认为1GB&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;包括业界在内都是介绍了ballast如何使用：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;全局变量声明，垃圾回收器会认为其在整个进程生命周期内reachable&lt;/li&gt;
+&lt;li&gt;局部变量声明，通过runtime.KeepAlive(&amp;hellip;)来欺骗垃圾回收器这之前对象reachable&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;但是，好像只看到了一派祥和，我们使用时却遇到了Rss占用问题。&lt;/p&gt;
+&lt;h4 id="问题1ballast占物理内存"&gt;问题1：ballast占物理内存 &lt;a href="#%e9%97%ae%e9%a2%981ballast%e5%8d%a0%e7%89%a9%e7%90%86%e5%86%85%e5%ad%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;在测试环境（很多套测试环境）都有比较大概率发现服务在几乎空闲时，物理内存占用竟然高达1.1g…这很不符合常理。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;通过pprof跟踪内存分配，发现内存分配比较大的路径就是这个压舱石（pprof mem采样是看的虚拟内存）。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;然后top、pmap等跟踪可疑进程发现其确实存在1GB左右的anon区域，且该区域为dirty**（其实gdb把内存dump一看全是0，就很容易联想到类似对象分配后memset的操作）**。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;根据了解的go GC、内存分配器相关的知识，了解到&lt;strong&gt;go向操作系统申请内存时通过mmap的方式&lt;/strong&gt;，&lt;strong&gt;释放内存是通过madvise+MADV_DONTNEED/MADV_FREE&lt;/strong&gt;的方式。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;go1.12的时候改成了FREE默认代替DONTNEED，这两个选项是有区别的，详细的可以看下man手册（man 2 madvise），FREE的效率更好一点，但是也有一些不好的副作用。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;go1.16之后linux下又恢复成了DONTNEED，因为FREE不会立即让进程的RSS降下来，会误导很多监控、开发运维人员&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;内存分配器为了提高分配效率、GC效率会进行一定的组织，这些概念大家应该有听说过，mheap、spanClass、mcentral、mspan、markbits、allocbits，还有p.mcache。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;smallSize&amp;lt;=32K的分配，走p.mcache（tinySize的更特殊一点，略）&lt;/li&gt;
+&lt;li&gt;largeSize&amp;gt;32K的分配，直接走mheap&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些对象不管是从p.mcache-&amp;gt;mcentral-&amp;gt;arena-&amp;gt;mheap路径来分配的，还是从mheap直接分配的，最终都是建立在从操作系统申请来的page里的，而这些page是由page allocator申请的。即使是很大的对象，最终也是以存在span描述的区域里的。&lt;/p&gt;
+&lt;p&gt;一个span可以很多pages，而在里面分配一个对象时，这些page是可以复用的，如果之前其中一个page用过了，但是现在申请一个更大的对象，之前这个旧的page也是所需pages中的一个，那么分配器会先清零memclr&amp;hellip;这段内存区域，这样在操作系统看来就是要真正分配内存，并且因为写了0，那就是全为dirty。&lt;/p&gt;
+&lt;p&gt;ps：可能我们以为我mmap新申请的内存页面，不写不也是0，为什么不只写之前复用过的page呢？嗯，道理归道理，现在的分配器实现就是这么干的，详见&lt;code&gt;allocNeedsZero(base, npages)&lt;/code&gt;这个函数。&lt;/p&gt;
+&lt;p&gt;结论：就是通过ballast这种方案初始化有点tricky，在更大范围的应用中不是很可靠：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;虽然通过一些尽早分配的办法可以避免上述问题，但是不太可靠。因为不确定哪天import了一个包，里面干了些内存分配比较多的操作，说不定影响到ballast占物理内存。&lt;/li&gt;
+&lt;li&gt;另外ballast这种方案不可移植，它是否占内存与特定平台也有一定关系，并不总是说mmap了一段内存过来不读写就不占内存，windows下的分配就是立即分配。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4 id="问题2可能引发oom问题"&gt;问题2：可能引发OOM问题 &lt;a href="#%e9%97%ae%e9%a2%982%e5%8f%af%e8%83%bd%e5%bc%95%e5%8f%91oom%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;本来是想通过ballast来在程序内存负载低时尽量减少GC活动，但是当内存负载高了之后，还是希望它能多清理下GC的，如果清理不及时就容易OOM。特别是混部场景下，这种问题就更明显。&lt;/p&gt;
+&lt;p&gt;我们可以在内存占用较高时，把GOGC设置的小一点来频繁的触发GC，来缓解这个问题。但是如果项目已经是使用的GOGC=100+ballast方案的话可能就不是很好调节，因为下次GC的heapGoal已经被推高了。&lt;/p&gt;
+&lt;p&gt;如果一开始就采用动态设置GOGC的方式，就更容易实施，比如uber的GC Tuner。在内存占用离上限（uber容器部署时通常取可用物理资源的70%）比较大时就用更大的GOGC（大于100），随着内存占用变高，GOGC也越来越小，通过更频繁的GC来尽可能避免OOM。&lt;/p&gt;</description></item><item><title>GC: prioritizing low latency and simplicity</title><link>/blog/2021-05-01-gogc-prioritizing-low-latency-and-simplicity/</link><pubDate>Sat, 01 May 2021 11:17:56 +0800</pubDate><guid>/blog/2021-05-01-gogc-prioritizing-low-latency-and-simplicity/</guid><description>&lt;p&gt;原文地址：https://blog.golang.org/go15gc&lt;/p&gt;
+&lt;p&gt;介绍了当前软硬件大规模发展的趋势以及go GC需要优先解决的问题：低延迟和简单性（通过一个参数就可以控制，而非像JVM调参那样）。&lt;/p&gt;
+&lt;p&gt;go团队的目标是设计一个面向未来十年的垃圾回收器，借鉴了十几年前发明的算法。go GC使用的是并发三色标记清除算法（concurrent, tri-color, mark-sweep collector），由Dijkstra在1978年提出。该算法与现在大多数企业级的GC实现不同，但是go团队认为该算法更适合于现代硬件的发展，也更有助于实现现代软件的GC低延迟目标。&lt;/p&gt;
+&lt;p&gt;该GC算法中，每个对象只能是white、grey、black中的其中一种，heap可以看做是互相连接的对象构成的一个graph。GC算法流程是：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;GC开始时，所有对象都是white；&lt;/li&gt;
+&lt;li&gt;GC遍历所有的roots对象（比如全局变量、栈变量）将其标记为灰色；&lt;/li&gt;
+&lt;li&gt;然后GC选择一个grey对象，将其标记为black，并扫描（scan）该对象检查它内部的指向其他对象的指针。如果发现有指针指向其他white对象，将white对象标记为grey；&lt;/li&gt;
+&lt;li&gt;该过程重复执行，直到没有任何的灰色对象；&lt;/li&gt;
+&lt;li&gt;最后，剩下的白色对象即认为是不可达对象，可以被回收再利用；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;GC过程和应用程序执行是并发进行的，应用程序也称为mutator，它会在GC运行期间修改一些指针的值。mutator必须遵循这样一条规则，就是不允许出现一个黑色对象指向一个白色对象，这样会导致对象被错误地回收。为了保证该规则成立，就需要引入写屏障（write barrier），它是编译阶段由编译器对mutator指针操作安插的一些特殊指令，用来跟踪对指针的修改，write barrier如果发现当前黑色对象的内部指针字段指向了外部的一个白色对象，则会将白色对象染色为grey，避免其被错误地GC掉，也保证其可以被继续扫描。&lt;/p&gt;
+&lt;p&gt;有些GC相关的问题：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;什么时候启动GC？&lt;/li&gt;
+&lt;li&gt;通过哪些指标来判断要启动GC？&lt;/li&gt;
+&lt;li&gt;GC应该如何与scheduler进行交互？&lt;/li&gt;
+&lt;li&gt;如何暂停一个mutator线程足够长时间，以扫描器stack？&lt;/li&gt;
+&lt;li&gt;如何表示white、grey和black三种颜色来实现高效地查找、扫描grey对象？&lt;/li&gt;
+&lt;li&gt;如何知道roots对象在哪里？&lt;/li&gt;
+&lt;li&gt;如何知道一个指向对象的指针的位置？&lt;/li&gt;
+&lt;li&gt;如何最小化内存碎片？&lt;/li&gt;
+&lt;li&gt;如何解决cache性能问题？&lt;/li&gt;
+&lt;li&gt;heap应该设置为多大？&lt;/li&gt;
+&lt;li&gt;等等。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;上述问题有些与内存分配有关，有些与可达对象分析有关，有些与goroutine调度有关，有些与性能有关，关于这些内容的讨论远远超出本文篇幅，可以自己参考相关的材料。&lt;/p&gt;
+&lt;p&gt;为了解决GC性能问题，可以考虑为每一种优化加个参数来控制，开发人员可以自己调整这里的参数来达到想要的优化效果。但是这种做法时间久了之后会发现有非常多的参数，调优就会变得非常困难，比如JVM调优。go团队不想走这样的老路，力求简单高效。&lt;/p&gt;
+&lt;p&gt;go通过GOGC这个环境变量来控制整个堆大小相对于现阶段可达对象大小的比例。GOGC默认值是100%，意味着当堆大小增长了当前可达对象大小的1倍时（2倍大小），就会触发GC；200%则意味着继续增长了当前可达对象的2倍时触发GC（3倍大小）。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果想降低GC花费的时间，就把这个值设置的大一点，因为这样不容易频繁触发GC；&lt;/li&gt;
+&lt;li&gt;如果愿意花费更多的GC时间来换取更少的内存占用，就把这个值设置的小一点，因为这样能够更加频繁地GC；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;前面提到go团队要设计一个面向未来十年的垃圾回收器，未来十年机器内存容量可能会翻倍或者成倍增长，简单地将GOGC设置为一定倍率也可以很好地工作，也不用像JVM调优那样重新设置一堆地参数，调参大军好惨。go团队也可以倾听用户真正地诉求在运行时方面做更多的优化。&lt;/p&gt;</description></item></channel></rss>

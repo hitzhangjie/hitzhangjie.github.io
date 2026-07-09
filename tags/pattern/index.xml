@@ -1,4 +1,15 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>pattern on</title><link>/tags/pattern/</link><description>Recent content in pattern on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 25 Apr 2022 00:23:51 +0800</lastBuildDate><atom:link href="/tags/pattern/index.xml" rel="self" type="application/rss+xml"/><item><title>Understanding the Design Patterns</title><link>/blog/2022-04-24-understanding-design-patterns/</link><pubDate>Mon, 25 Apr 2022 00:23:51 +0800</pubDate><guid>/blog/2022-04-24-understanding-design-patterns/</guid><description>The design patterns is a blueprint about how to solve a commonly-reoccuring prolem in specific occasions.According to scale and complexity, the patterns could be categorized as Architecture Patterns, Design Patterns and Idioms.
-Introduction # go-patterns actually is short for design patterns in go, which shows list of demos behind the concepts.
-We must think about the following questions before we dive into the demos, it is really important.
-What&amp;rsquo;s a pattern?</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Pattern on</title><link>/tags/pattern/</link><description>Recent content in Pattern on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 25 Apr 2022 00:23:51 +0800</lastBuildDate><atom:link href="/tags/pattern/index.xml" rel="self" type="application/rss+xml"/><item><title>Understanding the Design Patterns</title><link>/blog/2022-04-24-understanding-design-patterns/</link><pubDate>Mon, 25 Apr 2022 00:23:51 +0800</pubDate><guid>/blog/2022-04-24-understanding-design-patterns/</guid><description>&lt;p&gt;The design patterns is a blueprint about how to solve a commonly-reoccuring prolem in specific occasions.According to scale and complexity, the patterns could be categorized as Architecture Patterns, Design Patterns and Idioms.&lt;/p&gt;
+&lt;h2 id="introduction"&gt;Introduction &lt;a href="#introduction" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;go-patterns actually is short for design patterns in go, which shows list of demos behind the concepts.&lt;/p&gt;
+&lt;p&gt;We must think about the following questions before we dive into the demos, it is really important.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;What&amp;rsquo;s a pattern?&lt;/li&gt;
+&lt;li&gt;What&amp;rsquo;s a design pattern?&lt;/li&gt;
+&lt;li&gt;History of patterns?&lt;/li&gt;
+&lt;li&gt;Why should I learn patterns?&lt;/li&gt;
+&lt;li&gt;Criticism of patterns?&lt;/li&gt;
+&lt;li&gt;Classification of patterns?&lt;/li&gt;
+&lt;li&gt;etc.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="whats-a-pattern"&gt;What&amp;rsquo;s a pattern? &lt;a href="#whats-a-pattern" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Pattern is a solution, which works well in practices, to a commonly reoccurring problems. Patterns could be created and shared in every area, like building body, improving representation skills, architecture skills, or software design.&lt;/p&gt;</description></item></channel></rss>

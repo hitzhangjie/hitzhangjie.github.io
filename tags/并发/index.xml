@@ -1,6 +1,23 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>并发 on</title><link>/tags/%E5%B9%B6%E5%8F%91/</link><description>Recent content in 并发 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 19 Apr 2021 00:00:00 +0800</lastBuildDate><atom:link href="/tags/%E5%B9%B6%E5%8F%91/index.xml" rel="self" type="application/rss+xml"/><item><title>Go sync.Mutex 设计实现</title><link>/blog/2021-04-19-go-sync.mutex%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</link><pubDate>Mon, 19 Apr 2021 00:00:00 +0800</pubDate><guid>/blog/2021-04-19-go-sync.mutex%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</guid><description>终于来到了go语言相关的设计实现，go中sync.Mutex的设计有很多设计方面的考虑。
-我们看下对应的加锁解锁部分，对应的源码 see https://sourcegraph.com/github.com/golang/go/-/blob/src/sync/mutex.go#L72
-首先，了解下锁的定义，我们看到里面有个state字段，这个字段表示的是锁的状态，为0表示锁是解锁状态，其他状态可以参考下源码中的定义。
-// A Mutex is a mutual exclusion lcok. // The zero value for a Mutex is an unlocked mutex. // // A Mutex must not be copied after first use. type Mutext struct { state int32 sema uint32 } const ( mutexLocked = 1 &amp;lt;&amp;lt; iota // mutex is locked mutexWoken mutexStarving mutexWaiterShift = iota ) 下面看下加解锁实现，多注意下state相关的逻辑，比较容易好理解。
-mutex.Lock() # fastpath # 首先，会执行fastpath，会尝试CAS加锁一次，如果没有很多锁竞争，且锁处于未加锁状态（state=0），大概率会加锁成功（state=1）成功返回。
-如果fastpath加锁失败了，比如尝试加锁前state != 0：</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>并发 on</title><link>/tags/%E5%B9%B6%E5%8F%91/</link><description>Recent content in 并发 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 19 Apr 2021 00:00:00 +0800</lastBuildDate><atom:link href="/tags/%E5%B9%B6%E5%8F%91/index.xml" rel="self" type="application/rss+xml"/><item><title>Go sync.Mutex 设计实现</title><link>/blog/2021-04-19-go-sync.mutex%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</link><pubDate>Mon, 19 Apr 2021 00:00:00 +0800</pubDate><guid>/blog/2021-04-19-go-sync.mutex%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</guid><description>&lt;p&gt;终于来到了go语言相关的设计实现，go中sync.Mutex的设计有很多设计方面的考虑。&lt;/p&gt;
+&lt;p&gt;我们看下对应的加锁解锁部分，对应的源码 see https://sourcegraph.com/github.com/golang/go/-/blob/src/sync/mutex.go#L72&lt;/p&gt;
+&lt;p&gt;首先，了解下锁的定义，我们看到里面有个state字段，这个字段表示的是锁的状态，为0表示锁是解锁状态，其他状态可以参考下源码中的定义。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;// A Mutex is a mutual exclusion lcok.
+// The zero value for a Mutex is an unlocked mutex.
+//
+// A Mutex must not be copied after first use.
+type Mutext struct {
+state int32
+sema uint32
+}
+const (
+mutexLocked = 1 &amp;lt;&amp;lt; iota // mutex is locked
+mutexWoken
+mutexStarving
+mutexWaiterShift = iota
+)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;下面看下加解锁实现，多注意下state相关的逻辑，比较容易好理解。&lt;/p&gt;
+&lt;h3 id="mutexlock"&gt;mutex.Lock() &lt;a href="#mutexlock" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;h4 id="fastpath"&gt;fastpath &lt;a href="#fastpath" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;首先，会执行fastpath，会尝试CAS加锁一次，如果没有很多锁竞争，且锁处于未加锁状态（state=0），大概率会加锁成功（state=1）成功返回。&lt;/p&gt;
+&lt;p&gt;如果fastpath加锁失败了，比如尝试加锁前state != 0：&lt;/p&gt;</description></item></channel></rss>

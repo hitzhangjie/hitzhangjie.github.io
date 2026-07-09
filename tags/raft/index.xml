@@ -1,33 +1,140 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Raft on</title><link>/tags/raft/</link><description>Recent content in Raft on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 02 Jul 2026 20:00:00 +0800</lastBuildDate><atom:link href="/tags/raft/index.xml" rel="self" type="application/rss+xml"/><item><title>FLP 不可能性：分布式共识的边界、启示与工业突围</title><link>/blog/2026-07-02-flp-impossibility-guide/</link><pubDate>Thu, 02 Jul 2026 20:00:00 +0800</pubDate><guid>/blog/2026-07-02-flp-impossibility-guide/</guid><description>背景 # 写这篇文章的原因很简单：我跟同事聊 FLP 的时候，发现自己虽然读过论文，但真让我用大白话解释清楚，还是磕磕绊绊。什么&amp;quot;异步系统&amp;quot;、&amp;ldquo;二价配置&amp;rdquo;、&amp;ldquo;liveness&amp;rdquo;……读到一半就想放弃。
-所以我决定把这篇文章写给自己，也写给和我一样的分布式系统工程师——我们不是研究员，不需要用形式化符号交流，但我们需要真的搞懂 FLP 到底在说什么、它为什么值得被记住、以及它对我们日常写的分布式系统有什么影响。
-这篇文章会尽量避免&amp;quot;定义 3.1&amp;quot;、&amp;ldquo;定理 5.2&amp;quot;式的写法。如果某个概念第一次出现，我会先花几句话讲清楚它到底是什么。证明过程放到附录，正文只保留直觉。
-一、先把话说清楚：这些词到底是什么意思 # FLP 论文里有几个反复出现的词，不先搞清楚，后面没法聊。FLP，三位作者名字首字母缩写，它指的是三位作者论文提出的观点，“纯异步系统中即使只有一个节点故障，也无法建立确定性共识算法来同时满足safety和liveness”。
-1.1 &amp;ldquo;进程&amp;quot;是什么？ # 在 FLP 的语境下，一个&amp;quot;进程&amp;rdquo;（process）就是分布式系统里的一台机器——或者更准确地说，是这台机器上运行的那个程序实例。
-比如你有一个三节点的 etcd 集群，每个节点就是一个&amp;quot;进程&amp;rdquo;。这些进程之间只能通过发消息来通信——没有共享内存，没有全局变量。
-1.2 &amp;ldquo;正确的进程&amp;rdquo; vs &amp;ldquo;故障的进程&amp;rdquo; # 正确的进程：按照协议规定的逻辑老老实实在跑，不 crash，不发假消息。你可以理解成&amp;quot;这个节点是健康的&amp;quot;。
-故障的进程（FLP 论文里指 crash-stop 故障）：这个进程某一天突然不干活了。它不发送任何消息，也不响应任何请求——就像一台机器突然断电了。关键限制：它不会&amp;quot;撒谎&amp;quot;——FLP 讨论的是崩溃故障，不是拜占庭故障（恶意节点故意发错误消息的那种）。
-FLP 的惊人之处在于：只需要一个进程可能 crash（其他 N-1 个都好好的），共识就已经不可能了。
-wait，假消息？对，在更一般化的分布式系统中，比如战争中的每个个体，还要考虑个体会不会发出假消息来误导整个系统，比如拜占庭将军问题中叛变的将军可能会发出“进攻&amp;quot;”撤退&amp;quot;的误导性消息，从而打破全军的共识。
-1.3 &amp;ldquo;决定一个值&amp;rdquo; 到底是什么意思？ # 共识问题的场景是这样的：
-有 N 个进程，每个进程一开始都有一个自己提议的值（比如进程 1 提议&amp;quot;主节点是 A&amp;quot;，进程 2 提议&amp;quot;主节点是 B&amp;quot;）。它们需要通过互相发消息，最终所有人对同一个值达成一致。
-&amp;ldquo;决定&amp;rdquo;（decide）就是：一个进程在某个时刻，最终选定了一个值，并且从此以后不再改变。
-这里面有两个要求：
-大家决定的值一样：不能进程 1 选了 A，进程 2 选了 B。这叫&amp;quot;一致性&amp;quot;（agreement）。 决定的值必须是某个进程提出的：不能说大家最后决定了一个谁也没提出过的&amp;quot;C&amp;quot;。这叫&amp;quot;有效性&amp;quot;（validity）。 合在一起就是共识问题的 Safety 部分——&amp;ldquo;不出错&amp;rdquo;。</description></item><item><title>异地多活的阿喀琉斯之踵：写一致性的技术真相与工业实践</title><link>/blog/2026-07-01-%E5%BC%82%E5%9C%B0%E5%A4%9A%E6%B4%BB%E6%95%B0%E6%8D%AE%E4%B8%80%E8%87%B4%E6%80%A7%E6%B7%B1%E5%BA%A6%E5%89%96%E6%9E%90/</link><pubDate>Wed, 01 Jul 2026 20:16:00 +0800</pubDate><guid>/blog/2026-07-01-%E5%BC%82%E5%9C%B0%E5%A4%9A%E6%B4%BB%E6%95%B0%E6%8D%AE%E4%B8%80%E8%87%B4%E6%80%A7%E6%B7%B1%E5%BA%A6%E5%89%96%E6%9E%90/</guid><description>背景 # 在上一篇文章中，我们讨论了容错、高可用、容灾三者的本质区别。在容灾部分提到，异地多活是容灾体系中的&amp;quot;最高形态&amp;quot;——理想情况下 RTO ≈ 0，RPO ≈ 0。
-听起来很美好。但如果你深入问一句：&amp;ldquo;多活&amp;quot;到底是读多活，还是写多活？ 很多号称实现了异地多活的系统就要开始支支吾吾了。
-在展开之前，先厘清一个关键定义。所谓&amp;quot;写多活&amp;quot;存在三种不同层级的理解：
-L1（分区多写）：不同数据中心可以同时处理写请求，但每条数据在同一时刻只有一个&amp;quot;归属&amp;quot;写入者——单元化属于这一层级。 L2（同记录多写，最终一致）：两个数据中心可以同时修改同一条记录，冲突通过事后合并解决——CRDT 属于这一层级。 L3（同记录多写，强一致）：两个数据中心可以同时修改同一条记录，且系统对外表现得像只有一个副本——Spanner 属于这一层级，是目前已知的&amp;quot;上界&amp;rdquo;。 本文试图诚实回答一个问题：异地多活中，数据的写一致性到底怎么解决？工业界真正落地的方式是什么？以及，我们到底需要&amp;quot;多活&amp;quot;到什么程度？
-一、异地多活的挑战全景 # 1.1 根源：CAP 与 PACELC # Eric Brewer 在 2000 年提出的 CAP 定理，其精确表述是：当网络分区（Partition）发生时，分布式系统必须在 Consistency（线性一致性）和 Availability 之间做出权衡；当网络正常时，系统可以同时提供 C 和 A。将 CAP 简单地理解为&amp;quot;永久三选二&amp;quot;是一种常见的误读——C 和 A 的取舍只在分区窗口期才生效。
-C (Consistency / Linearizability) — 所有操作表现得像在一个全局有序的时间线上原子执行 A (Availability) — 每个非失败节点收到的请求最终都能返回响应 P (Partition Tolerance) — 系统在任意网络分区下仍能继续运行 异地多活场景下，机房之间的网络延迟不可消除（光纤中光速约 $2\times10^8$ m/s，北京到深圳直线约 2000km，即使走真空光速极限也需 ~13ms 往返），网络分区不可杜绝（光缆被挖断、运营商 BGP 抖动）。P 是必须接受的现实。</description></item><item><title>如何使用raft算法开发强一致kv存储系统</title><link>/blog/2021-09-04-%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8raft%E5%BC%80%E5%8F%91%E5%BC%BA%E4%B8%80%E8%87%B4kv%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F/</link><pubDate>Sun, 05 Sep 2021 00:47:15 +0800</pubDate><guid>/blog/2021-09-04-%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8raft%E5%BC%80%E5%8F%91%E5%BC%BA%E4%B8%80%E8%87%B4kv%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F/</guid><description>本文内容 # 本文结合etcd源码来进行介绍，etcd/contrib/raftexample提供了一个基于etcd/raft实现的kv存储系统。从该示例出发，我们来看一看如何基于raft算法开发一个强一致的kv存储系统。
-看完本文的源码分析后，上手一个raft强一致系统开发就不是什么难事了。
-ps：假定读者已经阅读并理解了raft论文，这里有我的批注版的In Search of an Understandable Consensus Algorithm.pdf，读起来可能会好理解点。
-etcd/raft # etcd服务端程序入口：see 源码
-启动过程中区分当前节点类型：根据data-dir目录下的目录名member/proxy/empty来区分，然后启动etcd实例或者proxy； 启动etcd服务节点：startEtcd这个函数，逻辑主要包括启动供集群节点间通信的rafthttp服务，以及供客户端请求的服务； 启动etcd proxy：startProxy这个函数，逻辑主要是启动etcd代理； etcd哪些部分值得学习：
-etcd proxy从项目功能上来说虽然很重要，但是从学习角度来说没那么有价值，不看这个； etcd server从项目功能上来说是核心，但是我们也没有必要学习所有的请求处理逻辑，重点是关注读写操作时如何基于raft实现强一致； raft：这部分是raft算法的核心实现，从理解raft论文到算法工程化需要额外做出巨大的优化，这些知识点往往是通用的，重点掌握； raft部分：
-pb协议： raft peers的通信协议，see 源码； raft算法中提到核心的几个rpc就是Vote、AppendEntries，但是工程中需要考虑更多，详见上述pb中的enum MessageType； 上述pb中的message Message类型定义了rpc通信过程中的请求/响应，不同rpc通过MessageType type字段区分； 状态机： raft实现数据一致性是通过replicated log（复制日志）实现的，这里的replicated log有时也称为WAL（write ahead log）； raft算法中，每个节点raftnode可能处于以下状态中的一种：follower、candidate、precandidate、leader； raft算法中，每个节点的状态可以通过一个状态机来建模； 了解了这些基础知识之后，我们结合etcd/contrib/raftexample来解释下raft如何选举，以及leader遇到写操作如何保证数据强一致。
-etcd/raft如何进行leader选举 # newRaftNode newRaftNode，see 源码，这个函数包括创建一个var rc raftNode，然后rc.startRaft()，这个函数包含非常重要的几个部分：
-startNode，see 源码，这个主要是建立好raftnode启动时的一些初始状态转换，有一个for事件循环处理，如改变raftnode的状态：tick函数、step函数，以及一些message的处理等等； serveRaft： serveChannels：see 源码 startNode:</description></item><item><title>分布式系统工程师roadmap</title><link>/blog/2021-07-01-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%B7%A5%E7%A8%8B%E5%B8%88roadmap/</link><pubDate>Fri, 02 Jul 2021 12:45:38 +0800</pubDate><guid>/blog/2021-07-01-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%B7%A5%E7%A8%8B%E5%B8%88roadmap/</guid><description>如何成为一名资深的分布式系统工程师，需要补齐哪些理论基础，又需要哪些工程方面的锻炼？本文原文见 Henry Robinson 的文章 distributed systems theory for the distributed systems engineer，我觉得是一个很不错的roadmap，沿着这个脉络半年下来，还是很有收获的……继续:)
-1 掌握分布式背后的相关理论 # 可能会有人甩出很多论文，FLP论文、Paxos论文、Raft论文、拜占庭将军相关的论文&amp;hellip;相关的论文可以摆出很多，但是论文是有一定深度的，是非常严谨的论述，对于攻读PhD的同学有帮助，但是对于一名从事分布式系统工程的同学真的有必要全部掌握吗？应该看多少论文，毕竟经过了那么多年的发展、沉淀呢？ 作为一名分布式系统工程师，搞明白需要掌握哪些理论，比单纯了解有哪些论文更重要。
-2 First Steps # 下面的4个文集很好地介绍了构建一个分布式系统要面临的挑战，它们共同概述了分布式系统工程师必须克服的一些技术上的困难，并为后面章节中更详细的说明奠定了基础。
-Distributed Systems for Fun and Profit，介绍了分布式系统的基础知识，包括时间在分布式系统中扮演的角色、不同的复制策略等； Notes on distributed systems for young bloods，不是纯理论介绍，在理论和实践中做到了一个不错的平衡，为后续更深入学习打好基础； A Note on Distributed Systems，一篇很经典的论文，解释了分布式系统中为什么不能总把远程交互对象当做本地的对象，让读者理解分布式场景中的问题和挑战； The fallacies of distributed computing，分布式计算的8个谬论，为分布式系统设计人员设计系统打下基础； 我们需要了解两个重要属性的含义，“safety”和“liveness”：
-safety，该属性表示不会有坏的事情发生，如API不会返回不一致的value、集群中不会同时选出两个leader等； liveness，该属性表示好的事情最终会发生，如API最终会返回一个结果、磁盘写操作最终会完成等； 3 Failure and Time # 分布式系统工程师面对的一些困难，其实可以归结为下面2个原因：
-Processes may fail There&amp;rsquo;s no good way to tell that they have done so 即，分布式系统中的任意进程可能会出现故障，但是其他进程又没有可靠的方式来感知这个进程出现了故障。</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Raft on</title><link>/tags/raft/</link><description>Recent content in Raft on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 02 Jul 2026 20:00:00 +0800</lastBuildDate><atom:link href="/tags/raft/index.xml" rel="self" type="application/rss+xml"/><item><title>FLP 不可能性：分布式共识的边界、启示与工业突围</title><link>/blog/2026-07-02-flp-impossibility-guide/</link><pubDate>Thu, 02 Jul 2026 20:00:00 +0800</pubDate><guid>/blog/2026-07-02-flp-impossibility-guide/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;写这篇文章的原因很简单：我跟同事聊 FLP 的时候，发现自己虽然读过论文，但真让我用大白话解释清楚，还是磕磕绊绊。什么&amp;quot;异步系统&amp;quot;、&amp;ldquo;二价配置&amp;rdquo;、&amp;ldquo;liveness&amp;rdquo;……读到一半就想放弃。&lt;/p&gt;
+&lt;p&gt;所以我决定把这篇文章写给自己，也写给和我一样的分布式系统工程师——我们不是研究员，不需要用形式化符号交流，但我们需要真的搞懂 FLP 到底在说什么、它为什么值得被记住、以及它对我们日常写的分布式系统有什么影响。&lt;/p&gt;
+&lt;p&gt;这篇文章会尽量避免&amp;quot;定义 3.1&amp;quot;、&amp;ldquo;定理 5.2&amp;quot;式的写法。如果某个概念第一次出现，我会先花几句话讲清楚它到底是什么。证明过程放到附录，正文只保留直觉。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h1 id="一先把话说清楚这些词到底是什么意思"&gt;一、先把话说清楚：这些词到底是什么意思 &lt;a href="#%e4%b8%80%e5%85%88%e6%8a%8a%e8%af%9d%e8%af%b4%e6%b8%85%e6%a5%9a%e8%bf%99%e4%ba%9b%e8%af%8d%e5%88%b0%e5%ba%95%e6%98%af%e4%bb%80%e4%b9%88%e6%84%8f%e6%80%9d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;FLP 论文里有几个反复出现的词，不先搞清楚，后面没法聊。FLP，三位作者名字首字母缩写，它指的是三位作者论文提出的观点，“纯异步系统中即使只有一个节点故障，也无法建立确定性共识算法来同时满足safety和liveness”。&lt;/p&gt;
+&lt;h2 id="11-进程是什么"&gt;1.1 &amp;ldquo;进程&amp;quot;是什么？ &lt;a href="#11-%e8%bf%9b%e7%a8%8b%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 FLP 的语境下，一个&amp;quot;进程&amp;rdquo;（process）就是分布式系统里的一台机器——或者更准确地说，是这台机器上运行的那个程序实例。&lt;/p&gt;
+&lt;p&gt;比如你有一个三节点的 etcd 集群，每个节点就是一个&amp;quot;进程&amp;rdquo;。这些进程之间只能通过&lt;strong&gt;发消息&lt;/strong&gt;来通信——没有共享内存，没有全局变量。&lt;/p&gt;
+&lt;h2 id="12-正确的进程-vs-故障的进程"&gt;1.2 &amp;ldquo;正确的进程&amp;rdquo; vs &amp;ldquo;故障的进程&amp;rdquo; &lt;a href="#12-%e6%ad%a3%e7%a1%ae%e7%9a%84%e8%bf%9b%e7%a8%8b-vs-%e6%95%85%e9%9a%9c%e7%9a%84%e8%bf%9b%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;正确的进程&lt;/strong&gt;：按照协议规定的逻辑老老实实在跑，不 crash，不发假消息。你可以理解成&amp;quot;这个节点是健康的&amp;quot;。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;故障的进程&lt;/strong&gt;（FLP 论文里指 crash-stop 故障）：这个进程某一天突然不干活了。它不发送任何消息，也不响应任何请求——就像一台机器突然断电了。&lt;strong&gt;关键限制&lt;/strong&gt;：它不会&amp;quot;撒谎&amp;quot;——FLP 讨论的是崩溃故障，不是拜占庭故障（恶意节点故意发错误消息的那种）。&lt;/p&gt;
+&lt;p&gt;FLP 的惊人之处在于：只需要一个进程可能 crash（其他 N-1 个都好好的），共识就已经不可能了。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;wait，假消息？对，在更一般化的分布式系统中，比如战争中的每个个体，还要考虑个体会不会发出假消息来误导整个系统，比如拜占庭将军问题中叛变的将军可能会发出“进攻&amp;quot;”撤退&amp;quot;的误导性消息，从而打破全军的共识。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="13-决定一个值-到底是什么意思"&gt;1.3 &amp;ldquo;决定一个值&amp;rdquo; 到底是什么意思？ &lt;a href="#13-%e5%86%b3%e5%ae%9a%e4%b8%80%e4%b8%aa%e5%80%bc-%e5%88%b0%e5%ba%95%e6%98%af%e4%bb%80%e4%b9%88%e6%84%8f%e6%80%9d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;共识问题的场景是这样的：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;有 N 个进程，每个进程一开始都有一个自己提议的值（比如进程 1 提议&amp;quot;主节点是 A&amp;quot;，进程 2 提议&amp;quot;主节点是 B&amp;quot;）。它们需要通过互相发消息，最终所有人&lt;strong&gt;对同一个值达成一致&lt;/strong&gt;。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&amp;ldquo;决定&amp;rdquo;（decide）就是：一个进程在某个时刻，&lt;strong&gt;最终选定了一个值，并且从此以后不再改变。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这里面有两个要求：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;大家决定的值一样&lt;/strong&gt;：不能进程 1 选了 A，进程 2 选了 B。这叫&amp;quot;一致性&amp;quot;（agreement）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;决定的值必须是某个进程提出的&lt;/strong&gt;：不能说大家最后决定了一个谁也没提出过的&amp;quot;C&amp;quot;。这叫&amp;quot;有效性&amp;quot;（validity）。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;合在一起就是共识问题的 Safety 部分——&amp;ldquo;不出错&amp;rdquo;。&lt;/p&gt;
+&lt;h2 id="14-最终是什么意思终止termination"&gt;1.4 &amp;ldquo;最终&amp;quot;是什么意思？——终止（Termination） &lt;a href="#14-%e6%9c%80%e7%bb%88%e6%98%af%e4%bb%80%e4%b9%88%e6%84%8f%e6%80%9d%e7%bb%88%e6%ad%a2termination" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&amp;ldquo;最终&amp;quot;是说：&lt;strong&gt;每个正确的进程（没 crash 的那些）在有限时间内一定会做出决定。&lt;/strong&gt; 不能一直&amp;quot;我在考虑考虑&amp;quot;就永远耗下去了。&lt;/p&gt;</description></item><item><title>异地多活的阿喀琉斯之踵：写一致性的技术真相与工业实践</title><link>/blog/2026-07-01-%E5%BC%82%E5%9C%B0%E5%A4%9A%E6%B4%BB%E6%95%B0%E6%8D%AE%E4%B8%80%E8%87%B4%E6%80%A7%E6%B7%B1%E5%BA%A6%E5%89%96%E6%9E%90/</link><pubDate>Wed, 01 Jul 2026 20:16:00 +0800</pubDate><guid>/blog/2026-07-01-%E5%BC%82%E5%9C%B0%E5%A4%9A%E6%B4%BB%E6%95%B0%E6%8D%AE%E4%B8%80%E8%87%B4%E6%80%A7%E6%B7%B1%E5%BA%A6%E5%89%96%E6%9E%90/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在&lt;a href="/blog/2026-07-01-%E5%AE%B9%E9%94%99%E9%AB%98%E5%8F%AF%E7%94%A8%E5%AE%B9%E7%81%BE%E5%8C%BA%E5%88%AB%E4%B8%8E%E5%AE%9E%E8%B7%B5/"&gt;上一篇文章&lt;/a&gt;中，我们讨论了容错、高可用、容灾三者的本质区别。在容灾部分提到，&lt;strong&gt;异地多活&lt;/strong&gt;是容灾体系中的&amp;quot;最高形态&amp;quot;——理想情况下 RTO ≈ 0，RPO ≈ 0。&lt;/p&gt;
+&lt;p&gt;听起来很美好。但如果你深入问一句：&lt;strong&gt;&amp;ldquo;多活&amp;quot;到底是读多活，还是写多活？&lt;/strong&gt; 很多号称实现了异地多活的系统就要开始支支吾吾了。&lt;/p&gt;
+&lt;p&gt;在展开之前，先厘清一个关键定义。所谓&amp;quot;写多活&amp;quot;存在三种不同层级的理解：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;L1（分区多写）&lt;/strong&gt;：不同数据中心可以同时处理写请求，但每条数据在同一时刻只有一个&amp;quot;归属&amp;quot;写入者——单元化属于这一层级。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;L2（同记录多写，最终一致）&lt;/strong&gt;：两个数据中心可以同时修改同一条记录，冲突通过事后合并解决——CRDT 属于这一层级。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;L3（同记录多写，强一致）&lt;/strong&gt;：两个数据中心可以同时修改同一条记录，且系统对外表现得像只有一个副本——Spanner 属于这一层级，是目前已知的&amp;quot;上界&amp;rdquo;。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;本文试图诚实回答一个问题：异地多活中，数据的写一致性到底怎么解决？工业界真正落地的方式是什么？以及，我们到底需要&amp;quot;多活&amp;quot;到什么程度？&lt;/p&gt;
+&lt;hr&gt;
+&lt;h1 id="一异地多活的挑战全景"&gt;一、异地多活的挑战全景 &lt;a href="#%e4%b8%80%e5%bc%82%e5%9c%b0%e5%a4%9a%e6%b4%bb%e7%9a%84%e6%8c%91%e6%88%98%e5%85%a8%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="11-根源cap-与-pacelc"&gt;1.1 根源：CAP 与 PACELC &lt;a href="#11-%e6%a0%b9%e6%ba%90cap-%e4%b8%8e-pacelc" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Eric Brewer 在 2000 年提出的 CAP 定理，其&lt;strong&gt;精确表述&lt;/strong&gt;是：&lt;strong&gt;当网络分区（Partition）发生时&lt;/strong&gt;，分布式系统必须在 Consistency（线性一致性）和 Availability 之间做出权衡；&lt;strong&gt;当网络正常时&lt;/strong&gt;，系统可以同时提供 C 和 A。将 CAP 简单地理解为&amp;quot;永久三选二&amp;quot;是一种常见的误读——C 和 A 的取舍只在分区窗口期才生效。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;C (Consistency / Linearizability) — 所有操作表现得像在一个全局有序的时间线上原子执行
+A (Availability) — 每个非失败节点收到的请求最终都能返回响应
+P (Partition Tolerance) — 系统在任意网络分区下仍能继续运行
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;异地多活场景下，机房之间的网络延迟不可消除（光纤中光速约 $2\times10^8$ m/s，北京到深圳直线约 2000km，即使走真空光速极限也需 ~13ms 往返），网络分区不可杜绝（光缆被挖断、运营商 BGP 抖动）。&lt;strong&gt;P 是必须接受的现实。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;2012 年，Daniel Abadi 提出了 &lt;strong&gt;PACELC 定理&lt;/strong&gt;作为 CAP 的自然扩展：当网络分区（&lt;strong&gt;P&lt;/strong&gt;artition）发生时，在 &lt;strong&gt;A&lt;/strong&gt; 和 &lt;strong&gt;C&lt;/strong&gt; 之间选；&lt;strong&gt;E&lt;/strong&gt;lse（无分区时），在 &lt;strong&gt;L&lt;/strong&gt;atency 和 &lt;strong&gt;C&lt;/strong&gt;onsistency 之间选。这个扩展对本文的讨论有直接指导意义——即使在无故障的系统中，物理延迟本身就会迫使我们在一致性和性能之间做权衡。为什么同城可以用 Paxos/Raft 同步复制，跨城必须退化到异步？PACELC 的 &lt;strong&gt;E 分支&lt;/strong&gt;给出了理论解释。&lt;/p&gt;</description></item><item><title>如何使用raft算法开发强一致kv存储系统</title><link>/blog/2021-09-04-%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8raft%E5%BC%80%E5%8F%91%E5%BC%BA%E4%B8%80%E8%87%B4kv%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F/</link><pubDate>Sun, 05 Sep 2021 00:47:15 +0800</pubDate><guid>/blog/2021-09-04-%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8raft%E5%BC%80%E5%8F%91%E5%BC%BA%E4%B8%80%E8%87%B4kv%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F/</guid><description>&lt;h2 id="本文内容"&gt;本文内容 &lt;a href="#%e6%9c%ac%e6%96%87%e5%86%85%e5%ae%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;本文结合etcd源码来进行介绍，etcd/contrib/raftexample提供了一个基于etcd/raft实现的kv存储系统。从该示例出发，我们来看一看如何基于raft算法开发一个强一致的kv存储系统。&lt;/p&gt;
+&lt;p&gt;看完本文的源码分析后，上手一个raft强一致系统开发就不是什么难事了。&lt;/p&gt;
+&lt;p&gt;ps：假定读者已经阅读并理解了raft论文，这里有我的&lt;a href="https://github.com/hitzhangjie/distributed-system-series/blob/master/papers/In%20Search%20of%20an%20Understandable%20Consensus%20Algorithm%20(Extended%20Version).pdf"&gt;批注版的In Search of an Understandable Consensus Algorithm.pdf&lt;/a&gt;，读起来可能会好理解点。&lt;/p&gt;
+&lt;h2 id="etcdraft"&gt;etcd/raft &lt;a href="#etcdraft" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;etcd服务端程序入口：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/server/main.go"&gt;源码&lt;/a&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;启动过程中区分当前节点类型：根据data-dir目录下的目录名member/proxy/empty来区分，然后启动etcd实例或者proxy；&lt;/li&gt;
+&lt;li&gt;启动etcd服务节点：startEtcd这个函数，逻辑主要包括启动供集群节点间通信的rafthttp服务，以及供客户端请求的服务；&lt;/li&gt;
+&lt;li&gt;启动etcd proxy：startProxy这个函数，逻辑主要是启动etcd代理；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;etcd哪些部分值得学习：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;etcd proxy从项目功能上来说虽然很重要，但是从学习角度来说没那么有价值，不看这个；&lt;/li&gt;
+&lt;li&gt;etcd server从项目功能上来说是核心，但是我们也没有必要学习所有的请求处理逻辑，重点是关注读写操作时如何基于raft实现强一致；&lt;/li&gt;
+&lt;li&gt;raft：这部分是raft算法的核心实现，从理解raft论文到算法工程化需要额外做出巨大的优化，这些知识点往往是通用的，重点掌握；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;raft部分：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;pb协议：
+&lt;ul&gt;
+&lt;li&gt;raft peers的通信协议，see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/raftpb/raft.proto"&gt;源码&lt;/a&gt;；&lt;/li&gt;
+&lt;li&gt;raft算法中提到核心的几个rpc就是Vote、AppendEntries，但是工程中需要考虑更多，详见上述pb中的enum MessageType；&lt;/li&gt;
+&lt;li&gt;上述pb中的message Message类型定义了rpc通信过程中的请求/响应，不同rpc通过MessageType type字段区分；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;状态机：
+&lt;ul&gt;
+&lt;li&gt;raft实现数据一致性是通过replicated log（复制日志）实现的，这里的replicated log有时也称为WAL（write ahead log）；&lt;/li&gt;
+&lt;li&gt;raft算法中，每个节点raftnode可能处于以下状态中的一种：follower、candidate、precandidate、leader；&lt;/li&gt;
+&lt;li&gt;raft算法中，每个节点的状态可以通过一个状态机来建模；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;了解了这些基础知识之后，我们结合etcd/contrib/raftexample来解释下raft如何选举，以及leader遇到写操作如何保证数据强一致。&lt;/p&gt;
+&lt;h2 id="etcdraft如何进行leader选举"&gt;etcd/raft如何进行leader选举 &lt;a href="#etcdraft%e5%a6%82%e4%bd%95%e8%bf%9b%e8%a1%8cleader%e9%80%89%e4%b8%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;newRaftNode&lt;/strong&gt;
+newRaftNode，see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/contrib/raftexample/raft.go?L87:6"&gt;源码&lt;/a&gt;，这个函数包括创建一个var rc raftNode，然后rc.startRaft()，这个函数包含非常重要的几个部分：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;startNode，see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/node.go?L218:6"&gt;源码&lt;/a&gt;，这个主要是建立好raftnode启动时的一些初始状态转换，有一个for事件循环处理，如改变raftnode的状态：tick函数、step函数，以及一些message的处理等等；&lt;/li&gt;
+&lt;li&gt;serveRaft：&lt;/li&gt;
+&lt;li&gt;serveChannels：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/contrib/raftexample/raft.go?L402"&gt;源码&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;startNode&lt;/strong&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如何查看这部分源码呢，首先从启动一个raftnode开始吧：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/node.go?L214:4"&gt;源码&lt;/a&gt;；&lt;/li&gt;
+&lt;li&gt;StartNode函数启动一个raftnode，节点刚启动的时候state都是follower：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/raft.go?L360"&gt;源码&lt;/a&gt;；&lt;/li&gt;
+&lt;li&gt;StartNode→Bootstrap(peers)通过配置告诉当前raftnode有多少个raftpeers，然后这些raftpeers加入与当前节点所在的集群属于变更配置，也要记录到raftlog中；&lt;/li&gt;
+&lt;li&gt;raftnode真正跑起来是在这里：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/node.go?L303:16"&gt;源码&lt;/a&gt;，这里有个大的for循环，node的主要逻辑都在这里了；
+&lt;ul&gt;
+&lt;li&gt;tickElection：for/switch-case n.tickC，选举逻辑，此时如果当前raftnode为follower或者candidate吧，此时的tick函数为tickElection，如果选举超时时间过了并且没收到leader的heartbeat来重置选举超时时间，此时会将MsgHup消息类型传入step函数中，将当前follower变为candidate发起选举：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/raft.go?L645"&gt;源码&lt;/a&gt;。这里的选举在raft论文中是直接就是选举动作，但是工程上做了优化，引入了一个可选的两阶段选举prevote。虽然可以tick是触发了tickElection，但是这个后续执行中会检查当前节点是否有资格成为leader，不一定有资格（比如自身的WAL不满足条件）。&lt;/li&gt;
+&lt;li&gt;假如有资格发起选举，则会调用becomeCandidate，会将当前raftnode的term+1，并且step函数变为stepCandidate。然后会调用r.poll来判断是否胜选：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/raft.go?L803"&gt;源码&lt;/a&gt;，其实这里是判断的自己给自己投票的话能否胜选，对于single raftnode的集群有用，假如是多节点集群那么这里无法胜选，继续看。ps：如果胜选就becomeLeader成为leader了。如果不是单节点，就要通过r.send发送投票给各个peers：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/raft.go?L833"&gt;源码&lt;/a&gt;。这里的r.send并不是真的网络发送，而是记录到r.msgs里面等下处理这里的r.msgs。注意这里r.send的时候已经编程了MsgVote类型了，表示投票请求，后续也应该收到MsgVoteResp。&lt;/li&gt;
+&lt;li&gt;r.msgs什么时候处理呢？还是前面我们提到的这个大循环体，每轮循环都会检查r.msgs中有没有message要处理：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/node.go?L316"&gt;源码&lt;/a&gt;，这里的函数n.rn.HasReady()方法检查到len(r.msgs)&amp;gt;0，则认为有消息要处理，这个消息最终会被包装到一个Ready{}事件中，这个事件会被丢到n.readyc这个chan中，什么时候处理在下面serveChannels中介绍。&lt;/li&gt;
+&lt;li&gt;becomeLeader：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/raft.go?L724"&gt;源码&lt;/a&gt;，step函数变为stepLeader，tick函数则变成tickHeartbeat，意味着当前为leader需要给followers定时发送heartbeat来重置它们的选举超时时间，那么heartbeat是什么形式的呢？其实就是通过appendEntry，只不过entry为空，用这种空的entry来表示心跳。leader就要担负起write请求的重任了。&lt;/li&gt;
+&lt;li&gt;但是如果没胜选的话，raftnode的状态就是candidate，step函数未stepCandidate，下面会继续用到。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;serveChannels&lt;/strong&gt;：
+前面关于r.msgs的消息没跟踪到在哪里处理的，我们看下是不是在serveChannels里面？
+serveChannels: see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/contrib/raftexample/raft.go?L402"&gt;源码&lt;/a&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;这个函数里面也有一个for事件循环，当它发现rc.node.Ready()有var rd Ready{}事件可处理时，如果rd上有非空的snapshot，就写入storage，然后将rd.Entries也记录到rd.HardState，然后将rd.Entries也写入storage，最后将rd.Messages发送到peers。我们感觉voteMsg是在这个时候发送给peers的，到底是不是呢：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/contrib/raftexample/raft.go?L459:4"&gt;源码&lt;/a&gt;。是的，这里的rd事件就是从raftnode.Ready()从发从其raftnode.readyc这个channel中取出来的。取出来后通过transport发送出去，这样voteMsg就发送出去了，那么投票的响应又是什么时候收到、什么时候处理的呢？&lt;/li&gt;
+&lt;li&gt;startRaft/AddPeer的时候会调用startPeer，内部会开始循环收包，收peer发来的raftmessage放入一个recvc chan中，startPeer中专门开启了一个goroutine来检查recvc中有没有peer发送来的消息，比如peer发送给我们的voteMsg的响应包：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/server/etcdserver/api/rafthttp/peer.go?L177"&gt;源码&lt;/a&gt;。这里通过raft.Process(ctx,m)对raftmessage进行处理。如何处理是在这个示例代码中定义的：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/contrib/raftexample/raft.go?L499"&gt;源码&lt;/a&gt;，即调用step函数进行处理。我们再往回看下，发送这个消息前已经把节点的step函数修改为了stepCandidate，那我们再看下这个函数里面干了啥，猜测应该有判断是否收到多数投票确认的逻辑；&lt;/li&gt;
+&lt;li&gt;stepCandidate：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/raft.go?L1399:7"&gt;源码&lt;/a&gt;，我们不考虑可选的prevote阶段，很显然这个消息MsgVote的响应类型应该是MsgVoteResp，如果是的话，就继续r.poll检查下是否胜选吧，如果胜选了，则自己becomeLeader，然后广播appendEntries，这里append是干啥，是为了通治其他peers更新commit index吧。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这样leader选举就完成了！！！&lt;/p&gt;</description></item><item><title>分布式系统工程师roadmap</title><link>/blog/2021-07-01-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%B7%A5%E7%A8%8B%E5%B8%88roadmap/</link><pubDate>Fri, 02 Jul 2021 12:45:38 +0800</pubDate><guid>/blog/2021-07-01-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%B7%A5%E7%A8%8B%E5%B8%88roadmap/</guid><description>&lt;p&gt;如何成为一名资深的分布式系统工程师，需要补齐哪些理论基础，又需要哪些工程方面的锻炼？本文原文见 Henry Robinson 的文章 distributed systems theory for the distributed systems engineer，我觉得是一个很不错的roadmap，沿着这个脉络半年下来，还是很有收获的……继续:)&lt;/p&gt;
+&lt;h1 id="1-掌握分布式背后的相关理论"&gt;1 掌握分布式背后的相关理论 &lt;a href="#1-%e6%8e%8c%e6%8f%a1%e5%88%86%e5%b8%83%e5%bc%8f%e8%83%8c%e5%90%8e%e7%9a%84%e7%9b%b8%e5%85%b3%e7%90%86%e8%ae%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;可能会有人甩出很多论文，FLP论文、Paxos论文、Raft论文、拜占庭将军相关的论文&amp;hellip;相关的论文可以摆出很多，但是论文是有一定深度的，是非常严谨的论述，对于攻读PhD的同学有帮助，但是对于一名从事分布式系统工程的同学真的有必要全部掌握吗？应该看多少论文，毕竟经过了那么多年的发展、沉淀呢？
+作为一名分布式系统工程师，搞明白需要掌握哪些理论，比单纯了解有哪些论文更重要。&lt;/p&gt;
+&lt;h1 id="2-first-steps"&gt;2 First Steps &lt;a href="#2-first-steps" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;下面的4个文集很好地介绍了构建一个分布式系统要面临的挑战，它们共同概述了分布式系统工程师必须克服的一些技术上的困难，并为后面章节中更详细的说明奠定了基础。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="http://book.mixu.net/distsys/"&gt;Distributed Systems for Fun and Profit&lt;/a&gt;，介绍了分布式系统的基础知识，包括时间在分布式系统中扮演的角色、不同的复制策略等；&lt;/li&gt;
+&lt;li&gt;&lt;a href="http://www.somethingsimilar.com/2013/01/14/notes-on-distributed-systems-for-young-bloods/"&gt;Notes on distributed systems for young bloods&lt;/a&gt;，不是纯理论介绍，在理论和实践中做到了一个不错的平衡，为后续更深入学习打好基础；&lt;/li&gt;
+&lt;li&gt;&lt;a href="http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.41.7628"&gt;A Note on Distributed Systems&lt;/a&gt;，一篇很经典的论文，解释了分布式系统中为什么不能总把远程交互对象当做本地的对象，让读者理解分布式场景中的问题和挑战；&lt;/li&gt;
+&lt;li&gt;&lt;a href="http://en.wikipedia.org/wiki/Fallacies_of_Distributed_Computing"&gt;The fallacies of distributed computing&lt;/a&gt;，分布式计算的8个谬论，为分布式系统设计人员设计系统打下基础；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;我们需要了解两个重要属性的含义，“safety”和“liveness”：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;safety，该属性表示不会有坏的事情发生，如API不会返回不一致的value、集群中不会同时选出两个leader等；&lt;/li&gt;
+&lt;li&gt;liveness，该属性表示好的事情最终会发生，如API最终会返回一个结果、磁盘写操作最终会完成等；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id="3-failure-and-time"&gt;3 Failure and Time &lt;a href="#3-failure-and-time" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;分布式系统工程师面对的一些困难，其实可以归结为下面2个原因：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Processes may fail&lt;/li&gt;
+&lt;li&gt;There&amp;rsquo;s no good way to tell that they have done so&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;即，分布式系统中的任意进程可能会出现故障，但是其他进程又没有可靠的方式来感知这个进程出现了故障。&lt;/p&gt;
+&lt;p&gt;进程掌握并共享给其他进程的时间方面的信息、可能检测到的故障场景以及可以正确实现的算法和原语之间存在非常紧密的关系。大多数情况下，我们假设两个不同的节点对于现在是什么时间或时间流逝的速度完全没有共享的信息。&lt;/p&gt;</description></item></channel></rss>

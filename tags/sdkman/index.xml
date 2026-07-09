@@ -1,4 +1,16 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>SDKMAN! on</title><link>/tags/sdkman/</link><description>Recent content in SDKMAN! on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 10 Jun 2026 08:00:00 +0800</lastBuildDate><atom:link href="/tags/sdkman/index.xml" rel="self" type="application/rss+xml"/><item><title>多版本 SDK 管理：SDKMAN!</title><link>/blog/2026-06-10-%E5%A4%9A%E7%89%88%E6%9C%ACsdk%E7%AE%A1%E7%90%86sdkman/</link><pubDate>Wed, 10 Jun 2026 08:00:00 +0800</pubDate><guid>/blog/2026-06-10-%E5%A4%9A%E7%89%88%E6%9C%ACsdk%E7%AE%A1%E7%90%86sdkman/</guid><description>多版本 SDK 管理：SDKMAN! # 问题的起源 # 最近准备开始研究一些 Java 开发相关的项目，第一件事自然是配置 Java 开发环境。装个 JDK 看起来简单，但真正动手的时候，问题就来了：
-不同项目依赖不同的 Java 版本——这个项目跑在 JDK 8 上，那个项目需要 JDK 17，还有一个在尝鲜 JDK 21 的虚拟线程。 除了 Java runtime，还有 Maven、Gradle 这些构建工具的版本也要管理。 最近这些年主要写 Go，对 JVM 生态的版本管理工具已经有些生疏了。 于是决定系统地梳理一下目前有哪些方案，以及哪个方案最适合当下的场景。
-多版本管理的痛点 # 这其实是一个老问题。如果你在 Linux 下做过开发，大概率接触过 update-alternatives：
-# 每次安装新版本，都要手动注册 sudo update-alternatives --install /usr/bin/java java /opt/jdk-17/bin/java 1 --slave javac ... -- slave javap ... sudo update-alternatives --install /usr/bin/java java /opt/jdk-21/bin/java 2 --slave javac ... -- slave javap .</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>SDKMAN! on</title><link>/tags/sdkman/</link><description>Recent content in SDKMAN! on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 10 Jun 2026 08:00:00 +0800</lastBuildDate><atom:link href="/tags/sdkman/index.xml" rel="self" type="application/rss+xml"/><item><title>多版本 SDK 管理：SDKMAN!</title><link>/blog/2026-06-10-%E5%A4%9A%E7%89%88%E6%9C%ACsdk%E7%AE%A1%E7%90%86sdkman/</link><pubDate>Wed, 10 Jun 2026 08:00:00 +0800</pubDate><guid>/blog/2026-06-10-%E5%A4%9A%E7%89%88%E6%9C%ACsdk%E7%AE%A1%E7%90%86sdkman/</guid><description>&lt;h1 id="多版本-sdk-管理sdkman"&gt;多版本 SDK 管理：SDKMAN! &lt;a href="#%e5%a4%9a%e7%89%88%e6%9c%ac-sdk-%e7%ae%a1%e7%90%86sdkman" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="问题的起源"&gt;问题的起源 &lt;a href="#%e9%97%ae%e9%a2%98%e7%9a%84%e8%b5%b7%e6%ba%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;最近准备开始研究一些 Java 开发相关的项目，第一件事自然是配置 Java 开发环境。装个 JDK 看起来简单，但真正动手的时候，问题就来了：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;不同项目依赖不同的 Java 版本——这个项目跑在 JDK 8 上，那个项目需要 JDK 17，还有一个在尝鲜 JDK 21 的虚拟线程。&lt;/li&gt;
+&lt;li&gt;除了 Java runtime，还有 Maven、Gradle 这些构建工具的版本也要管理。&lt;/li&gt;
+&lt;li&gt;最近这些年主要写 Go，对 JVM 生态的版本管理工具已经有些生疏了。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;于是决定系统地梳理一下目前有哪些方案，以及哪个方案最适合当下的场景。&lt;/p&gt;
+&lt;h2 id="多版本管理的痛点"&gt;多版本管理的痛点 &lt;a href="#%e5%a4%9a%e7%89%88%e6%9c%ac%e7%ae%a1%e7%90%86%e7%9a%84%e7%97%9b%e7%82%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;这其实是一个老问题。如果你在 Linux 下做过开发，大概率接触过 &lt;code&gt;update-alternatives&lt;/code&gt;：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;# 每次安装新版本，都要手动注册
+sudo update-alternatives --install /usr/bin/java java /opt/jdk-17/bin/java 1 --slave javac ... -- slave javap ...
+sudo update-alternatives --install /usr/bin/java java /opt/jdk-21/bin/java 2 --slave javac ... -- slave javap ...
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;执行版本切换时要异同切换master和slave对应的二进制：&lt;/p&gt;</description></item></channel></rss>

@@ -1,0 +1,563 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Devtools on</title><link>/categories/devtools/</link><description>Recent content in Devtools on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 11 Jul 2026 16:26:34 +0800</lastBuildDate><atom:link href="/categories/devtools/index.xml" rel="self" type="application/rss+xml"/><item><title>asciinema 与 asciinema-player 的核心工作原理</title><link>/blog/2026-07-11-blog_asciinema%E7%BB%88%E7%AB%AF%E5%8A%A8%E7%94%BB%E5%BD%95%E5%88%B6%E5%8F%8A%E6%92%AD%E6%94%BE/</link><pubDate>Sat, 11 Jul 2026 16:26:34 +0800</pubDate><guid>/blog/2026-07-11-blog_asciinema%E7%BB%88%E7%AB%AF%E5%8A%A8%E7%94%BB%E5%BD%95%E5%88%B6%E5%8F%8A%E6%92%AD%E6%94%BE/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;想在网页上展示一段「终端里正在跑命令」的效果，常见做法有两种：录一段屏幕视频，或者用 GIF。前者体积大、无法选中文字；后者画质差、帧率低。&lt;/p&gt;
+&lt;p&gt;&lt;a href="https://asciinema.org/"&gt;asciinema&lt;/a&gt; 走的是另一条路：&lt;strong&gt;不录像素，只录终端字节流&lt;/strong&gt;。录制产物是轻量的 &lt;code&gt;.cast&lt;/code&gt; 文本文件；在浏览器里由 &lt;a href="https://github.com/asciinema/asciinema-player"&gt;asciinema-player&lt;/a&gt; 按时间戳回放。博客首页的 git log 滚动动画，就是这条链路。&lt;/p&gt;
+&lt;p&gt;本文顺着「录制 → 存储 → 播放」把原理拆开，回答两个问题：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;code&gt;asciinema rec&lt;/code&gt; 到底捕获了什么？&lt;/li&gt;
+&lt;li&gt;浏览器里的 player 如何把一串字节「演」成终端画面？&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h1 id="录制pty-上的透明中间人"&gt;录制：PTY 上的透明中间人 &lt;a href="#%e5%bd%95%e5%88%b6pty-%e4%b8%8a%e7%9a%84%e9%80%8f%e6%98%8e%e4%b8%ad%e9%97%b4%e4%ba%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="和录屏的本质区别"&gt;和录屏的本质区别 &lt;a href="#%e5%92%8c%e5%bd%95%e5%b1%8f%e7%9a%84%e6%9c%ac%e8%b4%a8%e5%8c%ba%e5%88%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;传统录屏工具（OBS、&lt;code&gt;ffmpeg&lt;/code&gt; 抓屏）记录的是&lt;strong&gt;光栅帧&lt;/strong&gt;：每一帧是一块位图。asciinema 记录的是&lt;strong&gt;终端会话的原始输出&lt;/strong&gt;——普通字符，加上控制光标、颜色、清屏的 ANSI/VT escape 序列。&lt;/p&gt;
+&lt;p&gt;因此：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;文件通常只有几 KB 到几百 KB，gzip 后往往还能再压到约 8%&lt;/li&gt;
+&lt;li&gt;播放时可复制文字、可缩放、可换主题&lt;/li&gt;
+&lt;li&gt;代价是：只能还原「终端能表达」的内容，不能录 GUI&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="伪终端pty是关键"&gt;伪终端（PTY）是关键 &lt;a href="#%e4%bc%aa%e7%bb%88%e7%ab%afpty%e6%98%af%e5%85%b3%e9%94%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;录制机制和 &lt;code&gt;ssh&lt;/code&gt;、&lt;code&gt;script&lt;/code&gt;、&lt;code&gt;screen&lt;/code&gt; 同源，都依赖 Unix &lt;strong&gt;伪终端（PTY）&lt;/strong&gt;。一对 PTY 由两个端组成（若对 TTY / PTY / Console / 终端模拟器这些词本身发懵，可先看 &lt;a href="/blog/2026-07-11-tty-pty-terminal-console/"&gt;终端、TTY、PTY、Console：把这些概念一次理清&lt;/a&gt;）：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;端&lt;/th&gt;
+&lt;th&gt;角色&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;slave&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;对进程表现为「真实终端」：&lt;code&gt;isatty()&lt;/code&gt; 为真，支持窗口大小、&lt;code&gt;TERM&lt;/code&gt; 等&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;master&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;控制端：谁持有 master，谁就能读写 slave 上进程的全部 I/O&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;&lt;code&gt;asciinema rec&lt;/code&gt; 时大致是这样：&lt;/p&gt;</description></item><item><title>如何把 Notion 页面完美嵌入个人博客</title><link>/blog/2026-06-12-blog_%E5%8D%9A%E5%AE%A2%E4%B8%AD%E5%B5%8C%E5%85%A5notion%E9%A1%B5%E5%86%85%E5%AE%B9/</link><pubDate>Fri, 12 Jun 2026 08:00:00 +0800</pubDate><guid>/blog/2026-06-12-blog_%E5%8D%9A%E5%AE%A2%E4%B8%AD%E5%B5%8C%E5%85%A5notion%E9%A1%B5%E5%86%85%E5%AE%B9/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/doc/DYkxmdENJTGFHd0VY"/&gt;
+&lt;/div&gt;</description></item><item><title>vscode-常规配置以及同步说明</title><link>/blog/2024-04-14-vscode_%E5%B8%B8%E8%A7%84%E9%85%8D%E7%BD%AE%E5%8F%8A%E5%90%8C%E6%AD%A5%E8%AF%B4%E6%98%8E/</link><pubDate>Sun, 14 Apr 2024 23:00:00 +0800</pubDate><guid>/blog/2024-04-14-vscode_%E5%B8%B8%E8%A7%84%E9%85%8D%E7%BD%AE%E5%8F%8A%E5%90%8C%E6%AD%A5%E8%AF%B4%E6%98%8E/</guid><description>&lt;h2 id="前言"&gt;前言 &lt;a href="#%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;我经常在项目开发过程中针对不同项目，甚至是相同项目的不同模块阶段，频繁调整配置以满足当时的需要，我觉得能够快速调整vscode配置满足开发人员需要，是一项必备技能。&lt;/p&gt;
+&lt;p&gt;这里就简单总结下vscode配置调整过程中，一些比较有价值的信息。&lt;/p&gt;
+&lt;h2 id="搜索配置项"&gt;搜索配置项 &lt;a href="#%e6%90%9c%e7%b4%a2%e9%85%8d%e7%bd%ae%e9%a1%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;搜索修改过的配置项，可以按照 &amp;ldquo;@modified&amp;quot;进行过滤，&lt;/li&gt;
+&lt;li&gt;搜索指定插件的话，可以按照&amp;rdquo;@ext:&lt;id&gt;&amp;ldquo;进行过滤&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="设置优先级"&gt;设置优先级 &lt;a href="#%e8%ae%be%e7%bd%ae%e4%bc%98%e5%85%88%e7%ba%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;配置项可以在不同的设置范围内进行覆盖。在下面的列表中，后面的范围会覆盖前面的范围：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;默认设置 - 这个范围代表未配置的默认设置值。&lt;/li&gt;
+&lt;li&gt;用户设置 - 对所有的 VS Code 实例全局适用。&lt;/li&gt;
+&lt;li&gt;远程设置 - 适用于用户打开的远程机器。&lt;/li&gt;
+&lt;li&gt;工作区设置 - 适用于打开的文件夹或工作区。&lt;/li&gt;
+&lt;li&gt;工作区文件夹设置 - 适用于多根工作区的特定文件夹。&lt;/li&gt;
+&lt;li&gt;特定语言的默认设置 - 这些是由扩展提供的特定语言的默认值。&lt;/li&gt;
+&lt;li&gt;特定语言的用户设置 - 与用户设置相同，但特定于某种语言。&lt;/li&gt;
+&lt;li&gt;特定语言的远程设置 - 与远程设置相同，但特定于某种语言。&lt;/li&gt;
+&lt;li&gt;特定语言的工作区设置 - 与工作区设置相同，但特定于某种语言。&lt;/li&gt;
+&lt;li&gt;特定语言的工作区文件夹设置 - 与工作区文件夹设置相同，但特定于某种语言。&lt;/li&gt;
+&lt;li&gt;策略设置 - 由系统管理员设置，这些值始终会覆盖其他设置值。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="跨设备同步"&gt;跨设备同步 &lt;a href="#%e8%b7%a8%e8%ae%be%e5%a4%87%e5%90%8c%e6%ad%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Settings Sync功能，之前使用IDEA系列产品时，一来一个Settings Repository及插件来做这个事情，VSCode就方便多了，直接支持用户维度下的多份的同步，比如分别为macOS、Linux、Windows分别自定义一份配置。&lt;/p&gt;
+&lt;p&gt;同步的内容也很丰富：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;常规设置项&lt;/li&gt;
+&lt;li&gt;view&lt;/li&gt;
+&lt;li&gt;tasks&lt;/li&gt;
+&lt;li&gt;snippets&lt;/li&gt;
+&lt;li&gt;shortcuts&lt;/li&gt;
+&lt;li&gt;甚至是UI状态都可以&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;而且可以精确控制每一个配置项是否参与同步，这个就很有用，比如要读本地机器的文件，但是文件路径在参与同步的设备上不同，那么该配置项就可以“取消设置同步”。&lt;/p&gt;
+&lt;h2 id="重置配置"&gt;重置配置 &lt;a href="#%e9%87%8d%e7%bd%ae%e9%85%8d%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;当该乱某个配置项时，可以选择齿轮按钮，点击弹出菜单然后选择“reset this setting”，或者从settings.json中直接删除该配置项&lt;/li&gt;
+&lt;li&gt;可以直接在command pallete里选择 &amp;ldquo;reset settings&amp;rdquo; 命令，也可以直接将settings.json中内容全部删除&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;ps:
+settings.json文件，user level对应的配置文件路径为：&lt;/p&gt;</description></item><item><title>vscode-调整配置以保持专注</title><link>/blog/2024-04-14-vscode_%E8%B0%83%E6%95%B4%E9%85%8D%E7%BD%AE%E4%BB%A5%E4%BF%9D%E6%8C%81%E4%B8%93%E6%B3%A8/</link><pubDate>Sun, 14 Apr 2024 10:00:00 +0800</pubDate><guid>/blog/2024-04-14-vscode_%E8%B0%83%E6%95%B4%E9%85%8D%E7%BD%AE%E4%BB%A5%E4%BF%9D%E6%8C%81%E4%B8%93%E6%B3%A8/</guid><description>&lt;h1 id="前言"&gt;前言 &lt;a href="#%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;保持专注、减少外界干扰，首要的是培养内在的专注力，而不是依赖工具。回想起我前几年的一些经历：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;我的 MacBook Pro Touch Bar 经常闪烁，几乎刺痛了我的双眼。最终发现是硬件故障，我曾看到一个网友的解决方法，简直让我笑掉大牙。他直接用黑色胶带把 Touch Bar 给封住了。&lt;/li&gt;
+&lt;li&gt;后来我购买了一款防眩光、防窥的屏幕膜，但它稍微有些厚度，导致关闭屏幕时无法完全贴合。我开始寻找更轻薄、更便携的替代品，直到一个“老手”给了我建议：“简单点，直接将屏幕膜撕下来放在配套袋子里。”&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;为何提及这两个例子呢？其实是想说，现阶段虽然有很多创新产品，但未必完美。与其花大量时间寻找“完美”，不如早日认识到自己深处发展历程中的某个时刻、转而采用更经济更有效的解决方案。&lt;/p&gt;
+&lt;p&gt;但是，尽管产品成品不完美，但我们依然可以尽己所能让它接近我们期望的那样。就比如使用vscode进行开发时，我希望它&lt;strong&gt;能在不同规模的项目中能够帮助开发者保持专注&lt;/strong&gt;。&lt;/p&gt;
+&lt;h1 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;项目采用的微服务架构+monorepo进行代代码组织，每个微服务一个子目录，当然也有很多scripts、tools、ci/cd配置、配置文件管理、外部依赖等等。业务开发的时候，其实你很想只关心某些范围，而忽略掉不相关的范围，以让自己保持专注的同时提升检索、开发的效率。&lt;/p&gt;
+&lt;p&gt;为了保持专注，不同产品中有不同的设计，比如KDE中的activity，IDEA中的projectscope，Typora中有打字机模式……就不扯远了，我们只看看vscode中能做到什么程度，来让开发者保持更好的专注度。&lt;/p&gt;
+&lt;h1 id="配置方式"&gt;配置方式 &lt;a href="#%e9%85%8d%e7%bd%ae%e6%96%b9%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="忽略掉不关心的文件-filesexclude"&gt;忽略掉不关心的文件: files.exclude &lt;a href="#%e5%bf%bd%e7%95%a5%e6%8e%89%e4%b8%8d%e5%85%b3%e5%bf%83%e7%9a%84%e6%96%87%e4%bb%b6-filesexclude" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;vscode中支持在explorer、代码搜索操作中忽略某些文件夹、文件，这个是通过配置一些忽略规则来实现的。&lt;/p&gt;
+&lt;p&gt;规则配置说明，详见：see: https://code.visualstudio.com/docs/editor/glob-patterns&lt;/p&gt;
+&lt;p&gt;如果代码库是monorepo管理的，使用git进行版本控制（没有针对大仓的权限控制、拉取等进行特殊优化），那拉取下来后文件数量会很多，但是在我们对全局进行了了解之后，以后大部分功能开发过程中，你很可能希望能聚焦于其中某些部分，而非全部。不管是explorer中查看，还是代码搜索时检索，还是提交日志检查，你都希望能尽可能聚焦。所以是有必要隐藏某些不紧密相干的内容的。&lt;/p&gt;
+&lt;h2 id="忽略gitignore中文件-explorerexcludegitignore"&gt;忽略gitignore中文件: explorer.excludeGitIgnore &lt;a href="#%e5%bf%bd%e7%95%a5gitignore%e4%b8%ad%e6%96%87%e4%bb%b6-explorerexcludegitignore" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;gitignore中通常会忽略一些文件，大多数时候这些文件也是一些不需要在explorer中显示的，所以vscode也增加了这样一个配置项，允许忽略.gitignore中忽略的文件。&lt;/p&gt;
+&lt;p&gt;严格来说，是vscode会读取gitignore中的配置，但是对其中某些规则的解析上并不完全等同于git。&lt;/p&gt;
+&lt;p&gt;举个例子，下述配置项通常用来忽略linux上的编译构建生成的二进制程序，但是如果vscode读取后就会忽略所有内容，并不完全等价于git忽略的内容。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;*
+!*.*
+!*/
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="不要watch不关心的目录fileswatcherexclude"&gt;不要watch不关心的目录：files.watcherExclude &lt;a href="#%e4%b8%8d%e8%a6%81watch%e4%b8%8d%e5%85%b3%e5%bf%83%e7%9a%84%e7%9b%ae%e5%bd%95fileswatcherexclude" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;vscode会通过filesystem watch特性来监视某些文件内容的修改情况，以便及时reload最新内容，但是这也是由性能开销的，如果某些路径下的变更不是自己关心的，可以考虑忽略。至少在显示打开、强制reload window时还是会加载最新内容的。&lt;/p&gt;
+&lt;h2 id="通过-project-scope"&gt;通过 project scope &lt;a href="#%e9%80%9a%e8%bf%87-project-scope" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;IDEA系列的IDE产品中，有一个非常有用的特性，project scope。&lt;/p&gt;
+&lt;p&gt;前面提到的两种方式，控制的事工程全局层面，哪些文件可显示、隐藏出来。而project scope则是概念上对工程的划分。&lt;/p&gt;
+&lt;p&gt;比如用户登录流程、用户匹配流程、对局结束流程、DS管理流程，这些不同关键链路上的服务列表，它们有重叠的，也有各自特有的。用project scope进行管理就非常方便了。&lt;/p&gt;
+&lt;p&gt;你可以创建不同的project scopes，然后每个scope控制好要显示、隐藏的文件，当希望从某个关键业务流程切换到另一个关键业务流程的开发时，只需要切换project scope就可以了。&lt;/p&gt;
+&lt;p&gt;很遗憾的是，vscode原生不支持project scope，但是有些作者通过vscode extension的方式来实现了project scope，实现方式就是在进行scope切换时，自动帮用户设置好files.exclude。&lt;/p&gt;
+&lt;h2 id="通过-workspace"&gt;通过 workspace &lt;a href="#%e9%80%9a%e8%bf%87-workspace" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;vscode支持workspace，以及multi-root workspace，意思是你可以将多个独立的工程组织在一个workspace中，在一个workspace中也可以控制显示、隐藏的文件。&lt;/p&gt;
+&lt;p&gt;workspace是不同于project scope的另一种特性，可以针对同一个project配置多个workspace分别设置好隐藏、显示规则，可以近似实现project scope的功能。
+multi-root workspace还可以将多个不相干的projects组合在一个workspace里面，比如我有些个人兴趣驱动的电子书，调试器相关的、RPC框架相关的、Go语言设计实现相关的，我就可以将这几个独立的工程编排为一个workspace。&lt;/p&gt;</description></item><item><title>Linux桌面发行版分享</title><link>/blog/2016-05-07-linux_%E6%A1%8C%E9%9D%A2%E5%8F%91%E8%A1%8C%E7%89%88%E5%88%86%E4%BA%AB/</link><pubDate>Sun, 26 Jun 2022 16:37:16 +0800</pubDate><guid>/blog/2016-05-07-linux_%E6%A1%8C%E9%9D%A2%E5%8F%91%E8%A1%8C%E7%89%88%E5%88%86%E4%BA%AB/</guid><description>&lt;h1 id="linux桌面发行版分享"&gt;Linux桌面发行版分享 &lt;a href="#linux%e6%a1%8c%e9%9d%a2%e5%8f%91%e8%a1%8c%e7%89%88%e5%88%86%e4%ba%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;这是一篇写在2016年的文章一直在我的个人笔记里，感觉当时很多想法今天依然成立，所以拿出来继续分享下。某些信息可能已经有过时，相关的部分我在备注里进行了标注，&lt;/p&gt;
+&lt;h2 id="0体验linux发行版"&gt;0.体验Linux发行版 &lt;a href="#0%e4%bd%93%e9%aa%8clinux%e5%8f%91%e8%a1%8c%e7%89%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;今天安装了Ubuntu 16.04 LTS，本来准备一直用Fedora的，但是我的笔记本上安装的还是
+Fedora 21版本，但是当前最新的已经更新到了Fedora 24,今天刚刚发布了Beta版本。此
+前我对Fedora 23 GA以及Fedora 24 Alpha版本进行了简单的测试，实在是不喜欢KDE 5！&lt;br&gt;
+怎么说呢，其实看上去KDE 5挺漂亮的，应该将来也会有不错的发展，但是考虑到KDE 5刚
+出来的时间还不够长，其中很多在KDE 4里面方便实用的功能在KDE 5中还没有被开发出来
+，而我又是一个倾向于“工欲善其事，必先利其器”的同学，让我这样把一个未充分完善好
+的桌面环境当做自己的主力系统，我实在难以接受！对于GNOME 3，我就不做任何评论了
+，我宁可用Ubuntu Unity也不用GNOME 3！&lt;/p&gt;
+&lt;p&gt;可能有人说，没必要一直跟着更新啊，继续实用Fedora 21也可以啊！？此话当然不假，
+可是一个失去后续更新支持的版本，我想还是要继续跟进新版本要更好。其实我现在配置
+的已经相当棒了，有的软件源里面的程序存在某些小问题，瑕不掩瑜的，我也对其源代码
+进行了部分修改，以为自己所用，因为这部分工作还是相当多、相当细的，如果继续跟进
+新的发行版，而软件源里面的软件包可能还没有修改过来，或者不符合我的需要，又要进
+行重复性的工作，我觉得这个工作量还是蛮大的，至少现在我没有那么充足的时间。&lt;/p&gt;
+&lt;p&gt;Fedora发行版每6个月更新一次，CentOS 7可以支持10年，我本来也计划使用CentOS的，
+但是CentOS对稳定性的追求，也使得很多软件包不能被加入其软件源，有些我很喜欢的工
+具，安装、配置起来就会比较麻烦，dpkg、alien、rpmrebuild甚至修改源代码这些可能
+都要用到，以配置出一个趁手的系统环境。半年前，我在另一台三星的笔记本安装了
+CentOS 7，配置完成之后，堪称完美，那个时候时间多啊，折腾的时间也挺长的；现在时
+间没有那么充裕了，我在这台thinkpad上安装了CentOS 7.2，前后也就折腾了一天，不打
+算折腾了。&lt;/p&gt;
+&lt;p&gt;最后，我选择了Ubuntu 16.04 LTS版本，可以支持5年，而我本身也想重新比较一下
+Ubuntu、Fedora这两大发行版，为什么呢？因为对这两款发行版，我都有向当长的使用时
+间，现在也积累了很多的经验，前不久我碰巧又看到了一个各大发行版性能对比的文章，
+其中Debian系列的性能要明显优于RHEL系列，原因我暂时也不是特别清楚，这也是激发我
+重新选择Ubuntu的原因之一。我希望在使用过程中，重新比较一下Ubuntu和Fedora这两大发行版的差异，例如包管理工具的差异、软件包中的配置文件的差异、系统管理方面的差
+异，此外呢，我也希望能够对其性能上的差异进行一下更深的认识。&lt;/p&gt;
+&lt;h2 id="1系统安装过程"&gt;1.系统安装过程 &lt;a href="#1%e7%b3%bb%e7%bb%9f%e5%ae%89%e8%a3%85%e8%bf%87%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;系统安装过程，应该说是驾轻就熟了，下载一个Ubuntu 16.04 LTS的ISO文件，然后使用
+Unetbootin制作一个可以引导系统安装的U盘。U盘要格式化成FAT32格式，且要根据需要
+预留一定的存储空间，以供安装过程中释放文件使用，如果预留空间不足，可能导致安装
+失败。&lt;/p&gt;
+&lt;p&gt;制作完成安装U盘之后，插入电脑，关闭BIOS中的UEFI引导模式，然后从USB HDD启动安装即可。安装的时候手动分区，最好能够把那些第三方软件包给安装上，这样省的后续安装
+，省心。我是深有体会，之前安装音频、视频播放器的时候，安装解码库浪费了很多时间
+。安装过程中有个别地方需要设置一下，例如用户名、密码、语言、地区、时间等等的。&lt;br&gt;
+注意，Ubuntu在安装过程中不会对root用户的密码进行设置，并且默认将新建的用户加入
+wheel组中！但是在Fedora安装过程中，会对root密码进行设置，然后再创建一个新用户
+，并允许选择是否将该用户加入wheel组中，还可以指定uid、gid等。这是一个区别，需
+要注意一下，安装完成之后，需要通过“passwd root”对密码进行重新设定。&lt;/p&gt;</description></item><item><title>vim使用进阶常用操作</title><link>/blog/2016-01-07-vim_vim%E8%BF%9B%E9%98%B6%E7%AE%80%E6%98%93%E6%89%8B%E5%86%8C/</link><pubDate>Sun, 26 Jun 2022 11:44:40 +0800</pubDate><guid>/blog/2016-01-07-vim_vim%E8%BF%9B%E9%98%B6%E7%AE%80%E6%98%93%E6%89%8B%E5%86%8C/</guid><description>&lt;h1 id="vim使用进阶常用操作"&gt;vim使用进阶常用操作 &lt;a href="#vim%e4%bd%bf%e7%94%a8%e8%bf%9b%e9%98%b6%e5%b8%b8%e7%94%a8%e6%93%8d%e4%bd%9c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="文件打开退出"&gt;文件打开退出 &lt;a href="#%e6%96%87%e4%bb%b6%e6%89%93%e5%bc%80%e9%80%80%e5%87%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;open and edit files has several modes as following:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;vim filename: open this file&lt;/li&gt;
+&lt;li&gt;vim +n filename: open file and position cursor at line n, `n is a number&lt;/li&gt;
+&lt;li&gt;vim + filename: open this file and position your cursor at last line&lt;/li&gt;
+&lt;li&gt;vim +/pattern filename: open file and position at the first match of pattern&lt;/li&gt;
+&lt;li&gt;vim -r filename: open file and recover from swapfile, swapfile on big RAM is unnecessary, so we can disabled it&lt;/li&gt;
+&lt;li&gt;vim -R filename: open file in mode read-only&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;providing you have edited the file,if you press:&lt;/p&gt;</description></item><item><title>macOS 10.15.7安装配置gdb</title><link>/blog/2022-04-10-macos_macos10.15.7%E5%AE%89%E8%A3%85%E9%85%8D%E7%BD%AEgdb/</link><pubDate>Sun, 10 Apr 2022 13:05:20 +0800</pubDate><guid>/blog/2022-04-10-macos_macos10.15.7%E5%AE%89%E8%A3%85%E9%85%8D%E7%BD%AEgdb/</guid><description>&lt;h2 id="问题简介"&gt;问题简介 &lt;a href="#%e9%97%ae%e9%a2%98%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;gdb作为一款符号级调试器，是广大开发人员排查问题的神兵利器，但是因为macOS darwin内核的一些调整，gdb出现了各种神奇的bug行为，如权限问题导致的无法启动调试、启动调试后调试会话卡死等等。&lt;/p&gt;
+&lt;p&gt;作者此前也曾经因为此类问题而苦恼，甚至不得不放弃了使用gdb调试器而使用其他办法来排查。最近在通过homebrew安装jupyterlab的时候发现gdb被升级了，就突然想起了之前被搁置的这个问题，测试后发现gdb还是不可正常使用。因此google一圈加不断测试，最终终于成功了。&lt;/p&gt;
+&lt;p&gt;这里总结下方便日后查阅，也供遇到类似问题的朋友参考，这确实是一个老大难的问题了。google能发现很多针对该问题的讨论，难兄难弟们，let&amp;rsquo;s go。&lt;/p&gt;
+&lt;h2 id="如何解决"&gt;如何解决 &lt;a href="#%e5%a6%82%e4%bd%95%e8%a7%a3%e5%86%b3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;download the source code zip file from https://github.com/bminor/binutils-gdb.git,
+unzip the zipfile to &lt;code&gt;./binutils-gdb-master&lt;/code&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;then try to build from master HEAD&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;mkdir build
+cd build
+../binutils-gdb-master/configure \
+--disable-unit-tests \
+--disable-binutils \
+--without-guile
+make -j8
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;the built gdb binary is put here: &lt;code&gt;./gdb/gdb&lt;/code&gt;. Because I want to make package management simpler, so I don&amp;rsquo;t want to run &lt;code&gt;make install&lt;/code&gt; to install the gdb and other files.&lt;/p&gt;</description></item><item><title>使用awgo开发alfred.workflow</title><link>/blog/2020-07-31-alfred_%E4%BD%BF%E7%94%A8awgo%E5%BC%80%E5%8F%91alfred.workflow/</link><pubDate>Fri, 31 Jul 2020 14:53:15 +0800</pubDate><guid>/blog/2020-07-31-alfred_%E4%BD%BF%E7%94%A8awgo%E5%BC%80%E5%8F%91alfred.workflow/</guid><description>&lt;style&gt;
+img {
+width: 680px;
+}
+&lt;/style&gt;
+&lt;h1 id="本文简介"&gt;本文简介 &lt;a href="#%e6%9c%ac%e6%96%87%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;该workflow主要是为了对 &amp;ldquo;时间戳&amp;rdquo; &amp;amp;&amp;amp; &amp;ldquo;格式化日期+时间字符串&amp;rdquo; 进行快速转换，方便使用。&lt;/p&gt;
+&lt;p&gt;开发人员，经常会涉及到时间相关的转换操作，有个趁手的工具还是很有必要的。&lt;/p&gt;
+&lt;p&gt;我平时使用alfred比较多，自然就想通过workflow的方式来实现，当然用hammerspoon、pet等其他工具也可以。&lt;/p&gt;
+&lt;p&gt;alfred workflow和alfred本身的交互是通过管道方式进行连接的：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;alfred将用户输入的信息转发给匹配的workflow；&lt;/li&gt;
+&lt;li&gt;workflow对接收到的参数进行处理，并将处理的结果按照指定格式输出到stdout；&lt;/li&gt;
+&lt;li&gt;alfred读取stdout中的数据作为响应展示到用户界面；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这里主要使用了awgo来编写workflow，实现逻辑可以参考下代码，逻辑很简单。下面主要介绍下如何使用。&lt;/p&gt;
+&lt;h1 id="如何安装"&gt;如何安装？ &lt;a href="#%e5%a6%82%e4%bd%95%e5%ae%89%e8%a3%85" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;下载项目下 &lt;a href="https://raw.githubusercontent.com/hitzhangjie/alfred-datetime-workflow/master/workflow/Date%20Formats%20Go.alfredworkflow"&gt;workflow/Date Formats Go.alfredworkflow&lt;/a&gt;，双击即可安装。&lt;/p&gt;
+&lt;h1 id="如何使用"&gt;如何使用？ &lt;a href="#%e5%a6%82%e4%bd%95%e4%bd%bf%e7%94%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;运行 &lt;code&gt;datex&lt;/code&gt; 唤起workflow&lt;br&gt;
+&lt;img alt="运行datex换起workflow" src="assets/alfred/1.jpg"/&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;常用转换操作: 获取当前时间对应的Unix时间戳，以及格式化字符串&lt;br&gt;
+&lt;code&gt;datex now&lt;/code&gt;，将当前时间转换为时间戳以及格式化后的字符串(多种日期格式)。&lt;br&gt;
+可以用上下键移动进行选择，当按下回车键时，会将对应的结果拷贝到剪贴板，方便粘贴使用。
+&lt;img alt="获取当前时间" src="assets/alfred/2.jpg"/&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;常用转换操作: 将时间戳转换为对应的格式化字符串&lt;br&gt;
+以时间戳1596137272为例，&lt;code&gt;datex 1596137272&lt;/code&gt;，此时会将时间戳转换为格式化后的字符串。&lt;br&gt;
+选择、复制数据操作类似。
+&lt;img alt="转换时间戳" src="assets/alfred/3.jpg"/&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;常用转换操作: 将格式化字符串转换为时间戳，或其他格式&lt;br&gt;
+以字符串&lt;code&gt;2020-07-30&lt;/code&gt;为例，&lt;code&gt;datex 2020-07-30&lt;/code&gt;，此时会先将其与候选的格式化字符串进行匹配。&lt;br&gt;
+并转换成一个有效的时间戳。 然后再根据此时间戳，转换为其他格式对应的字符串。选择、复制数据操作类似。
+&lt;img alt="转换字符串" src="assets/alfred/4.jpg"/&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;这大致就是该workflow的使用方式。&lt;/p&gt;
+&lt;p&gt;关于日期时间格式转换的workflow，github上已经有几个比较好的实现了，轮子不好用就得自己造。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;实现对timezone支持不好;&lt;/li&gt;
+&lt;li&gt;采用的时间格式不符合国人习惯;&lt;/li&gt;
+&lt;li&gt;掌握awgo开发alfred workflow以后可以写更多效率工具;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;希望这个小工具能帮助到有需要的同学，也给准备开发alfred workflow或使用awgo开发workflow的同学提供一个示例。&lt;/p&gt;
+&lt;h1 id="如何实现"&gt;如何实现？ &lt;a href="#%e5%a6%82%e4%bd%95%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="流程图梳理下逻辑"&gt;流程图梳理下逻辑 &lt;a href="#%e6%b5%81%e7%a8%8b%e5%9b%be%e6%a2%b3%e7%90%86%e4%b8%8b%e9%80%bb%e8%be%91" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;先画个流程图，简单理下思路，思路理清楚了，写代码就快了。&lt;/p&gt;
+&lt;img alt="流程图" src="assets/alfred/0.png"/&gt;
+&lt;h2 id="alfredworkflow编排"&gt;alfred.workflow编排 &lt;a href="#alfredworkflow%e7%bc%96%e6%8e%92" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;好，理清楚思路之后，我们开始尝试对worklow进行编排，如下所示：&lt;/p&gt;
+&lt;img alt="workflow编排" src="assets/alfred/5.jpg"/&gt;
+&lt;p&gt;workflow中包含2个节点：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;节点1，是一个script filter，我们可以配置一个关键字datex来激活它，当然还可以继续输入参数。激活该script filter之后，它将调用我们编写的时间转换程序alfred-datetime-workflow，程序返回的结果将在alfred界面上进行展示，展示的样式是列表。如我们输入datex now，将显示现在的时间戳以及其他格式的datetime字符串。&lt;br&gt;
+&lt;img alt="script filter配置" src="assets/alfred/8.jpg"/&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;节点2，是Copy to Clipboard，它干什么呢？节点1中显示了列表之后，用户选择一个列表项+回车之后，选中的列表项对应的参数值将被传递给该节点作为参数，Copy to Clipboard就是将参数拷贝到剪贴板；&lt;/p&gt;</description></item><item><title>静态站点生成器，为什么选择hugo？</title><link>/blog/2020-05-30-blog_%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8/</link><pubDate>Sat, 30 May 2020 16:58:22 +0800</pubDate><guid>/blog/2020-05-30-blog_%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8/</guid><description>&lt;style&gt;
+img {width:680px;}
+video {width:680px;}
+&lt;/style&gt;
+&lt;p&gt;&lt;img src="assets/2020-05-30-%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8/%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8hugo.png" alt="hugo"&gt;&lt;/p&gt;
+&lt;p&gt;Hugo 是一个静态站点生成器，是评测最快的静态站点生成器，采用golang编写，依赖bep、spf13、friends这几个第三方库来实现。Hugo是一个不错的静态站点生成器，类似的还有readthedoc、gitbook、jekyll、gatsby等等，谈谈我对这几个流行的站点生成器的看法。&lt;/p&gt;
+&lt;h3 id="jekyll"&gt;&lt;strong&gt;jekyll&lt;/strong&gt; &lt;a href="#jekyll" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;img src="assets/2020-05-30-%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8/640-20220625165716427.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;jekyll，是我使用的第一个静态站点生成器，用于我的 github pages， 它有比较丰富的主题，这个是我当时选择的一个原因，我可以专心于文档的编写，文档也是markdown格式。但是由于它对markdown的支持比较鸡肋，比如缺乏对图片引用、图表、plantuml、flowchart等的良好的支持，最终让我觉得通过jekyll来维护一个静态站点比较痛苦。&lt;/p&gt;
+&lt;h3 id="gitbook"&gt;&lt;strong&gt;gitbook&lt;/strong&gt; &lt;a href="#gitbook" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;img src="assets/2020-05-30-%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8/640-20220625165733460.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;gitbook，是我平时经常使用的一个编辑工具吧，特别是涉及到类似书籍章节的大量内容组织的时候，现在依旧是我常用的编辑工具之一。gitbook-cli是其配套的一个工具，现在已经不再更新、维护，离线编辑已经不再被支持，现在转为线上服务。我还是比较倾向于离线编辑，不得不寻求其他可替代方案。&lt;/p&gt;
+&lt;h3 id="readthedoc"&gt;&lt;strong&gt;readthedoc&lt;/strong&gt; &lt;a href="#readthedoc" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;img src="assets/2020-05-30-%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8/640-20220625165744359.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;见名知意，readthedoc确实比较用来写技术文档，其本身也是为了给python写api文档的，其用来构建类似的技术文档、手册还比较合适，但是用来构建一个更通用点的静态站点的话就有些不合适，不管多大的屏幕，它展示的区域总是那么小，有点死守每行N个字符的味道。&lt;/p&gt;
+&lt;h3 id="gatsby"&gt;&lt;strong&gt;gatsby&lt;/strong&gt; &lt;a href="#gatsby" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;这个也是一个比较好用的静态站点生成器，网上也有很多它和hugo的对比，由于我对背后的实现js等不太熟悉，而我本人也经常有些定制化的修改需求，我还是有可能会去改下源码为自己所用的，所以选型阶段直接放弃。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2020-05-30-%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8/640-20220625165752044.png" alt="图片"&gt;&lt;/p&gt;
+&lt;h3 id="mkdocs"&gt;&lt;strong&gt;mkdocs&lt;/strong&gt; &lt;a href="#mkdocs" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;img src="assets/2020-05-30-%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8/640-20220625165800334.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;mkdocs和gitbook类似，使用都比较简单，但是其风格定制化比较难操作，如果你对它的默认风格不太满意，又想定制主题，而不想沾染什么前端相关的工作，mkdocs可能并不一定合适。&lt;/p&gt;
+&lt;h3 id="hugo"&gt;&lt;strong&gt;hugo&lt;/strong&gt; &lt;a href="#hugo" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;hugo的支持、维护、更新都还不错，生态也不错，也有很多使用hugo的公司、团队、个人用它来维护自己产品、个人的文档、博客等等，也有比较丰富的主题可供选择。hugo的好处是它的主题是完整的，包括各种各样的插件，可以体验、下载安装、应用中意的主题，后续切换主题也比较方便。而且hugo也提供了一些命令行操作来快速发布静态站点。还有就是对golang的偏爱，意味着我可以在有需要的时候了解其实现，修改其源码进行定制化，或者做贡献。&lt;/p&gt;
+&lt;p&gt;综合上述考虑和对比，现在呢，我更倾向于使用hugo来作为接下来的静态站点生成器。&lt;/p&gt;</description></item><item><title>你的mac有哪些“趁手”的配置呢？</title><link>/blog/2020-04-25-macos_%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/</link><pubDate>Sat, 25 Apr 2020 17:13:14 +0800</pubDate><guid>/blog/2020-04-25-macos_%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/</guid><description>&lt;style&gt;
+img {width:680px;}
+video {width:680px;}
+&lt;/style&gt;
+&lt;p&gt;这阵子上班在同事之间走动比较多，发现基本上已经人手一台mac，但是对系统的配置、使用却大不同。也有新同学估计是windows转过来的，适应起来也有困难。听物资管理的同事提起过，有同学因为不习惯mac重新换机器的也不少。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2020-04-25-%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/640-20220625170645996.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;前几天生日，买了台新设备送自己（原本打算买Aprilia 150，先放放），恰好生日前一天到&amp;#x1f603;。刚好也在做一些配置的事，就把过程中觉得比较有分享价值的整理分享下。&lt;/p&gt;
+&lt;p&gt;回想起16年参加工作刚领工资那个月，兴冲冲地买了mbp，端端正正的16:10屏幕，细腻的分辨率，舒服的键盘，人性化的键盘灯，灵敏的触控板……哇，硬件完美，这就是我想要的工具。试用了一天之后，发现很难适应。狂吐槽，经常拿它和Linux桌面做对比，过了一段时间的调教，发现还是可以的&amp;#x1f603;。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2020-04-25-%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/640.jpeg" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;自己老设备也没使用time machine来做快照，没那么大硬盘分区了，而且有很多垃圾，还是干干净净从头来一遍吧，也把过程中值得分享的记录下（尽量做到合适的归类）。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;1 Spotlight&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;以前，搜索引擎是大家了解信息的主要入口，搜索、热门词条等，spotlight是一个类似的东西，它提供了一个入口让用户可以快速触达待访问的内容，可能是启动一个应用程序，进入一个文件路径，打开一个文件，翻译一个单词，进行一段科学计算，执行一个工作流，全文搜索，OCR搜索你的网页批注……网络搜索……&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2020-04-25-%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/640-20220625170645857.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;听起来很美好是吧，这个玩意也不是什么新鲜的东西，在Windows、Linux上都有类似的工具，比如KDE上按键F2 进入搜索基本上是同样的效果，Unity、GNOME上都有类似的，特别是XBuntu上对spotlight进行了高度“抄袭”&amp;#x1f603;。&lt;/p&gt;
+&lt;p&gt;调整原因：默认command+space是启动spotlight，与输入法切换冲突&lt;/p&gt;
+&lt;p&gt;调整推荐：快捷键调整成 command+/，这个组合键简单，又避免冲突&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2020-04-25-%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/640-20220625170645647.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;2 Launchpad&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Launchpad有点类似于windows下的开始菜单，这里可以搜索安装的应用程序，和windows相比一个好点的地方是，可以对应用进行分组，现在Android、iOS都支持，大家应该不陌生，好处就是避免了冗长的程序列表，定位也更快。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2020-04-25-%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/640-20220625170645965.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2020-04-25-%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/640-20220625170645837.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;因为有了Spotlight、Alfred（下面会提到），Launchpad并不算是一个高频操作，所以我把Option按键用来分配组合键，Option+W。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2020-04-25-%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/640-20220625170645689.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;另外，Launchpad偶尔会抽风，将应用顺序、组合全部搞的错乱，这个也不用怕，安装Launchpad Manager来管理Launchpad布局，并将最新布局导出到icloud进行备份，如果哪天抽风了，拿出来恢复一下就可以。CleanMyMac扫描大文件的时候偶尔会干掉Launchpad对应的数据文件，从CleanMyMac的搜索路径里屏蔽掉就可以了。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;3. Desktops&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;现代的桌面操作系统都支持多任务，一边听着音乐，一边写着文档等等，这是常有的事情，然而每个人理解的多任务可能不太一样。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2020-04-25-%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/640-20220625170645704.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;可能有的用户真的没那么多任务要处理，也就是一边公放着音乐，一遍斗地主，诸如此类，那一个桌面可能就够了。但是，多任务也可能是下面这样的，甚至更多。如果真的只能通过Alt+Tab来切换简直是噩梦。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2020-04-25-%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/640-20220625170645779.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;多个虚拟桌面的好处就体现出来了，Ubuntu Unity里面的workspace，KDE里面的Pages，macOS里面的Desktop，Windows 10里面的taskview，anyway，总之都是一个意思，无非就是为了方便用户进行任务管理。按照任务类别适当将任务组织到不同的Desktop，并按照就近原则将常用的任务放在切换时更快速访问到的Desktop，是个比较好的做法。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2020-04-25-%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/640-20220625170645800.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;通过触控板可以方便地在上述虚拟Desktop间进行切换，也可以将窗口移动到其他的Desktop。说到这里就不得不提触控板、窗口拖动、快捷键的设置，嗯，这里先只讲快捷键设置吧。&lt;/p&gt;
+&lt;p&gt;快捷键快速切换Desktop，默认改成了Ctrl+Command+ Left Arrow，其实用触控板也可以，至于为什么想用快捷键？可能电脑大小比例不符合人体工程学，经常性地触控板左右滑动之后，会感觉手腕很累……所以键盘、触控板交替着用，会舒服一点。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2020-04-25-%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/640-20220625170646018.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;如果左右切换都嫌累，嫌麻烦，拖拽窗口到其他Desktop就更麻烦了，比如有的时候你在Desktop1打开了一个编辑器，但是你后面意识到它应该移动到其他Desktop2中去（KDE里面有种更好的管理方式叫Activity），那你就得手动移动过去，问题是如果Desktop2中窗口比较多，你移动过去发现，唉，移动错了，应该移动到Desktop3中去，然后你又开始拖动……&lt;/p&gt;
+&lt;p&gt;效率是什么，效率就是短小精悍，让响应跟上思维的速度，这种看似不起眼的事情，我是不愿意让它悄悄消耗掉自己的时间。如果支持快捷键快速将一个窗口移动到另一个Desktop会方便一点，因为快捷键可以连续触发，而不用再次拖拽来个位移。KDE里面pages管理，是有考虑到这些的，macOS里面没有，当然也可以做到，只不过嘛就要自己动手了。&lt;/p&gt;
+&lt;p&gt;Hammerspoon（下文会提到）是针对macOS提供的一个可扩展的工具，通过lua脚本封装了大多数的macOS系统编程接口，如果你想定制化一些操作，只要看着hammerspoon的文档写lua脚本就可以了，论一个开发者的好处&lt;img src="data:image/gif;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQImWNgYGBgAAAABQABh6FO1AAAAABJRU5ErkJggg==" alt="图片"&gt;。&lt;/p&gt;
+&lt;p&gt;写这么一段lua脚本，放置到~/.hammerspoon目录下，就支持快捷键Shift+Ctrl+Cmd+Arrow Keys来快速移动窗口了，至于为什么选择这个快捷键，习惯，KDE下面多年养成的习惯。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2020-04-25-%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/640-20220625170645836.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2020-04-25-%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/640-20220625170645963.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;4 Trackpad&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;触控板还需要设置吗，要设置，适合自己的才是最好的。&lt;/p&gt;
+&lt;p&gt;Tap to click，点选这个勾上，这样就不用每次“按”一下才触发单击操作。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2020-04-25-%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/640-20220625170645936.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;Scroll direction: Natural，这个滚动方向，现在虽然不用鼠标了，但是习惯养成了。比如浏览网页的时候，想从页面底部回到顶部，或者希望向上滚动，我想的是，把页面往下拽一下页面顶部的位置就展示在眼前了。这里的natural滚动方向我就很难适应，有相似的可以取消勾选。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2020-04-25-%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/640-20220625170646115.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;我不想知道自己干什么的时候该用几根手指，我只想完成想干的事情。所以我几乎都设置成了四指操作，有的最多只有三指的，那就三指好了，反正四指也可以触发，去掉这些记忆负担。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2020-04-25-%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/640-20220625170646007.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;使用触摸板拖动窗口，默认设置是先点按窗口标题栏，按住不放，再一只手将其拖动，这个操作很不方便，设置下可以直接三指窗口拖动。现实场景中，一般我是通过hammerspoon自定义脚本来完成的：最大化、最小化、居中、左半屏、右半屏等。但是，移动窗口的需求还是有的。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2020-04-25-%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/640-20220625170646286.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;5 Keyboard&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>如何实现一个更安全的删除命令rm</title><link>/blog/2019-10-18-shell_%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AA%E6%9B%B4%E5%AE%89%E5%85%A8%E7%9A%84%E5%88%A0%E9%99%A4%E5%91%BD%E4%BB%A4rm/</link><pubDate>Fri, 18 Oct 2019 15:00:01 +0800</pubDate><guid>/blog/2019-10-18-shell_%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AA%E6%9B%B4%E5%AE%89%E5%85%A8%E7%9A%84%E5%88%A0%E9%99%A4%E5%91%BD%E4%BB%A4rm/</guid><description>&lt;style&gt;
+img {
+width: 680px;
+padding-bottom: 1rem;
+}
+&lt;/style&gt;
+&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;大家有没有因为一时大意，错误地执行了&lt;code&gt;rm -rf&lt;/code&gt;而导致重要文件被删除的情况？一定有那么一次两次的吧。前几天，我又犯了这一次这样的错误。本来是要删除当前目录下的一个文件，于是执行 &lt;code&gt;rm -rf .&lt;/code&gt;，这里还没有输入完，因为我调整了KeyRepeat设置项的原因吧，按键延迟很短，结果命令变成了 &lt;code&gt;rm -rf ..&lt;/code&gt;，这个时候&lt;code&gt;..&lt;/code&gt;已经指向了HOME目录……额，没关注右手，左手还没有tab候选，右手已经键入了回车，gg，眼睁睁地看着大量文件被删除，ctrl+c已经太晚了 :( 。&lt;/p&gt;
+&lt;p&gt;多亏macOS默认对Desktop、Document等目录下的文件做了自动地备份，不然就真的要苦了，虽然对重要文件、数据也有做过备份，但是也不能做到按月、按天的备份，哪怕是最近几个月的数据、配置的丢失，对我来说也是挺伤的。果不其然，后续几天陆陆续续发现丢失了各种各样的配置，IDE的、bash的、git的、pet的……各种各样的！&lt;/p&gt;
+&lt;p&gt;不幸中的万幸，一些自己认为真的很重要的数据，一般在Document中交给icloud做了备份，这些数据倒是可以恢复，虽然慢了点，但是能恢复总还是好的！感谢icloud提供的云存储服务！&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/rm/icloud.jpeg" alt="icloud恢复文件"&gt;&lt;/p&gt;
+&lt;h2 id="如何避免误删除文件"&gt;如何避免误删除文件 &lt;a href="#%e5%a6%82%e4%bd%95%e9%81%bf%e5%85%8d%e8%af%af%e5%88%a0%e9%99%a4%e6%96%87%e4%bb%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;经此一役之后，我还是思考了一些如何规避的问题，我有多年的Linux使用经验，竟然也会犯这样的错误，我将其归因于：过失问题，虽然像我这样的有经验的开发者极少会犯这样的错误，但是还是会偶尔发生！很多开发者都提出了自己的一些想法，如何规避rm造成的文件误删问题，我们这里不考虑如何恢复的问题，如果是私人笔记本单硬盘单分区的话，恢复的困难度是比较高的。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;删除只用系统gui删除，如macOS、windows、kde下删除文件到垃圾箱，误删的话还是可以从垃圾箱恢复的；&lt;/p&gt;
+&lt;p&gt;不适用：执行删除动作是很常见的，作为一名开发者，我不大可能使用gui来频繁切换目录后才删除文件。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;自定义bash中的alias，如alias rm=&amp;ldquo;function rm() {&amp;hellip;.}&amp;quot;，该函数内部做一些检查，以决定是否删除文件；&lt;/p&gt;
+&lt;p&gt;不适用：这也是一个解决问题的思路，但是能否与原生的/bin/rm命令完全兼容是一个问题，而且检查逻辑可能要频繁改动才能胜任各种避免误删的场景，使用起来不是那么灵活。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;使用第三方的删除工具，如github上的一些类似rm-safe的工具，代替原生的/bin/rm命令；&lt;/p&gt;
+&lt;p&gt;不适用：这些工具不能完全与/bin/rm兼容，尤其是那些命令选项不完全兼容，而/bin/rm是一个非常好用的工具，我们只是想尽力规避下误删除的风险而已。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;看上去没有一个现有工具能够完全满足自己的选择，那就自己按自己的需要开发一个吧！&lt;/p&gt;
+&lt;h2 id="设计更安全的rm工具"&gt;设计更安全的rm工具 &lt;a href="#%e8%ae%be%e8%ae%a1%e6%9b%b4%e5%ae%89%e5%85%a8%e7%9a%84rm%e5%b7%a5%e5%85%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="分析binrm"&gt;分析/bin/rm &lt;a href="#%e5%88%86%e6%9e%90binrm" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;首先，不得不说，/bin/rm是一个非常好用的命令，删除文件、删除没目录等等，可以说使用频率非常高，它也确实很好用。说白了，我们只是要在它的基础上做些安全方面的风险规避就能满足需求。&lt;/p&gt;
+&lt;p&gt;/bin/rm，它有一系列的命令选项，且是POSIX风格的。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果我们开发一个工具，或者在/bin/rm基础上包一层的话，我们最好也使用POSIX风格的命令选项来解析;&lt;/li&gt;
+&lt;li&gt;涉及到rm相关的选项，原来rm有的我们也要有，而且功能必须保持一致；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;说白了就是，我们要保证用户使用的时候，习惯保持不变，甚至没有意识到自己在使用一个安全增强的rm。&lt;/p&gt;
+&lt;h3 id="如何安全增强"&gt;如何安全增强 &lt;a href="#%e5%a6%82%e4%bd%95%e5%ae%89%e5%85%a8%e5%a2%9e%e5%bc%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;rm动作是用户自己执行的，除了用户自己清楚目标文件是否重要，没有其他人可以做出胜过文件拥有者的决定，所以安全增强的决定还是交给用户自己来做出，我们的工具只是协助用户完成这样的动作。&lt;/p&gt;
+&lt;p&gt;设计一个安全增强的rm：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;支持pin命令，如&lt;code&gt;rm pin Documents&lt;/code&gt;，保护Documents目录及其下的文件；
+&lt;ul&gt;
+&lt;li&gt;当执行&lt;code&gt;rm -rf Documents&lt;/code&gt;时，发现有.pinLock文件存在，表示Documents目录及其下的文件、子目录受保护，拒绝删除；&lt;/li&gt;
+&lt;li&gt;当执行&lt;code&gt;rm -rf Documents/dir/file&lt;/code&gt;时，会递归地回溯目录层级，如果路径上任一父目录受保护，该文件不能被删除；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;支持unpin命令，如&lt;code&gt;rm unpin Documents&lt;/code&gt;，取消Documents当前一级目录的保护；
+&lt;ul&gt;
+&lt;li&gt;当执行&lt;code&gt;rm -rf Documents/dir/file&lt;/code&gt;时，如果Documents处于unpin状态，但是dir处于pin状态，file也是受保护的，不能删除；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;支持&lt;code&gt;-r&lt;/code&gt;选项，允许递归地添加、移除保护；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="实现该rm命令"&gt;实现该rm命令 &lt;a href="#%e5%ae%9e%e7%8e%b0%e8%af%a5rm%e5%91%bd%e4%bb%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;以下是大致的rm命令操作的help信息，它有3个子命令，help显示帮助信息，pin用来对目录添加保护，unpin移除保护。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;$ rm help
+hitzhangjie/rm is an security-enhanced version of /bin/rm,
+which could avoid the deletion of files by mistake.
+rm help:
+display help info
+rm pin:
+-r, pin target recursively
+rm unpin:
+-r, unpin target recursively
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;当传递给rm的选项，不是rm help/pin/unpin这样的选项时，会将选项当做/bin/rm的选项，进而执行rm相关的动作，所不同的是，这里的删除并不是由/bin/rm来执行，而是由我们重写的一个rmCmd来执行，其内部会首先检查待删除文件、目录是否正在被保护。&lt;/p&gt;</description></item><item><title>macOS实现高效todolist</title><link>/blog/2019-02-23-alfred_macos%E5%AE%9E%E7%8E%B0%E9%AB%98%E6%95%88todolist/</link><pubDate>Sat, 23 Feb 2019 00:13:00 +0800</pubDate><guid>/blog/2019-02-23-alfred_macos%E5%AE%9E%E7%8E%B0%E9%AB%98%E6%95%88todolist/</guid><description>&lt;style&gt;
+img {
+width: 680px;
+padding-bottom: 1rem;
+}
+&lt;/style&gt;
+&lt;h1 id="高效-todo"&gt;高效 “Todo” &lt;a href="#%e9%ab%98%e6%95%88-todo" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Apple设备上有一个非常好的效率工具“&lt;strong&gt;Calendar.app（日历）&lt;/strong&gt;”，在日历中可以添加待办事项，并且支持按天、周、月、年视图进行快速浏览，是工作、学习的好帮手。工作中，自己的想法、他人的反馈、问题要点等需要快速记录下来，每次唤醒日历进行手动添加还是有点低效，能不能实现更高效地“Todo”呢？
+&lt;img src="assets/todolist/1550882147_45.png" alt="calendar.app"&gt;&lt;/p&gt;
+&lt;p&gt;想象一下手动打开日历，定位到今天，滑动到下方找一个合适的时间点添加待办事项，输入描述信息再回到原来的工作，麻烦！结合Alfred+AppleScript编写了一个Workflow，现在方便多了，实现了如下效果。快捷键快速呼出Alfred交互输入框，然后键入“&lt;strong&gt;todo 待办事项描述信息&lt;/strong&gt;，然后键入“&lt;strong&gt;回车&lt;/strong&gt;”，此时就可以自动添加一条新的待办事项到日历中，是不是方便多了！
+&lt;img src="assets/todolist/1550884138_61.png" alt="todo"&gt;&lt;/p&gt;
+&lt;p&gt;执行上述操作之后：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;若日历程序没启动，添加成功会启动日历并提到前台，展示当前添加的待办事项；&lt;/li&gt;
+&lt;li&gt;若日历程序已启动，添加成功不会再将日历提到前台，在通知中心发一条添加成功的通知；
+&lt;img src="assets/todolist/1550882378_18.png" alt="notify"&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;我想要的高效“Todo”是近似这样的，目前能基本满足我的要求。这里的实现方式是，打开Alfred-&amp;gt;Preferences-&amp;gt;Workflows，新建一个Blank Flow，然后配置如下：
+&lt;img src="assets/todolist/1550882415_51.png" alt="workflow"&gt;
+workflow中todo节点获取输入的待办事项，并将输入信息通过脚本参数的形式传递给后续的osacript进行处理，该脚本负责添加待办事项到日历。workflow中两个节点的配置如下所示：
+&lt;img src="assets/todolist/1550882463_68.png" alt="workflow-node1"&gt;
+&lt;img src="assets/todolist/1550882487_94.png" alt="workflow-node2"&gt;
+完整的脚本代码如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-javascript"&gt;on run
+set theQuery to &amp;quot;{query}&amp;quot;
+--------------------------------------------------------------------------
+-- 今天的开始、结束，用于筛选今天的事件列表
+set todayStart to (current date)
+set time of todayStart to 0
+copy todayStart to todayEnd
+set time of todayEnd to 86400
+-- 待添加事件的开始、结束时间，我喜欢按照时间顺序追加的添加方式
+copy todayStart to todoStart
+set minutes of todoStart to 0
+set seconds of todoStart to 0
+-- 启动Calendar筛选今天内添加的todo事件列表
+tell application &amp;quot;Calendar&amp;quot;
+tell calendar &amp;quot;todo&amp;quot;
+-- 遍历todo事件列表找到最后添加的事件
+set allEvents to (every event where its start date is greater than or equal to todayStart and end date is less than todayEnd)
+repeat with e in allEvents
+set t to start date of e
+if t ≥ todoStart then
+copy t to todoStart
+end if
+end repeat
+-- 继续追加新todo事件
+if hours of todoStart is equal to 0 then
+set hours of todoStart to 8
+else
+set todoStart to todoStart + (1 * hours)
+end if
+set todoEnd to todoStart + (1 * hours)
+make new event with properties {summary:theQuery, start date:todoStart, end date:todoEnd}
+end tell
+-- 启动Calendar显示
+if not running then
+run
+delay 0.25
+activate
+else
+set msg to &amp;quot;添加成功：&amp;quot; &amp;amp; theQuery
+display notification msg
+end if
+end tell
+----------------------------------------------------------------------
+return theQuery
+end run
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;AppleScript不太熟，东拼西凑攒出来这个小工具，还攒了一些其他小工具&amp;hellip; 希望对大家有帮助！&lt;/p&gt;</description></item><item><title>chrome分屏阅读插件：pagesplit</title><link>/blog/2018-03-02-chrome_%E5%88%86%E5%B1%8F%E9%98%85%E8%AF%BB%E6%8F%92%E4%BB%B6pagesplit/</link><pubDate>Fri, 02 Mar 2018 22:21:32 +0800</pubDate><guid>/blog/2018-03-02-chrome_%E5%88%86%E5%B1%8F%E9%98%85%E8%AF%BB%E6%8F%92%E4%BB%B6pagesplit/</guid><description>&lt;style&gt;
+img {
+width: 680px;
+padding-bottom: 1rem;
+}
+&lt;/style&gt;
+&lt;h1 id="前言"&gt;前言 &lt;a href="#%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;这几天在钻研golang，经常在网上看些源码分析的文章，既然是源码分析就少不了code和分析的各种穿插描述，文章篇幅一长或者code block块比较长，经常需要滚动鼠标上下翻页，这种阅读体验好差劲。心想要是能够将web页面进行类似于vim的vsplit或者lsplit就好了。于是就有了这个chrome扩展。&lt;/p&gt;
+&lt;h1 id="产品调研"&gt;产品调研 &lt;a href="#%e4%ba%a7%e5%93%81%e8%b0%83%e7%a0%94" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;chrome网上应用商店中搜索了一下，找到了几个类似功能的插件“split tabs”、“tab resize”，体验之后不太满足个人需要。原因是：这两个扩展都是通过创建一个新的浏览器窗口来打开当前web页面，然后并排显示（支持水平、垂直并排显示），如下图。
+&lt;img src="assets/pagesplit/dGcBAAAAAAAA&amp;amp;bo=hAMzAoQDMwIDMBU!.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;这种实现方式，实际使用时存在如下几个缺点：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;工作中，我们打开的应用程序窗口可能会很多，比如rtx，各种ide，各种终端……这样alt+tab切几次之后就难受了，需要手动将两个浏览器窗口给选择出来并排显示。不好用！&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;工作中，可能工作用的web标签页有很多，各种运维平台，各种视图，各种管理后台……如果在浏览器窗口中选择了其他的tab，再次切换回之前的tab比较困难，也不容易回到初始的并排显示状态。不好用！&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id="解决方案"&gt;解决方案 &lt;a href="#%e8%a7%a3%e5%86%b3%e6%96%b9%e6%a1%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;个人感觉还是同一个tab下能够vsplit、split比较方便，chrome网上应用商店找不到合适的了，google了一下，找到另一款扩展：&amp;ldquo;Frame two pages&amp;rdquo;，这个插件在功能上能满足需要，能够实现同一个tab下vsplit、split，如下图所示：&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/pagesplit/dPIAAAAAAAAA&amp;amp;bo=IAOAAoQD0AIDQJE!.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;但是其在使用时比较繁琐，当我们打开一个web页面，希望对其进行vsplit操作时，页面会弹出一个提示窗口，输入split方式，然后会执行对应的分割方式，看上去不错，但是有几个问题让人用起来很难受：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;没有考虑浏览器的X-Frame-Options对iframe的影响，使用过程中会“莫名其妙”地split失败，比如我正在写这篇文章，来测试一下vsplit什么效果，如下图，并没有成功vsplit；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;img src="assets/pagesplit/dGoBAAAAAAAA&amp;amp;bo=sQNFArEDRQIDIAU!.png" alt="图片"&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;不实用，如果选择的tab索引index大于0，会将index-1和index进行并排展示，至少与我的页面分割的初衷不一致；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;于是乎，我想改进下这个插件为我所用，说不定也可以方便大家，本着不重复造轮子的原则，安装上了这个Frame two pages扩展看了下它的代码，了解了chrome扩展的大致写法，然后对其进行了一些修改，基本符合我的功能性要求。&lt;/p&gt;
+&lt;h1 id="设计实现"&gt;设计实现 &lt;a href="#%e8%ae%be%e8%ae%a1%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;现在实现的功能包括：&lt;/p&gt;
+&lt;p&gt;1）点击插件按钮，选择split方式，支持对当前已经打开的web页面进行split、vsplit分割。&lt;/p&gt;
+&lt;p&gt;以垂直分割当前web页面为例，首先点击扩展图标，选择分割方式为vertical分割。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/pagesplit/dJEAAAAAAAAA&amp;amp;bo=XgJPAV4CTwEDEDU!.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;就得到了如下效果的分割页面，这个页面是在原页面tab之后创建的一个tab，不影响原来的tab。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/pagesplit/dGgBAAAAAAAA&amp;amp;bo=hAPsAYQD7AEDIAU!.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;2）忽略所有页面的X-Frame-Options选项，保证可以打开页面（为了安全使用者自己决定用不用吧），为了使用方便我我忽略掉了所有的X-Frame-Options，使得iframe可以正常加载。&lt;/p&gt;
+&lt;p&gt;3）某些情况下可能希望分割的两部分分别展示不同的页面，也是支持的，需要在一个空白的tab页上点击页面分割，此时会展示出如下输入url的输入框，然后点击下方的按钮就可以了。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/pagesplit/dGcBAAAAAAAA&amp;amp;bo=hAPrAYQD6wEDEDU!.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;比如一个进百度，一个进google。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/pagesplit/dHMAAAAAAAAA&amp;amp;bo=hAPnAYQD5wEDEDU!.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;4）我觉得存在这样的使用情景，比如正在看一个博客时，希望打开搜索引擎检索部分信息，一般我们都是打开一个新的标签页进搜索引擎，看完搜索结果后再跳回原来的tab……阅读期间可能要多次跳来跳去……希望能在已经成功vsplit、split的页面里面，将其中一个reset允许我们重新输入url打开新的页面。&lt;/p&gt;
+&lt;p&gt;于是为这个插件加了菜单：&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/pagesplit/dFYBAAAAAAAA&amp;amp;bo=hAPKAYQDygEDIAU!.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;以重置vsplit后的左半部分页面为例，选择“Split Page -&amp;gt; Reset left/top page”。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/pagesplit/dJEAAAAAAAAA&amp;amp;bo=hAO2AYQDtgEDIAU!.png" alt="图片"&gt;&lt;/p&gt;
+&lt;p&gt;左半部分就被重置到重新输入url的状态了，比如希望进入google，输入google网址，点击跳转按钮即可。&lt;/p&gt;
+&lt;h1 id="总结"&gt;总结 &lt;a href="#%e6%80%bb%e7%bb%93" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;简要了解了chrome extension的开发过程，chrome不同的版本迭代过程中增加了很多安全限制，开发、调试过程中要多注意。这只是为了平时阅读代码方便二次开发的一个小工具，另外对js了解的不多，可能存在bug，也欢迎反馈。&lt;/p&gt;
+&lt;p&gt;感兴趣的可以从github下载进行体验，仓库地址：https://github.com/hitzhangjie/PageSplit。&lt;/p&gt;</description></item><item><title>聊聊伴我多年的老友，Linux</title><link>/blog/2017-03-13-%E8%81%8A%E8%81%8A%E4%BC%B4%E6%88%91%E5%A4%9A%E5%B9%B4%E7%9A%84%E8%80%81%E5%8F%8Blinux/</link><pubDate>Mon, 13 Mar 2017 21:00:00 +0800</pubDate><guid>/blog/2017-03-13-%E8%81%8A%E8%81%8A%E4%BC%B4%E6%88%91%E5%A4%9A%E5%B9%B4%E7%9A%84%E8%80%81%E5%8F%8Blinux/</guid><description>&lt;h1 id="1-邂逅linux"&gt;1 邂逅Linux &lt;a href="#1-%e9%82%82%e9%80%85linux" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;初次接触Linux操作系统是在什么时候？想想～～&lt;/p&gt;
+&lt;p&gt;高三毕业后买了第一台电脑，一台清华同方的台式机，随机赠送的光盘里面有一张操作系
+统光盘“家电下乡Linux适农版”……那是我第一次接触并运行Linux，但那时的我并没有意识
+到，放在我面前的是一个即将深深地吸引我并要在多年的职业生涯中去不断锤炼的存在。&lt;/p&gt;
+&lt;p&gt;大一、大二这两年，我或多或少地接触到了Linux，但是并没有产生多大兴趣，直到有一
+天我激怒了一个同学。当时他正在摆弄Ubuntu，错误地GRUB配置导致系统引导失败，着急
+的他在QQ空间发了一条状态，意思就是大神求救之类的。当时我回了一个字“水”。他看后
+很生气，系统都启动不了了能不着急吗？于是呢，就言辞激烈地“回敬”了我几句……&lt;/p&gt;
+&lt;p&gt;事后我想，Linux有这么复杂吗？于是我开始试图取了解Linux，当然这只是个引子，后面
+陆陆续续看到有不少同学都在使用各种Linux的发行版，我才决定认真去了解、学习一下
+Linux，没想到这竟是一条不归路……&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;LiveCD &amp;amp; RemasterSys &amp;amp; dump &amp;amp; restore&lt;/li&gt;
+&lt;li&gt;GRUB 2 &amp;amp; Customize Boot Menu to bootstrap Multiple OS&lt;/li&gt;
+&lt;li&gt;Plymouth&lt;/li&gt;
+&lt;li&gt;Tweak KDE/GNOME/Unity Appearance (Colors &amp;amp; Themes)&lt;/li&gt;
+&lt;li&gt;Linux Commandline Techs &amp;amp; Administration&lt;/li&gt;
+&lt;li&gt;Unix/Linux Programming&lt;/li&gt;
+&lt;li&gt;Linux Kernel 0.11&lt;/li&gt;
+&lt;li&gt;Linux Kernel 2.4&lt;/li&gt;
+&lt;li&gt;Keep going along the roadmap to Linux World!&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;上面大体上是我初识、折腾、学习、应用、研究Linux的过程，而且这个过程在相当长一
+段事时间内还将一直向前延伸下去。与其说对Linux感兴趣，不如说是好奇心驱使，还有
+很多疑问没有揭开，这里当然不只是Linux操作系统内核本身。&lt;/p&gt;
+&lt;p&gt;我这个博客所要描述的东西可能就比较杂了，这里面我会穿插着记录很多东西～与其说是
+博客，不如说是我自己的一个学习笔记了，但是我这个人比较喜欢分享，但有不想那么刻
+意，所以我就把它丢在这，谁看见了找到点自己感兴趣的东西，也算是种缘分。&lt;/p&gt;
+&lt;h1 id="2-livecd--remastersys--dump--restore"&gt;2 LiveCD &amp;amp; RemasterSys &amp;amp; dump &amp;amp; restore &lt;a href="#2-livecd--remastersys--dump--restore" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="21-livecd"&gt;2.1 LiveCD &lt;a href="#21-livecd" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在学习Linux过程中，会有体验不同Linux发行版这样的需求的，这个时候你有不想频繁地安装系统来解决。LiveCD就是发行版厂商针对用户的这种需求推出的一个玩意，用户可以插入光盘到光驱、BIOS引导从光驱启动来体验。&lt;/p&gt;</description></item></channel></rss>

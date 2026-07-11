@@ -204,7 +204,7 @@ $$&lt;/p&gt;
 &lt;li&gt;&lt;strong&gt;网络与安全：&lt;/strong&gt; 防火墙规则（&lt;code&gt;iptables&lt;/code&gt;）、云平台安全组端口、路由表条目。&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;云资源拓扑：&lt;/strong&gt; 磁盘挂载容量、虚拟机规格、负载均衡器的权重分配。&lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;只要实际环境的任何一项指标与当初的设计蓝图产生了偏差，配置漂移就已经发生了。&lt;/p&gt;</description></item><item><title>网络编程：TCP send 返回成功，真的意味着对端收到了吗？</title><link>/blog/2026-06-25-tcp-send-reliability-myth/</link><pubDate>Thu, 25 Jun 2026 10:00:00 +0800</pubDate><guid>/blog/2026-06-25-tcp-send-reliability-myth/</guid><description>&lt;p&gt;TCP 连接 send 返回成功，真的意味着对端收到/处理了吗？先说结论，不光可能没处理，甚至收到都不一定收到。很多人说TCP不是可靠的吗？为什么像golang &lt;code&gt;tcpconn.Write&lt;/code&gt; 返回了nil，竟然还有可能发送不成功呢？&lt;/p&gt;
+&lt;p&gt;只要实际环境的任何一项指标与当初的设计蓝图产生了偏差，配置漂移就已经发生了。&lt;/p&gt;</description></item><item><title>网络编程：TCP send 返回成功，真的意味着对端收到了吗？</title><link>/blog/2026-06-25-tcp%E5%8F%AF%E9%9D%A0%E6%80%A7%E4%B8%8E%E5%8F%91%E9%80%81%E5%A4%B1%E8%B4%A5%E4%B9%8B%E8%B0%9C/</link><pubDate>Thu, 25 Jun 2026 10:00:00 +0800</pubDate><guid>/blog/2026-06-25-tcp%E5%8F%AF%E9%9D%A0%E6%80%A7%E4%B8%8E%E5%8F%91%E9%80%81%E5%A4%B1%E8%B4%A5%E4%B9%8B%E8%B0%9C/</guid><description>&lt;p&gt;TCP 连接 send 返回成功，真的意味着对端收到/处理了吗？先说结论，不光可能没处理，甚至收到都不一定收到。很多人说TCP不是可靠的吗？为什么像golang &lt;code&gt;tcpconn.Write&lt;/code&gt; 返回了nil，竟然还有可能发送不成功呢？&lt;/p&gt;
 &lt;p&gt;这是很多开发者的TCP认知误区。现如今很多网络服务器开发都是基于开发框架、RPC桩代码生成，网络通信被简化成了一个桩代码函数调用，开发者的技能也从系统调用、libev库之类的较深的理解慢慢会话为了RPC桩代码call boy :)&lt;/p&gt;
 &lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;前几天同事问了我一个问题：我们框架里通过 &lt;code&gt;send&lt;/code&gt; 通知对方服务，如果 &lt;code&gt;send&lt;/code&gt; 没有返回失败，能不能 100% 确定对端收到了这个包？&lt;/p&gt;
@@ -226,4 +226,2072 @@ $$&lt;/p&gt;
 ↓
 对端网卡 → 内核 → 应用层
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;系统调用的语义是&amp;quot;数据已提交给内核&amp;quot;，它&lt;strong&gt;不会&lt;/strong&gt;等待数据通过网卡发送出去，更不会等待对端的 TCP ACK。这是有意为之的设计——如果每个 &lt;code&gt;write&lt;/code&gt; 都要等到对端确认，那么一次 RTT 就会阻塞调用线程，性能将完全不可接受（后面还会细说）。&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;系统调用的语义是&amp;quot;数据已提交给内核&amp;quot;，它&lt;strong&gt;不会&lt;/strong&gt;等待数据通过网卡发送出去，更不会等待对端的 TCP ACK。这是有意为之的设计——如果每个 &lt;code&gt;write&lt;/code&gt; 都要等到对端确认，那么一次 RTT 就会阻塞调用线程，性能将完全不可接受（后面还会细说）。&lt;/p&gt;</description></item><item><title>GitHub Actions 中的认证方式：GITHUB_TOKEN、PAT 与 Deploy Key</title><link>/blog/2026-06-11-cicd_github-actions-auth-tokens/</link><pubDate>Thu, 11 Jun 2026 12:00:00 +0800</pubDate><guid>/blog/2026-06-11-cicd_github-actions-auth-tokens/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;我的个人博客采用 Hugo 构建，源代码放在私有仓库 &lt;code&gt;hitzhangjie/myspace&lt;/code&gt;，构建产物需要部署到公开仓库 &lt;code&gt;hitzhangjie/hitzhangjie.github.io&lt;/code&gt;。原先的 workflow 部署在目标仓库上，每次 push 源仓库后还需要手动推一次目标仓库，很痛苦。&lt;/p&gt;
+&lt;p&gt;迁移 workflow 到源仓库（myspace）时，发现 &lt;code&gt;GITHUB_TOKEN&lt;/code&gt; 无法完成跨仓库推送。这引出了一个问题：GitHub Actions 中到底有哪几种认证方式？它们分别怎么配置、作用域是什么？&lt;/p&gt;
+&lt;h1 id="三种认证方式速览"&gt;三种认证方式速览 &lt;a href="#%e4%b8%89%e7%a7%8d%e8%ae%a4%e8%af%81%e6%96%b9%e5%bc%8f%e9%80%9f%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;认证方式&lt;/th&gt;
+&lt;th&gt;谁来生成&lt;/th&gt;
+&lt;th&gt;作用域&lt;/th&gt;
+&lt;th&gt;适用场景&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;GITHUB_TOKEN&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;GitHub &lt;strong&gt;自动&lt;/strong&gt;注入&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;当前仓库&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;同仓库内操作（checkout、发 release、写 PR 评论等）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Personal Access Token (PAT)&lt;/td&gt;
+&lt;td&gt;用户&lt;strong&gt;手动&lt;/strong&gt;创建&lt;/td&gt;
+&lt;td&gt;用户有权访问的&lt;strong&gt;所有仓库&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;跨仓库操作、需要比 GITHUB_TOKEN 更广的权限&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;SSH Deploy Key&lt;/td&gt;
+&lt;td&gt;用户&lt;strong&gt;手动&lt;/strong&gt;生成&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;单个仓库&lt;/strong&gt;（写权限可选）&lt;/td&gt;
+&lt;td&gt;跨仓库推送（如部署静态站点到另一个仓库）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h1 id="github_token"&gt;GITHUB_TOKEN &lt;a href="#github_token" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="它是什么"&gt;它是什么 &lt;a href="#%e5%ae%83%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;GITHUB_TOKEN&lt;/code&gt; 是 GitHub Actions 在&lt;strong&gt;每次 workflow 运行时自动生成&lt;/strong&gt;的一个临时令牌。你&lt;strong&gt;不需要、也没办法&lt;/strong&gt;手动配置它——在任何仓库的 Settings → Secrets and variables 或 Settings → Deploy keys 里都找不到它。&lt;/p&gt;
+&lt;p&gt;它由 GitHub 在 workflow 启动时注入，workflow 结束后立即失效。&lt;/p&gt;</description></item><item><title>高并发系统设计：解决c10k c100k c10m问题</title><link>/blog/2024-01-06-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F_%E8%A7%A3%E5%86%B3c10kc100kc10m%E9%97%AE%E9%A2%98/</link><pubDate>Sat, 06 Jan 2024 20:30:24 +0800</pubDate><guid>/blog/2024-01-06-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F_%E8%A7%A3%E5%86%B3c10kc100kc10m%E9%97%AE%E9%A2%98/</guid><description>&lt;h3 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;c10k, c100k甚至c10m，这些问题大家已经不再陌生，聊起来可能显得有点枯燥？新技术层出不穷，至少我自己对这些问题有了些新的认识，需要更新沉淀下我的“小宇宙”。&lt;/p&gt;
+&lt;h3 id="c10k问题-1999-1gbps-ethernet"&gt;c10k问题, 1999, 1Gbps Ethernet &lt;a href="#c10k%e9%97%ae%e9%a2%98-1999-1gbps-ethernet" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;The &lt;strong&gt;C10k problem&lt;/strong&gt; is the problem of optimizing &lt;a href="https://en.wikipedia.org/wiki/Network_socket"&gt;network sockets&lt;/a&gt; to handle a large number of clients at the same time.[&lt;a href="https://en.wikipedia.org/wiki/C10k_problem#cite_note-C10K-1"&gt;1]&lt;/a&gt; The name C10k is a &lt;a href="https://en.wikipedia.org/wiki/Numeronym"&gt;numeronym&lt;/a&gt; for &lt;a href="https://en.wikipedia.org/wiki/Concurrent_computing"&gt;concurrently&lt;/a&gt; handling ten thousand connections.[&lt;a href="https://en.wikipedia.org/wiki/C10k_problem#cite_note-Liu-Deters-2"&gt;2]&lt;/a&gt; Handling many concurrent connections is a different problem from handling many &lt;a href="https://en.wikipedia.org/wiki/Requests_per_second"&gt;requests per second&lt;/a&gt;: the latter requires high throughput (processing them quickly), while the former does not have to be fast, but requires efficient scheduling of connections.&lt;/p&gt;</description></item><item><title>框架设计：JSON库性能对比及实现探究</title><link>/blog/2023-08-23-%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1_json%E5%BA%93%E6%80%A7%E8%83%BD%E5%AF%B9%E6%AF%94%E5%8F%8A%E5%AE%9E%E7%8E%B0%E6%8E%A2%E7%A9%B6/</link><pubDate>Mon, 09 Oct 2023 16:01:42 +0800</pubDate><guid>/blog/2023-08-23-%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1_json%E5%BA%93%E6%80%A7%E8%83%BD%E5%AF%B9%E6%AF%94%E5%8F%8A%E5%AE%9E%E7%8E%B0%E6%8E%A2%E7%A9%B6/</guid><description>&lt;h2 id="本文背景"&gt;本文背景 &lt;a href="#%e6%9c%ac%e6%96%87%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;JSON是一种轻量级的数据交换格式，易于阅读、解析、生成，应用十分广泛。如今在微服务通信中，JSON也是一种常见的序列化手段，比如json-rpc或者gRPC json、pb互转。因为读写场景的不同，对JSON序列化、反序列化（或者解析）的关注点也不一样，一个通用的JSON库不一定能满足性能要求，可以看到有非常多的JSON第三方库频频向标准库发起挑战。本文将从JSON解析的不同场景入手，来说明这些场景下对JSON生成、解析的一些诉求，以及对性能方面的考量，进一步介绍下业界在这方面一些优秀的实践。&lt;/p&gt;
+&lt;h2 id="回顾json标准"&gt;回顾JSON标准 &lt;a href="#%e5%9b%9e%e9%a1%bejson%e6%a0%87%e5%87%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;rfc8259是目前JSON事实上的标准https://datatracker.ietf.org/doc/html/rfc8259，一个合法的JSON value必须是一个object、array、number、string，或者以下字面量false、true、null。该规范定义了JSON grammar来说明如何表示上述数据。&lt;/p&gt;
+&lt;p&gt;rfc8259标准明确提出，如果JSON数据不是在一个封闭系统中使用，在不同系统中进行交换时，字符集应该明确使用UTF-8编码。旧的JSON标准并没有指出这点，但是为了保证不同系统的正常交互，大多数系统使用的正是UTF-8编码。标准还指出在编码时不应该在头部添加BOM字符（Byte Order Mark，U+FEFE），一些JSON解析器为了尽可能保证互操作性可能会忽略被错误添加的BOM字符，而不是报错。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;ps：rfc8259中还提及使用Unicode字符，Unicode是一种字符编码标准，定义了字符的唯一码点，而UTF-8是Unicode的一种可变长的具体编码方案，以对ASCII进行向后兼容。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;JSON 解析器（parser）将JSON文本转换为另一种表示形式，比如go结构体struct。JSON 解析器必须接受所有符合 JSON grammar的文本，可以接受非 JSON 形式或其他扩展（比如vscode .devcontainer定义中支持注释）。解析器实现可能会对其文本的长度进行限制，也可以对数据的最大嵌套深度进行限制，也可以对数值的范围、精度进行限制。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;ps：&amp;ldquo;A JSON parser MAY accept non-JSON forms or extensions.&amp;rdquo; 这句话的意思是，JSON解析器可以接受非JSON形式或扩展。也就是说，解析器可以容忍一些不符合严格JSON语法的文本，或者支持一些扩展的语法或功能。这给了解析器一定的灵活性，使其能够处理一些非标准的JSON文本或具有扩展功能的JSON文本。这样做是为了在实际应用中提供更大的灵活性和兼容性，以满足不同的需求和场景。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;JSON生成器（generator）用于生成JSON文本，生成的文本必须严格符合JSON grammar。比如&lt;code&gt;json.Marshal(v)&lt;/code&gt;将v这个数据类型序列化成JSON文本，当然还有&lt;code&gt;json.MarshalIndent(v, &amp;quot;&amp;quot;, &amp;quot;\\t&amp;quot;)&lt;/code&gt;，会在name前面增加一些缩进，tab、空格等空白字符在标准中也是允许的。&lt;/p&gt;
+&lt;p&gt;**小结：通过rfc8259我们了解了JSON是用来做什么的，有效的JSON数据是什么样的，为了互操作性、灵活性JSON的解析器、生成器又可以怎么做。**下面我们将介绍一些应用场景，从一般到特殊，对应的也会对标准库实现提出一些挑战，然后进一步介绍一些业界的实践、优化。&lt;/p&gt;
+&lt;h2 id="从标准库开始"&gt;从标准库开始 &lt;a href="#%e4%bb%8e%e6%a0%87%e5%87%86%e5%ba%93%e5%bc%80%e5%a7%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;go标准库中提供了对JSON编码、解析的支持，最常用的两个函数就是&lt;code&gt;json.Marshal&lt;/code&gt;、&lt;code&gt;json.Unmarshal&lt;/code&gt;。标准库的设计实现，对大多数数据类型、普通的编码解析场景、易用性方面提供了很不错的支持。&lt;/p&gt;
+&lt;p&gt;在指出标准库在哪些场景下会表现欠佳之前，需要先了解下标准库在编码、解析过程中的一些实现策略、细节。&lt;/p&gt;
+&lt;p&gt;这里简单总结一下：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;标准库json.Marshal的过程，使用了大量的反射操作，比如确定map k、v的类型信息，struct字段的类型信息，匿名嵌套及字段的可见性分析，struct jsontag规则处理，而且是通过反射递归展开json.Marshal(v)中v的类型信息，才能知道如何encode，最后才是根据v及其内部各个组成部分对应的typeEncoder来完成encode输出。encode的过程中虽然它使用了一些caching（缓存）、pooling（池化）技术，但是前面的反射开销确实是比较大的，尤其是数据类型复杂、数据量比较大的时候。&lt;/p&gt;
+&lt;p&gt;想了解详细过程的话，可以参考这篇总结，会对这个过程中的开销有更清晰的认识：https://www.notion.so/hitzhangjie/JSON-d278399b8092470985cbc423830115fb?pvs=4&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;标准库json.Unmarshal的过程，和json.Marshal的过程相比，其中涉及到的一些要点大差不差，这里就不展开了。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;see: https://sourcegraph.com/github.com/golang/go@go1.19.10/-/tree/src/encoding/json&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;ps：反射的开销主要在哪里？&lt;/p&gt;
+&lt;p&gt;reflection trades performance for very dynamic and flexible code by pushing work from compile time to runtime. The runtime costs include indirect calls, type inspection, value conversions, and dynamic dispatch. But used judiciously, these costs can be worth it for certain programs.&lt;/p&gt;</description></item><item><title>Linux性能问题排查60s</title><link>/blog/2023-09-08-linux%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A560s/</link><pubDate>Fri, 08 Sep 2023 16:30:30 +0800</pubDate><guid>/blog/2023-09-08-linux%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A560s/</guid><description>&lt;h3 id="简介"&gt;简介 &lt;a href="#%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;最近在阅读Gregg大佬著作《BPF Performance Tools》，其中一小节作者提到了其在Netflix工程团队中践行的一个性能排查checklist，当遇到Linux性能问题时，前60s往往是借助这个checklist来进行排查，如果有必要，缩小范围后再借助其他工具进行进一步排查。我觉得这个简短的checklist还挺实用的，特地摘录出来分享下。&lt;/p&gt;
+&lt;h3 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;这个checklist可以用来指导排查任意Linux性能问题，当我们知道有台机器性能（疑似）有问题时，我们就可以登录这台机器，按照这个checklist来进行前60s的快速分析。这也是Gregg自己以及Netflix工程团队实践中总结出来的。&lt;/p&gt;
+&lt;p&gt;对于很多刚入行后台开发的同学而言，我觉得这个还是比较有价值的，应该在日常工作中不断实践、不断加深对性能影响因素的理解。有位技术扎实的同事曾经这样说，一切都是可计算的、可量化的，比如判断对特定工作负载瓶颈是什么，cpu、内存、网卡？链路长短，网络延迟，然后大致的系统吞吐量是什么样的？他大致就能推算出来。&lt;/p&gt;
+&lt;p&gt;其实，Jeff Dean曾经在论文里给出过一些开发人员应该知晓的latency数据：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;L1 cache reference ......................... 0.5 ns
+Branch mispredict ............................ 5 ns
+L2 cache reference ........................... 7 ns
+Mutex lock/unlock ........................... 25 ns
+Main memory reference ...................... 100 ns
+Compress 1K bytes with Zippy ............. 3,000 ns = 3 µs
+Send 2K bytes over 1 Gbps network ....... 20,000 ns = 20 µs
+SSD random read ........................ 150,000 ns = 150 µs
+Read 1 MB sequentially from memory ..... 250,000 ns = 250 µs
+Round trip within same datacenter ...... 500,000 ns = 0.5 ms
+Read 1 MB sequentially from SSD* ..... 1,000,000 ns = 1 ms
+Disk seek ........................... 10,000,000 ns = 10 ms
+Read 1 MB sequentially from disk .... 20,000,000 ns = 20 ms
+Send packet CA-&amp;gt;Netherlands-&amp;gt;CA .... 150,000,000 ns = 150 ms
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;有开发者将上述数据进行了可视化，以方便从视觉上更直观的感受差别：&lt;/p&gt;</description></item><item><title>SIMD数据级并行处理</title><link>/blog/2023-10-13-simd%E6%95%B0%E6%8D%AE%E7%BA%A7%E5%B9%B6%E8%A1%8C%E5%A4%84%E7%90%86/</link><pubDate>Fri, 08 Sep 2023 16:30:30 +0800</pubDate><guid>/blog/2023-10-13-simd%E6%95%B0%E6%8D%AE%E7%BA%A7%E5%B9%B6%E8%A1%8C%E5%A4%84%E7%90%86/</guid><description>&lt;blockquote&gt;
+&lt;p&gt;Q: 那，接下来需要看下下面几个问题：什么是SIMD呢？SIMD最初是用来解决什么问题的呢？SIMD在JSON编码、解析中可以用来做什么呢？simdjson正确使用SIMD还需要注意些什么呢？&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id="whats-simd"&gt;What&amp;rsquo;s SIMD &lt;a href="#whats-simd" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;SIMD(Single Instruction Multiple Data) 是一种并行计算技术,可以同时对多个数据执行相同的操作。使用 SIMD 的主要目的是为了提升计算性能。&lt;/p&gt;
+&lt;p&gt;目前在大多数现代主流ARM、x64处理器上都支持SIMD，最初Pentium支持SIMD是为了更好地对多媒体（声音）进行处理，现代处理器增加了位宽更大的寄存器（128-bit、256-bit、512-bit），也增加了一些高效的指令。&lt;/p&gt;
+&lt;p&gt;老的x64（Intel、AMD）平台可以用SSE2&amp;hellip;SSE4.2（128-bit），主流的x64（Intel、AMD）可以用AVX、AVX2（256-bit），最新的x64（Intel）可以用AVX-512（512-bit），其他平台可以自行检索下。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;ps: 并行处理按照发生的粒度，可以划分为：任务并行（多核），指令并行（超标量流水线），数据并行（simd、vector、gpu）。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id="simd适用场景"&gt;SIMD适用场景 &lt;a href="#simd%e9%80%82%e7%94%a8%e5%9c%ba%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;适合使用 SIMD 的情况包括:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;需要对大批量数据执行相同的数学运算或逻辑运算,如向量、矩阵运算、图像处理等。&lt;/li&gt;
+&lt;li&gt;需要对多媒体数据如音频、视频等进行处理,如编码、解码、滤波、变换等。&lt;/li&gt;
+&lt;li&gt;在数据库、科学计算、金融分析等需要处理大量数值计算的场景。&lt;/li&gt;
+&lt;li&gt;游戏开发中的物理模拟、人工智能等也可以使用 SIMD。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;使用 SIMD 的好处有:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;提高计算并行度,单次指令处理更多数据。&lt;/li&gt;
+&lt;li&gt;减少指令数,降低指令调度开销。&lt;/li&gt;
+&lt;li&gt;更高效利用处理器内部执行单元。&lt;/li&gt;
+&lt;li&gt;数据级并行,更易映射到多核架构。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;一些常见使用 SIMD 的例子:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;图像处理:模糊、锐化、色彩空间转换等算法可以用SIMD加速。&lt;/li&gt;
+&lt;li&gt;信号处理:FFT、FIR/IIR 滤波等用SIMD实现。&lt;/li&gt;
+&lt;li&gt;科学计算:向量矩阵运算都可以用 SIMD 优化。&lt;/li&gt;
+&lt;li&gt;数据压缩/解压:如音频视频编解码中的 SIMD 优化。&lt;/li&gt;
+&lt;li&gt;数据库操作:聚集函数、关系运算可用 SIMD 实现。&lt;/li&gt;
+&lt;li&gt;机器学习:神经网络中矩阵乘法、激活函数计算等使用 SIMD。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;总之,SIMD 非常适合数据并行的场景,使用它可以显著提升计算性能。编译器和开发者都可以通过自动向量化和手动优化,利用 SIMD 使程序运行更快。&lt;/p&gt;
+&lt;h3 id="simd新手入门"&gt;SIMD新手入门 &lt;a href="#simd%e6%96%b0%e6%89%8b%e5%85%a5%e9%97%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;这里以对两个数组进行求和为例，如果使用C来进行编码的话，基本逻辑应该是这样：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;int nums1[LENGTH] = {1, 2, 3, 4, 5, 6, 7, 8};
+int nums2[LENGTH] = {1, 1, 1, 1, 1, 1, 1, 1};
+int result[LENGTH] = {0};
+for (int i=0; i&amp;lt;LENGTH; i++) {
+result[i] = nums1[i] + nums2[i];
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;现在，我们考虑使用SSE、AVX2分别对其进行处理。&lt;/p&gt;</description></item><item><title>安全编程：检测并解决数值计算溢出问题</title><link>/blog/2023-03-03-%E5%AE%89%E5%85%A8%E7%BC%96%E7%A8%8B_%E6%A3%80%E6%B5%8B%E5%B9%B6%E8%A7%A3%E5%86%B3%E8%AE%A1%E7%AE%97%E6%BA%A2%E5%87%BA%E9%97%AE%E9%A2%98/</link><pubDate>Fri, 03 Mar 2023 02:04:11 +0800</pubDate><guid>/blog/2023-03-03-%E5%AE%89%E5%85%A8%E7%BC%96%E7%A8%8B_%E6%A3%80%E6%B5%8B%E5%B9%B6%E8%A7%A3%E5%86%B3%E8%AE%A1%E7%AE%97%E6%BA%A2%E5%87%BA%E9%97%AE%E9%A2%98/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;数据类型是个好东西，类型定义了一种数据组成以及允许在其上进行的操作。
+数据类型是个好东西，它定义了一种最基础的“安全”，类型安全。&lt;/p&gt;
+&lt;p&gt;我们在进行数值运算时，有可能会“超出”类型本身的值域，但是受限于位宽限制，进而表现为“上溢出”。以a+b为例：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果a、b都是有符号数，且其符号相同，有可能超过最大值、最小值而在值域空间中轮转；
+两个正数相加，结果却是负数；两个负数相加，结果却是正数.&lt;/li&gt;
+&lt;li&gt;如果a、b都是无符号数，也有可能超过最大值而在值域空间中轮转。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这个很容易理解，今天我们想看下如何解决此类问题。&lt;/p&gt;
+&lt;h2 id="如何解决溢出问题"&gt;如何解决溢出问题 &lt;a href="#%e5%a6%82%e4%bd%95%e8%a7%a3%e5%86%b3%e6%ba%a2%e5%87%ba%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="升级32位到64位"&gt;升级32位到64位？ &lt;a href="#%e5%8d%87%e7%ba%a732%e4%bd%8d%e5%88%b064%e4%bd%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;这通常是第一反应，它可能是有效的，也可能无效。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;有效：如果输入int32 a、b是有明确约束保证的，比如任意一个都必须在[-1*1&amp;laquo;31,(1&amp;laquo;31)-1]，
+a+b可能对int32可能会溢出，但是如果提升成int64则可以解决问题，前提有这样的约束保证；&lt;/li&gt;
+&lt;li&gt;无效：没有任何输入约束做保证，只是简单提升成int64 a、b是没有用的，极端情况，a=b=1&amp;laquo;36-1，
+a+b很明显就溢出了，这种就需要其他方法做保证。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="设计上应该有上限"&gt;设计上应该有上限？ &lt;a href="#%e8%ae%be%e8%ae%a1%e4%b8%8a%e5%ba%94%e8%af%a5%e6%9c%89%e4%b8%8a%e9%99%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在设计上就要有这方面的“数据”上的“安全”的意识，比如：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;玩家每赛季的经验应该是有上限的，满经验后就提示玩家满经验，后续就不给加了；&lt;/li&gt;
+&lt;li&gt;比如用uint32表示经验值，那么加之前先测一下是否发生了溢出(v=orig+delta, 如果v小于任意一个则溢出)
+这很好理解，正常情况下，v应该大于orig、delta，就是逻辑反嘛。
+ps：不好理解？把值域想象成一个转盘，delta不可能让v在值域范围内“环绕 (wraparound)”/“转到”orig，反之orig也不能让v转到delta。
+如果发生了溢出，则直接将v=maxUint32完事，多出来的就扔掉，提示玩家满经验。&lt;/li&gt;
+&lt;li&gt;或者，这里的满经验不一定要maxUint32，可以是认为设计好的一个小值，比如99999；
+如果输入有约束，比较小比如int8 a, int8 b，那么至少可以保证 if a+b &amp;gt; 99999 then v=999999 是ok的，
+也不会触及累积量v达到uint32最大值的情况。可能这种情况比较理想化了。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="检查是否发生溢出"&gt;检查是否发生溢出？ &lt;a href="#%e6%a3%80%e6%9f%a5%e6%98%af%e5%90%a6%e5%8f%91%e7%94%9f%e6%ba%a2%e5%87%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;言归正传，还是要有办法来比较可靠地检查运算结果a+b是否发生了溢出？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;可以用大数计算来避免溢出，比如golang里面的math/big包。
+比如int32 a,b相加，按int c=a+b的方式，c有可能是个溢出后的错误结果。
+但是如果用大数计算，位宽充足可以算出正确结果，只要将其和maxInt32比较下即可知道是否发生了溢出。
+如果确实发生了溢出，应该如何处理，如fallback到满经验值不再加经验。&lt;/li&gt;
+&lt;li&gt;也可以不用大数计算，通过一些有趣的副作用也可以知道是否发生了溢出。
+比如在x86汇编中，可以通过 &lt;code&gt;test OF,OF&lt;/code&gt; 来判断是否发生了溢出。
+高级语言中，就没那么直接，比如go，得借助一些其他办法来判断，这就是这个math_test.go要测试的东西。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="代码测试运算时检测溢出"&gt;代码测试：运算时检测溢出 &lt;a href="#%e4%bb%a3%e7%a0%81%e6%b5%8b%e8%af%95%e8%bf%90%e7%ae%97%e6%97%b6%e6%a3%80%e6%b5%8b%e6%ba%a2%e5%87%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;测试代码，请移步：https://github.com/hitzhangjie/codemaster/blob/master/math/math_test.go。&lt;/p&gt;
+&lt;p&gt;math_test.go中定义了两个函数safeSignedAdd、safeUnsignedAdd来对有符号数、无符号数加法进行安全的计算：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果发生了溢出则返回错误，方便调用方处理；&lt;/li&gt;
+&lt;li&gt;如果没发生错误则返回两数之和；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;我们想检测下如何更好地发现一些造成溢出的边界条件，我们使用go fuzztest来帮助发现潜在的问题。
+我们设置了边界附近的值作为seed scorpus，这样方便go fuzztest引擎使用mutator微调输入参数时能够覆盖到边界条件。&lt;/p&gt;
+&lt;p&gt;其实也可以使用go fuzztest的随机构造输入的模式，但是这样往往需要执行更多的时间才有助于发现问题。
+ps：改天再写篇文章详细介绍下go fuzztest内部是如何工作的。&lt;/p&gt;</description></item><item><title>框架设计：一致性hash负载均衡方案的思考</title><link>/blog/2022-08-06-%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1_%E4%B8%80%E8%87%B4%E6%80%A7hash%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1%E6%96%B9%E6%A1%88%E7%9A%84%E6%80%9D%E8%80%83/</link><pubDate>Sat, 06 Aug 2022 17:16:57 +0800</pubDate><guid>/blog/2022-08-06-%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1_%E4%B8%80%E8%87%B4%E6%80%A7hash%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1%E6%96%B9%E6%A1%88%E7%9A%84%E6%80%9D%E8%80%83/</guid><description>&lt;h1 id="常见的负载均衡策略"&gt;常见的负载均衡策略 &lt;a href="#%e5%b8%b8%e8%a7%81%e7%9a%84%e8%b4%9f%e8%bd%bd%e5%9d%87%e8%a1%a1%e7%ad%96%e7%95%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;客户端完成被调服务的服务发现后，获得了一批实例节点列表，现在要借助合适的负载均衡算法来选择一个实例完成请求处理。&lt;/p&gt;
+&lt;p&gt;常见的负载均衡算法包括：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;轮询：每一次网络请求按照顺序发放给下节点列表中的下一个节点，这种情况适用于节点配置相同并且平均服务请求相对均衡的情况&lt;/li&gt;
+&lt;li&gt;加权轮询：考虑了不同节点的硬件配置情况，如节点a、b、c性能有低到高，权重设置为1、3、6，则按照权重分配10%、30%、60%的请求给到节点，这种可以避免高性能机器负载低、避免性能差机器过载&lt;/li&gt;
+&lt;li&gt;随机：随机选择一个节点来处理请求，这种在请求量比较大的情况下能达到相对均衡的分布，同样适用于机器配置相同的情况&lt;/li&gt;
+&lt;li&gt;加权随机：考虑了不同节点的硬件配置情况，类似加权轮询，只不过选择下一个节点时是基于随机选择，而非轮询的方式&lt;/li&gt;
+&lt;li&gt;余数hash：根据某个key对节点数做取模运算，比如节点数为n，根据请求中的m = uid % n，表示用节点列表中第m个节点来作为服务节点。当key分布范围比较广能达到相对均衡，选择key字段的时候要考虑下key分布情况。使用hash的场景，一般是因为后端节点有状态可复用（或者希望借此减少并发冲突），但真实环境中，节点故障是常态，尤其是在容器化部署场景下自动化扩缩容，hash会导致集群中所有节点状态无法被复用。一般会用一致性hash代替hash。&lt;/li&gt;
+&lt;li&gt;一致性hash：一致性hash是对hash的优化，一致性这里强调的就是节点加入、离开后尽量保证大多数请求仍然能路由到该路由的节点，而不是新加入的节点，同时为了避免新加入、离开节点导致的负载不均衡问题，引入了虚拟节点的概念，每个物理节点都对应着hash环上一定数量的虚拟节点，这些节点混在一起，能实现各个节点负载的相对均衡。节点数量该选择多少呢？一个比较直观的认识是可能虚拟节点越多越均衡，但是数量过多也会有开销，这与虚拟节点的hash计算、存储有关系，本文后面讨论。&lt;/li&gt;
+&lt;li&gt;按响应速度：有些负载均衡设备，会根据与后端服务节点间的ping延时来选择一个响应时间最短的。类似的也可以根据client、server之间的ping延时或者请求处理响应时间来选择。&lt;/li&gt;
+&lt;li&gt;按最少连接数：对于某些请求处理时间比较长的场景，如ftp传输等，一个tcp连接存在的时间可能比较长，连接数比较多的可能代表该节点负载比较重，因此会开率选择连接数比较少的来提供服务。&lt;/li&gt;
+&lt;li&gt;其他&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;负载均衡算法有很多，之所以这么多也是因为应用场景的差异，根据合适的场景选择适用的负载均衡算法。&lt;/p&gt;
+&lt;h1 id="调研一致性hash策略及其可替代方案"&gt;调研一致性hash策略及其可替代方案 &lt;a href="#%e8%b0%83%e7%a0%94%e4%b8%80%e8%87%b4%e6%80%a7hash%e7%ad%96%e7%95%a5%e5%8f%8a%e5%85%b6%e5%8f%af%e6%9b%bf%e4%bb%a3%e6%96%b9%e6%a1%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;对一致性hash方案及其可替代方案进行调研、对比。&lt;/p&gt;
+&lt;h2 id="余数hash"&gt;余数hash &lt;a href="#%e4%bd%99%e6%95%b0hash" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;余数hash，简单讲就是那个key去算出hash值，然后对节点数量取模，m = hash(key) % n，用节点列表中的第m个节点去做请求处理。
+如果节点数变化非常不频繁，或者说key remapping（rebalancing）过程中带来的开销不大、影响不大，那用余数hash也无所谓。&lt;/p&gt;
+&lt;p&gt;但是现实场景中，比如一些有状态服务，如果remapp后映射到了与先前不同的节点，或者容器化部署时节点数经常变更，不满足适用余数hash的条件。&lt;/p&gt;
+&lt;p&gt;比较常见的对策，就是采用一致性hash。&lt;/p&gt;
+&lt;h2 id="一致性hash"&gt;一致性hash &lt;a href="#%e4%b8%80%e8%87%b4%e6%80%a7hash" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="简要介绍"&gt;简要介绍 &lt;a href="#%e7%ae%80%e8%a6%81%e4%bb%8b%e7%bb%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;一致性hash能够缓解节点加入、离开时rebalancing导致的一些hash节点改变的问题，在以下场景中就更有优势：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;服务是有状态的，这样大多数路由仍然能路由到原来的节点，状态可以复用；&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;即使服务不是有状态的，将原来路由到节点n的请求及其后续请求继续路由到该节点，也可能存在更好的局部性处理（locality），&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;举个例子（可能不很恰当哈）：
+比如有个个人展示页要展示头像昵称、最近游戏记录，假设之前有个什么客户端请求uid=xxx的请求路由到了节点n拉取过了昵称头像并cache，后面该展示页也路由到该节点的话就可以复用该cache。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;假设key空间中值数量为k，节点数为n，那么当发生remapping时，笼统估算有k/n不命中原来的节点。&lt;/p&gt;
+&lt;h3 id="关于实现"&gt;关于实现 &lt;a href="#%e5%85%b3%e4%ba%8e%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;关于一致性hash的实现：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;构建一个一致性hash环，一个数组就可以实现&lt;/li&gt;
+&lt;li&gt;选定节点的key，如ip，hash(key)，然后再hash环上对应位置存储该节点信息，考虑到hash环大小需要适当取模&lt;/li&gt;
+&lt;li&gt;考虑到各节点的负载平衡，引入虚节点，每个物理节点对应为k各虚节点（k多大？），各个虚节点的hash值计算就分不同方法：
+&lt;ul&gt;
+&lt;li&gt;key多大？兼顾计算效率和负载均衡性，因为节点数提前无法预估，可能要选择一个更好的经验值&lt;/li&gt;
+&lt;li&gt;引入k个hash函数，hash1(key), hash2(key), hash3(key)&amp;hellip;.hashK(key)，分别设置到hash环上&lt;/li&gt;
+&lt;li&gt;针对key，构造key_1, key_2, key_3..，keyK，使用同一个hash函数分别计算上述key的hash，并在hash环上设置其节点信息&lt;/li&gt;
+&lt;li&gt;TODO 这里的计算方式的选择，虚节点数多大（过少还是会不均衡），过大计算效率慢（多次计算hash），另外多个hash还是构造多个key也可能会影响到负载的均衡性，需要针对性的测试。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;现在有个请求，比如用玩家userid作key，hash(key)得到值之后，因为一致性hash环是个首尾相接的有序数组实现的，可通过二分查找（查找第一个大于等于该&lt;code&gt;hash(key)&lt;/code&gt; )的节点，复杂度O(logn)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;一致性hash，对于带权重的也能支持到：比如a机器比b机器性能高一倍，希望其处理两倍于b的请求，那么就可以让a机器的虚节点多一倍。但是如果管理的节点数量成千上万之后，hash环上存储这些虚节点的开销就不能忽略了。&lt;/p&gt;
+&lt;h2 id="一致性hash替代方案rendezvous-hashing"&gt;一致性hash替代方案：Rendezvous hashing &lt;a href="#%e4%b8%80%e8%87%b4%e6%80%a7hash%e6%9b%bf%e4%bb%a3%e6%96%b9%e6%a1%88rendezvous-hashing" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Rendezvous hashing，也叫Highest Random Weight hashing。它比一致性hash提出来早一年，用了一种不同的方式来解决余数hash中key remapping的问题，也能实现一致性hash中 “需要remmap的keys数量=k/n” 的这种效果。&lt;/p&gt;</description></item><item><title>分布式系统：实践中高可用如何做</title><link>/blog/2022-06-21-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F_%E5%AE%9E%E8%B7%B5%E4%B8%AD%E9%AB%98%E5%8F%AF%E7%94%A8%E5%A6%82%E4%BD%95%E5%81%9A/</link><pubDate>Wed, 22 Jun 2022 18:02:53 +0800</pubDate><guid>/blog/2022-06-21-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F_%E5%AE%9E%E8%B7%B5%E4%B8%AD%E9%AB%98%E5%8F%AF%E7%94%A8%E5%A6%82%E4%BD%95%E5%81%9A/</guid><description>&lt;h1 id="高可用"&gt;高可用 &lt;a href="#%e9%ab%98%e5%8f%af%e7%94%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;提升服务可用性当然是一件好事，但是实现高可用也是有成本的。提升可用性的常用做法是通过靠设备冗余来实现，当然还有其他的办法，但是不管是哪种办法，做这些工作是有成本的。实践中，一般要权衡投入产出比，来决定需不需要做HA，做的话对哪些服务做HA。&lt;/p&gt;
+&lt;h2 id="提升可用性的手段"&gt;提升可用性的手段 &lt;a href="#%e6%8f%90%e5%8d%87%e5%8f%af%e7%94%a8%e6%80%a7%e7%9a%84%e6%89%8b%e6%ae%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;所谓高可用，可以从以下几个方面来考虑：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;进程内模块的开闭（特性开关）：对异常代码分支进行打开、关闭控制，有问题时可以关闭&lt;/li&gt;
+&lt;li&gt;特定用户的影响：特定用户本地数据问题可能触发某种异常，可以暂时对用户屏蔽特定逻辑&lt;/li&gt;
+&lt;li&gt;子系统级的影响：大系统小做，轻重分离，将关键服务和一般服务拆分开，避免互相影响&lt;/li&gt;
+&lt;li&gt;进程级的影响：多进程模型，避免单个进程挂掉产生影响，常用的共享内存队列+多进程&lt;/li&gt;
+&lt;li&gt;节点级的影响：单个节点挂掉，可以通过冗余、屏蔽故障节点的方式来解决，主备、集群等&lt;/li&gt;
+&lt;li&gt;组件级的影响：对组件的性能边界要有清晰的认识&lt;/li&gt;
+&lt;li&gt;大流量冲击：消息队列削峰&lt;/li&gt;
+&lt;li&gt;地震火灾导致的区域性故障：部署时考虑跨机房、跨区域部署，异地多活&lt;/li&gt;
+&lt;li&gt;等等&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="有状态无状态服务"&gt;有状态、无状态服务 &lt;a href="#%e6%9c%89%e7%8a%b6%e6%80%81%e6%97%a0%e7%8a%b6%e6%80%81%e6%9c%8d%e5%8a%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;服务也分为有状态服务、无状态服务，对这两种情景的处理方式一般也不同的。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;无状态服务，一般通过屏蔽故障节点、负载均衡的方式来解决即可；&lt;/li&gt;
+&lt;li&gt;有状态服务，则相对更复杂一些。总而言之节点级的可用性的提升，一般要借助设备冗余来实现，但是对游戏业务而言，这个成本会比较高。而且有些游戏后台服务是有状态服务，对这类服务做HA会明显增加整体方案的复杂度（比如主备方案，或者分片+副本的集群方案），而且设备成本也会增加很多。设备成本过高，还不如让玩家重开一局。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;游戏业务的特点和普通的业务可能不太一样，其战斗服务器一般都是有状态服务，所以主流无状态服务采用的HA方案、主备或者集群方案，不一定总适用于游戏场景的，因为考虑到机器挂掉后恢复的收益，这个实现成本、方案复杂度就太高了。&lt;/p&gt;
+&lt;p&gt;游戏业务中对有状态服务的HA一般这样做，可能会通过：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;分区分服&lt;/li&gt;
+&lt;li&gt;分set&lt;/li&gt;
+&lt;li&gt;多进程&lt;/li&gt;
+&lt;li&gt;大系统小做+轻重分离&lt;/li&gt;
+&lt;li&gt;特性开关&lt;/li&gt;
+&lt;li&gt;用户数据异常屏蔽&lt;/li&gt;
+&lt;li&gt;等等&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;通过这些方式的来降低问题影响面，也算是提升可用性的办法吧。&lt;/p&gt;</description></item><item><title>Understanding the Design Patterns</title><link>/blog/2022-04-24-%E7%90%86%E8%A7%A3%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/</link><pubDate>Mon, 25 Apr 2022 00:23:51 +0800</pubDate><guid>/blog/2022-04-24-%E7%90%86%E8%A7%A3%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/</guid><description>&lt;p&gt;The design patterns is a blueprint about how to solve a commonly-reoccuring prolem in specific occasions.According to scale and complexity, the patterns could be categorized as Architecture Patterns, Design Patterns and Idioms.&lt;/p&gt;
+&lt;h2 id="introduction"&gt;Introduction &lt;a href="#introduction" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;go-patterns actually is short for design patterns in go, which shows list of demos behind the concepts.&lt;/p&gt;
+&lt;p&gt;We must think about the following questions before we dive into the demos, it is really important.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;What&amp;rsquo;s a pattern?&lt;/li&gt;
+&lt;li&gt;What&amp;rsquo;s a design pattern?&lt;/li&gt;
+&lt;li&gt;History of patterns?&lt;/li&gt;
+&lt;li&gt;Why should I learn patterns?&lt;/li&gt;
+&lt;li&gt;Criticism of patterns?&lt;/li&gt;
+&lt;li&gt;Classification of patterns?&lt;/li&gt;
+&lt;li&gt;etc.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="whats-a-pattern"&gt;What&amp;rsquo;s a pattern? &lt;a href="#whats-a-pattern" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Pattern is a solution, which works well in practices, to a commonly reoccurring problems. Patterns could be created and shared in every area, like building body, improving representation skills, architecture skills, or software design.&lt;/p&gt;</description></item><item><title>实现k8s应用远程调试</title><link>/blog/2022-04-08-%E5%AE%9E%E7%8E%B0k8s%E5%BA%94%E7%94%A8%E8%BF%9C%E7%A8%8B%E8%B0%83%E8%AF%95/</link><pubDate>Fri, 08 Apr 2022 15:45:20 +0800</pubDate><guid>/blog/2022-04-08-%E5%AE%9E%E7%8E%B0k8s%E5%BA%94%E7%94%A8%E8%BF%9C%E7%A8%8B%E8%B0%83%E8%AF%95/</guid><description>&lt;p&gt;最近在支持团队测试左移、测试规范、CI/CD流水线方面的一些工作，针对开发人员发现问题、定位问题、修复问题这个过程产生了一点新的想法，尤其是在整体上云后的大背景下，我认为值得和大家一起探讨下，如何借助远程调试更快速地定位k8s应用问题。&lt;/p&gt;
+&lt;h1 id="1-问题背景"&gt;1 问题背景 &lt;a href="#1-%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;现在公司大部分业务都上云了，服务部署基本上也k8s容器化了，解决了一些老大难的问题，本文不讨论k8s的好处，我们讨论下开发k8s应用（比如微服务）时开发侧可能碰到的一些问题。前段时间我开发了一个统计模调接口成功率的服务，部署在123平台，因为服务代码有些隐晦的bug排查修复花了些时间，这个过程中就开始思考为什么我对go、trpc很熟的情况下定位问题还这么麻烦呢？于是就有了接下来的探索以及这篇总结。&lt;/p&gt;
+&lt;h1 id="2-经常遇到的问题"&gt;2 经常遇到的问题 &lt;a href="#2-%e7%bb%8f%e5%b8%b8%e9%81%87%e5%88%b0%e7%9a%84%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;如果一件事情，短时间内需要人肉重复很多遍，就很容易让人抓狂，比如这次开发体验很快就让我抓狂了：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;测试服务发现服务表现不正常，准备定位bug&lt;/li&gt;
+&lt;li&gt;查看错误日志初步锁定问题范围，重新走读代码进一步缩小问题范围&lt;/li&gt;
+&lt;li&gt;修改代码、提交代码，构建镜像、发布，然后重新测试&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;排查问题不只是这么轻描淡写，简单3步就搞定了：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;可能是bug不容易定位，在外部数据满足某种条件下或者遇到某种事件时才会触发bug；&lt;/li&gt;
+&lt;li&gt;可能是测试用例覆盖不够，通过上述方法定位并解决了问题1，但是后面发现了问题2；&lt;/li&gt;
+&lt;li&gt;可能是日志信息不够，错误异常分支没有日志，或者日志信息不全；&lt;/li&gt;
+&lt;li&gt;微服务架构事务处理会跨越多个服务，可能要结合tracing、logging、metrics多个系统联合排查；&lt;/li&gt;
+&lt;li&gt;修改代码后提交并构建发布，可能涉及到CI/CD环节，流水线耗时较长；&lt;/li&gt;
+&lt;li&gt;123平台提供了dtools来快速构建、patch，但是破坏了测试环境稳定性（缺少镜像）&lt;/li&gt;
+&lt;li&gt;TKE有同学基于七彩石配置下发实现的替换工具，存在dtools类似的问题；&lt;/li&gt;
+&lt;li&gt;……&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;总之，这个排查过程可能要涉及到多轮人肉操作，作为一个VIM党连上下移动都觉得用滑动鼠标、按上下左右是种低效的操作，更不用说让我在各个系统中间（而且系统衔接当前也还有较大空间）切来切去了。做了这么多“额外”的操作，才能渐渐去逼近真相、解决真正的问题。&lt;/p&gt;
+&lt;h1 id="3-降低问题复杂度"&gt;3 降低问题复杂度 &lt;a href="#3-%e9%99%8d%e4%bd%8e%e9%97%ae%e9%a2%98%e5%a4%8d%e6%9d%82%e5%ba%a6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;这里先声明下，并不是说通过日志这种方式排查问题不好，主要还是要看待解决问题的复杂度，如果加几行日志就可以轻松缩小问题域并解决，那自然是好的。但是实际情况是，并不是所有问题都这么容易解决，而且也确实需要多考虑一些其他影响，比如dtools对测试环境的破坏（覆盖了镜像、忘了打镜像怎么办），频繁测试严格走CI/CD的耗时，等等。&lt;/p&gt;
+&lt;p&gt;包括现在提倡的测试左移，单测覆盖、接口测试、集成测试等等，测试是门艺术，远比我之前肤浅的认识要重要，除了质量也要关注效率，做这么多其实也是像在投入时间、迭代效率、软件质量、团队构成等因素之间寻求一种平衡，降低整体复杂度。现在有些团队已经不再将单测覆盖率当做硬指标了，而是通过结合多种测试手段来寻求这种平衡。&lt;/p&gt;
+&lt;p&gt;很多人对TDD有认识，但是在实际开发过程中并不会真的去做，代码语句覆盖、分支覆盖情况可能并不高，而且对某些corner cases可能靠正常思路也很难构造出来，可能要结合fuzz testing来协助。&lt;/p&gt;
+&lt;p&gt;说这么多，只是为了说明一点，发现问题、走查日志、走查代码、修复提交、构建发布、重新测试，可能是我们每个开发同学解决定位解决bug时高频出现的操作流程，没有好的问题定位工具支持，对宝贵的开发资源就是种浪费。&lt;/p&gt;
+&lt;p&gt;我看了下外部的很多团队在k8s开发方面的一些实践，这个过程感觉是可以优化的，那就是让开发k8s应用的我们获得本地调试能力，让远程的一些“不确定性的因素”变成本地“肉眼可见”的观测，问题解决起来就方便多了。尤其是对某些testcase，可能需要反复往前、往后翻代码才能定位到问题，这种在将mozilla rr（record and replay）作为调试器backend的加成下优势会非常明显。&lt;/p&gt;
+&lt;h1 id="4-远程调试k8s应用"&gt;4 远程调试k8s应用 &lt;a href="#4-%e8%bf%9c%e7%a8%8b%e8%b0%83%e8%af%95k8s%e5%ba%94%e7%94%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;前面我们说了开发定位bug时大致的手段，并且强调了在问题比较复杂时，我们可能会通过多次“修改代码、构建发布、测试”这样的流程来逼近bug，这种场景下，如果能用调试器来跟踪下应用的执行过程，观测下执行流程、变量信息等是否符合预期，缩小问题域的过程会快很多，扩展阅读部分给出了一些业界团队的实践，供参考。&lt;/p&gt;
+&lt;h2 id="调试器基础"&gt;调试器基础 &lt;a href="#%e8%b0%83%e8%af%95%e5%99%a8%e5%9f%ba%e7%a1%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;对于一般的应用程序调试器大致可以分为两种类型：指令级调试器、符号级调试器，大家平时调试用的gdb、delve等就是符号级调试器，当然他们也具备一定的指令级调试能力。现代符号级调试器架构一般分为frontend、backend，二者通过service层进行通信（如借助rpc或者pipe），frontend主要是完成与用户的交互、展示，backend完成对tracee（被调试线程）的实际控制。&lt;/p&gt;
+&lt;p&gt;以go语言的符号级调试器go-delve/delve为例，其分为frontend、backend，frontend可以是命令行、gdlv图形界面、vscode、goland等，backend针对不同的平台有多种实现，如借助平台的delve native实现、借助其他调试器能力gdbserver、mozilla rr等。本地调试frontend和backend之间通信通过net.pipe，远程通信通过json-rpc，如果是考虑到与vscode、goland集成的话则需要考虑类似DAP（debugger adapter protocol）的方式。&lt;/p&gt;
+&lt;p&gt;ps: 这里不过多展开了，对调试器设计实现感兴趣的朋友，可以参考我的电子书（最后一章待完成）：https://www.hitzhangjie.pro/debugger101.io/&lt;/p&gt;
+&lt;p&gt;大家用的vscode插件、go-delve/delve调试器，其实就是先起个dlv backend以server的形式监听，协议就是DAP，通过vscode调试的时候，会通过DAP协议与dlv backend交互，dlv backend对被调试进程进行控制（如控制单步执行、读写内存等），大致就是这样的，对于远程调试k8s应用，也是这样的过程。&lt;/p&gt;
+&lt;h2 id="远程调试演示"&gt;远程调试演示 &lt;a href="#%e8%bf%9c%e7%a8%8b%e8%b0%83%e8%af%95%e6%bc%94%e7%a4%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;首先给大家简单实操演示下远程调试k8s应用，最后大家会意识到这个是完全可以实现的，而且可以做的更方便易用。&lt;/p&gt;
+&lt;h3 id="示例工程说明"&gt;示例工程说明 &lt;a href="#%e7%a4%ba%e4%be%8b%e5%b7%a5%e7%a8%8b%e8%af%b4%e6%98%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;下面以一个简单的工程作为示例，实操下如何远程调试k8s应用，这个工程只有这么几个文件：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;/Volumes/kubernetes/debugging-go-app-in-k8s $ tree .
+.
+├── Dockerfile
+├── Makefile
+├── app
+└── main.go
+0 directories, 4 files
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这里的main.go，是一个http服务，模拟我们的微服务，可以长期运行并接受用户请求。&lt;/p&gt;</description></item><item><title>如何实现源代码语法高亮</title><link>/blog/2022-02-09-%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E6%BA%90%E4%BB%A3%E7%A0%81%E8%AF%AD%E6%B3%95%E9%AB%98%E4%BA%AE/</link><pubDate>Wed, 09 Feb 2022 22:20:00 +0800</pubDate><guid>/blog/2022-02-09-%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E6%BA%90%E4%BB%A3%E7%A0%81%E8%AF%AD%E6%B3%95%E9%AB%98%E4%BA%AE/</guid><description>&lt;h2 id="语法高亮"&gt;语法高亮 &lt;a href="#%e8%af%ad%e6%b3%95%e9%ab%98%e4%ba%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;软件开发过程中对源代码进行语法高亮是非常有必要的，通过这种方式可以将程序中不同的要素进行有效地区分，如关键字、保留字、标识符、括号匹配、注释、字符串等等。开发人员使用的IDE一般都支持语法高亮，像vim、sublime等的编辑器也可以通过插件对不同编程语言的源代码进行语法高亮支持。&lt;/p&gt;
+&lt;h2 id="如何实现"&gt;如何实现 &lt;a href="#%e5%a6%82%e4%bd%95%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;要实现语法高亮，需要做哪些工作呢？如果学习过编译原理，其实应该很容易想到，我们只需要实现一个词法分析器能够提取程序中的token序列，并通过语法分析器进行分析识别这些token具体为何物、它们之间具体是什么联系，是构成一个函数，还是构成一个表达式，还是简单到定义了一个变量、一个分支控制语句，等等。只要识别出来了，将这些不同的程序构造进行高亮显示自然不再困难。&lt;/p&gt;
+&lt;h2 id="动手实践"&gt;动手实践 &lt;a href="#%e5%8a%a8%e6%89%8b%e5%ae%9e%e8%b7%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;我们就以go语言为例，来具体讨论下如何对源码进行高亮显示。自然我们不希望重新实现一遍词法分析器、语法分析器之类的琐碎工作，我们也没有精力去重新实现一遍这类工作。尽管flex、yacc可以帮助我们简化这类工作，但是go标准库其实已经提供了package ast来帮助我们做一些语法分析相关的工作。本文我们就基于package ast来演示下如何对go源码进行语法高亮。&lt;/p&gt;
+&lt;p&gt;设计一个package colorize来提供一个colorize.Print(&amp;hellip;)方法，来将指定的源码文件进行高亮展示，并且允许指定源文件的行号范围、io.Writer、高亮颜色风格。只用编写如下几个源文件即可：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;line_writer.go，负责按行输出，输出的时候允许指定token、高亮颜色风格，token包含了起始位置信息，所以配合颜色，即可完成对特定关键字、标识符、注释等不同程序构造的高亮显示；&lt;/li&gt;
+&lt;li&gt;colorize.go，负责读取源文件并对其进行AST分析，将其中我们要高亮的一些程序构造提取出来，如关键字package、var、func等作为token提取出来，并构造一个colorTok（包含了token本身位置信息、属于哪一类别，这里的类别决定了最终的颜色风格）；&lt;/li&gt;
+&lt;li&gt;style.go，即高亮显示风格，不同类别对应着不同的终端颜色；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;下面就是具体的源码实现了，其实这里的源码源自go-delve/delve，我在编写debugger101相关的demo时发现了go-delve/delve中存在的bug，并对其进行了修复，这里也算是简单记录分享一下吧。同学们真正有机会去尝试这个的也不多。&lt;/p&gt;
+&lt;h3 id="file-colorizego"&gt;file: colorize.go &lt;a href="#file-colorizego" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;// Package colorize use AST analysis to analyze the source and colorize the different kinds
+// of literals, like keywords, imported packages, etc.
+//
+// If you want to highlight source parts, for example, the identifiers.
+// - firstly, colorTok must be generated by `emit(token.IDENT, n.Pos(), n.End())` in colorize.go
+// - secondly, we should map the token.IDENT to some style in style.go
+// - thirdly, we should define the color escape in terminal.go
+package colorize
+import (
+&amp;quot;go/ast&amp;quot;
+&amp;quot;go/parser&amp;quot;
+&amp;quot;go/token&amp;quot;
+&amp;quot;io&amp;quot;
+&amp;quot;io/ioutil&amp;quot;
+&amp;quot;path/filepath&amp;quot;
+&amp;quot;reflect&amp;quot;
+&amp;quot;sort&amp;quot;
+)
+// Print prints to out a syntax highlighted version of the text read from
+// path, between lines startLine and endLine.
+func Print(out io.Writer, path string, startLine, endLine, arrowLine int, colorEscapes map[Style]string) error {
+buf, err := ioutil.ReadFile(path)
+if err != nil {
+return err
+}
+w := &amp;amp;lineWriter{w: out, lineRange: [2]int{startLine, endLine}, arrowLine: arrowLine, colorEscapes: colorEscapes}
+var fset token.FileSet
+f, err := parser.ParseFile(&amp;amp;fset, path, buf, parser.ParseComments)
+if err != nil {
+w.Write(NormalStyle, buf, true)
+return nil
+}
+var base int
+fset.Iterate(func(file *token.File) bool {
+base = file.Base()
+return false
+})
+type colorTok struct {
+tok token.Token // the token type or ILLEGAL for keywords
+start, end int // start and end positions of the token
+}
+toks := []colorTok{}
+emit := func(tok token.Token, start, end token.Pos) {
+if _, ok := tokenToStyle[tok]; !ok {
+return
+}
+start -= token.Pos(base)
+if end == token.NoPos {
+// end == token.NoPos it's a keyword and we have to find where it ends by looking at the file
+for end = start; end &amp;lt; token.Pos(len(buf)); end++ {
+if buf[end] &amp;lt; 'a' || buf[end] &amp;gt; 'z' {
+break
+}
+}
+} else {
+end -= token.Pos(base)
+}
+if start &amp;lt; 0 || start &amp;gt;= end || end &amp;gt; token.Pos(len(buf)) {
+// invalid token?
+return
+}
+toks = append(toks, colorTok{tok, int(start), int(end)})
+}
+for _, cgrp := range f.Comments {
+for _, cmnt := range cgrp.List {
+emit(token.COMMENT, cmnt.Pos(), cmnt.End())
+}
+}
+ast.Inspect(f, func(n ast.Node) bool {
+if n == nil {
+return true
+}
+switch n := n.(type) {
+case *ast.File:
+emit(token.PACKAGE, f.Package, token.NoPos)
+return true
+case *ast.BasicLit:
+emit(n.Kind, n.Pos(), n.End())
+return true
+case *ast.Ident:
+// TODO(aarzilli): builtin functions? basic types?
+return true
+case *ast.IfStmt:
+emit(token.IF, n.If, token.NoPos)
+if n.Else != nil {
+for elsepos := int(n.Body.End()) - base; elsepos &amp;lt; len(buf)-4; elsepos++ {
+if string(buf[elsepos:][:4]) == &amp;quot;else&amp;quot; {
+emit(token.ELSE, token.Pos(elsepos+base), token.Pos(elsepos+base+4))
+break
+}
+}
+}
+return true
+}
+nval := reflect.ValueOf(n)
+if nval.Kind() != reflect.Ptr {
+return true
+}
+nval = nval.Elem()
+if nval.Kind() != reflect.Struct {
+return true
+}
+tokposval := nval.FieldByName(&amp;quot;TokPos&amp;quot;)
+tokval := nval.FieldByName(&amp;quot;Tok&amp;quot;)
+if tokposval != (reflect.Value{}) &amp;amp;&amp;amp; tokval != (reflect.Value{}) {
+emit(tokval.Interface().(token.Token), tokposval.Interface().(token.Pos), token.NoPos)
+}
+for _, kwname := range []string{&amp;quot;Case&amp;quot;, &amp;quot;Begin&amp;quot;, &amp;quot;Defer&amp;quot;, &amp;quot;Package&amp;quot;, &amp;quot;For&amp;quot;, &amp;quot;Func&amp;quot;, &amp;quot;Go&amp;quot;, &amp;quot;Interface&amp;quot;, &amp;quot;Map&amp;quot;, &amp;quot;Return&amp;quot;, &amp;quot;Select&amp;quot;, &amp;quot;Struct&amp;quot;, &amp;quot;Switch&amp;quot;} {
+kwposval := nval.FieldByName(kwname)
+if kwposval != (reflect.Value{}) {
+kwpos, ok := kwposval.Interface().(token.Pos)
+if ok &amp;amp;&amp;amp; kwpos != token.NoPos {
+emit(token.ILLEGAL, kwpos, token.NoPos)
+}
+}
+}
+return true
+})
+sort.Slice(toks, func(i, j int) bool { return toks[i].start &amp;lt; toks[j].start })
+flush := func(start, end int, style Style) {
+if start &amp;lt; end {
+w.Write(style, buf[start:end], end == len(buf))
+}
+}
+cur := 0
+for _, tok := range toks {
+flush(cur, tok.start, NormalStyle)
+flush(tok.start, tok.end, tokenToStyle[tok.tok])
+cur = tok.end
+}
+if cur != len(buf) {
+flush(cur, len(buf), NormalStyle)
+}
+return nil
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="file-stylego"&gt;file: style.go &lt;a href="#file-stylego" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;package colorize
+import &amp;quot;go/token&amp;quot;
+// Style describes the style of a chunk of text.
+type Style uint8
+const (
+NormalStyle Style = iota
+KeywordStyle
+StringStyle
+NumberStyle
+CommentStyle
+LineNoStyle
+ArrowStyle
+)
+var tokenToStyle = map[token.Token]Style{
+token.ILLEGAL: KeywordStyle,
+token.COMMENT: CommentStyle,
+token.INT: NumberStyle,
+token.FLOAT: NumberStyle,
+token.IMAG: NumberStyle,
+token.CHAR: StringStyle,
+token.STRING: StringStyle,
+token.BREAK: KeywordStyle,
+token.CASE: KeywordStyle,
+token.CHAN: KeywordStyle,
+token.CONST: KeywordStyle,
+token.CONTINUE: KeywordStyle,
+token.DEFAULT: KeywordStyle,
+token.DEFER: KeywordStyle,
+token.ELSE: KeywordStyle,
+token.FALLTHROUGH: KeywordStyle,
+token.FOR: KeywordStyle,
+token.FUNC: KeywordStyle,
+token.GO: KeywordStyle,
+token.GOTO: KeywordStyle,
+token.IF: KeywordStyle,
+token.IMPORT: KeywordStyle,
+token.INTERFACE: KeywordStyle,
+token.MAP: KeywordStyle,
+token.PACKAGE: KeywordStyle,
+token.RANGE: KeywordStyle,
+token.RETURN: KeywordStyle,
+token.SELECT: KeywordStyle,
+token.STRUCT: KeywordStyle,
+token.SWITCH: KeywordStyle,
+token.TYPE: KeywordStyle,
+token.VAR: KeywordStyle,
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="file-line_writergo"&gt;file: line_writer.go &lt;a href="#file-line_writergo" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;package colorize
+import (
+&amp;quot;fmt&amp;quot;
+&amp;quot;io&amp;quot;
+)
+type lineWriter struct {
+w io.Writer
+lineRange [2]int
+arrowLine int
+curStyle Style
+started bool
+lineno int
+colorEscapes map[Style]string
+}
+func (w *lineWriter) style(style Style) {
+if w.colorEscapes == nil {
+return
+}
+esc := w.colorEscapes[style]
+if esc == &amp;quot;&amp;quot; {
+esc = w.colorEscapes[NormalStyle]
+}
+fmt.Fprintf(w.w, &amp;quot;%s&amp;quot;, esc)
+}
+func (w *lineWriter) inrange() bool {
+lno := w.lineno
+if !w.started {
+lno = w.lineno + 1
+}
+return lno &amp;gt;= w.lineRange[0] &amp;amp;&amp;amp; lno &amp;lt; w.lineRange[1]
+}
+func (w *lineWriter) nl() {
+w.lineno++
+if !w.inrange() || !w.started {
+return
+}
+w.style(ArrowStyle)
+if w.lineno == w.arrowLine {
+fmt.Fprintf(w.w, &amp;quot;=&amp;gt;&amp;quot;)
+} else {
+fmt.Fprintf(w.w, &amp;quot; &amp;quot;)
+}
+w.style(LineNoStyle)
+fmt.Fprintf(w.w, &amp;quot;%4d:\t&amp;quot;, w.lineno)
+w.style(w.curStyle)
+}
+func (w *lineWriter) writeInternal(style Style, data []byte) {
+if !w.inrange() {
+return
+}
+if !w.started {
+w.started = true
+w.curStyle = style
+w.nl()
+} else if w.curStyle != style {
+w.curStyle = style
+w.style(w.curStyle)
+}
+w.w.Write(data)
+}
+func (w *lineWriter) Write(style Style, data []byte, last bool) {
+cur := 0
+for i := range data {
+if data[i] == '\n' {
+if last &amp;amp;&amp;amp; i == len(data)-1 {
+w.writeInternal(style, data[cur:i])
+if w.curStyle != NormalStyle {
+w.style(NormalStyle)
+}
+if w.inrange() {
+w.w.Write([]byte{'\n'})
+}
+last = false
+} else {
+w.writeInternal(style, data[cur:i+1])
+w.nl()
+}
+cur = i + 1
+}
+}
+if cur &amp;lt; len(data) {
+w.writeInternal(style, data[cur:])
+}
+if last {
+if w.curStyle != NormalStyle {
+w.style(NormalStyle)
+}
+if w.inrange() {
+w.w.Write([]byte{'\n'})
+}
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="运行测试"&gt;运行测试 &lt;a href="#%e8%bf%90%e8%a1%8c%e6%b5%8b%e8%af%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;下面是测试文件，我们定义了一个表示源码内容的字符串，并通过gomonkey mock掉了ioutil.ReadFile(&amp;hellip;)的操作让其返回定义的源码字符串，然后执行colorize.Print(&amp;hellip;)对其进行高亮显示。&lt;/p&gt;</description></item><item><title>MySQL查询性能优化</title><link>/blog/2022-01-06-mysql%E6%9F%A5%E8%AF%A2%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/</link><pubDate>Thu, 06 Jan 2022 16:50:11 +0800</pubDate><guid>/blog/2022-01-06-mysql%E6%9F%A5%E8%AF%A2%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/</guid><description>&lt;p&gt;【转】MySQL优化原理，https://www.cnblogs.com/zhangyinhua/p/7620964.html&lt;/p&gt;
+&lt;p&gt;说起MySQL的查询优化，相信大家积累一堆技巧：不能使用 &lt;code&gt;SELECT *&lt;/code&gt;、不使用NULL字段、合理创建索引、为字段选择合适的数据类型….. 你是否真的理解这些优化技巧？是否理解其背后的工作原理？在实际场景下性能真有提升吗？&lt;/p&gt;
+&lt;p&gt;我想未必。因而理解这些优化建议背后的原理就尤为重要，希望本文能让你重新审视这些优化建议，并在实际业务场景下合理的运用。&lt;/p&gt;
+&lt;hr&gt;
+&lt;style&gt;
+img {
+width: 680px;
+padding-bottom: 1rem;
+}
+&lt;/style&gt;
+&lt;h2 id="mysql逻辑架构"&gt;&lt;strong&gt;MySQL逻辑架构&lt;/strong&gt; &lt;a href="#mysql%e9%80%bb%e8%be%91%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;如果能在头脑中构建一幅MySQL各组件之间如何协同工作的架构图，有助于深入理解MySQL服务器。下图展示了MySQL的逻辑架构图。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2022-01-06-MySQL%E6%9F%A5%E8%AF%A2%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/1.jpg" alt="img"&gt;&lt;/p&gt;
+&lt;p&gt;MySQL逻辑架构，来自：高性能MySQL&lt;/p&gt;
+&lt;p&gt;MySQL逻辑架构整体分为三层，最上层为客户端层，并非MySQL所独有，诸如：连接处理、授权认证、安全等功能均在这一层处理。&lt;/p&gt;
+&lt;p&gt;MySQL大多数核心服务均在中间这一层，包括查询解析、分析、优化、缓存、内置函数(比如：时间、数学、加密等函数)。所有的跨存储引擎的功能也在这一层实现：存储过程、触发器、视图等。&lt;/p&gt;
+&lt;p&gt;最下层为存储引擎，其负责MySQL中的数据存储和提取。和Linux下的文件系统类似，每种存储引擎都有其优势和劣势。中间的服务层通过API与存储引擎通信，这些API接口屏蔽了不同存储引擎间的差异。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="mysql查询过程"&gt;&lt;strong&gt;MySQL查询过程&lt;/strong&gt; &lt;a href="#mysql%e6%9f%a5%e8%af%a2%e8%bf%87%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;我们总是希望MySQL能够获得更高的查询性能，最好的办法是弄清楚MySQL是如何优化和执行查询的。一旦理解了这一点，就会发现：&lt;strong&gt;很多的查询优化工作实际上就是遵循一些原则让MySQL的优化器能够按照预想的合理方式运行而已。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;当向MySQL发送一个请求的时候，MySQL到底做了些什么呢？&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2022-01-06-MySQL%E6%9F%A5%E8%AF%A2%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/2.jpg" alt="img"&gt;&lt;/p&gt;
+&lt;p&gt;MySQL查询过程&lt;/p&gt;
+&lt;h3 id="客户端服务端通信协议"&gt;客户端/服务端通信协议 &lt;a href="#%e5%ae%a2%e6%88%b7%e7%ab%af%e6%9c%8d%e5%8a%a1%e7%ab%af%e9%80%9a%e4%bf%a1%e5%8d%8f%e8%ae%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;MySQL客户端/服务端通信协议是“半双工”的：在任一时刻，要么是服务器向客户端发送数据，要么是客户端向服务器发送数据，这两个动作不能同时发生。一旦一端开始发送消息，另一端要接收完整个消息才能响应它，所以我们无法也无须将一个消息切成小块独立发送，也没有办法进行流量控制。&lt;/p&gt;
+&lt;p&gt;客户端用一个单独的数据包将查询请求发送给服务器，所以当查询语句很长的时候，需要设置 &lt;code&gt;max_allowed_packet&lt;/code&gt;参数。但是需要注意的是，如果查询实在是太大，服务端会拒绝接收更多数据并抛出异常。&lt;/p&gt;
+&lt;p&gt;与之相反的是，服务器响应给用户的数据通常会很多，由多个数据包组成。但是当服务器响应客户端请求时，客户端必须完整的接收整个返回结果，而不能简单的只取前面几条结果，然后让服务器停止发送。因而在实际开发中，尽量保持查询简单且只返回必需的数据，减小通信间数据包的大小和数量是一个非常好的习惯，这也是查询中尽量避免使用 &lt;code&gt;SELECT *&lt;/code&gt;以及加上LIMIT限制的原因之一。&lt;/p&gt;
+&lt;h3 id="查询缓存"&gt;查询缓存 &lt;a href="#%e6%9f%a5%e8%af%a2%e7%bc%93%e5%ad%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在解析一个查询语句前，如果查询缓存是打开的，那么MySQL会检查这个查询语句是否命中查询缓存中的数据。如果当前查询恰好命中查询缓存，在检查一次用户权限后直接返回缓存中的结果。这种情况下，查询不会被解析，也不会生成执行计划，更不会执行。&lt;/p&gt;
+&lt;p&gt;MySQL将缓存存放在一个引用表（不要理解成table，可以认为是类似于HashMap的数据结构），通过一个哈希值索引，这个哈希值通过查询本身、当前要查询的数据库、客户端协议版本号等一些可能影响结果的信息计算得来。所以两个查询在任何字符上的不同（例如：空格、注释），都会导致缓存不会命中。&lt;/p&gt;
+&lt;p&gt;如果查询中包含任何用户自定义函数、存储函数、用户变量、临时表、mysql库中的系统表，其查询结果都不会被缓存。比如函数 &lt;code&gt;NOW()&lt;/code&gt;或者 &lt;code&gt;CURRENT_DATE()&lt;/code&gt;会因为不同的查询时间，返回不同的查询结果，再比如包含 &lt;code&gt;CURRENT_USER&lt;/code&gt;或者 &lt;code&gt;CONNECION_ID()&lt;/code&gt;的查询语句会因为不同的用户而返回不同的结果，将这样的查询结果缓存起来没有任何的意义。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;既然是缓存，就会失效，那查询缓存何时失效呢？&lt;/strong&gt;　MySQL的查询缓存系统会跟踪查询中涉及的每个表，如果这些表（数据或结构）发生变化，那么和这张表相关的所有缓存数据都将失效。正因为如此，在任何的写操作时，MySQL必须将对应表的所有缓存都设置为失效。如果查询缓存非常大或者碎片很多，这个操作就可能带来很大的系统消耗，甚至导致系统僵死一会儿。而且查询缓存对系统的额外消耗也不仅仅在写操作，读操作也不例外：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;任何的查询语句在开始之前都必须经过检查，即使这条SQL语句永远不会命中缓存&lt;/li&gt;
+&lt;li&gt;如果查询结果可以被缓存，那么执行完成后，会将结果存入缓存，也会带来额外的系统消耗&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;基于此，我们要知道并不是什么情况下查询缓存都会提高系统性能，缓存和失效都会带来额外消耗，只有当缓存带来的资源节约大于其本身消耗的资源时，才会给系统带来性能提升。但要如何评估打开缓存是否能够带来性能提升是一件非常困难的事情，也不在本文讨论的范畴内。如果系统确实存在一些性能问题，可以尝试打开查询缓存，并在数据库设计上做一些优化，比如：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;用多个小表代替一个大表，注意不要过度设计&lt;/li&gt;
+&lt;li&gt;批量插入代替循环单条插入&lt;/li&gt;
+&lt;li&gt;合理控制缓存空间大小，一般来说其大小设置为几十兆比较合适&lt;/li&gt;
+&lt;li&gt;可以通过 &lt;code&gt;SQL_CACHE&lt;/code&gt;和 &lt;code&gt;SQL_NO_CACHE&lt;/code&gt;来控制某个查询语句是否需要进行缓存&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;最后的忠告是不要轻易打开查询缓存，特别是写密集型应用。如果你实在是忍不住，可以将 &lt;code&gt;query_cache_type&lt;/code&gt;设置为DEMAND，这时只有加入 &lt;code&gt;SQL_CACHE&lt;/code&gt;的查询才会走缓存，其他查询则不会，这样可以非常自由地控制哪些查询需要被缓存。&lt;/p&gt;
+&lt;p&gt;当然查询缓存系统本身是非常复杂的，这里讨论的也只是很小的一部分，其他更深入的话题，比如：缓存是如何使用内存的？如何控制内存的碎片化？事务对查询缓存有何影响等等，读者可以自行阅读相关资料，这里权当抛砖引玉吧。&lt;/p&gt;
+&lt;h3 id="语法解析和预处理"&gt;语法解析和预处理 &lt;a href="#%e8%af%ad%e6%b3%95%e8%a7%a3%e6%9e%90%e5%92%8c%e9%a2%84%e5%a4%84%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;MySQL通过关键字将SQL语句进行解析，并生成一颗对应的解析树。这个过程解析器主要通过语法规则来验证和解析。比如SQL中是否使用了错误的关键字或者关键字的顺序是否正确等等。预处理则会根据MySQL规则进一步检查解析树是否合法。比如检查要查询的数据表和数据列是否存在等等。&lt;/p&gt;
+&lt;h3 id="查询优化"&gt;查询优化 &lt;a href="#%e6%9f%a5%e8%af%a2%e4%bc%98%e5%8c%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;经过前面的步骤生成的语法树被认为是合法的了，并且由优化器将其转化成查询计划。多数情况下，一条查询可以有很多种执行方式，最后都返回相应的结果。优化器的作用就是找到这其中最好的执行计划。&lt;/p&gt;
+&lt;p&gt;MySQL使用基于成本的优化器，它尝试预测一个查询使用某种执行计划时的成本，并选择其中成本最小的一个。在MySQL可以通过查询当前会话的 &lt;code&gt;last_query_cost&lt;/code&gt;的值来得到其计算当前查询的成本。&lt;/p&gt;
+&lt;p&gt;Mysql代码&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;mysql&amp;gt; select * from t_message limit 10;
+...省略结果集
+mysql&amp;gt; show status like 'last_query_cost';
++-----------------+-------------+
+| Variable_name | Value |
++-----------------+-------------+
+| Last_query_cost | 6391.799000 |
++-----------------+-------------+
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;示例中的结果表示优化器认为大概需要做6391个数据页的随机查找才能完成上面的查询。这个结果是根据一些列的统计信息计算得来的，这些统计信息包括：每张表或者索引的页面个数、索引的基数、索引和数据行的长度、索引的分布情况等等。&lt;/p&gt;</description></item><item><title>常见的零拷贝优化技术</title><link>/blog/2021-09-09-%E5%B8%B8%E8%A7%81%E7%9A%84%E9%9B%B6%E6%8B%B7%E8%B4%9D%E4%BC%98%E5%8C%96%E6%8A%80%E6%9C%AF/</link><pubDate>Thu, 09 Sep 2021 14:40:13 +0800</pubDate><guid>/blog/2021-09-09-%E5%B8%B8%E8%A7%81%E7%9A%84%E9%9B%B6%E6%8B%B7%E8%B4%9D%E4%BC%98%E5%8C%96%E6%8A%80%E6%9C%AF/</guid><description>&lt;p&gt;在关注IO性能时我们经常听到零拷贝，那么零拷贝到底是什么呢？为什么要做零拷贝？又有哪些方案？本文就一起来看下。&lt;/p&gt;
+&lt;h2 id="零拷贝技术一般可以分为两类"&gt;零拷贝技术一般可以分为两类 &lt;a href="#%e9%9b%b6%e6%8b%b7%e8%b4%9d%e6%8a%80%e6%9c%af%e4%b8%80%e8%88%ac%e5%8f%af%e4%bb%a5%e5%88%86%e4%b8%ba%e4%b8%a4%e7%b1%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;devices（disk、nic）和kernel buffer之间的数据拷贝，一般可以通过DMA（直接存储器访问）来优化掉，既能够避免中断CPU减轻CPU负载，也能够直接读写内存减少数据从nic到cpu再到kernel buffer的拷贝动作；&lt;/li&gt;
+&lt;li&gt;kernel buffer和application buffer之间的数据拷贝；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;说优化拷贝一般是去优化cpu拷贝，DMA拷贝是无法避免的。零拷贝则强调的是kernel buffer和application buffer之间的拷贝，零拷贝并不是说整个过程中完全有没有数据拷贝，在kernel space还是发生拷贝，当然下面提到的sendfile+DMA硬件支持分散读/聚集写情况下能优化掉kernel buffer之间的拷贝。&lt;/p&gt;
+&lt;h2 id="然后明确下优化拷贝的原因"&gt;然后明确下优化拷贝的原因 &lt;a href="#%e7%84%b6%e5%90%8e%e6%98%8e%e7%a1%ae%e4%b8%8b%e4%bc%98%e5%8c%96%e6%8b%b7%e8%b4%9d%e7%9a%84%e5%8e%9f%e5%9b%a0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;使用系统调用的次数影响到上下文切换次数，上下文切换会带来一定的开销，如read、write组合起来完成磁盘数据读取、网络发送，就要切换4次，而且read、write要重复很多次，上下文切换开销就不能完全忽视；&lt;/li&gt;
+&lt;li&gt;数据拷贝，主要是说利用cpu来拷贝，cpu势必要中断原来的任务去做拷贝的事情，move来move去，干了些杂活，理想情况下是希望尽可能做更多的事，当然不一定能完全避免cpu拷贝，但是能让拷贝的数据量减少点还是值得的；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;零拷贝优化一方面是要优化掉kernel buffer和application buffer的数据拷贝问题，一方面也要考虑下如何尽可能减少cpu拷贝对程序停顿的影响。&lt;/p&gt;
+&lt;h2 id="常见的拷贝优化方案"&gt;常见的拷贝优化方案 &lt;a href="#%e5%b8%b8%e8%a7%81%e7%9a%84%e6%8b%b7%e8%b4%9d%e4%bc%98%e5%8c%96%e6%96%b9%e6%a1%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;这里解决kernel buffer和application buffer之间数据拷贝的常用办法有以下几种，以读取磁盘数据发送到socket为例说明：&lt;/p&gt;
+&lt;h3 id="memory-mapping"&gt;memory mapping &lt;a href="#memory-mapping" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;mmap系统调用，read的时候，dma从磁盘发送数据到kernel buffer，mmap根据fd映射对应的kernel buffer和application buffer，省掉一次考拷贝。write的时候，数据从kernel buffer直接拷贝到socket buffer再到nic buffer;&lt;/p&gt;
+&lt;h3 id="shared-buffers-in-kernel-memory-space"&gt;shared buffers in kernel memory space &lt;a href="#shared-buffers-in-kernel-memory-space" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;这里希望能再次优化掉mmap方案中write时从kernel buffer到nic buffer的拷贝，在kernel space中建立一个共享内存区域buf，dma传送数据到这个buf的b_data指针指向的位置，write的时候使用dma从这个buf的m_data位置开始写，其实b_data、m_data共享了底层内存区域。相当于一个写指针、一个读指针。通过这种方式优化掉了kernel space到nic space的拷贝；&lt;/p&gt;
+&lt;h3 id="shared-buffers-between-user-and-kernel-space"&gt;shared buffers between user and kernel space &lt;a href="#shared-buffers-between-user-and-kernel-space" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;linux sk_buffers结构，其中有个指针记录着要发送的数据（application buffer中）的地址，避免了从application buffer到kernel buffer的拷贝；&lt;/p&gt;
+&lt;h3 id="different-system-calls-sendfile-splice-etc"&gt;different system calls, sendfile, splice, etc &lt;a href="#different-system-calls-sendfile-splice-etc" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;先说sendfile，sendfile允许在fd之间直接传送数据，进出sendfile上下文切换只需两次，数据直接从源fd对应的kernel buffer（dma从设备上拷贝过去）到目的socketfd的socket buffer拷贝，完全绕过了应用程序buffer及其拷贝；&lt;/p&gt;</description></item><item><title>培养技术领导力</title><link>/blog/2021-08-17-%E5%9F%B9%E5%85%BB%E6%8A%80%E6%9C%AF%E9%A2%86%E5%AF%BC%E5%8A%9B/</link><pubDate>Tue, 17 Aug 2021 22:11:58 +0800</pubDate><guid>/blog/2021-08-17-%E5%9F%B9%E5%85%BB%E6%8A%80%E6%9C%AF%E9%A2%86%E5%AF%BC%E5%8A%9B/</guid><description>&lt;p&gt;关于如何培养自己的技术领导力，文章&lt;a href="https://slack.engineering/technical-leadership-getting-started/"&gt;technical leadership: getting started&lt;/a&gt; 中作者分享了自己的心得。&lt;/p&gt;
+&lt;p&gt;读后深有感触，现在做一个简单的总结。总结不拘泥于原文结构，根据个人感悟重新整理下。&lt;/p&gt;
+&lt;p&gt;塑造领导力的3个层次：leading self，leading others，leading organizations。没有人天生就是专家，在成为专家的路线上，我们就要沿着这3个层次慢慢锻炼提升自己。&lt;/p&gt;
+&lt;h1 id="成为专家"&gt;成为专家 &lt;a href="#%e6%88%90%e4%b8%ba%e4%b8%93%e5%ae%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;想起10000小时定律，要成为领域专家是需要付出大量的实践的，过程中要不断提升自己的实践能力、技术视野、对公司业务价值及目标的理解。能否成为真正的专家，靠的不是运气，而是稳定持续地有力输出，again and again and again…consistently！这里就要求自己先做到leading self，把自己做到最好，起到表率的作用。然后再尝试靠技术领导力去leading others，leading organizations。&lt;/p&gt;
+&lt;h1 id="善于分享"&gt;善于分享 &lt;a href="#%e5%96%84%e4%ba%8e%e5%88%86%e4%ba%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;提高这里的输出，也不能总是依靠个人能力。如果你想走得够快，你可能选择自己走；如果你想走得更远，那必须依靠团队的力量。对于掌握的知识、技能，藏着掖着并不是在帮你，因为你没有正向激励到身边的人，没有在恰当的时候塑造有力的技术影响力，更没有帮助大家提升到更接近的段位来一场更漂亮的团战。是时候地分享自己掌握的知识、技能，也减少他人对自己的依赖，侧面上可以赢取更多的时间放在更有价值的事情上。知识是没有穷尽的，总会有更值得钻研的领域等着去探索。&lt;/p&gt;
+&lt;h1 id="有效沟通"&gt;有效沟通 &lt;a href="#%e6%9c%89%e6%95%88%e6%b2%9f%e9%80%9a" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;有效沟通，并不是说要如何快速地结束沟通，而是如何高效率地达成共识。当然有些沟通不能达成共识，但是也要有效地同步双方掌握的问题背景、信息，完成意见的交换，仍应当放在沟通目的的第一位。看待问题要避免掺杂过多主观成分，客观看待问题，以目标为导向，更有助于促成有效沟通。有效沟通是表达自己、了解他人的前提，也是能团战的必要条件。&lt;/p&gt;
+&lt;p&gt;加油！加油！加油！&lt;/p&gt;</description></item><item><title>分布式计算的8条谬论</title><link>/blog/2021-07-05-%E5%88%86%E5%B8%83%E5%BC%8F%E8%AE%A1%E7%AE%978%E6%9D%A1%E8%B0%AC%E8%AE%BA/</link><pubDate>Mon, 05 Jul 2021 01:50:59 +0800</pubDate><guid>/blog/2021-07-05-%E5%88%86%E5%B8%83%E5%BC%8F%E8%AE%A1%E7%AE%978%E6%9D%A1%E8%B0%AC%E8%AE%BA/</guid><description>&lt;p&gt;分布式计算的谬论，是由L Peter Deutsch以及其他Sun Microsystems的同行总结的几条分布式计算初学者经常误以为成立的判断。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;这8条谬论分别是&lt;/strong&gt;：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;网络是可靠的；&lt;/li&gt;
+&lt;li&gt;通信时延为0；&lt;/li&gt;
+&lt;li&gt;带宽是无限的；&lt;/li&gt;
+&lt;li&gt;网络是安全的；&lt;/li&gt;
+&lt;li&gt;拓扑不会改变；&lt;/li&gt;
+&lt;li&gt;只有一个管理者；&lt;/li&gt;
+&lt;li&gt;传输成本为0；&lt;/li&gt;
+&lt;li&gt;网络是同构的；&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;&lt;strong&gt;陷入这8条谬论会导致如下后果&lt;/strong&gt;：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;开发的软件程序中针对网络的错误处理不够健壮，遇到网络错误时程序会stall或者无限等待响应，即便是网络恢复了，程序也不能自行恢复或需要手动重启；&lt;/li&gt;
+&lt;li&gt;忽视通信时延以及可能导致的丢包问题，应用层、传输层开发人员开发的程序对于传输流量大小没有任何限制，会导致严重的的丢包或者带宽浪费；&lt;/li&gt;
+&lt;li&gt;流量的发送方，忽视带宽本身的限制，会导致一些瓶颈；&lt;/li&gt;
+&lt;li&gt;忽视网络安全容易被恶意用户和不断演进的能绕过安全软件的恶意程序蒙蔽双眼；&lt;/li&gt;
+&lt;li&gt;网络拓扑的改变也会对网络带宽和通信时延产生影响，因此会产生相似的问题；&lt;/li&gt;
+&lt;li&gt;可能会出现多个管理员，它们可能会制定出相互冲突的策略，流量的发送方需要知道这里的“策略”才能按预期路径传输，但是策略出现冲突，会对传输造成影响。&lt;/li&gt;
+&lt;li&gt;构建、维护一个网络或者子网的隐藏成本不能被忽略，在预算中必须清晰地列出来，而不能出现突然地削减；&lt;/li&gt;
+&lt;li&gt;如果假定一个系统是同构网络，那么可能会导致这里列出的前3个谬论；&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;&lt;strong&gt;这8条谬论的诞生&lt;/strong&gt;：&lt;/p&gt;
+&lt;p&gt;这8个谬论大部分由来自Sun Microsystems公司的L. Peter Deutsch提出，1994年它提出了前7个。不过Bill Joy和Tom Lyon在那时就早已经将前4条作为网络计算的谬论了。在1997年，James Gosling（Sun员工，也是Java之父）添加了第8条谬论。&lt;/p&gt;</description></item><item><title>分布式系统工程师roadmap</title><link>/blog/2021-07-01-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%B7%A5%E7%A8%8B%E5%B8%88roadmap/</link><pubDate>Fri, 02 Jul 2021 12:45:38 +0800</pubDate><guid>/blog/2021-07-01-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%B7%A5%E7%A8%8B%E5%B8%88roadmap/</guid><description>&lt;p&gt;如何成为一名资深的分布式系统工程师，需要补齐哪些理论基础，又需要哪些工程方面的锻炼？本文原文见 Henry Robinson 的文章 distributed systems theory for the distributed systems engineer，我觉得是一个很不错的roadmap，沿着这个脉络半年下来，还是很有收获的……继续:)&lt;/p&gt;
+&lt;h1 id="1-掌握分布式背后的相关理论"&gt;1 掌握分布式背后的相关理论 &lt;a href="#1-%e6%8e%8c%e6%8f%a1%e5%88%86%e5%b8%83%e5%bc%8f%e8%83%8c%e5%90%8e%e7%9a%84%e7%9b%b8%e5%85%b3%e7%90%86%e8%ae%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;可能会有人甩出很多论文，FLP论文、Paxos论文、Raft论文、拜占庭将军相关的论文&amp;hellip;相关的论文可以摆出很多，但是论文是有一定深度的，是非常严谨的论述，对于攻读PhD的同学有帮助，但是对于一名从事分布式系统工程的同学真的有必要全部掌握吗？应该看多少论文，毕竟经过了那么多年的发展、沉淀呢？
+作为一名分布式系统工程师，搞明白需要掌握哪些理论，比单纯了解有哪些论文更重要。&lt;/p&gt;
+&lt;h1 id="2-first-steps"&gt;2 First Steps &lt;a href="#2-first-steps" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;下面的4个文集很好地介绍了构建一个分布式系统要面临的挑战，它们共同概述了分布式系统工程师必须克服的一些技术上的困难，并为后面章节中更详细的说明奠定了基础。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="http://book.mixu.net/distsys/"&gt;Distributed Systems for Fun and Profit&lt;/a&gt;，介绍了分布式系统的基础知识，包括时间在分布式系统中扮演的角色、不同的复制策略等；&lt;/li&gt;
+&lt;li&gt;&lt;a href="http://www.somethingsimilar.com/2013/01/14/notes-on-distributed-systems-for-young-bloods/"&gt;Notes on distributed systems for young bloods&lt;/a&gt;，不是纯理论介绍，在理论和实践中做到了一个不错的平衡，为后续更深入学习打好基础；&lt;/li&gt;
+&lt;li&gt;&lt;a href="http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.41.7628"&gt;A Note on Distributed Systems&lt;/a&gt;，一篇很经典的论文，解释了分布式系统中为什么不能总把远程交互对象当做本地的对象，让读者理解分布式场景中的问题和挑战；&lt;/li&gt;
+&lt;li&gt;&lt;a href="http://en.wikipedia.org/wiki/Fallacies_of_Distributed_Computing"&gt;The fallacies of distributed computing&lt;/a&gt;，分布式计算的8个谬论，为分布式系统设计人员设计系统打下基础；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;我们需要了解两个重要属性的含义，“safety”和“liveness”：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;safety，该属性表示不会有坏的事情发生，如API不会返回不一致的value、集群中不会同时选出两个leader等；&lt;/li&gt;
+&lt;li&gt;liveness，该属性表示好的事情最终会发生，如API最终会返回一个结果、磁盘写操作最终会完成等；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id="3-failure-and-time"&gt;3 Failure and Time &lt;a href="#3-failure-and-time" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;分布式系统工程师面对的一些困难，其实可以归结为下面2个原因：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Processes may fail&lt;/li&gt;
+&lt;li&gt;There&amp;rsquo;s no good way to tell that they have done so&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;即，分布式系统中的任意进程可能会出现故障，但是其他进程又没有可靠的方式来感知这个进程出现了故障。&lt;/p&gt;
+&lt;p&gt;进程掌握并共享给其他进程的时间方面的信息、可能检测到的故障场景以及可以正确实现的算法和原语之间存在非常紧密的关系。大多数情况下，我们假设两个不同的节点对于现在是什么时间或时间流逝的速度完全没有共享的信息。&lt;/p&gt;</description></item><item><title>The L4 MicroKernel</title><link>/blog/2021-06-19-the-l4-microkernel/</link><pubDate>Sat, 19 Jun 2021 00:41:02 +0800</pubDate><guid>/blog/2021-06-19-the-l4-microkernel/</guid><description>&lt;h2 id="l4简介"&gt;L4简介 &lt;a href="#l4%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;L4是在L3基础上开发的，改进了IO和IPC等，L4致力于打造一个通用的微内核，以便允许在其基础上进一步定制化来满足场景需求，L4衍生了不少微内核实现。&lt;/p&gt;
+&lt;p&gt;现在也有些工作组致力于将Linux在L4上运行起来（L4Linux），将Windows在L4上运行起来（L4Windows），著名的GNU Hurd已经从老的Mach微内核迁移到了L4微内核。&lt;/p&gt;
+&lt;h2 id="内核划分依据"&gt;内核划分依据 &lt;a href="#%e5%86%85%e6%a0%b8%e5%88%92%e5%88%86%e4%be%9d%e6%8d%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;微内核相比于宏内核，主要是微内核提供的核心更小，区别二者的依据并非源码多少，而是内核中提供功能的多寡。GNU Hurd中有提供宏内核、微内核、混合内核的对比示意图，&lt;a href="https://en.wikipedia.org/wiki/GNU_Hurd#/media/File:OS-structure2.svg"&gt;点击查看&lt;/a&gt;。注意，宏内核有时记作monolithic kernel，也记作macro kernel。&lt;/p&gt;
+&lt;p&gt;ps：通常微内核源码会比宏内核少很多，如L4::Pistachio/ia32只有1w+左右的代码，但是Linux有几百万行。&lt;/p&gt;
+&lt;p&gt;微内核通常将内核功能限定在下面几个方面：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;进程管理；&lt;/li&gt;
+&lt;li&gt;虚拟内存管理；&lt;/li&gt;
+&lt;li&gt;进程通信、同步机制；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;其他宏内核中常见的文件系统、设备驱动、网络功能在微内核中都是在用户态实现，这些功能可能在single-server中全部实现，也可能在multi-server中实现，进程通过内核IPC机制与server之间进行通信来。&lt;/p&gt;
+&lt;p&gt;因为微内核中用户程序请求一些用户态的server（如文件系统、网络等服务）都需要借助IPC来完成，IPC用的非常多，改进其性能就显得尤为重要。早期的微内核实现IPC性能比较差，L4及以后的微内核设计都将提升IPC性能作为一个重要方向，L4中已经做的不错了，一起来了解下是如何实现的。&lt;/p&gt;
+&lt;h2 id="微内核优缺点"&gt;微内核优缺点 &lt;a href="#%e5%be%ae%e5%86%85%e6%a0%b8%e4%bc%98%e7%bc%ba%e7%82%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="优点"&gt;优点 &lt;a href="#%e4%bc%98%e7%82%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;robustness：微内核中将很多功能在用户态实现，比如以multi-server的方式实现，假如文件系统服务出故障了，直接重启该服务即可，无需重启整个内核。而且这些服务是在用户态运行的，无权访问核心态数据，对整个内核无破坏性。微内核体积小也更方便维护、调试、定位、修复。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;security：安全是系统很重要的方面，root用户可以访问一切资源，宏内核中root的权限、可支配范围相当大，root权限被滥用会导致严重问题，如Linux 2.4以前版本ptrace可以加载任意模块包括恶意模块。微内核中这样对权限收的更紧，没那么多系统调用，自然获得root权限的入口更少，更容易约束。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;memory usage：内核的代码、数据需要常驻内存，宏内核中即便某些部分不常用到也不能够换出到交换区，会浪费内存空间，也影响用户程序执行效率。在微内核中，微内核本身体积小，宏内核中的一些核心服务被放到用户态中实现了，使用不频繁的内存区可以换出到交换区。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;performance：当想在微内核核心态执行操作时，通常要关闭中断，以避免一些重要的处理过程被中断，这么做顶多会导致当前的一些程序、服务没有处理中断请求。如果考虑实时处理的话，则需要考虑这点。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="缺点"&gt;缺点 &lt;a href="#%e7%bc%ba%e7%82%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;微内核的缺点就是程序之间、程序和某些系统服务之间的通信都需要通过IPC来完成，如果IPC性能差则会导致整体性能差，所以有很多研究如何提高IPC性能的研究。L4Ka的研究人员可以证明，能够将IPC的开销从100ms降低到5ms及以下。&lt;/p&gt;
+&lt;p&gt;see: https://www.youtube.com/watch?v=wCoLTnHUwEY.&lt;/p&gt;
+&lt;h2 id="l4ka的设计"&gt;L4Ka的设计 &lt;a href="#l4ka%e7%9a%84%e8%ae%be%e8%ae%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;L4表示第二代微内核，它吸收了第一代微内核设计上的一些经验教训，第一代微内核中Mach是最有名的实现之一。Mach和当时的其他微内核实现类似，没有自底向上地思考到底哪些功能应该在内核中实现，哪些不应该在内核中实现。其实它们看上去更像是拿到一个宏内核，然后再尝试将一些内核中的系统服务搞到用户层去。&lt;/p&gt;
+&lt;p&gt;L4考虑了这些问题，比如哪些服务在用户态运行并且不损失安全性和功能。比如L4内核甚至都没必要引入threads或scheduler的概念，只提供实现进程抢占的系统调用就可以（尽管实际情况是L4支持用户级线程）。微内核就是这样，提供最基础的功能，在不同场景中用户可以执行特定的策略来实现更加复杂的功能。&lt;/p&gt;
+&lt;p&gt;看L4Ka的详细设计之前，先来了解几个概念。&lt;/p&gt;
+&lt;h3 id="l4ka基本概念"&gt;L4Ka基本概念 &lt;a href="#l4ka%e5%9f%ba%e6%9c%ac%e6%a6%82%e5%bf%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;threads：线程是最基本的调度实体，只有线程可以被调度。线程之间的同学是通过IPC来完成的，每个线程都有一个寄存器集合（IP、SP、user-visible registers、processor table）、一个关联的task、进程地址空间、pagefault handler（页式管理器，通过IPC接收pagefault请求）、exception handler、preempters和一些其他的调度参数（优先级、时间片等）。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;tasks：task提供了进程执行需要的环境，它包括了一个虚地址空间、通信端口，一个task至少包括了一个thread，最新的L4实现不限制线程数量。task中创建的所有线程（除了主线程）创建后都需要显示启动，通过系统调用lthread_ex_regs()来启动。一个clan可以包括一个或多个tasks，其中只有一个是chief task，一个task创建另一个task，前者成为后者的chief task。task只可以被chief task kill掉，或者因为chief task被kill掉而间接被kill掉。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;ps：这里clan、task、chief task的关系，可以联系下Linux下的会话session、会话首进程、进程组、组长进程、父进程之类的来理解。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;flexpages and Virtual Address Space：flexpages指的是flexible large memory pages，L4通过这些内存来访问主存和设备IO内存。进程虚地址空间也是由flexpages构成的，提供了两个系统调用来管理flexpages：grant、map、flush。grant将内存页从一个user交给另一个user，前者失去访问权限；map将内存页共享给另一个task，二者均可以访问；如果一个内存页已经映射给其他用户使用了，flush将清空对应地址空间。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="io实现"&gt;IO实现 &lt;a href="#io%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;L4并没有在内核中实现IO，而是将其放到了内核外的用户层去实现。内核只是接受IO相关的中断请求（IPC请求的形式），然后将其转发给对应的设备驱动来完成处理。访问外设IO都是以这种方式进行的。&lt;/p&gt;
+&lt;h3 id="ipc实现"&gt;IPC实现 &lt;a href="#ipc%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;假如task A的线程发送给task B中的线程一个消息M，需要经历这么几步：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;A: load B的id&lt;/li&gt;
+&lt;li&gt;A: load data of M&lt;/li&gt;
+&lt;li&gt;A: call kernel&lt;/li&gt;
+&lt;li&gt;kernel: read IPC request，load B的id&lt;/li&gt;
+&lt;li&gt;kernel：switch rsp to B&amp;rsquo;s rsp&lt;/li&gt;
+&lt;li&gt;kernel：switch VMA to B&amp;rsquo;s VMA&lt;/li&gt;
+&lt;li&gt;kernel: load A的id并设置&lt;/li&gt;
+&lt;li&gt;kernel：return to userspace（B&amp;rsquo;s VMA)&lt;/li&gt;
+&lt;li&gt;B: receive A发送的M（来自kernel load A的id并设置这步）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;ps：这里的设计实现see：https://www.youtube.com/watch?v=mRr1lCJse_I。据说现在宏内核之所以还能活的好好的，主要是之前的微内核IPC性能实在太差。&lt;/p&gt;</description></item><item><title>go map设计实现及应用选型</title><link>/blog/2021-06-15-go-map%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0%E5%8F%8A%E5%BA%94%E7%94%A8%E9%80%89%E5%9E%8B/</link><pubDate>Tue, 15 Jun 2021 15:52:11 +0800</pubDate><guid>/blog/2021-06-15-go-map%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0%E5%8F%8A%E5%BA%94%E7%94%A8%E9%80%89%E5%9E%8B/</guid><description>&lt;h2 id="map大致实现"&gt;map大致实现 &lt;a href="#map%e5%a4%a7%e8%87%b4%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="buckets--overflow"&gt;buckets &amp;amp; overflow &lt;a href="#buckets--overflow" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;本文介绍了map的内部数据结构，每个桶8个kvpairs，超过了可以用溢出桶，但是溢出桶会降低map性能，所以会创建新的bucket将数据迁到新bucket里面。&lt;/p&gt;
+&lt;h3 id="hash--top-hash-table"&gt;hash &amp;amp; top hash table &lt;a href="#hash--top-hash-table" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;一个kvpairs存储在哪个bucket里面呢，首先根据key计算hash，然后对buckets数量取余，再放到对应桶里面，如果有空位置就放入，没有就需要走前面提到的溢出桶的逻辑。&lt;/p&gt;
+&lt;p&gt;根据key计算出的hash除了计算key分布在哪个桶，还有其他用途，每个桶里都有一个top hash构成的数组，是为了map访问时加快查询key所在的数组索引的，通过减少比较key的耗时来加速访问。&lt;/p&gt;
+&lt;p&gt;mapaccess_faststr, mapaccess_fast64&amp;hellip;访问map中元素时，根据key类型不同编译器插入不同的函数调用，函数名后缀表示key的类型，为什么有不同的函数呢？这是为了提高key的hash计算效率和比较效率。&lt;/p&gt;
+&lt;h3 id="load-factor"&gt;load factor &lt;a href="#load-factor" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;装填因子，是用来控制map装填的元素数量，即元素数量除以桶数量。装填因子过小容易浪费内存空间，过大容易引发更多的碰撞冲突导致性能下降。&lt;/p&gt;
+&lt;h3 id="initialization--lazy-initialization"&gt;initialization &amp;amp;&amp;amp; lazy initialization &lt;a href="#initialization--lazy-initialization" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;map提前初始化再赋值，比lazy初始化后再赋值效率高，为什么呢？lazy初始化桶是后面创建的更花时间。但是lazy初始化相比较而言容易节省内存。&lt;/p&gt;
+&lt;h3 id="kvpairs-padding"&gt;kvpairs padding &lt;a href="#kvpairs-padding" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;map中kvpairs的存储有考虑内存占用方面的优化，key的类型和value的类型可能不同，所以在数据对齐过程中padding会浪费不少内存，所以go map中的keys和values是分开存储的，先存储keys再存储values。&lt;/p&gt;
+&lt;h2 id="并发安全检测"&gt;并发安全检测 &lt;a href="#%e5%b9%b6%e5%8f%91%e5%ae%89%e5%85%a8%e6%a3%80%e6%b5%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;map中的并发读写问题，go提供了如下方式进行检查：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;data race detection&lt;/strong&gt;：通过选项-race来检测是否存在data race，关于data race检测的问题，kavya joshi的分享里有介绍；&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;concurrent map writes&lt;/strong&gt;：map对应的数据结构hmap中有个字段flags来记录当前的map操作，比如当前执行m[1]=1，是一个kv的赋值，对应的函数是mapassign_fast64，如果执行的是delete(m, 1)，对应的函数是mapdelete_fast64，这里的map修改操作对应的函数内部会将hmap.flags^=hashWriting，如果已经有一个写操作在执行，后面又有一个写操作执行，后面的写操作就有很大概率检测到flags的hashWriting位被设置了，此时就会抛出错误“concurrent map writes”错误；&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;关于map为什么不直接提供并发安全的版本，原因也简单。并发安全的版本是有同步开销的，但是很多时候并不需要并发安全的版本，如果默认实现是并发安全的，性能上就要大打折扣了。不考虑并发安全问题的话，map比sync.Map要快7~10倍。&lt;/p&gt;
+&lt;h2 id="并发安全实现"&gt;并发安全实现 &lt;a href="#%e5%b9%b6%e5%8f%91%e5%ae%89%e5%85%a8%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;sync.Map是并发安全的实现，它对某些场景下的并发读写做了性能方面的优化：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&amp;ldquo;The Map type is optimized for two common use cases: (1) when the entry for a given key is only ever written once but read many times, as in caches that only grow, (2) when multiple goroutines read, write and overwrite entries for disjoint sets of keys. In these two cases, use of a Map may significantly reduce lock contention compared to a Go map paired with a separate Mutex or RWMutex.&amp;rdquo;&lt;/p&gt;</description></item><item><title>Go程序内存泄露问题快速定位</title><link>/blog/2021-04-14-go%E7%A8%8B%E5%BA%8F%E5%86%85%E5%AD%98%E6%B3%84%E9%9C%B2%E9%97%AE%E9%A2%98%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D/</link><pubDate>Wed, 14 Apr 2021 18:00:00 +0800</pubDate><guid>/blog/2021-04-14-go%E7%A8%8B%E5%BA%8F%E5%86%85%E5%AD%98%E6%B3%84%E9%9C%B2%E9%97%AE%E9%A2%98%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D/</guid><description>&lt;style&gt;
+.myimg {
+width: 680px;
+padding-bottom: 1rem;
+}
+&lt;/style&gt;
+&lt;p&gt;前几天有同学反馈了cgo内存泄露问题，自己也针对这个问题探索了一番，算是为以后解决类似问题提前攒点经验吧。也趁机整理了一下go开发过程中内存泄露问题的一些常用排查方法，也希望对新接触go的同学有所帮助。整理之余，bcc工具之丰富也让我有点惊讶，也希望对自己日后的工作有所帮助吧。&lt;/p&gt;
+&lt;h2 id="内存泄漏"&gt;内存泄漏 &lt;a href="#%e5%86%85%e5%ad%98%e6%b3%84%e6%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;内存泄露，一个老生常谈的问题，但即便是老手也会犯一些低级错误。如果没有可靠的研发流程保证在测试阶段发现问题，问题就容易被带到线上。计算资源始终是有限的，问题也不会因为资源充裕就消失不见，产生影响只是时间问题。影响有多大，就要结合场景来说了。&lt;/p&gt;
+&lt;p&gt;内存泄漏，最可能的影响就是内存申请失败。但实际上操作系统更聪明，结合系统整体负载情况，它会为每个进程计算一个oom_score，并在内存资源紧张时选择一个合适的进程杀死并回收内存资源，see &lt;a href="https://unix.stackexchange.com/a/153586/95211"&gt;how does the oom killer decide which process to kill first&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;所以，内存泄露的最终结果，大概率会被操作系统kill，通常进程挂掉后，确认其是否是因为oom问题被kill，可以通过查看 &lt;code&gt;/proc/messages&lt;/code&gt; 来确认是否有对应日志。有的话，那就坐实了oom killed（但是被oom killed的进程不一定意味着存在内存泄露）。&lt;/p&gt;
+&lt;h2 id="服务质量"&gt;服务质量 &lt;a href="#%e6%9c%8d%e5%8a%a1%e8%b4%a8%e9%87%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;结合运维手段的变化，来看看是否内存泄漏问题对服务质量造成的影响。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;传统人工方式，通过感知告警、人为介入这种方式，效率低，要十几分钟；&lt;/li&gt;
+&lt;li&gt;通过虚拟机自动化部署的方式，感知异常自动重启虚拟机，耗时大约要分钟级；&lt;/li&gt;
+&lt;li&gt;通过docker容器化部署的方式，感知异常自动重启容器，耗时大约在秒级；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;看上去现代运维方式一定程度上可以缓解这个问题，是，这也要分情况：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果内存泄露的代码路径不容易被触发，那可能要跑很久才能触发oom kill，如一周；但是如果代码路径在关键代码路径上，且请求量大，频繁触发内存泄露，那可能跑个几分钟就会挂掉；&lt;/li&gt;
+&lt;li&gt;跟每次内存泄露的内存大小也有关系，如果泄露的少，多苟活一阵子，反之容易暴毙；&lt;/li&gt;
+&lt;li&gt;进程一旦挂掉，这段时间就不能响应了，服务的健康监测、名字服务、负载均衡等措施需要一段时间才能感知到，如果请求量大，服务不可用依然会带来比较大的影响。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;服务质量保证是不变的，所以别管用了什么运维手段，问题终究是问题，也是要解决的。&lt;/p&gt;
+&lt;h2 id="go内存泄漏"&gt;Go内存泄漏 &lt;a href="#go%e5%86%85%e5%ad%98%e6%b3%84%e6%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="垃圾回收"&gt;垃圾回收 &lt;a href="#%e5%9e%83%e5%9c%be%e5%9b%9e%e6%94%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;自动内存管理减轻了开发人员管理内存的复杂性，不需要像C\C++开发者那样显示malloc、free，或者new、delete。垃圾回收借助于一些垃圾回收算法完成对无用内存的清理，垃圾回收算法有很多，比如：引用计数、标记清除、拷贝、分代等等。&lt;/p&gt;
+&lt;p&gt;Go中垃圾回收器采用的是“并发三色标记清除”算法，see:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;a href="https://www.ardanlabs.com/blog/2018/12/garbage-collection-in-go-part1-semantics.html"&gt;Garbage Collection In Go : Part I - Semantics&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://www.ardanlabs.com/blog/2019/05/garbage-collection-in-go-part2-gctraces.html"&gt;Garbage Collection In Go : Part II - GC Traces&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://www.ardanlabs.com/blog/2019/07/garbage-collection-in-go-part3-gcpacing.html"&gt;Garbage Collection In Go : Part III - GC Pacing&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Go语言支持自动内存管理，那还存在内存泄漏问题吗？&lt;/p&gt;</description></item><item><title>分布式系统：聊聊计算机系统中的时间</title><link>/blog/2021-03-09-%E8%81%8A%E8%81%8A%E8%AE%A1%E7%AE%97%E6%9C%BA%E4%B8%AD%E7%9A%84%E6%97%B6%E9%97%B4/</link><pubDate>Tue, 09 Mar 2021 23:59:59 +0800</pubDate><guid>/blog/2021-03-09-%E8%81%8A%E8%81%8A%E8%AE%A1%E7%AE%97%E6%9C%BA%E4%B8%AD%E7%9A%84%E6%97%B6%E9%97%B4/</guid><description>&lt;p&gt;我相信很多人都是时间管理大师，几乎所有人都知道生活中如何运用时间，但是我相信很多人并不知道这个世界的时间是如何工作的。&lt;/p&gt;
+&lt;h2 id="你了解时间吗"&gt;你了解时间吗 &lt;a href="#%e4%bd%a0%e4%ba%86%e8%a7%a3%e6%97%b6%e9%97%b4%e5%90%97" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;如果不相信，那我问几个问题，看读者知道不？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;你听说过石英晶体吗？&lt;/li&gt;
+&lt;li&gt;你听说过晶振振荡周期吗？&lt;/li&gt;
+&lt;li&gt;你听说过时钟中断吗？&lt;/li&gt;
+&lt;li&gt;你听说过计时电路吗？&lt;/li&gt;
+&lt;li&gt;你听说过时钟漂移吗？&lt;/li&gt;
+&lt;li&gt;你听说过铯原子钟吗？&lt;/li&gt;
+&lt;li&gt;你听说过BIH这个机构吗？&lt;/li&gt;
+&lt;li&gt;你听说过闰秒吗？&lt;/li&gt;
+&lt;li&gt;你听说过NTP协议吗？&lt;/li&gt;
+&lt;li&gt;etc.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;如果，你不能一一回答上述问题，那这个地球上的时间是如何工作的，你可能并不太清楚 :)。&lt;/p&gt;
+&lt;p&gt;我们日出而出、日落而息，我们规划工作事项，我们协调重要工作，我们安排计算机程序精密协作……时间是非常重要的，以至于我们生物进化过程中形成了“生物钟”来适应，它无影无形，它无处不在。&lt;/p&gt;
+&lt;h2 id="我们如何测量时间的"&gt;我们如何测量时间的 &lt;a href="#%e6%88%91%e4%bb%ac%e5%a6%82%e4%bd%95%e6%b5%8b%e9%87%8f%e6%97%b6%e9%97%b4%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="凭感觉不靠谱"&gt;凭感觉不靠谱 &lt;a href="#%e5%87%ad%e6%84%9f%e8%a7%89%e4%b8%8d%e9%9d%a0%e8%b0%b1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;先介绍下，我们是如何测量时间的。这并不像大多数人想象的那样简单，烧一炷香？一个时辰，或者来个沙漏？一只椰子鸡炖熟了，这个有一定的实用价值，但是非常不精确，对于精度要求较高时更是如此。&lt;/p&gt;
+&lt;h3 id="天文学测量方式"&gt;天文学测量方式 &lt;a href="#%e5%a4%a9%e6%96%87%e5%ad%a6%e6%b5%8b%e9%87%8f%e6%96%b9%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;自17世纪机械钟发明以来，我们就一直在用天文学的方法测量时间。每天太阳都是从东方地平线上升起，然后升到天空的最高处，最后再落到西边。太阳到达天空中的最高点时，称为“&lt;strong&gt;中天&lt;/strong&gt;”（transit of the sun），它在每天正午达到最高点。两次连续的太阳中天之间的时间称为一个“&lt;strong&gt;太阳日&lt;/strong&gt;”（solar day）。因为每天都会有24小时，每小时都有3600s，所以一个“&lt;strong&gt;太阳秒&lt;/strong&gt;”（solar second）被精确定义为 1/86400 个太阳日。&lt;/p&gt;
+&lt;img alt="solar noon" src="assets/time/solar_noon.png" style="width:480px;"/&gt;
+&lt;p&gt;那么平均太阳日的几何示意，则可以由下图所示：&lt;/p&gt;
+&lt;img alt="mean solar day" src="assets/time/solsid_day.png" style="width:480px;"/&gt;
+&lt;p&gt;ps：有些人想为什么不地球自转一周算1天？其实这就是上图中的“&lt;strong&gt;恒星日&lt;/strong&gt;”（sidereal day），以遥远的恒星为参考物，每天转到这个方位算是一个恒星日。但是我们自然万物向阳而生，以太阳这颗大恒星作为参考系似乎是更合理的计时方法。&lt;/p&gt;
+&lt;p&gt;在20世纪40年代，科学家们证实了地球的自转周期并非常数（const value，固定值）。由于潮汐摩擦和大气的阻力，地球的自转速度正在变慢。基于对远古时代珊瑚的生长图案的研究，地质学家现在相信，在3亿年前每年大约有400天（太阳日）。年的长度（地球绕太阳一周的时间）被认为是不变的，那么每天的时间就简单地变长了。除了这种长期变化趋势，也存在一些长短的短期变化，这可能是由于地球地核层熔岩的剧烈沸腾而引起的。&lt;/p&gt;
+&lt;p&gt;这些发现，促使天文学家们在计算天的长度时要测量很多天的长度，然后再对它们取平均值，最后除以86400得到的结果称为“&lt;strong&gt;平均太阳秒&lt;/strong&gt;”（mean solar second）。&lt;/p&gt;
+&lt;h3 id="物理学测量方式"&gt;物理学测量方式 &lt;a href="#%e7%89%a9%e7%90%86%e5%ad%a6%e6%b5%8b%e9%87%8f%e6%96%b9%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;1948年的时候，原子钟诞生，它使更精确地测量时间成为可能。原子钟不受地球的摆动和振动的影响，而是通过铯133原子的跃迁来计时。物理学家从天文学家的手中接管了计时的工作，定义1秒是铯133原子做9192631770次跃迁所用的时间。选择9192631770是为了使原子秒与引入原子秒那一年的平均太阳秒相等。&lt;/p&gt;
+&lt;p&gt;目前世界上大约有50个实验室拥有铯133原子钟。每个实验室都定期向巴黎的BIH（Bureau International Heure）报告其时钟滴答数。BIH将这些值平均起来产生“&lt;strong&gt;国际原子时间&lt;/strong&gt;”（international atomic time，简称TAI）。这样TAI就是铯133原子钟从1958年1月1日午夜（起始时间）以来被9192631770除后的平均滴答数。&lt;/p&gt;
+&lt;p&gt;尽管TAI相当稳定，并且任何人只要愿意，都可以买到一只铯原子钟，但是它仍然存在一个严重的问题，那就是86400个TAI秒比现在一个平均太阳日要少3微秒（因为平均太阳日越来越长了）。使用TAI计时将意味着多年以后，中午会出现得越来越早，直到最终出现在凌晨（太阳还不知道在哪睡觉，TAI秒却显示已经中午了）。&lt;/p&gt;
+&lt;h3 id="utc与闰秒"&gt;UTC与闰秒 &lt;a href="#utc%e4%b8%8e%e9%97%b0%e7%a7%92" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;人们也许早晚会注意到这些变化，今后可能将会发生与1582年古罗马教皇Pope Gregory十三世宣布从日历中删除10天时类似的情况。这一事件导致了街头暴动，因为地主要收一个整月的地租，银行家要收一个整月的利息，而雇主拒绝向雇员支付他们没有工作的那10天的工资，这里只是提到了其中的几个冲突。在一些新教区，人们拒绝任何与教皇法令相关的事情，有长达170年不接受罗马教皇颁布的日历。&lt;/p&gt;
+&lt;p&gt;BIH通过引入“&lt;strong&gt;闰秒&lt;/strong&gt;”（leap second）来解决这个问题，避免以后出现类似罗马教皇一次删10天日历的情况，也避免造成世界范围内难以协调、预料的灾难。闰秒什么意思呢，即当TAI和太阳秒计时之间的差增加到800微秒的时候就要使用一次闰秒。闰秒的使用如下图所示。即在箭头指向的时刻处，TAI和太阳秒相差超过阈值时，在UTC中应用一次闰秒，使得UTC保持同步。&lt;/p&gt;
+&lt;img alt="leap second" src="assets/time/leap_second.jpg" style="width:480px;"/&gt;
+&lt;p&gt;&lt;strong&gt;这种修正，产生了一种时间系统，该时间系统基于恒定长度的TAI秒，并力求和太阳的运动保持一致，它被称为“&lt;strong&gt;统一协调时间&lt;/strong&gt;”（universal coordinated time，简称UTC）&lt;/strong&gt;。UTC是现代人计时的基础。它从根本上取代了原有的标准“&lt;strong&gt;格林尼治天文时间&lt;/strong&gt;”（greenwich mean time），格林尼治天文时间是一种天文时间。&lt;/p&gt;
+&lt;h3 id="闰秒的阴暗面"&gt;闰秒的&amp;quot;阴暗面&amp;quot; &lt;a href="#%e9%97%b0%e7%a7%92%e7%9a%84%e9%98%b4%e6%9a%97%e9%9d%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;值得一提的是，闰秒有正有负，因为地球自转受很多因素影响，有时变快有时变慢（显然我们很难直观察觉到），不同的时间段内情况也不同，比如从1972年到2020年平均每21个月就有一次闰秒出现，但是有的时间段内则没有闰秒。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;闰秒为正的情况，UTC时间戳可能会出现这样的时间序列：23:59:59 -&amp;gt; 23:59:60 -&amp;gt; 00:00:00&lt;/li&gt;
+&lt;li&gt;闰秒为负的情况，UTC时间戳可能会出现这样的时间序列：23:59:58 -&amp;gt; 00:00:00&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;ps：自1970年后，这过去的几十年里基本上地球自转都是变慢的，所以出现的闰秒都是正闰秒，但是最近几年地球自转有变快的情况，如果一直持续下去，后面可能会出现负闰秒。不过现在也有很多提案希望废除闰秒，因为它确实带来太多问题了。&lt;/p&gt;</description></item><item><title>如何“偷懒”：从提升代码质量开始</title><link>/blog/2020-10-16-%E5%B7%A5%E7%A8%8B%E7%B4%A0%E5%85%BB_%E5%81%B7%E6%87%92%E4%BB%8E%E6%8F%90%E5%8D%87%E4%BB%A3%E7%A0%81%E8%B4%A8%E9%87%8F%E5%BC%80%E5%A7%8B/</link><pubDate>Fri, 16 Oct 2020 21:07:45 +0800</pubDate><guid>/blog/2020-10-16-%E5%B7%A5%E7%A8%8B%E7%B4%A0%E5%85%BB_%E5%81%B7%E6%87%92%E4%BB%8E%E6%8F%90%E5%8D%87%E4%BB%A3%E7%A0%81%E8%B4%A8%E9%87%8F%E5%BC%80%E5%A7%8B/</guid><description>&lt;p&gt;如果一件事情只需要做一次，我们可能怎么方便怎么来，但是如果一件事情要重复千百遍，怎么方便怎么来就会变成灾难。对身体，对时间，对团队。停下来想想过去做的一些事情，都是为了做好事情的同时，能让自己更好地慢下来，让身体可以偷懒。本文先从提升代码质量开始谈起。&lt;/p&gt;
+&lt;p&gt;Linus Torvards在一次采访中，主持人贴了两个链表操作的实现，让其评价哪一种更好一点，Torvards说更喜欢消除了特殊逻辑的那种，并将这种偏好称为“taste”。每个人的taste不同，也不方便评价好与坏，但是“脑筋急转弯似”的做法一点都不“聪明”。好的思路很多都是相同的，不好的东西千差万别的厉害。&lt;/p&gt;
+&lt;h3 id="站在巨人肩膀上"&gt;站在巨人肩膀上 &lt;a href="#%e7%ab%99%e5%9c%a8%e5%b7%a8%e4%ba%ba%e8%82%a9%e8%86%80%e4%b8%8a" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;从什么时候开始，我开始思考如何在有限的时间里涉猎更多的东西，awesome、101、patterns、slideshare、best practices&amp;hellip;似乎有限的时间被延长了，我们没必要一个个坑的踩过来摸索中前进，别把别人头破血流总结出的经验教训不当回事。以前我奉行“纸上得来终觉浅、绝知此事要躬行”，很好，但是生命是有限的。&lt;/p&gt;
+&lt;p&gt;想要更大的世界，必须懂得借力，吸收经验教训，好的坏的全部统统吸纳滋养自己。&lt;/p&gt;
+&lt;h4 id="对异常关注不足未养成安全编程习惯"&gt;对异常关注不足，未养成安全编程习惯 &lt;a href="#%e5%af%b9%e5%bc%82%e5%b8%b8%e5%85%b3%e6%b3%a8%e4%b8%8d%e8%b6%b3%e6%9c%aa%e5%85%bb%e6%88%90%e5%ae%89%e5%85%a8%e7%bc%96%e7%a8%8b%e4%b9%a0%e6%83%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;经常看到 &lt;code&gt;if ok {...} else {...}&lt;/code&gt; 这样的代码，没有养成优先处理异常的习惯。导致出现多余的if-else分支是小事，怕的是，这么习惯了容易产生下面的问题：if中先处理正常逻辑，else中再事后补异常处理逻辑，而对异常情景的细分，也可能会因为“功能已完成、异常哪有那么巧出现”的侥幸心理而有所倦怠，如rpc错误是网络错误、超时还是逻辑逻辑，每种该作何处理，可能会草草了事。不能说这种担心是多余的，人都是属驴的，自己也会有这种惰性。&lt;/p&gt;
+&lt;p&gt;对输入不做校验，“不大可能”，这不能算是一个合理的理由，“调用方判断”，这更不合理。这就好比我想吃饭了，从商家买到过保质期的食物，那我作为活动的发起方（调用方）我肯定会检查下食物保质期，但是商家也不能不管保质期就卖给我吧。那这么看，是调用方检查，还是提供方检查，还是没必要。自己的函数坑自己的服务，也是坑。&lt;/p&gt;
+&lt;p&gt;每每提及“高可用”、5个9，大家就竖起耳朵听，可是连基本的进程级的健壮性都不下功夫，又怎么去奢求诗和远方。&lt;/p&gt;
+&lt;h4 id="写的虽然是代码但其实是逻辑的表达"&gt;写的虽然是代码，但其实是逻辑的表达 &lt;a href="#%e5%86%99%e7%9a%84%e8%99%bd%e7%84%b6%e6%98%af%e4%bb%a3%e7%a0%81%e4%bd%86%e5%85%b6%e5%ae%9e%e6%98%af%e9%80%bb%e8%be%91%e7%9a%84%e8%a1%a8%e8%be%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;发明高级语言的目的，就是为了更好的表达，但是我们学会了编程语言，却忘了怎么表达。&lt;/p&gt;
+&lt;p&gt;我想了想那些好的文章是怎么写的，我们需要一个吸睛的标题来惹人关注，需要时刻不忘中心思想避免论述过于涣散，还需要凤头猪肚豹尾来层层论述，每个段落也要有提纲挈领的中心句。如果说是一本书，也还是类似的，但是又有了其他的要求，章节并不是硬性的切割，有时候我们前言里会看到，您可以根据情况自主选择感兴趣的章节阅读，那是因为各个章节相对独立，结合起来又形成一个更完备的论述。&lt;/p&gt;
+&lt;p&gt;那，代码该怎么写呢？&lt;/p&gt;
+&lt;p&gt;一个服务的所有逻辑，平铺在一个工程下的源文件中，没有任何模块化的组织，比如go项目没有任何package，那我们的逻辑是变复杂了还是变简单了？
+函数、方法调用体现的是一种通信，当我们去和别人沟通时，我们一定是清晰地知道别人能提供我们需要的服务，才会去选择与其沟通，而且为了有效率的沟通，还要言简意赅。那一个package、receiver下的函数、方法不区分导出、非导出，那该选择哪个发起通信呢？而且内部的一些实现细节也不关心，我只关心能不能买到服务。
+完成一项任务，总可以拆分成几个步骤，所以我们可以先写伪代码列出todolist，基本上每一项todo都是一个相对独立的逻辑，还可以为每个相对独立的逻辑加一行简单的注释，末尾加空行隔开，以体现出逻辑区块。难道从头撸到尾能将逻辑表达的更清晰？想象一篇没有标点的作文该怎样阅读？
+……
+有时候，我们说编码好坏是习惯问题，是taste，但我觉得是思维习惯的问题。这样的习惯日积月累，负面影响可能会更大。&lt;/p&gt;
+&lt;h4 id="简单点再简单点简单可依赖"&gt;简单点再简单点，简单可依赖 &lt;a href="#%e7%ae%80%e5%8d%95%e7%82%b9%e5%86%8d%e7%ae%80%e5%8d%95%e7%82%b9%e7%ae%80%e5%8d%95%e5%8f%af%e4%be%9d%e8%b5%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;什么是简单？是方便，是省心？我觉得是诚实不隐瞒，是就是，不是就不是。最恨的就是那些表面光正背后搞小动作的代码。&lt;/p&gt;
+&lt;p&gt;有些代码表里不一，表面是一套，背后是一套。命名说是做这个，结果背后不干这个，或者除了干这个还干别的。为什么我们使用一些标准库的api的时候就愿意选择相信它，但是看我们自己代码的时候就不得不频繁地跳来跳去呢？&lt;/p&gt;
+&lt;p&gt;不相信写的代码，原因跟下面经常遇到的问题相关，经过了现实的捶打只能先“另眼相看”；
+导出类型、方法、函数、变量、常量缺乏必要的注释，不得已只能跳过去看代码；
+函数签名多返回值没有必要说明，如返回值变量名，除了最后一个是error不知其他干嘛的，只能跳过去看return，问题是还有多个return出口；
+函数签名参数列表，shorter &amp;amp; simpler，如果有近10个、20来个参数，怎么记得住形参？传实参的时候会不会对应错误？哪些参数是必填、选填？命名是否能准确清晰地覆盖这些参数？
+hack逻辑，如硬编码，这些损失的不只是灵活性，也植入了一些暗黑操作。一个好的软件架构师应该做到“make the invisible visible”，invisible的一个直观的害处就是，越俎代庖的事情会变得普遍，本来可以由调用方支配的一些控制参数，被独断专行了，本来应该上升到系统层面的问题，被一个模块偷偷代表了；
+……
+我的逻辑是，只要阅读代码的时候有非常频繁的跳转、推导、假设、验证的过程，那这个代码的可读性就真的不怎么样。&lt;/p&gt;
+&lt;h3 id="公司代码规范"&gt;公司代码规范 &lt;a href="#%e5%85%ac%e5%8f%b8%e4%bb%a3%e7%a0%81%e8%a7%84%e8%8c%83" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;只要是规范，就有局限性、滞后性。我理解，规范不是让我们追求完美主义，而是追求better code，better practices。如果一个开发者有好的taste，他写出来的代码可能已经接近或达到规范的要求了。但是并不是每个开发者都有这样的taste，所以我们才需要规范来约束我们做一件共同的事情。&lt;/p&gt;
+&lt;p&gt;遵守代码规范的一个明显的好处是，可读性会有比较明显的提升，这是很有意义的。可读性提升，意味着维护成本降低，意味着省下时间，意味着可以在正常工作时间做更多事情，可以早下班休息、充电。这可能不是对每个人都是个好事情，但是是对团队有意义的事情，对多数人有意义的事情，就应该坚持！&lt;/p&gt;
+&lt;h3 id="最后"&gt;最后 &lt;a href="#%e6%9c%80%e5%90%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;多年前翻阅Linux文档，Torvards解释为什么一个Tab非要8个空格而非通用的4个，他说，我就是要让那些爱写嵌套多层代码的人“难受”……&lt;/p&gt;
+&lt;p&gt;省下大把自己、大家的时间，这难道不是一种很聪明的“偷懒”行为？&lt;/p&gt;</description></item><item><title>静态分析：从AST到服务调用和代码逻辑的可视化</title><link>/blog/2020-10-06-visualizing-your-go-code/</link><pubDate>Tue, 06 Oct 2020 23:13:52 +0800</pubDate><guid>/blog/2020-10-06-visualizing-your-go-code/</guid><description>&lt;h3 id="代码可读性"&gt;代码可读性 &lt;a href="#%e4%bb%a3%e7%a0%81%e5%8f%af%e8%af%bb%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;作为一名开发人员，代码可读性是我们常常挂在嘴边的。代码写出来除了让计算机能够正常执行以外，终究还是要让人能够理解它，后续才能做进一步的维护工作。如果代码写出来，只有它的作者能够看得懂，那只能说明这个作者逻辑表达能力有问题，透过其代码难以看出解决问题的思路。这是软件工程中要尽力避免的。&lt;/p&gt;
+&lt;p&gt;在软件工程方法论指导下，为了尽可能让代码可读性达标，我们往往会根据一些最佳实践拟定一些大多数人认可的标准，让所有开发人员遵守，然后通过代码评审、代码规范检查、持续集成交付流水线等综合起来，以尽可能逼近这一目标。当绝大多数人能够在约定的框架下，保质保量提交代码时，我们已经在代码可读性、可维护性方面前进了一大步。&lt;/p&gt;
+&lt;p&gt;然而，这样足够了吗？我认为还不够。&lt;/p&gt;
+&lt;h3 id="代码是思维的表达"&gt;代码是思维的表达 &lt;a href="#%e4%bb%a3%e7%a0%81%e6%98%af%e6%80%9d%e7%bb%b4%e7%9a%84%e8%a1%a8%e8%be%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;代码，不过是通过一种大家都理解的语言书写出来的篇章。就好比写文章一样，要有中心思想，然后围绕中心思想要展开层层描述。写代码一样，中心思想就是我们要解决的问题，围绕中心思想的层层描述就是我们解决问题的思路。所以，代码没有什么神秘的，它是人类思维的表达。&lt;/p&gt;
+&lt;p&gt;我们是如何快速理解一篇文章的呢？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;先看标题，掌握其核心关键词；&lt;/li&gt;
+&lt;li&gt;看下第一段落的内容，往往第一段会引出问题；&lt;/li&gt;
+&lt;li&gt;看下其余段落的首句、末句，往往会给出该段落的中心思想；&lt;/li&gt;
+&lt;li&gt;看下最后一段的内容，一般会给出一个结论；&lt;/li&gt;
+&lt;li&gt;通篇串下，了解文章整体含义；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;为什么我们会通过这种方式？因为一篇好的文章一定有承上启下、过渡。这种循序渐进的方式，步步逼近中心思想。&lt;/p&gt;
+&lt;p&gt;那代码呢？某种程度上，代码也是类似的。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;以go语言为例，通常对于一个package，我们会提供package注释来表示当前package要解决的问题；&lt;/li&gt;
+&lt;li&gt;每个package内部又包含了不同的types、variables、functions，它们结合起来来解决一个问题；&lt;/li&gt;
+&lt;li&gt;每一个function内部又分为多个步骤，每一步完成一个小功能，为下一步做好准备；&lt;/li&gt;
+&lt;li&gt;每一个小功能、步骤可能是if-else, switch-case, for-loop……之类的语言结构；&lt;/li&gt;
+&lt;li&gt;同时，我们还会提供测试用例，来验证上述方案的正确性。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;有没有觉得很相似，或许我们应该采用已有的读书的经验来辅助更好地理解程序？&lt;/p&gt;
+&lt;h3 id="oop思想认识世界"&gt;OOP思想认识世界 &lt;a href="#oop%e6%80%9d%e6%83%b3%e8%ae%a4%e8%af%86%e4%b8%96%e7%95%8c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;代码，和文章不同的是，它虽然有明显的程序构造，但是却没有明显的段落之分。&lt;/p&gt;
+&lt;p&gt;那我如何才能借鉴多年来养成的还不错的阅读习惯，来帮助我理解代码呢？当然不能盲目套用，不过俗话说，能工摹形，巧匠窃意，思想很多地方还是可以相通的。&lt;/p&gt;
+&lt;p&gt;如何更好地理解这个世界，对各种各样的问题进行抽象呢？比如一辆摩托车，它有离合器、发动机、链条、轮毂、轮胎、减震、油箱、排气等很多部件构成，我听说宝马水鸟电子控制很厉害，可以实现无人驾驶，那可是两轮的400多斤的大机器。那它的电子控制系统怎么做到的？至少要能理解一个摩托车有核心部件，整体运转起来如何理解其状态，如何控制个别部件以影响其他部件进而控制整体状态。那它如何控制部件呢？电子操作或机械操作。&lt;/p&gt;
+&lt;p&gt;扯远了，我只是有点喜欢水鸟而已。整个世界可以看做是一个个对象及其之间的联系所构成，代码也不例外。&lt;/p&gt;
+&lt;p&gt;道法自然，OOP的思想不过是借鉴了人类认识世界的方式，将其运用到了软件工程领域，以更好地对问题进行抽象，从而构建出设计更合理的软件。那代码里面有哪些语言构造体现了OOP的思想呢。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;类型与对象，生物学里区分物种、种群、个体，那是因为它们既有共性，也有个性；&lt;/li&gt;
+&lt;li&gt;通信的方式，自然界个体之间的交互也有多种方式，比如雄狮撒泡尿标记领地也不管入侵者认不认同，或者低吼驱赶入侵者离开，人和人用听得懂的语言沟通；&lt;/li&gt;
+&lt;li&gt;隐私与距离，每个人都有自己的隐私，如果你的朋友跟你借100块钱你可能给了，但是他如果问是你老婆给的还是你自己的，你可能就不想借给他了，给你就行了你管那么多干嘛呢，我还不想拿自家的借你呢，说不定借你老婆的给你的呢。每个人在一副外表下总有些不愿意被人触碰、靠近的地方。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;了解一个人，其实你不需要深入他的家庭本身去了解，看看他天天接触什么人，说些什么话，你也就大致清楚了。感兴趣就继续了解，不感兴趣也就拉倒了。我想绝大多数人都不是窥视狂，在拥有一定判断力的基础上，通过一些局部的信息是可以了解大致的整体信息的。&lt;/p&gt;
+&lt;p&gt;理解代码有相同之处？&lt;/p&gt;
+&lt;h3 id="流程控制--组件交互"&gt;流程控制 + 组件交互 &lt;a href="#%e6%b5%81%e7%a8%8b%e6%8e%a7%e5%88%b6--%e7%bb%84%e4%bb%b6%e4%ba%a4%e4%ba%92" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;某种程度上，我认为理解代码也有相似之处。&lt;/p&gt;
+&lt;p&gt;如果能够拎出那些比较重要的对象（objects），以及他们之间的通信（function call, chan send/recv），或者他们的私密信息（注释），是不是也能够大致有个了解呢？&lt;/p&gt;
+&lt;p&gt;如果想更深入了解下，加上事情的脉络（控制结构，if-else, switch-case, for-loop）呢？&lt;/p&gt;
+&lt;p&gt;其他信息? 我相信还有其他有用的有用信息，能够通过一些更加有效率的方式呈现出来。&lt;/p&gt;
+&lt;h3 id="认识-goast"&gt;认识 go/ast &lt;a href="#%e8%ae%a4%e8%af%86-goast" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;计算机编程语言，有多少种？我认为只有一种，就是人类可以理解的语言。有趣的是，编程语言之多可以覆盖元素周期表，不信来瞧瞧。&lt;/p&gt;
+&lt;table&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;img alt="languages" src="https://i.pinimg.com/originals/bb/3a/d0/bb3ad028960fb7345df89057ff071437.jpg" width="340px"&gt;&lt;/td&gt;
+&lt;td&gt;&lt;img alt="goast example" src="https://upload.wikimedia.org/wikipedia/commons/a/ac/Python_add5_parse.png" width="340px"&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+&lt;ul&gt;
+&lt;li&gt;语言是什么？语言有精确的数学定义，它不是胡编乱造，尤其是编程语言；&lt;/li&gt;
+&lt;li&gt;编程语言更精确？那倒未必，人类社会多姿多彩之处，就在于会演绎出更加丰富多彩的内容，包括对语言的破坏性“创造”，人脑纠错能力太强了，我们甚至没有察觉到自己犯了错误，如网上津津乐道的山东人倒装玩法；&lt;/li&gt;
+&lt;li&gt;我能发明一门语言吗？当然，只要你能给出严谨的数学定义，没有歧义，找到一群人学会并开始用它交流，姑且可以称为语言了，比如生活大爆炸谢耳朵他老婆；&lt;/li&gt;
+&lt;li&gt;语言不是主谓宾之类的吗？主谓宾也可以进一步形式化，数学之美也让我感到惊叹；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;So&amp;hellip;假如我用编程语言写了一段代码，如何知道我有没有犯错误呢？那就是编译器的工作，词法分析、语法分析、语义分析，一切OK之后会进入中间代码生成、代码优化、生成最终代码。通常一般在语法分析会构建语法分析树AST（Abstract Syntax Tree），如果能够正常构建出AST，表示代码是按照语言对应生成规则来写的，就没什么大问题，反之则可能又自我“发挥”犯错了。&lt;/p&gt;
+&lt;p&gt;以下面的go程序为例：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;package main
+import (
+&amp;quot;fmt&amp;quot;
+)
+func add(a, b int) int {
+return a + b
+}
+func main() {
+c := add(1, 2)
+fmt.Printf(&amp;quot;1 + 2 = %d\n&amp;quot;, c)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;以下是两个不错的ast可视化工具，可以将上述代码拷贝以下以查看对应的AST。&lt;/p&gt;</description></item><item><title>软件逆向：剖析Go二进制文件</title><link>/blog/2020-09-06-%E5%89%96%E6%9E%90go%E4%BA%8C%E8%BF%9B%E5%88%B6%E6%96%87%E4%BB%B6/</link><pubDate>Sun, 06 Sep 2020 18:55:39 +0800</pubDate><guid>/blog/2020-09-06-%E5%89%96%E6%9E%90go%E4%BA%8C%E8%BF%9B%E5%88%B6%E6%96%87%E4%BB%B6/</guid><description>&lt;h2 id="为什么要反汇编"&gt;为什么要反汇编？ &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e8%a6%81%e5%8f%8d%e6%b1%87%e7%bc%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;这篇文章介绍下反汇编的基本概念，以及如何用go语言写一个简单的反汇编器。本文的目标就是为了尽可能描述下反汇编的的相关概念，以及让读者朋友们了解go二进制程序内部大致是什么样的。&lt;/p&gt;
+&lt;p&gt;汇编代码不会撒谎，阅读汇编代码能够让我们更细致地了解处理器执行的指令到底做了什么。这也是为什么反汇编很重要的原因之一。如果我们有一个二进制程序，并且怀疑它有一些恶意的行为，通过反汇编来研究它就是一种很好的途径。再或者，如果你分析代码难以发现性能瓶颈，那么反汇编也是一种可以简化分析的途径。&lt;/p&gt;
+&lt;p&gt;如果你担心能不能阅读x86_64汇编代码的问题，其实不用担心，我们大部分都不能很顺畅地阅读。你也没有必要为了搞懂这篇文章去阅读其他任何的汇编代码，不过如果有汇编基础的话确实会感觉更有意思点。这里有一篇介绍汇编基础的文章 &lt;a href="https://www.nayuki.io/page/a-fundamental-introduction-to-x86-assembly-programming"&gt;A fundamental introduction to x86 assembly programming&lt;/a&gt;。&lt;/p&gt;
+&lt;h2 id="什么是反汇编"&gt;什么是反汇编？ &lt;a href="#%e4%bb%80%e4%b9%88%e6%98%af%e5%8f%8d%e6%b1%87%e7%bc%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;那么，什么是反汇编呢？&lt;/p&gt;
+&lt;p&gt;反汇编，其实是将已经编译好的二进制程序，重新转换为汇编代码的过程。为了解释清楚，我们先考虑下从源代码编译构建的过程：&lt;/p&gt;
+&lt;p&gt;&lt;img src="https://www.grant.pizza/dissecting/CompilerDiagram.png" alt="assemble-process"&gt;&lt;/p&gt;
+&lt;p&gt;汇编代码，其实是一种介于源代码、机器指令之间的中间代码表示，虽然大多数汇编指令是和机器指令对应的，但是也不绝对，比如go汇编就是一种跟机器指令没有明显对应关系的汇编形式。详细地可以参考go assembler设计对应的go blog一文。ok，言归正传。编译器首先将源代码转换为OS/架构特定的汇编代码，然后再通过汇编器将汇编代码转换为机器指令。从字面上就可以看出disassemble是assemble的一个逆向的过程，俗称反汇编。&lt;/p&gt;
+&lt;p&gt;&lt;img src="https://www.grant.pizza/dissecting/DisassemblerDiagram.png" alt="disassemble-process"&gt;&lt;/p&gt;
+&lt;p&gt;庆幸地是，go语言有一个相对标准、完整的工具链，汇编、反汇编都会比较方便。我们可以直接将源码转换成汇编代码来查看，例如通过运行命令 &lt;code&gt;go build -gcflags -S program.go&lt;/code&gt;。如果我们已经有了一个编译构建好的二进制程序，这个时候想查看汇编代码的话，就得通过反汇编，可以运行命令 &lt;code&gt;go tool objdump binaryFile&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;如果想了解如何实现汇编、反汇编的话，这篇文章其实已经可以结束了。但是如果来解释下如何从0到1构建一个反汇编器的话，还是有意思的。&lt;/p&gt;
+&lt;h2 id="从0到1构建反汇编器"&gt;从0到1构建反汇编器？ &lt;a href="#%e4%bb%8e0%e5%88%b01%e6%9e%84%e5%bb%ba%e5%8f%8d%e6%b1%87%e7%bc%96%e5%99%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;首先，为了构建一个反汇编器，我们需要先知道二进制程序对应的目标机器架构包含的所有的机器指令。为了实现这个，我们可能要参考特定架构的手册来查阅到底有多少机器指令。如果对这个不熟悉，这个过程其实是比较困难的。其实，有很多种微处理器架构、汇编语法、指令集、编码模式，而且一直在变。光掌握这些不同机器架构包含的指令集就是一个很困难的事情，至于如何困难可以参考下这篇文章 &lt;a href="https://www.grant.pizza/DisassemblerDiagram.png"&gt;how many x86_64 instructions are there anyway&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;庆幸地是，这些繁重的工作应被解决了，反汇编框架Capstone就是干这个事情的。Capstone其实已经是一个事实上的标准了，在各种反汇编工具中应用广泛。重新实现一个反汇编框架，其实没必要，这个过程只会是一个学习性的、枯燥的、重复的任务，我们不会介绍如何实现一个Capstone反汇编框架，只会介绍如何借助Capstone来实现反汇编的能力。在go语言中使用Capstone也简单，有一个针对go的实现gapstone。&lt;/p&gt;
+&lt;p&gt;通过下面的代码我们可以初始化一个gapstone反汇编框架引擎，用它来执行后续的反汇编任务。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;engine, err := gapstone.New(
+gapstone.CS_ARCH_X86,
+gapstone.CS_MODE_64,
+)
+if err != nil {
+log.Fatal(err)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;例如，我们可以将下面的原始指令数据传递给Capstone反汇编框架，然后该反汇编框架将会将这些原始指令数据转换为对应的x86_64下的指令。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;0x64 0x48 0x8B 0xC 0x25 0xF8 0xFF 0xFF 0xFF
+|
+mov rcx, qword ptr fs:[0xfffffffffffffff8]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;把上面的操作放在一起，如下：&lt;/p&gt;</description></item><item><title>框架设计：Go程序如何实现热重启</title><link>/blog/2020-08-28-go%E7%A8%8B%E5%BA%8F%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%83%AD%E9%87%8D%E5%90%AF/</link><pubDate>Fri, 28 Aug 2020 03:36:59 +0800</pubDate><guid>/blog/2020-08-28-go%E7%A8%8B%E5%BA%8F%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E7%83%AD%E9%87%8D%E5%90%AF/</guid><description>&lt;p&gt;最近在优化公司框架trpc时发现了一个热重启相关的问题，优化之余也总结沉淀下，对go如何实现热重启这方面的内容做一个简单的梳理。&lt;/p&gt;
+&lt;h2 id="1什么是热重启"&gt;1.什么是热重启？ &lt;a href="#1%e4%bb%80%e4%b9%88%e6%98%af%e7%83%ad%e9%87%8d%e5%90%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;热重启（Hot Restart），是一项保证服务可用性的手段。它允许服务重启期间，不中断已经建立的连接，老服务进程不再接受新连接请求，新连接请求将在新服务进程中受理。对于原服务进程中已经建立的连接，也可以将其设为读关闭，等待平滑处理完连接上的请求及连接空闲后再行退出。通过这种方式，可以保证已建立的连接不中断，连接上的事务（请求、处理、响应）可以正常完成，新的服务进程也可以正常接受连接、处理连接上的请求。当然，热重启期间进程平滑退出涉及到的不止是连接上的事务，也有消息服务、自定义事务需要关注。&lt;/p&gt;
+&lt;p&gt;这是我理解的热重启的一个大致描述。热重启现在还有没有存在的必要？我的理解是看场景。&lt;/p&gt;
+&lt;p&gt;以后台开发为例，假如运维平台有能力在服务升级、重启时自动踢掉流量，服务就绪后又自动加回流量，假如能够合理预估服务QPS、请求处理时长，那么只要配置一个合理的停止前等待时间，是可以达到类似热重启的效果的。这样的话，在后台服务里面支持热重启就显得没什么必要。但是，如果我们开发一个微服务框架，不能对将来的部署平台、环境做这种假设，也有可能使用方只是部署在一两台物理机上，也没有其他的负载均衡设施，但不希望因为重启受干扰，热重启就很有必要。当然还有一些更复杂、要求更苛刻的场景，也需要热重启的能力。&lt;/p&gt;
+&lt;p&gt;热重启是比较重要的一项保证服务质量的手段，还是值得了解下的，这也是本文介绍的初衷。&lt;/p&gt;
+&lt;h2 id="2如何实现热重启"&gt;2.如何实现热重启？ &lt;a href="#2%e5%a6%82%e4%bd%95%e5%ae%9e%e7%8e%b0%e7%83%ad%e9%87%8d%e5%90%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;如何实现热重启，这里其实不能一概而论，要结合实际的场景来看（比如服务编程模型、对可用性要求的高低等）。大致的实现思路，可以先抛一下。&lt;/p&gt;
+&lt;p&gt;一般要实现热重启，大致要包括如下步骤：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;首先，要让老进程，这里称之为父进程了，先要fork出一个子进程来代替它工作；&lt;/li&gt;
+&lt;li&gt;然后，子进程就绪之后，通知父进程，正常接受新连接请求、处理连接上收到的请求；&lt;/li&gt;
+&lt;li&gt;再然后，父进程处理完已建立连接上的请求后、连接空闲后，平滑退出。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;听上去是挺简单的&amp;hellip;&lt;/p&gt;
+&lt;h3 id="21认识fork"&gt;2.1.认识fork &lt;a href="#21%e8%ae%a4%e8%af%86fork" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;大家都知道&lt;code&gt;fork()&lt;/code&gt; 系统调用，父进程调用fork会创建一个进程副本，代码中还可以通过fork返回值是否为0来区分是子进程还是父进程。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;int main(char **argv, int argc) {
+pid_t pid = fork();
+if (pid == 0) {
+printf(&amp;quot;i am child process&amp;quot;);
+} else {
+printf(&amp;quot;i am parent process, i have a child process named %d&amp;quot;, pid);
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;可能有些开发人员不知道fork的实现原理，或者不知道fork返回值为什么在父子进程中不同，或者不知道如何做到父子进程中返回值不同……了解这些是要有点知识积累的。&lt;/p&gt;
+&lt;h3 id="22返回值"&gt;2.2.返回值 &lt;a href="#22%e8%bf%94%e5%9b%9e%e5%80%bc" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;简单概括下，ABI定义了进行函数调用时的一些规范，如何传递参数，如何返回值等等，以x86为例，如果返回值是rax寄存器能够容的一般都是通过rax寄存器返回的。&lt;/p&gt;
+&lt;p&gt;如果rax寄存器位宽无法容纳下的返回值呢？也简单，编译器会安插些指令来完成这些神秘的操作，具体是什么指令，就跟语言编译器实现相关了。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;c语言，可能会将返回值的地址，传递到rdi或其他寄存器，被调函数内部呢，通过多条指令将返回值写入rdi代指的内存区；&lt;/li&gt;
+&lt;li&gt;c语言，也可能在被调函数内部，用多个寄存器rax,rdx&amp;hellip;一起暂存返回结果，函数返回时再将多个寄存器的值赋值到变量中；&lt;/li&gt;
+&lt;li&gt;也可能会像golang这样，通过栈内存来返回；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="23fork返回值"&gt;2.3.fork返回值 &lt;a href="#23fork%e8%bf%94%e5%9b%9e%e5%80%bc" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;fork系统调用的返回值，有点特殊，在父进程和子进程中，这个函数返回的值是不同的，如何做到的呢？&lt;/p&gt;
+&lt;p&gt;联想下父进程调用fork的时候，操作系统内核需要干些什么呢？分配进程控制块、分配pid、分配内存空间……肯定有很多东西啦，这里注意下进程的硬件上下文信息，这些是非常重要的，在进程被调度算法选中进行调度时，是需要还原硬件上下文信息的。&lt;/p&gt;
+&lt;p&gt;Linux fork的时候，会对子进程的硬件上下文进行一定的修改，我就是让你fork之后拿到的pid是0，怎么办呢？前面2.2节提过了，对于那些小整数，rax寄存器存下绰绰有余，fork返回时就是将操作系统分配的pid放到rax寄存器的。&lt;/p&gt;</description></item><item><title>delve调试器设计实现</title><link>/blog/2020-08-25-delve%E8%B0%83%E8%AF%95%E5%99%A8%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</link><pubDate>Tue, 25 Aug 2020 12:21:14 +0800</pubDate><guid>/blog/2020-08-25-delve%E8%B0%83%E8%AF%95%E5%99%A8%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</guid><description>&lt;p&gt;研究调试器设计实现有段时间了，前几天在调试一个程序时，发现go调试器go-delve/delve竟然不支持类似gdb的x/FMT格式，于是在之前工作上又优化了一下。CR期间，也学习到一些之前理解不深的地方，也顺便了解了下delve的整体架构设计、大致实现，今天就来说道说道。&lt;/p&gt;
+&lt;h1 id="delve简介"&gt;delve简介 &lt;a href="#delve%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;go-delve/delve是Derekparker发起的一个调试器项目，面向go语言的。为什么针对go语言要创建一个新的调试器呢？为什么不使用GDB呢？这里涉及到go的一些特性。&lt;/p&gt;
+&lt;p&gt;作为符号级调试器，要能正常实现源码级调试，有这么几个事情必须要做的：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;首先，就必须要有调试信息的支持，比如编译器、连接器在构建过程中插入DWARF相关的sections，以供后续调试器提取、解析以重建指令、地址与源码的映射关系，还有在活动记录中跳转等等。&lt;/li&gt;
+&lt;li&gt;此外，有了调试信息，还需要理解语言内部实现，比如go的类型系统、协程、运行时，这样你才能读写源码级的运行状态信息；&lt;/li&gt;
+&lt;li&gt;还没完，你还需要一些平台级实现相关的玩意，不同的语言在不同的平台上有不同的实现，调试器要理解这些差异并做针对性处理；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些工作，在GDB里扩展插件来实现，不一定能很好地实现的，比如GDB支持的DWARF标准版本问题，和go编译器没有对齐之类的，比如GDB里面Target层（对tracee）控制层考虑的大多是进程、线程级别的，没有对goroutine类似的控制能力，诸如此类。&lt;/p&gt;
+&lt;p&gt;Anyway，我们需要一款更理解go的调试器，delve就这么诞生了。现在大已经是go官方推荐的调试器了，也是GoLand、VSCode、vim-go中使用的调试器。能有幸了解一款调试器的实现、参与贡献还是很爽的一件事情。&lt;/p&gt;
+&lt;h1 id="delve整体架构"&gt;delve整体架构 &lt;a href="#delve%e6%95%b4%e4%bd%93%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h1 id="delve大致实现"&gt;delve大致实现 &lt;a href="#delve%e5%a4%a7%e8%87%b4%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;</description></item><item><title>Monkey Patching in Go</title><link>/blog/2020-08-23-monkey_patching_in_go/</link><pubDate>Sun, 23 Aug 2020 15:41:28 +0800</pubDate><guid>/blog/2020-08-23-monkey_patching_in_go/</guid><description>&lt;p&gt;前几天写了篇&lt;a href="https://hitzhangjie.github.io/blog/2020-08-20-x64%E6%B1%87%E7%BC%96%E5%BC%80%E5%8F%91%E4%BB%8B%E7%BB%8D/"&gt;x64汇编开发介绍&lt;/a&gt;的文章，当时有提到接下来会介绍下go中如何实现monkey patching，嗯，今天就来说下这个事情。&lt;/p&gt;
+&lt;h1 id="monkey-patching-简介"&gt;Monkey Patching 简介 &lt;a href="#monkey-patching-%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;monkey patching，一说到这个，很多熟悉go的同学可能会联想起gomonkey这个mock测试框架。该术语的定义取决于使用它的社区。在Ruby，Python 和许多其他动态编程语言中，“monkey patching”一词仅指在运行时对类或模块的动态修改，其目的是为了修补现有的第三方代码，以此作为解决方法。错误或功能无法正常运行。根据其不同的意图，在运行时修改类的其他形式也具有不同的名称。例如，在Zope和Plone中，安全补丁通常是使用动态类修改来提供的，但它们被称为热修补程序(hot fixes)。&lt;/p&gt;
+&lt;p&gt;monkey patching，它常用于如下场景：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;在运行时替换方法/类/属性/函数，例如在测试过程中取消功能；&lt;/li&gt;
+&lt;li&gt;修改/扩展第三方产品的行为，而无需维护源代码的私有副本；&lt;/li&gt;
+&lt;li&gt;在运行时将补丁程序的结果应用于内存中的状态，而不是磁盘上的源代码；&lt;/li&gt;
+&lt;li&gt;分发与原始源代码一起存在的安全性或行为修复程序（例如，将其作为Ruby on Rails平台的插件分发）；&lt;/li&gt;
+&lt;li&gt;探索各种自动修复程序以提供自我修复。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id="monkey-patching-in-go"&gt;Monkey Patching in Go &lt;a href="#monkey-patching-in-go" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;最近在写mock测试的时候，有些场景下用到了gomonkey，这个测试框架挺好用的，之前也简单了解过大致的实现，最近也在看些底层工具链相关的东西，就想整理分享下。&lt;/p&gt;
+&lt;p&gt;首先我会简单介绍下go函数的实现、指令patching的概念，然后看下反汇编、指令级调试如何帮助快速定位问题，然后通过几个简单的demo来演示下如何实现指令patch，然后我们再回到go实现monkey patching。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;如果不感兴趣就真的不要看了，就好像别人骑车摔破头也觉得很爽，但是有人觉得10几万的车也没啥吸引人的，所以我极少主动转发、群里推送这些文章，我更希望它是被主动发现的。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="go函数表示"&gt;Go函数表示 &lt;a href="#go%e5%87%bd%e6%95%b0%e8%a1%a8%e7%a4%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="demo1"&gt;demo1 &lt;a href="#demo1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;下面定义了一个简单的函数&lt;code&gt;a()&lt;/code&gt;，然后再main函数中调用它，然后调用通过print打印出它的返回值。&lt;/p&gt;
+&lt;p&gt;file: main.go&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;package main
+func a() int { return 1 }
+func main() {
+print(a())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这个函数非常简单，monkey patching离不开汇编，所以我们先看下其对应的汇编代码，了解这个程序干了些啥。&lt;/p&gt;
+&lt;p&gt;这里顺便推荐几个工具:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;dlv，适用于go的调试器&lt;/li&gt;
+&lt;li&gt;radare2，静态分析工具，类似的还有IDA、Hopper&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;我这里就先试用radare2（下文简称r2）来演示如何操作了。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;$ go build -gcflags=&amp;quot;all=-N -l&amp;quot; -o main main.go
+$ r2 ./main
+-- give | and &amp;gt; a try piping and redirection
+[0x00454330]&amp;gt; s sym.main.main
+[0x00459270]&amp;gt; af
+[0x00459270]&amp;gt; pdf
+; CODE XREF from sym.main.main @ 0x4592c2
+┌ 84: sym.main.main ();
+│ ; var int64_t var_10h @ rsp+0x8
+│ ; var int64_t var_8h @ rsp+0x10
+│ ┌─&amp;gt; 0x00459270 64488b0c25f8. mov rcx, qword fs:[0xfffffffffffffff8] ;; 这里是go函数栈检查
+│ ╎ 0x00459279 483b6110 cmp rsp, qword [rcx + 0x10]
+│ ┌──&amp;lt; 0x0045927d 763e jbe 0x4592bd
+│ │╎ 0x0045927f 4883ec18 sub rsp, 0x18 ;; 栈没问题开始执行
+│ │╎ 0x00459283 48896c2410 mov qword [var_8h], rbp
+│ │╎ 0x00459288 488d6c2410 lea rbp, qword [var_8h]
+│ │╎ 0x0045928d e8beffffff call sym.main.a ;; 调用函数sym.main.a
+│ │╎ 0x00459292 488b0424 mov rax, qword [rsp]
+│ │╎ 0x00459296 4889442408 mov qword [var_10h], rax
+│ │╎ 0x0045929b e83003fdff call sym.runtime.printlock
+│ │╎ 0x004592a0 488b442408 mov rax, qword [var_10h]
+│ │╎ 0x004592a5 48890424 mov qword [rsp], rax
+│ │╎ 0x004592a9 e8a20afdff call sym.runtime.printint
+│ │╎ 0x004592ae e89d03fdff call sym.runtime.printunlock
+│ │╎ 0x004592b3 488b6c2410 mov rbp, qword [var_8h]
+│ │╎ 0x004592b8 4883c418 add rsp, 0x18
+│ │╎ 0x004592bc c3 ret
+│ └──&amp;gt; 0x004592bd e83e7affff call sym.runtime.morestack_noctxt
+└ └─&amp;lt; 0x004592c2 ebac jmp sym.main.main
+[0x00459270]&amp;gt; s sym.main.a ;; 查看sym.main.a地址为0x00459250
+[0x00459250]&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;函数main中调用函数a的过程就这么简单&lt;code&gt;call sym.main.a&lt;/code&gt;，也就是call 0x00459250，再看下a这个函数，它很简单将返回值1存储到[arg_8h]中，就是前一个栈帧中的一个8字节空间，之后的我们就先不关心了。&lt;/p&gt;</description></item><item><title>x64汇编开发介绍</title><link>/blog/2020-08-20-x64%E6%B1%87%E7%BC%96%E5%BC%80%E5%8F%91%E4%BB%8B%E7%BB%8D/</link><pubDate>Thu, 20 Aug 2020 20:27:19 +0800</pubDate><guid>/blog/2020-08-20-x64%E6%B1%87%E7%BC%96%E5%BC%80%E5%8F%91%E4%BB%8B%E7%BB%8D/</guid><description>&lt;p&gt;最近在工作和学习中发现，其实汇编是非常重要的，即便现在高级语言已经非常方便了，但是了解汇编对于深入理解计算机系统，以及一些高深的知识点是不可或缺的。举几个例子，比如说Linux操作系统有一个系统调用函数叫Fork我们都知道Fork的返回值在子进程中是0，在父进程中是非0，那这个是如何实现的呢？对于不了解汇编的人也很难有能力去阅读Linux操作系统源码，只能道听途说了解到个大概原因。再比如接下来要讲的gomonkey测试框架实现的一些指令patching操作，这些都是与汇编操作分不开的。甚至你想了解下上下文切换开销，你都需要深入了解下指令执行周期等等的问题。&lt;/p&gt;
+&lt;p&gt;不懂汇编，不妨碍你开发上层应用，但是对你的深度就是一道坎，你很难跨国这个鸿沟去窥探更底层的一些原理。&lt;/p&gt;
+&lt;p&gt;有感而发，今天就回顾下intel官方开发发布的x64汇编知识，做一个简单的回顾，也为后面研究gomonkey指令patching等等做一些准备和铺垫。&lt;/p&gt;
+&lt;h2 id="介绍"&gt;介绍 &lt;a href="#%e4%bb%8b%e7%bb%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;大家使用x86汇编来写一些对性能比较敏感的程序嗯，这个情况已经持续很多年了嗯，但是现在32位机器应逐渐被64位机器取代了，对应的汇编代码也发生了变化。这篇文章主要就是介绍x64汇编的，如果不了解x86汇编也没什么大碍，当然了解的话理解起来会更简单一点。&lt;/p&gt;
+&lt;p&gt;x64是一个通用的名字，它表示的是对Intel以及AMD 32位指令集架构的一个64位扩展。AMD首先引入了x64指令集，最初叫x86-64，后面又改成了AMD64。Intel呢，将其支持64位指令集的架构称之为IA-32e，后面又改成了EMT64。这两个版本之间有一点细微的不兼容的地方，但是大部分指令在两个版本上都可以很好的工作，相关的细节可以参考Intel开发手册&lt;a href="http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html"&gt;Intel 64 And IA-32 Architectures Software Developer&amp;rsquo;s Manuals&lt;/a&gt;，以及AMD64架构的技术文档。我们将这两个版本的交集部分称之为x64。不要将x64与64位Intel Itanium架构（称之为IA-64）混为一谈。&lt;/p&gt;
+&lt;p&gt;这篇文章没有涉及硬件相关的细节，如caches、分支预测，以及其他高级话题。文章最后会给出一些这些领域的参考手册供了解更多。&lt;/p&gt;
+&lt;p&gt;汇编语言，往往会用来编写对性能要求比较苛刻的程序或其中的一部分。但是对大部分普通程序员来说，与其让其写汇编，还不如写cc++然后配上一个好的编译器来的实在，后者编译器优化的性能可能比其写出的汇编代码质量更高。汇编语言对于调试代码也是有用的，有时一个编译器可能生成了一些不正确的汇编指令，通过调试器在程序中单步调试可以帮助定位到问题的原因。代码优化器，有时也会犯错。汇编的另外一个用途，你可以用它来研究没有源码的程序。反汇编让你能够改变、修复现有的可执行程序（推荐下几个工具hopper or cutter）。如果你想了解或者调查为什么某种编程语言比较慢，其他的比较快之类的问题，汇编也是你的好帮手。最后吧，掌握汇编知识，对于诊断一些恶意软件，也是必不可少的技能。&lt;/p&gt;
+&lt;h2 id="架构"&gt;架构 &lt;a href="#%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当要去学习特定平台的汇编时，首先应该学习的是，该平台的寄存器集合。&lt;/p&gt;
+&lt;h3 id="通用架构"&gt;通用架构 &lt;a href="#%e9%80%9a%e7%94%a8%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;64位寄存器允许容纳更大的尺寸的数据，或者是地址，所以我们定义的更多的类型，将1个字节byte定义成8bits，将1个字word定义成16bits，将一个双字double word定义成32bits，将一个四字quadword定义成64位，将一个八字double quadword定义成128bits。关于字节序的问题，Intel是小端字节序，意味着低有效位存储在内存的低地址中。&lt;/p&gt;
+&lt;p&gt;&lt;img src="https://software.intel.com/content/dam/develop/external/us/en/images/29529-figure-1-181178.jpg" alt="通用架构"&gt;&lt;/p&gt;
+&lt;p&gt;上图显示了16个64bits的通用目的寄存器，前8个被命名成rax、rbx、rcx、rdx、rbp、rsi、rdi、rsp，这个命名和历史原因有关系，后面8个被命名成了r8&lt;del&gt;r15。如果前8个自己存器名，将字符r换成e，就变成了对应的地位的32位寄存器，比如rax的低32位是eax。类似地，如果想访问低16位，就直接把前缀去掉，如AX就是访问的rax的低16位，如果低8位呢，那就是AL了，AH就是次低8位（8&lt;/del&gt;15位）。新加的8个寄存器r8~r15可以用类似的方式来访问低位数据，如r8（qword），r8d（lower dword），r8w（lowest word）、r8b（lowest byte MASM风格，intel风格是r8l）。注意没有r8h这种表示法。&lt;/p&gt;
+&lt;p&gt;使用REX操作码前缀去访问新添加的这8个通用寄存器的字节时，有一些限制，不能像访问之前的8个通用寄存器一样通过AH、BH、CH、DH来访问，并且一次只能访问一个（如R11B），但是可以使用AL、BL、CL、DL，为啥来，因为它就是强制要求将AH、BH、CH、DH转换成BPL、SPL、DIL、SIL来使用。&lt;/p&gt;
+&lt;p&gt;64位指令指针寄存器RIP，指向下一条要执行的指令的低质，并且支持64位平坦内存模型，当前操作系统中的内存地址布局将在后面提及。&lt;/p&gt;
+&lt;p&gt;栈指针寄存器RSP，指向当前刚push进栈的元素空间地址，也就是栈顶了，栈从高地址向低地址方向增长。栈用来存储调用例程（函数）的返回值、传递参数，或者用以支持ABI中的调用惯例（如保存调用方现场）。&lt;/p&gt;
+&lt;p&gt;RFLAGS寄存器，用来存储一些标识信息，它用来标识一些操作的结果（如是否溢出、运算结果的正负等）或者控制处理器的执行。这在x86 32位寄存器EFLAGS中就已经形成了这些，现在在以前基础上又添加了高32位，用来预留支持扩展，当前是没有使用的。下表列出了最常使用的一些flags。大多数其他flags是用于操作系统级别的任务。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style="text-align: left"&gt;Symbol&lt;/th&gt;
+&lt;th style="text-align: left"&gt;Bit&lt;/th&gt;
+&lt;th style="text-align: left"&gt;Name&lt;/th&gt;
+&lt;th style="text-align: left"&gt;Set if&amp;hellip;&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;CF&lt;/td&gt;
+&lt;td style="text-align: left"&gt;0&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Carry&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Operation generated a carry or borrow&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;PF&lt;/td&gt;
+&lt;td style="text-align: left"&gt;2&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Parity&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Last byte has even number of 1&amp;rsquo;s, else 0&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;AF&lt;/td&gt;
+&lt;td style="text-align: left"&gt;4&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Adjust&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Denotes Binary Coded Decimal in-byte carry&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;ZF&lt;/td&gt;
+&lt;td style="text-align: left"&gt;6&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Zero&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Result was 0&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;SF&lt;/td&gt;
+&lt;td style="text-align: left"&gt;7&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Sign&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Most significant bit of result is 1&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;OF&lt;/td&gt;
+&lt;td style="text-align: left"&gt;11&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Overflow&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Overflow on signed operation&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;&lt;/td&gt;
+&lt;td style="text-align: left"&gt;&lt;/td&gt;
+&lt;td style="text-align: left"&gt;&lt;/td&gt;
+&lt;td style="text-align: left"&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;DF&lt;/td&gt;
+&lt;td style="text-align: left"&gt;10&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Direction&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Direction string instructions operate (increment or decrement)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;ID&lt;/td&gt;
+&lt;td style="text-align: left"&gt;21&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Identification&lt;/td&gt;
+&lt;td style="text-align: left"&gt;Changeability denotes presence of CPUID instruction&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;浮点运算单元（FPU，Floating Point Unit）包含了8个寄存器FPR0-FPR7，还有状态寄存器、控制寄存器，以及其他的几个寄存器。FPR0-7这几个寄存器，每个都可以存储下表中列出的数据类型的值。浮点操作遵从IEEE 754标准。注意，大多数c/c++编译器支持32位和64位的float、double数据类型，但是没有支持80位的浮点数据类型，但是汇编是支持的。这8个寄存器和另外8个MMX？寄存器实际上是共享的同一组物理寄存器。&lt;/p&gt;</description></item><item><title>go开发如何做测试(2)：选择合适的测试框架</title><link>/blog/2020-08-19-go%E5%BC%80%E5%8F%91%E5%A6%82%E4%BD%95%E5%81%9A%E6%B5%8B%E8%AF%95%E9%80%89%E6%8B%A9%E5%90%88%E9%80%82%E7%9A%84%E6%B5%8B%E8%AF%95%E6%A1%86%E6%9E%B6/</link><pubDate>Wed, 19 Aug 2020 00:40:31 +0800</pubDate><guid>/blog/2020-08-19-go%E5%BC%80%E5%8F%91%E5%A6%82%E4%BD%95%E5%81%9A%E6%B5%8B%E8%AF%95%E9%80%89%E6%8B%A9%E5%90%88%E9%80%82%E7%9A%84%E6%B5%8B%E8%AF%95%E6%A1%86%E6%9E%B6/</guid><description>&lt;p&gt;开发除了编写代码，也应该关注如何保证代码的可测试性，以及维护有效的测试用例。最近团队对单测要求不断提高，也将之前收集、积累的一点测试相关的内容记录分享下。这篇主要总结下常见的测试框架的优缺点。&lt;/p&gt;
+&lt;p&gt;如何做好测试，是一门系统性的方法学，而不只是一些零零散散的经验。根据测试目的的不同，对测试方法可以作如下分类：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;稳定性测试&lt;/li&gt;
+&lt;li&gt;压力测试&lt;/li&gt;
+&lt;li&gt;回归测试&lt;/li&gt;
+&lt;li&gt;冒烟测试&lt;/li&gt;
+&lt;li&gt;性能测试&lt;/li&gt;
+&lt;li&gt;功能测试&lt;/li&gt;
+&lt;li&gt;安全测试&lt;/li&gt;
+&lt;li&gt;可用性测试&lt;/li&gt;
+&lt;li&gt;&amp;hellip;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这么多的测试方法，最初我还是在填写一项IntelliJ IDEA发起的问卷调查时了解到的，后面在研发过程中也渐渐加深了对这些测试方法的认识。这里面的每一项测试，我认为开发都是应该去了解的。&lt;/p&gt;
+&lt;p&gt;很多测试方法是通用的，和具体语言无关，这篇文章只重点关注go开发如何做单元测试。这是每位开发首先应该掌握起来的，它是其他测试得以顺利展开的基础。&lt;/p&gt;
+&lt;p&gt;开发在编码阶段，应该在本地完成单测相关的工作，保证测试用例通过，在自动化构建阶段应该有能力执行一些跑单测、BVT测试的任务，通过后才允许提交给测试团队。当然现在EPC实行起来之后，大部分团队都是这么执行的了。&lt;/p&gt;
+&lt;p&gt;研发效能要求提升代码库的测试覆盖率，要提高测试的价值，我们得先学些下掌握比较好的测试的方法。&lt;/p&gt;
+&lt;p&gt;参考了下go测试的一些实践，业务中肯定会遇到如下这些情况，或多或少：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;新老服务都有比较多的外部依赖，比如网络调用、读db等&lt;/li&gt;
+&lt;li&gt;存量服务维护、开发，有些不适合大范围重构的&lt;/li&gt;
+&lt;li&gt;测试不要侵入业务代码，不能为了测试写太多不相干的东西&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;go单测中使用的比较多的，大致有如下这些选择， gomock+gostub+gomonkey+goconvey，现在go用的比较多的就是这几个，我比较推荐gomock、gomonkey，看情况，灵活组合使用吧，先总结下这几个的使用方式、优缺点。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;gomock是基于interface的，mockgen生成interface对应的mock桩代码，然后再去写mock代码。
+如果前期没这些interface设计的话，也不方便测试。有的话，看起来也不是特别方便。&lt;/li&gt;
+&lt;li&gt;gostub支持对变量、方法、过程进行mock，但是用上它，存量代码的话就要做些调整，对代码有侵入，
+因为它是基于变量去作mock，比如func Hello(&amp;hellip;)要改成var Hello=func(&amp;hellip;)才能用&lt;/li&gt;
+&lt;li&gt;gomonkey也支持对变量、方法、过程进行mock，我现在感觉这个比较好用，简单，对代码无侵入，
+和gostub实现原理不太一样，比如函数，它通过汇编调整跳转地址，这么着对内联函数就支持不到了，就得-gcflags=&amp;ldquo;all=-l&amp;quot;禁用内联&lt;/li&gt;
+&lt;li&gt;goconvey主要是用来更好地管理测试用例，可以根据情况用或者不用&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这里有几篇文章，感兴趣的可以先看下：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;组合灵活使用，gomock+gostub+gomonkey+goconvey：https://www.jianshu.com/p/2f675d5e334e&lt;/li&gt;
+&lt;li&gt;gomonkey实现原理：https://bouk.co/blog/monkey-patching-in-go/&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;在深度使用上述几个测试框架之后，个人感觉gomonkey+goconvery组合是比较合适的，goconvey也可以考虑用go testing框架t.Run代替来维护子测试。&lt;/p&gt;
+&lt;p&gt;很多同学对开发阶段写单测，多少还是有些抵触的，常见的理由大多是没时间写单测。我的理解是，这里有个因果倒置的问题，写单测的目的并不是为了写而写，写单侧的目的是为了验证你的逻辑或者测试先行驱动逻辑开发，甚至还会为后续的修改保驾护航。&lt;/p&gt;
+&lt;p&gt;在开发阶段写单测，客观上会花些时间，但是也会节省频繁提交构建、部署、测试的时间，开发阶段在上述操作中频繁切换的次数会大幅减少。&lt;/p&gt;
+&lt;p&gt;我的体验是这样的，仅供参考。&lt;/p&gt;</description></item><item><title>go开发如何做测试(1)：表驱动测试</title><link>/blog/2020-08-19-go%E5%BC%80%E5%8F%91%E5%A6%82%E4%BD%95%E5%81%9A%E6%B5%8B%E8%AF%95%E8%A1%A8%E9%A9%B1%E5%8A%A8%E6%B5%8B%E8%AF%95/</link><pubDate>Wed, 19 Aug 2020 00:36:19 +0800</pubDate><guid>/blog/2020-08-19-go%E5%BC%80%E5%8F%91%E5%A6%82%E4%BD%95%E5%81%9A%E6%B5%8B%E8%AF%95%E8%A1%A8%E9%A9%B1%E5%8A%A8%E6%B5%8B%E8%AF%95/</guid><description>&lt;p&gt;开发除了编写代码，也应该关注如何保证代码的可测试性，以及维护有效的测试用例。最近团队对单测要求不断提高，也将之前收集、积累的一点测试相关的内容记录分享下。本文转自Dave Cheney的表驱动测试一文，这篇文章写得挺好的。&lt;/p&gt;
+&lt;h1 id="prefer-table-driven-tests"&gt;Prefer table driven tests &lt;a href="#prefer-table-driven-tests" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;I’m a big fan of testing, specifically &lt;a href="https://dave.cheney.net/2019/04/03/absolute-unit-test"&gt;unit testing&lt;/a&gt; and TDD (&lt;a href="https://www.youtube.com/watch?v=EZ05e7EMOLM"&gt;done correctly&lt;/a&gt;, of course). A practice that has grown around Go projects is the idea of a table driven test. This post explores the how and why of writing a table driven test.&lt;/p&gt;
+&lt;p&gt;Let’s say we have a function that splits strings:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;// Split slices s into all substrings separated by sep and
+// returns a slice of the substrings between those separators.
+func Split(s, sep string) []string {
+var result []string
+i := strings.Index(s, sep)
+for i &amp;gt; -1 {
+result = append(result, s[:i])
+s = s[i+len(sep):]
+i = strings.Index(s, sep)
+}
+return append(result, s)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In Go, unit tests are just regular Go functions (with a few rules) so we write a unit test for this function starting with a file in the same directory, with the same package name, &lt;code&gt;strings&lt;/code&gt;.&lt;/p&gt;</description></item><item><title>深入理解：你不认识的cc++ volatile</title><link>/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc-volatile/</link><pubDate>Fri, 24 Jul 2020 19:46:11 +0800</pubDate><guid>/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc-volatile/</guid><description>&lt;style&gt;
+img {
+width: 680px;
+}
+&lt;/style&gt;
+&lt;h2 id="1-令人困惑的volatile"&gt;1. 令人困惑的volatile &lt;a href="#1-%e4%bb%a4%e4%ba%ba%e5%9b%b0%e6%83%91%e7%9a%84volatile" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;volatile字面意思是“&lt;strong&gt;不稳定的、易变的&lt;/strong&gt;”，不少编程语言中存在volatile关键字，也有共同之处，如“&lt;strong&gt;表示程序执行期间数据可能会被外部操作修改&lt;/strong&gt;”，如被外设修改或者被其他线程修改等。这只是字面上给我们的一般性认识，然而具体到不同的编程语言中volatile的语义可能相差甚远。&lt;/p&gt;
+&lt;p&gt;很多人以为自己精通CC++，但是被问起volatile的时候却无法清晰、果断地表明态度，那只能说明还是处在“从入门到精通”的路上，如果了解一门语言常见特性的使用、能够写健壮高效的程序就算精通的话，那实在是太藐视“大师”的存在了。从一个volatile关键字折射出了对CC++标准、编译器、操作系统、处理器、MMU各个方面的掌握程度。&lt;/p&gt;
+&lt;p&gt;几十年的发展，很多开发者因为自己的偏见、误解，或者对某些语言特性（如Java中的volatile语义）的根深蒂固的认识，赋予了CC++ volatile本不属于它的能力，自己却浑然不知自己犯了多大的一个错误。&lt;/p&gt;
+&lt;p&gt;我曾经以为CC++中volatile可以保证线程可见性，因为Java中是这样的，直到后来阅读Linux内核看到Linus Torvards的一篇文档，他强调了volatile可能带来的坏处“任何使用volatile的地方，都可能潜藏了一个bug”，我为他的“危言耸听”感到吃惊，所以我当时搜索了不少资料来求证CC++ volatile的能力，事后我认为CC++ volatile不能保证线程可见性。但是后来部门内一次分享，分享中提到了volatile来保证线程可见性，我当时心存疑虑，事后验证时犯了一个错误导致我错误地认为volatile可以保证线程可见性。直到我最近翻阅以前的笔记，翻到了几年前对volatile的疑虑……我决定深入研究下这个问题，以便能顺利入眠。&lt;/p&gt;
+&lt;h2 id="2-从规范认识volatile"&gt;2. 从规范认识volatile &lt;a href="#2-%e4%bb%8e%e8%a7%84%e8%8c%83%e8%ae%a4%e8%af%86volatile" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;以常见的编程语言C、C++、Java为例，它们都有一个关键字volatile，但是对volatile的定义却并非完全相同。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Java中对volatile的定义：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;8.3.1.4. &lt;code&gt;volatile&lt;/code&gt; Fields&lt;/p&gt;
+&lt;p&gt;The Java programming language allows threads to access shared variables (&lt;a href="https://docs.oracle.com/javase/specs/jls/se7/html/jls-17.html#jls-17.1"&gt;§17.1&lt;/a&gt;). As a rule, to ensure that shared variables are consistently and reliably updated, a thread should ensure that it has exclusive use of such variables by obtaining a lock that, conventionally, enforces mutual exclusion for those shared variables.&lt;/p&gt;</description></item><item><title>测试方法：开发者应掌握的系统性测试方法</title><link>/blog/2020-07-01-%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</link><pubDate>Wed, 01 Jul 2020 20:30:01 +0800</pubDate><guid>/blog/2020-07-01-%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</guid><description>&lt;style type="text/css" rel="stylesheet"&gt;
+/* Three image containers (use 25% for four, and 50% for two, etc) */
+.column {
+float: left;
+width: 50%;
+padding: 5px;
+}
+/* Clear floats after image containers */
+.row::after {
+content: "";
+clear: both;
+display: table;
+}
+.fixsize {
+width: 400px;
+}
+.fullsize {
+width: 680px;
+}
+&lt;/style&gt;
+&lt;p&gt;如何做好测试，是一门系统性的方法学，而不只是一些零零散散的经验。了解并掌握各种测试的目的、方法是非常有必要的。&lt;/p&gt;
+&lt;p&gt;最近工作中也在推动测试相关的一些事项，有一点感触，这里先简单总结下常见测试方法的目的，大致包括如下几类。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;1. 研发流程中构建环节&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;冒烟测试&lt;br&gt;
+该术语，取自集成电路开发领域，集成电路在测试之前，先要加电检查，如果没有冒烟才能进行后续的测试。冒烟测试并不是测试过程的一个阶段，它是软件构建过程中的一个环节，它包含一些非常基础的测试，如保证编译通过、部分核心用例通过，它随每次构建触发，处于持续集成的一个环节。英文表述为BVT测试，Build Verification Testing，从中更能感受的到。将其理解为测试的一个阶段，是一个巨大的误区。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;2. 功能性指标相关测试&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;功能测试&lt;br&gt;
+软件需求说明中对软件需要的功能进行了描述，软件需求分析阶段会对需求说明进行详细分析，并整理出相关的规格说明，包括每个用例的输入、输出等等。功能测试，其实也就是对这里的软件需求规格说明进行测试用例的覆盖，考察的是对各个点、异常路径的把控程度。在实际研发过程中，开发人员一般会先自测通过后，再转给测试团队进行进一步的测试。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;回归测试&lt;br&gt;
+之前已经测试过的用例，可以沉淀下来，供以后进行回归，已发现软件变更、升级期间是否引入了bug。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;其他&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;3. 非功能性指标相关测试&lt;/strong&gt;&lt;/p&gt;
+&lt;div class="row"&gt;
+&lt;div class="column"&gt;&lt;img class="fixsize" alt="性能测试曲线" src="assets/testing/性能测试曲线.png"/&gt;&lt;/div&gt;
+&lt;div class="column"&gt;&lt;img class="fixsize" alt="并发请求响应时间" src="assets/testing/并发请求响应时间.png"/&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;性能测试 (how much + how fast)&lt;br&gt;
+对软件的性能指标进行测试，以验证是否达到预期设计的性能要求。在软件设计之初，需求方一般会提出明确的性能要求，如希望支撑N个用户的并发访问请求，希望响应时间能控制在2s以内等等。除了用户提出的性能指标要求，软件设计人员在系统设计的时候，也会对系统中交互的各个子系统、组件之间的性能有一定要求，如各组件通信响应时间在100ms以内等。&lt;br&gt;
+性能测试，是对系统的一个检验，检验是否达到了预期的设计标准。性能测试，通常可以参考系统最大吞吐量时的请求量级、响应时间，来确定系统的最佳运行点，科学合理地部署设备资源来平衡性能和成本。&lt;br&gt;
+性能测试，通常会和负载测试、压力测试等结合起来，以获得系统的最佳运行点、系统最大负载点、系统崩溃点。&lt;/p&gt;</description></item><item><title>如何高效开发一个命令行工具</title><link>/blog/2020-06-26-%E5%A6%82%E4%BD%95%E9%AB%98%E6%95%88%E5%BC%80%E5%8F%91%E4%B8%80%E4%B8%AA%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%B7%A5%E5%85%B7/</link><pubDate>Fri, 26 Jun 2020 10:38:34 +0800</pubDate><guid>/blog/2020-06-26-%E5%A6%82%E4%BD%95%E9%AB%98%E6%95%88%E5%BC%80%E5%8F%91%E4%B8%80%E4%B8%AA%E5%91%BD%E4%BB%A4%E8%A1%8C%E5%B7%A5%E5%85%B7/</guid><description>&lt;p&gt;我经常会开发一些命令行工具来协助处理一些事情，如开发一个代码生成工具快速生成服务代码，或者开发一个工具来方便管理github上的工具，或者开发一个工具rm来替换掉不安全的rm，等等。&lt;/p&gt;
+&lt;p&gt;命令行工具开发过程中，比较常见的一个问题就是对功能进行分组，开发多个命令不利于使用，在命令中支持子命令是一个更常见、更友好的做法，如go build，go tool，go pprof，等等。我们还希望为不同的子命令添加不同的命令行选项，如&lt;code&gt;go build -gcflags=&lt;/code&gt;，&lt;code&gt;go pprof --seconds=&lt;/code&gt;，等等。&lt;/p&gt;
+&lt;h3 id="如何支持子命令字呢"&gt;如何支持子命令字呢？ &lt;a href="#%e5%a6%82%e4%bd%95%e6%94%af%e6%8c%81%e5%ad%90%e5%91%bd%e4%bb%a4%e5%ad%97%e5%91%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;假如我们开发一个命令行程序 &lt;code&gt;gox&lt;/code&gt;，我们希望能为它添加一个子命令&lt;code&gt;gox create&lt;/code&gt;来创建一个完整的服务工程，包括自动生成工程下的代码。&lt;/p&gt;
+&lt;p&gt;那如何为命令行程序&lt;code&gt;gox&lt;/code&gt;添加这个子命令字呢？&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;gox&lt;/code&gt;是shell搜索路径定位到的程序，&lt;code&gt;create&lt;/code&gt;只能是shell传递给进程的一个普通参数，在&lt;code&gt;gox&lt;/code&gt;程序启动之后只能从&lt;code&gt;os.Args&lt;/code&gt;来获取该参数，以及后续&lt;code&gt;gox create -protofile= -protodir&lt;/code&gt;的参数&lt;code&gt;-protofile&lt;/code&gt;及&lt;code&gt;-protodir&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;然后呢，为了方便以后扩展其他子命令，我们最好将subcmd进行一下抽象，通过一个&lt;code&gt;Command interface{}&lt;/code&gt;约定好一个subcmd必须要完成那些操作。接口并不是为了抽象而抽象，而是用来清晰地表明要做什么。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;// Command what does a command do
+type Command interface{
+// PreRun run before the command logic execution
+PreRun() error
+// Run run the command logic
+Run() error
+// PostRun run after the command logic execution
+PostRun() error
+}
+// BaseCommand basic implemention
+//
+// this BaseCommand could be embeded into a customized subcmd
+type BaseCommand struct{
+}
+func (bc *BaseCommand) PreRun() error {
+return nil
+}
+func (bc *BaseCommand) Run() error {
+panic(&amp;quot;implement me&amp;quot;)
+}
+func (bc *BaseCommand) PostRun() error {
+return nil
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Command接口定义了一个command应该干什么，然后也可以提供一个基本的Command实现BaseCommand，它提供了一些基本的操作可以供后续复用，后面我们要扩展其他子命令字的时候，通过将该BaseCommand嵌入，可以少实现几个函数，这也是go里面提倡的通过组合来实现继承。&lt;/p&gt;</description></item><item><title>A Golang Debugger Book</title><link>/blog/2020-06-09-a-golang-debugger-book/</link><pubDate>Tue, 09 Jun 2020 20:25:07 +0800</pubDate><guid>/blog/2020-06-09-a-golang-debugger-book/</guid><description>&lt;p&gt;18年开始学习go时，发现了一款调试器delve，陆陆续续地看了些源码、调试标准的东西，发现调试器是一个很好的切入视角来认识计算机系统，就想把这些东西理顺、分享一下。到现在为止，对开发工具链的认识都还有些认识上的不足，关键还是，觉得调试器就好比一个放大镜，放大一倍看清内存变量，放大两倍看清类型系统，放大三倍看清机器物理结构……这是简单的，涉及到运行时、操作系统、硬件等的特性，我是觉得很有意思，尤其是对部分想了解这些知识的人来说，还是有一定的参考意义的。&lt;/p&gt;
+&lt;p&gt;https://github.com/hitzhangjie/golang-debugger-book。&lt;/p&gt;
+&lt;p&gt;后来工作变动没有持续投入了，19年下半年支持trpc也没太多时间投入，19年年底的时候买了ipad花了连续几个周末啃了300页dwarf标准，坚持写完了dwarf相关的部分。后面开始支持epc又没时间了……&lt;/p&gt;
+&lt;p&gt;现在各项工作陆陆陆续续有了眉目，也想把之前放下的东西再捡起来，感兴趣可以简单翻下，如果有小伙伴也有兴趣的话，欢迎业余时间一起继续下去，倒不是觉得是项多么出彩的内容，就是觉得有些值得深究的东西想去探索一下，还有就是一项工作搁置太久会有很浓的挫败感。&lt;/p&gt;
+&lt;p&gt;腾讯的小伙伴们很优秀，如果能有小伙伴们助攻，这个应该会加速很多。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;dwarf v4标准解析 已完成&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;dwarf数据提取 go标准库已提供&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;delve源码解析 一小部分&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;go类型系统、运行时、调试器结合 待补充&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;go新版本准备切换dwarf v5、更好的linker，有些相关的知识，涉及到compiler、linker、debugger的协作&amp;hellip;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;其他&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;其实，还有很多内容要补充，我也不知道最终会变成啥样，可能就是现在这样……曾经试图邀请几个小伙伴来搞下，可能本身没什么吸引力吧，最终还是这样。&lt;/p&gt;
+&lt;p&gt;感兴趣才能坚持下去，每次想到它，都有种立即想投入的冲动，一个人的周末有点有限 :)&lt;/p&gt;</description></item><item><title>框架设计：GoNeat RPC框架设计详解</title><link>/blog/2020-02-04-goneat-rpc%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1%E8%AF%A6%E8%A7%A3/</link><pubDate>Tue, 04 Feb 2020 00:18:55 +0800</pubDate><guid>/blog/2020-02-04-goneat-rpc%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1%E8%AF%A6%E8%A7%A3/</guid><description>&lt;style&gt;
+img {
+width: 680px;
+padding-bottom: 1rem;
+}
+&lt;/style&gt;
+&lt;p&gt;GoNeat框架一直持续演进中，抽时间整理了下框架从服务启动到结束退出这一连串流程中涉及到的设计、实现细节，希望能对想了解GoNeat框架设计、实现感兴趣的同学有帮助。
+本文初衷是为了介绍GoNeat框架的设计，本人觉得按照一个服务的生命周期进行介绍，读者会比较容易接受、介绍起来也没那么枯燥，缺点是一个模块的多个实现细节可能会在不同的地方提及，读者可能需要一定的前后联想。内容比较多，也可以直接跳过部分内容阅读感兴趣的章节。
+由于语言功底不是特别好，在用词、句式、断句、篇章组织上难免存在不尽如人意的地方，请多多包涵。&lt;/p&gt;
+&lt;h1 id="goneat-rpc框架设计详解"&gt;GoNeat RPC框架设计详解 &lt;a href="#goneat-rpc%e6%a1%86%e6%9e%b6%e8%ae%be%e8%ae%a1%e8%af%a6%e8%a7%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;GoNeat，追求“小而美”的设计，是基于golang开发的面向后台开发的微服务框架，旨在提升后台开发效率，让大家摆脱各种琐碎的细节，转而更加专注于服务质量本身。Simple &amp;amp; Powerful，是我们始终追求的设计理念。&lt;/p&gt;
+&lt;p&gt;本文从整体上介绍GoNeat的设计，GoNeat包括哪些核心部件，它们又是是如何协作的，服务运行期间涉及到哪些处理流程，等等。如果读者想更深入地了解，可以在本文基础上再阅读相关源码，或与我们开发者交流。&lt;/p&gt;
+&lt;h2 id="goneat-整体架构"&gt;GoNeat 整体架构 &lt;a href="#goneat-%e6%95%b4%e4%bd%93%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;下图展示了GoNeat的整体架构设计，包括其核心组成部分，以及不同组成部分之间的交互：
+&lt;img src="assets/goneat/1562603824_70.png" alt="GoNeat-Arch"&gt;&lt;/p&gt;
+&lt;p&gt;GoNeat包括如下核心组成部分：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Server，代表一个服务实例，一个Server可以插入多个ServerModule；&lt;/li&gt;
+&lt;li&gt;ServerModule，代表一个服务模块，实现包括StreamServer、PacketServer、HttpServer、HippoServer；&lt;/li&gt;
+&lt;li&gt;NHandler，即Codec Handler，代表一个协议Handler，实现包括nrpc、ilive、sso、http等协议Handler；
+&lt;ul&gt;
+&lt;li&gt;不同port上可以分别提供不同协议的服务，如8000端口提供tcp/udp的nrpc服务，而8080提供http服务；&lt;/li&gt;
+&lt;li&gt;不同port上到达的请求，经协议Handler解析出请求，并根据请求中的命令字，找到注册的CmdHandler；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;Server将请求以函数参数的形式递交给注册的CmdHandler处理，处理完毕返回结果给调用方；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;介绍完框架的核心组件之后，下面结合一个服务示例，介绍下服务启动、请求处理、服务退出的详细流程及设计细节。&lt;/p&gt;
+&lt;h2 id="goneat-服务示例"&gt;GoNeat 服务示例 &lt;a href="#goneat-%e6%9c%8d%e5%8a%a1%e7%a4%ba%e4%be%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;我们仍然使用“&lt;em&gt;test_nrpc.proto&lt;/em&gt;”作为示例服务pb（您可以在 &lt;a href="https://git.code.oa.com/go-neat/demo/tree/master/quickstart"&gt;go-neat/demo/quickstart&lt;/a&gt; 中找到该示例）：&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;&lt;strong&gt;file: test_nrpc.proto&lt;/strong&gt;&lt;/em&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-protobuf"&gt; syntax = &amp;quot;proto2&amp;quot;;
+package test_nrpc;
+// BuyApple
+message BuyAppleReq {
+optional uint32 num = 1;
+};
+message BuyAppleRsp {
+optional uint32 errcode = 1;
+optional string errmsg = 2;
+};
+// SellApple
+message SellAppleReq {
+optional uint32 num = 1;
+};
+message SellAppleRsp {
+optional uint32 errcode = 1;
+optional string errmsg = 2;
+};
+// service test_nrpc
+service test_nrpc {
+rpc BuyApple(BuyAppleReq) returns(BuyAppleRsp); // CMD_BuyApple
+rpc SellApple(SellAppleReq) returns(SellAppleRsp); // CMD_SellApple
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;使用goneat命令行工具来创建一个新的go-neat服务：&lt;/p&gt;</description></item><item><title>工程素养：Google CR指引如何推进代码评审</title><link>/blog/2019-09-10-%E5%B7%A5%E7%A8%8B%E7%B4%A0%E5%85%BB_%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E5%9C%B0%E8%BF%9B%E8%A1%8C%E4%BB%A3%E7%A0%81review/</link><pubDate>Tue, 10 Sep 2019 17:26:01 +0800</pubDate><guid>/blog/2019-09-10-%E5%B7%A5%E7%A8%8B%E7%B4%A0%E5%85%BB_%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E5%9C%B0%E8%BF%9B%E8%A1%8C%E4%BB%A3%E7%A0%81review/</guid><description>&lt;p&gt;最近学习了Google的CodeReview指引，整理了其中一些比较有价值的点，分享给大家。&lt;/p&gt;
+&lt;h1 id="google-code-review-guidelines"&gt;Google Code Review Guidelines &lt;a href="#google-code-review-guidelines" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Google积累了很多最佳实践，涉及不同的开发语言、项目，&lt;a href="https://google.github.io/eng-practices"&gt;这些文档&lt;/a&gt;，将Google工程师多年来积攒的一些最佳实践经验进行了总结并分享给众开发者。学习下这里的经验，我们在进行项目开发、开源协同的过程中，相信也可以从中受益。&lt;/p&gt;
+&lt;p&gt;Google目前公开的最佳实践相关文档，目前包括：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="https://google.github.io/eng-practices/review/"&gt;Google&amp;rsquo;s Code Review Guidelines&lt;/a&gt;，Google代码review指引，包含以下两个系列的内容：
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="https://google.github.io/eng-practices/review/reviewer/"&gt;The Code Reviewer&amp;rsquo;s Guide&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://google.github.io/eng-practices/review/developer/"&gt;The Change Author&amp;rsquo;s Guide&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这了涉及到Google内部使用的一些术语，先提下：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;CL: 代表changelist，表示一个提交到VCS的修改，或者等待review的修改，也有组织称之为change或patch；&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;LGTM：代表Looks Good to ME，负责代码review的开发者对没有问题的CL进行的评论，表明代码看上去OK；&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id="the-code-reviewer"&gt;&lt;a href="https://google.github.io/eng-practices/review/"&gt;The Code Reviewer&amp;rsquo;s Guide&lt;/a&gt; &lt;a href="#the-code-reviewer" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;从代码reviewer的角度出发，介绍下Google内部积累的一些good practices。&lt;/p&gt;
+&lt;h2 id="introduction"&gt;Introduction &lt;a href="#introduction" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Code Review（代码评审）指的是让第三者来阅读作者修改的代码，以发现代码中存在的问题。包括Google在内的很多公司会通能过Code Review的方式来保证代码和产品的质量。&lt;/p&gt;
+&lt;p&gt;前文已有提及，CR相关内容主要包括如下两个系列：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="https://google.github.io/eng-practices/review/reviewer/"&gt;The Code Reviewer&amp;rsquo;s Guide&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://google.github.io/eng-practices/review/developer/"&gt;The Change Author&amp;rsquo;s Guide&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这里先介绍下CR过程中应该做什么，或者CR的目标是什么。&lt;/p&gt;
+&lt;h2 id="what-do-code-reviewers-look-for"&gt;What Do Code Reviewers Look For? &lt;a href="#what-do-code-reviewers-look-for" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Code review应该关注如下方面：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Design：程序设计、架构设计是否设计合理&lt;/li&gt;
+&lt;li&gt;Functionality：代码功能是否符合作者预期，代码行为是否用户友好&lt;/li&gt;
+&lt;li&gt;Complexity：实现是否能简化，代码可读性是否良好，接口是否易用&lt;/li&gt;
+&lt;li&gt;Tests：是否提供了正确、设计良好的自动化测试、单元测试&lt;/li&gt;
+&lt;li&gt;Naming：变量名、类名、方法名等字面量的选择是否清晰、精炼&lt;/li&gt;
+&lt;li&gt;Comments：是否编写了清晰的、有用的注释&lt;/li&gt;
+&lt;li&gt;Style：代码风格是否符合规范&lt;/li&gt;
+&lt;li&gt;Documentation：修改代码的同时，是否同步更新了相关文档&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="picking-the-best-reviewers"&gt;Picking the Best Reviewers &lt;a href="#picking-the-best-reviewers" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;一般，Code review之前，我们应该确定谁才是最好的、最合适的reviewer，这个reviewer应该**“有能力在比较合理的时间内对代码修改是否OK做出透彻、全面的判断”**。通常reviewer应该是编写被修改代码的owner，可能他是相关项目、相关源文件、相关代码行的创建者或者修改者，意味着我们发起Code review时，同一个项目可能需要涉及到多个reviewer进行Code review，让不同的、最合适的reviewer来review CL中涉及到的不同部分。&lt;/p&gt;</description></item><item><title>网络编程：write closed tcpconn</title><link>/blog/2018-12-20-write-closed-tcpconn/</link><pubDate>Thu, 20 Dec 2018 23:11:29 +0800</pubDate><guid>/blog/2018-12-20-write-closed-tcpconn/</guid><description>&lt;h1 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;strong&gt;tcp client: write to a half-closed tcp connection!&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这里探讨一下这个问题，Write to a closed tcp connection的问题。在深入讨论这些问题之前，首先要了解tcp state diagram，为此文末特地附上了经典的tcp状态转换图。&lt;/p&gt;
+&lt;p&gt;我们的场景是这样的，tcp server已经启动，然后tcp client主动建立连接请求，连接成功建立后，tcp client并不立即发送数据而是等待一段时间之后才会发送数据（这种在client端的tcp连接池中非常常见），tcp server端为了防止连接被滥用，会每隔30s钟检查一下tcp连接是否空闲，如果两次检查都发现tcp连接空闲则主动将连接关闭。&lt;/p&gt;
+&lt;h1 id="原因分析"&gt;原因分析 &lt;a href="#%e5%8e%9f%e5%9b%a0%e5%88%86%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;此时tcp server端会调用 &lt;code&gt;conn.Close()&lt;/code&gt;方法，该方法最终会导致传输层发送tcp FIN包给对端，tcp client这边的机器收到FIN包后会回一个ACK，然后呢？tcp client不会继续发FIN包给tcp server吗？不会！仅此而已。问题就是这么诞生的，什么问题呢，tcp client仍然可以发包，但是 &lt;code&gt;n, err := tcpconn.Write(...)&lt;/code&gt;这个时候并不会检测到 &lt;code&gt;err != nil&lt;/code&gt;，只有等到 &lt;code&gt;n, err := tcpconn.Read(...)&lt;/code&gt;的时候才会发现err为io.EOF，这个时候才能判断得知tcp server已经把连接销毁了。&lt;/p&gt;
+&lt;p&gt;从RPC框架角度而言，希望为client维护的tcp连接池是高效可用的，所以想对上述情况下的客户端连接进行检测，避免连接池中存在上述被tcp server关闭的连接。&lt;/p&gt;
+&lt;p&gt;再简单总结下tcp server、tcp client两端的不同处理逻辑：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;从tcp server的视角来看，&lt;/p&gt;
+&lt;p&gt;tcp server调用的conn.Close()，对应的是系统调用close，tcp server端认为它已经彻底关闭这个连接了！&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;从tcp client的视角来看，&lt;/p&gt;
+&lt;p&gt;这个连接是我主动建立的，我还没有给你发送FIN包发起关闭序列呢，因此这个连接仍然是可以使用的。tcp client认为tcp server只是关闭了写端，没有关闭读端，因此tcp client仍然是可写的，并且socket被设置成了nonblocking，conn.Write()仍然是成功返回的，返回的err == nil。但是当真正传输层执行数据发送的时候，tcp server端认为这个连接已销毁，因此会返回RST！这个时候上层go代码因为已经返回已经感知不到写的时候存在错误，这个RST会将tcp client端的socket标记为已关闭。下次tcpconn.Read的时候就能感知到io.EOF错误了，如果再发起一次tcpconn.Write也可以立即返回错误。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id="关于close与shutdown"&gt;关于close与shutdown &lt;a href="#%e5%85%b3%e4%ba%8eclose%e4%b8%8eshutdown" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;假如tcp server调用的不是conn.Close()，而是conn.CloseWrite()，这个对应的系统调用shutdown(SHUT_WR)，那只表示写端关闭，这个时候tcp client发送数据过去，tcp server端返回的就不是RST了，而是正常的ACK，因为tcp server端也认为这个连接只是关闭了写端。&lt;/p&gt;</description></item><item><title>大规模分布式跟踪系统dapper</title><link>/blog/2018-10-03-%E5%A4%A7%E8%A7%84%E6%A8%A1%E5%88%86%E5%B8%83%E5%BC%8F%E8%B7%9F%E8%B8%AA%E7%B3%BB%E7%BB%9Fdapper/</link><pubDate>Wed, 03 Oct 2018 22:58:42 +0800</pubDate><guid>/blog/2018-10-03-%E5%A4%A7%E8%A7%84%E6%A8%A1%E5%88%86%E5%B8%83%E5%BC%8F%E8%B7%9F%E8%B8%AA%E7%B3%BB%E7%BB%9Fdapper/</guid><description>&lt;style&gt;
+img {
+width: 680px;
+padding-bottom: 1rem;
+}
+&lt;/style&gt;
+&lt;p&gt;dapper，大规模分布式跟踪系统，现在有不少开源实现是基于dapper的核心思想来设计的，如zipkin、jaeger、lightstep、appdash等。了解dapper的工作原理，也方便理解zipkin、jaeger这几个常用的分布式跟踪实现，使用opentracing来集成不同的backend的时候也不至于一头雾水。所以又把dapper的论文阅读了几遍，梳理了下其核心思想。网上也有不少这篇论文的中文译文，但是翻译的蹩脚，理解起来很晦涩，所以还是自己梳理下方便以后查阅，也希望对大家有帮助。&lt;/p&gt;
+&lt;p&gt;[TOC]&lt;/p&gt;
+&lt;h1 id="分布式跟踪"&gt;分布式跟踪 &lt;a href="#%e5%88%86%e5%b8%83%e5%bc%8f%e8%b7%9f%e8%b8%aa" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;分布式跟踪系统，能够将系统中各个服务之间的调用关系（依赖关系）、请求耗时情况、请求方式（串行、并发）等等清晰地展示出来，对于快速定位系统调用链路中出现的异常问题有着非常重要的作用。不管是普通程序开发人员，还是web、rpc或其他框架开发人员，都希望能集成分布式跟踪的能力。&lt;/p&gt;
+&lt;h1 id="dapper简介"&gt;dapper简介 &lt;a href="#dapper%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;现在主流的分布式跟踪系统，基本都是基于google发布的论文dapper来进行后续开发的，论文中详细解释了dapper实现分布式跟踪的原理，点击查看 &lt;a href="https://bigbully.github.io/Dapper-translation/"&gt;dapper：大规模分布式跟踪系统&lt;/a&gt;。&lt;/p&gt;
+&lt;h2 id="设计初衷"&gt;设计初衷 &lt;a href="#%e8%ae%be%e8%ae%a1%e5%88%9d%e8%a1%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;分布式跟踪系统，其职责就是“&lt;strong&gt;无所不在的部署，持续的监控&lt;/strong&gt;”，这也是真正提现分布式跟踪能力的前提。“&lt;strong&gt;无所不在的部署&lt;/strong&gt;”，这非常重要，因为即使一小部分监控没有监控到，也会让人对整个跟踪结果产生质疑。“&lt;strong&gt;持续的监控&lt;/strong&gt;”，监控应该是7x24小时不间断的，对于某些小概率事件或者难以重现的事件，如果不能做到持续监控就有可能遗漏这部分异常。&lt;/p&gt;
+&lt;h2 id="设计目标"&gt;设计目标 &lt;a href="#%e8%ae%be%e8%ae%a1%e7%9b%ae%e6%a0%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;dapper将“&lt;strong&gt;无所不在的部署，持续的监控&lt;/strong&gt;”作为大的方向，由此也确定了具体的3个设计目标。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;低开销，跟踪系统对在线服务的影响应该足够小&lt;/strong&gt;
+有些服务是经过开发人员高度优化后的，如果跟踪系统引入的overhead比较大，就可能抵消掉之前优化工作带来的性能提升，开发人员不得不关停分布式跟踪能力。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;应用透明，分布式跟踪的实现细节应该对应用开发人员透明&lt;/strong&gt;
+应用开发人员是不需要知道有分布式跟踪这回事的，如果一个跟踪系统不能屏蔽这些细节、需要开发者配合的话，这种业务侵入性很强的跟踪系统是难以大力推广的，也就难以实现“无所不在的部署”这样的能力，也就不能实现全面细致的跟踪。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;可伸缩性，面对未来N年服务集群扩大的趋势，都应该能对其进行有力地把控&lt;/strong&gt;
+分布式跟踪系统不只是跟踪几个、十几个服务，它在设计上要能够对大规模的服务集群进行全局把控。这就要求其必须保持足够的可伸缩性，在服务集群扩大之后要通过某种形式的“扩容”来保证分布式跟踪能力的线性增长。这里的扩容可能是机器级别的、网络级别的、存储级别的。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这3个设计目标之外，还有另一个设计目标，“&lt;strong&gt;信息处理的速度要足够快&lt;/strong&gt;”。如果信息处理的速度足够快，就可以近乎实时地发现线上系统中存在的异常问题。&lt;/p&gt;
+&lt;h2 id="实现方案"&gt;实现方案 &lt;a href="#%e5%ae%9e%e7%8e%b0%e6%96%b9%e6%a1%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;dapper在许多高阶的设计思想上吸取了&lt;code&gt;pinpoint&lt;/code&gt;和&lt;code&gt;Magpie&lt;/code&gt;的研究成果，但在分布式跟踪领域中，dapper的实现包含了许多新的贡献。例如为了保证对业务服务的“低开销”，引入了“&lt;strong&gt;采样率&lt;/strong&gt;”。dapper的另一个特征就是在足够低的层级实现分布式跟踪，以对应用级透明。&lt;/p&gt;
+&lt;h3 id="跟踪树"&gt;跟踪树 &lt;a href="#%e8%b7%9f%e8%b8%aa%e6%a0%91" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;dapper的分布式跟踪方案可以借助下图来一探究竟，其核心思想是从客户端（user）发起的请求一直到接入层服务A，再到后端服务B、C，再从C到D、E，整个请求处理链路可以借由一个树形结构来表示出来。可以通过将服务器上发生的每一次请求、响应作为一个记录收集起来，收集信息包括跟踪标识符（message identifier）和时间戳（timestamped events）。通过添加标注（annotation），依赖于应用程序或中间件明确地标记一个全局id，从而连接每一条收集的记录和用户发起的请求。显然这里需要代码植入，不过我们可以代码植入的范围收敛到框架层，保证对应用层透明。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/dapper/1538574420_34.png" alt="dapper跟踪树"&gt;&lt;/p&gt;
+&lt;p&gt;下面对dapper的设计思想进行更深入的了解，我们将先从上图中涉及到的几个关键概念开始。&lt;/p&gt;
+&lt;h3 id="跟踪trace"&gt;跟踪（trace） &lt;a href="#%e8%b7%9f%e8%b8%aatrace" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;在dapper跟踪树结构中，树节点是整个架构的基本单元，而每一个节点是一个span，它又包含了对其他span的引用&lt;/strong&gt;。节点之间的连线表示的是当前span与它的父span或者派生出的子span之间的关系。span在日志文件中的表示只是简单的记录请求开始时间、请求结束时间，span在整个树形结构中它们是相对独立的。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/dapper/1538573941_58.png" alt="dapper trace"&gt;)&lt;/p&gt;
+&lt;p&gt;上图是一个分布式跟踪过程的示意图，图中说明了span在一个完整的跟踪过程中是什么样的，dapper记录了span的名称、span-id、父span-id，以重建一次跟踪过程中不同span之间的关系。如果一个span没有父span-id那么它是root span，也就是整个调用链的起始点。所有span都挂在一个特定的跟踪链上，也共用同一个跟踪id，即trace-id（图中未标出）。所有这些id（trace-id、span-id）都是全局唯一的64位整数表示。&lt;/p&gt;
+&lt;p&gt;在一个典型的dapper跟踪中，我们希望为每一个rpc对应到一个单一的span上，而且每一个额外的组件层都对应到一个跟踪树型结构的层级。&lt;/p&gt;
+&lt;h3 id="跨度span"&gt;跨度（span） &lt;a href="#%e8%b7%a8%e5%ba%a6span" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;下图中给出了一个更加详细的dapper跟踪中span记录点的视图，其实&lt;strong&gt;每个span记录点都包含了两个不同的视角（client端RPC视角，server端RPC视角）&lt;/strong&gt;，图中也画出了rpc Helper.Call的client、server端视角，如client发送请求、server接收请求、server处理、server发送响应、client接收响应的过程。span的开始、结束时间，以及任何rpc的时间信息都可以通过dapper在rpc组件库中植入代码以记录下来。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/dapper/1538573991_26.png" alt="dapper span"&gt;&lt;/p&gt;
+&lt;p&gt;如果应用程序开发者希望在跟踪中增加自己的注释信息（业务数据），如图中的“foo”，这些信息也会和其他span一样记录下来。&lt;/p&gt;
+&lt;p&gt;此外，&lt;strong&gt;任何一个span记录点都包括了来自rpc client、rpc server端的主机信息&lt;/strong&gt;。每一个span记录点可以包含来自client、server两端的注释信息，使得span记录点能够记录请求方、响应方这两个主机的信息。&lt;strong&gt;另外由于记录的时间戳来自不同的主机，不同的主机上的时间可能存在一定的时间偏差（时钟漂移），必须考虑时间偏差带来的影响，因为它会影响到我们判断某个span的发生时间的先后顺序&lt;/strong&gt;。我们可以基于这样的一个事实，就是rpc client发送一个请求之后server才可以收到，对于响应也是一样，server响应之后client才能收到响应，这样一来rpc server端的接收响应时间戳、发送响应时间戳就确定了一个上下限。&lt;/p&gt;
+&lt;h3 id="植入点instrumentation-point"&gt;植入点（instrumentation point） &lt;a href="#%e6%a4%8d%e5%85%a5%e7%82%b9instrumentation-point" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;dapper可以对应用开发者以近乎零侵入的成本对分布式控制路径进行跟踪，几乎完全依赖于少量通用组件库的改造，如在框架层对现有rpc代码进行改造，植入分布式跟踪相关的代码。&lt;/p&gt;
+&lt;p&gt;如何记录跟踪上下文信息呢（trace-id、parent span-id、span-id）？不同的rpc框架可能基于不同的网络服务模型（同步、异步、多进程、多线程、协程）实现，需要考虑清楚如何保存这里的跟踪上下文，可以结合不同的编程语言提供的语言特性来辅助实现，如基于java多线程模型实现的rpc框架可能会考虑通过ThreadLocal来存储跟踪上下文信息，golang可以通过goroutine局部变量来寄存跟踪上下文信息，C++可以通过一个全局map结构来维护请求seq与跟踪上下文的映射关系等，这只是一种保存跟踪上下文信息的思路，具体的场景还需要具体分析。&lt;/p&gt;
+&lt;h3 id="注释annotation"&gt;注释（annotation） &lt;a href="#%e6%b3%a8%e9%87%8aannotation" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;下面是通过c++和java向跟踪中span记录点添加注释的方法：&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/dapper/1538573134_74.png" alt="dapper span annotation"&gt;&lt;/p&gt;</description></item><item><title>布隆过滤器的原理及应用</title><link>/blog/2018-09-29-%E5%B8%83%E9%9A%86%E8%BF%87%E6%BB%A4%E5%99%A8%E5%8E%9F%E7%90%86%E5%8F%8A%E5%BA%94%E7%94%A8/</link><pubDate>Sat, 29 Sep 2018 22:49:10 +0800</pubDate><guid>/blog/2018-09-29-%E5%B8%83%E9%9A%86%E8%BF%87%E6%BB%A4%E5%99%A8%E5%8E%9F%E7%90%86%E5%8F%8A%E5%BA%94%E7%94%A8/</guid><description>&lt;style&gt;
+img {
+width: 680px;
+padding-bottom: 1rem;
+}
+&lt;/style&gt;
+&lt;p&gt;布隆过滤器在很多场景中都有应用，如根据发件人过滤垃圾邮件、避免已浏览视频的重复推荐、避免分布式缓存中不存在key的访问穿透，等等，布隆过滤器发挥了非常大的作用，布隆过滤器其实也存在很多的变体。本文就来结合作者业务中遇到的问题、布隆过滤器的应用来详细了解下布隆过滤器的原理及应用。&lt;/p&gt;
+&lt;h1 id="布隆过滤器"&gt;布隆过滤器 &lt;a href="#%e5%b8%83%e9%9a%86%e8%bf%87%e6%bb%a4%e5%99%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;描述布隆过滤器之前，首先描述下背景，经常遇到“&lt;strong&gt;快速查询、插入&lt;/strong&gt;”等操作的场景，这个时候第一时间想到的可能是set、map数据结构，因为它的时间复杂度为O(1)，是首选的数据结构。但是当&lt;strong&gt;要记录的数据量非常大时，set、map可能并不是一种合适的选择&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;假如我们有一个短视频推荐的场景，用户每次拉取短视频列表时都只返回用户没有看过的短视频，短视频通过短视频id（uint32）唯一标识，假如我们用map来存储，一个短视频id就需要4字节，假如一个用户一天可以观看50个短视频，1个月就是1500个，1年就是18000个，这样一个用户1年就需要占用存储72KB，假如我们有100w用户，那就是72GB，这些信息是要放在内存里面进行计算的，什么样的机型才可以拥有72GB大小的内存啊？要尽量做到“低成本、高性能”的方案设计，这种选型是有问题的。&lt;/p&gt;
+&lt;p&gt;布隆过滤器（bloom filter），其实就是一种折中的设计方案。内存是按字节寻址，但是1个字节是8位，存储1个短视频id，比如值1，1bit就可以表示的情况下却需要多占用31个bit，岂不是极大的浪费？&lt;strong&gt;布隆过滤器的底层存储其实也就是一段连续的内存空间，所有的查询、插入操作都转换成对bit的查询、写入操作。比如要写入一个短视频id，将通过多轮hash(短视频id)计算出多个bit offset，如b1&lt;del&gt;b8，然后存储操作就转换为将b1&lt;/del&gt;b8全部设置为1，查询操作就转换为查询b1~b8是否全部为1&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/bloomfilter/1538231246_68.png" alt="bloom filter"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;布隆过滤器，以接近O(1)的性能进行查询、插入操作，但是由于hash碰撞的存在，会引入一定的误差率&lt;/strong&gt;。存在这样的问题，本来短视频id NNN没有存储，但是却由于多轮hash(NNN)得到的b1&lt;del&gt;b8与其他某个短视频id MMM计算得到的b1&lt;/del&gt;b8完全相同，更可能由于之前存储多个短视频id A、B、C、D时将b1~b8设置为1，此时就会导致判断NNN已存储。这种情况就引入了“误差率”的概念。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;误差率&lt;/strong&gt;：
+布隆过滤器现在要存储N个元素，存储指定元素e时，先进行多轮hash计算得到b1&lt;del&gt;bn，然后依次检查offset为b1&lt;/del&gt;bn的bit位是否已经设置为1，如果全部为1则表示布隆过滤器中已存储该元素。当不全为1时认为没有存储过元素e，将b1~bn设置为1。
+由于写入操作时，我们总是遵循test、set的方式，所以当我们逐次将N个元素写入布隆过滤器时，假如test时发现元素已存储，这种情况下一定是由于hash碰撞引起，引入了误差。
+&lt;strong&gt;所以如果要求写入N个元素却只成功写入了M个元素（M&amp;lt;=N），误差率=(N-M)/N&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;优缺点&lt;/strong&gt;：
+优点：速度快，又节省存储空间。
+缺点：存在一定的误差 &amp;amp;&amp;amp; 不支持删除操作。&lt;/p&gt;
+&lt;p&gt;如果应用场景允许一定的判定误差，例如短视频推荐场景、信息流推荐场景等，那么布隆过滤器也不失为一种合适的选择。&lt;strong&gt;刚才提到set、map占用内存空间大，那么布隆过滤能占用多少呢，这里就涉及到误差率和存储成本之间的权衡了&lt;/strong&gt;。&lt;/p&gt;
+&lt;h1 id="误差率--存储空间"&gt;误差率 &amp;amp; 存储空间 &lt;a href="#%e8%af%af%e5%b7%ae%e7%8e%87--%e5%ad%98%e5%82%a8%e7%a9%ba%e9%97%b4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;误差率，一般是根据应用场景或者产品体验、产品表现来指定的，如用布隆过滤器记录用户观看过的短视频id误差率不超过1/1000。&lt;/p&gt;
+&lt;p&gt;其实指定了误差率之后，一般也就可以确定存储1个这样的短视频id所需要的大致bit数量了，简称bpe（bits per element），&lt;code&gt;double bpe = - (log(error) / (ln(2)^2))&lt;/code&gt;，但是到底需要多少bit数量（bpe是浮点型），还需要进一步确定，&lt;code&gt;int hashes = (int)ceil(ln(2) * bpe)&lt;/code&gt;，这表名要计算得到hashes个hash值，然后用这个值对布隆过滤器内存空间bits数量取模，从而得到hashes个bit offset。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;double denom = 0.480453013918201; // ln(2)^2
+double bpe = -(log(error) / denom);
+int hashes = (int)ceil(0.693147180559945 * bpe); // ln(2)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;假如希望存储entries个元素的话，在满足上述误差率的情况下，布隆过滤器需要分配内存空间为&lt;code&gt;int bits = (int)(bpe * entries)&lt;/code&gt;。&lt;/p&gt;</description></item><item><title>工程素养：godoc文档</title><link>/blog/2018-06-29-godoc%E6%96%87%E6%A1%A3/</link><pubDate>Fri, 29 Jun 2018 22:39:03 +0800</pubDate><guid>/blog/2018-06-29-godoc%E6%96%87%E6%A1%A3/</guid><description>&lt;h1 id="godoc文档"&gt;godoc文档 &lt;a href="#godoc%e6%96%87%e6%a1%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="标准库文档"&gt;标准库文档 &lt;a href="#%e6%a0%87%e5%87%86%e5%ba%93%e6%96%87%e6%a1%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当要查看go标准库文档时，可借助godoc命令进行查询，如&lt;code&gt;godoc container/list&lt;/code&gt;，也可以在本地开启一个web服务来查询，如&lt;code&gt;godoc -http=:6060&lt;/code&gt;。&lt;/p&gt;
+&lt;h2 id="非标注库文档"&gt;非标注库文档 &lt;a href="#%e9%9d%9e%e6%a0%87%e6%b3%a8%e5%ba%93%e6%96%87%e6%a1%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当要查看非标准库（如自建项目）的文档时，我们也是借助godoc来查看，但是执行godoc命令之前需要做些准备工作。&lt;/p&gt;
+&lt;h3 id="希望在文档中看到什么信息"&gt;希望在文档中看到什么信息 &lt;a href="#%e5%b8%8c%e6%9c%9b%e5%9c%a8%e6%96%87%e6%a1%a3%e4%b8%ad%e7%9c%8b%e5%88%b0%e4%bb%80%e4%b9%88%e4%bf%a1%e6%81%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;package介绍&lt;/li&gt;
+&lt;li&gt;type介绍&lt;/li&gt;
+&lt;li&gt;func介绍&lt;/li&gt;
+&lt;li&gt;示例代码&lt;/li&gt;
+&lt;li&gt;针对package的示例代码&lt;/li&gt;
+&lt;li&gt;针对type的示例代码&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;上述几种希望看到的信息，我们首先需要在代码中按照godoc约定的方式提供上述信息，godoc才能找到这些信息展示出来。下面就分别描述下如何在代码中包含上述信息。&lt;/p&gt;
+&lt;h3 id="package--type--func-介绍"&gt;package &amp;amp; type &amp;amp; func 介绍 &lt;a href="#package--type--func-%e4%bb%8b%e7%bb%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;这里对package、type、func的介绍是以leading comments的方式在代码中直接提供的，就是package声明、type声明、func声明前面紧邻的注释，该注释与声明之间没有空行分隔。&lt;/p&gt;
+&lt;p&gt;以如下文件$GOPATH/src/kisslulu/conf/conf.go为例：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-golang"&gt;// Package conf provides support for loading json, ini, properties configuration.
+package conf
+// JsonCfg
+type JsonCfg struct {
+}
+// IniCfg
+type IniCfg struct {
+}
+// PropCfg
+type PropCfg struct {
+}
+// Load json config from filepath
+func LoadJsonCfg(filepath string) (*JsonCfg, error) {
+}
+// Load Ini config from filePath
+func LoadIniCfg(filepath string) (*IniCfg, error) {
+}
+// Load PropCfg from filepath
+func LoadPropCfg(filepath string) (*PropCfg, error) {
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;运行&lt;code&gt;godoc -http=:6060&lt;/code&gt;找到对应的package kisslulu/conf即可预览文档中对package、type、func的介绍。&lt;/p&gt;</description></item><item><title>Assembly Language</title><link>/blog/2017-10-14-%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80_assembly-language/</link><pubDate>Sat, 14 Oct 2017 20:13:35 +0800</pubDate><guid>/blog/2017-10-14-%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80_assembly-language/</guid><description>&lt;p&gt;处理器是算逻运算、控制操作的执行部件，它只能识别机器指令并执行动作。机器指令是一系列的0、1字符串，本质上对应了总线上的高低电平信号，所以机器语言都是特定于硬件的。&lt;/p&gt;
+&lt;p&gt;由于0、1字符串很难记忆，用机器语言开发是一个老大难的问题，汇编语言因此被开发出来用于代替机器语言。汇编指令只是机器指令中操作码的助记符，因此汇编语言仍然是机器强相关的，不同的处理器其对应的汇编指令也不同。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;学习汇编语言有助于理解：&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;程序是如何与操作系统、处理器、bios进行交互的；&lt;/li&gt;
+&lt;li&gt;数据如何在内存中以及外设中表示的；&lt;/li&gt;
+&lt;li&gt;处理器如何访问、执行指令；&lt;/li&gt;
+&lt;li&gt;指令如何访问、处理数据；&lt;/li&gt;
+&lt;li&gt;程序如何访问外设；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;其他使用汇编语言的优势：&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;消耗更少的内存和处理器执行时间；&lt;/li&gt;
+&lt;li&gt;允许以更简单的方式来完成硬件特定的复杂作业；&lt;/li&gt;
+&lt;li&gt;适用于时间敏感的作业；&lt;/li&gt;
+&lt;li&gt;适用于编写中断服务程序和内存驻留程序；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="11-pc硬件的基本特征"&gt;1.1 PC硬件的基本特征 &lt;a href="#11-pc%e7%a1%ac%e4%bb%b6%e7%9a%84%e5%9f%ba%e6%9c%ac%e7%89%b9%e5%be%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;机器指令是0、1字符串，分别表示ON、OFF，对应数字信号的高低电平。机器中的最低存储单位是bit，通常8bit构成一个byte，为了对数据传输过程中传输数据的有效性进行检查，通常会在数据byte发送之后再追加一个奇偶校验bit。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;奇校验：保证8bit数据+1bit校验位中的1的个数为奇数；&lt;/li&gt;
+&lt;li&gt;偶校验：保证8bit数据+1bit校验位中的1的个数为偶数；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;发送方、接收方遵循相同的奇偶校验规则，如果接收方收到数据后发现奇偶校验不正确，则表示可能硬件出错，或者出现了电平扰动。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;处理器支持如下数据尺寸：&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;|:&amp;mdash;|:&amp;mdash;&amp;mdash;|
+|Word|2 bytes|
+|Doubleword|4 bytes|
+|Quadword|8 bytes|
+|Paragraph|16 bytes|
+|Kilobyte|2^10 bytes|
+|Megabyte|2^20 bytes|&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;二进制 &amp;amp; 十六进制系统：&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;二进制天然适用于计算机计算领域，0、1刚好代表数字电路中的高低电平；而十六进制是用于对比较长的二进制数值进行更加优雅地简写，使我们表示起来更加清晰、简单。&lt;/p&gt;
+&lt;p&gt;二进制、十六进制的相关运算，特别是涉及到原码、反码、补码、移码的运算，需要重点了解下，建议参考《计算机组成原理》相关章节。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;访问内存中的数据：&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;处理器控制指令执行的过程可以简化为”取指令-指令移码-指令执行“的循环体，一个”取指令-指令译码-指令执行“周期称之为一个机器周期。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;取指周期：根据CS、IP从内存指定位置取指令，并存储到指令寄存器IR；&lt;/li&gt;
+&lt;li&gt;译码周期：根据IR中的指令，分析出操作码OP、操作数或操作数地址；&lt;/li&gt;
+&lt;li&gt;执行周期：根据分析出的OP、操作数或操作地址信息执行相应的动作；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Intel架构的处理器在内存中存储时是采用的小端字节序，意味着一个多字节数值的低字节部分将在低地址存储，高字节部分将在高地址存储，但是在处理器寄存器中存储时低字节部分就在低字节，高字节部分就在高字节，所以在处理器寄存器、内存之间存储、加载数据时需要做字节序方面的转换。&lt;/p&gt;
+&lt;p&gt;以处理器寄存器中数值0x1234为例，现在要将其存储到内存中，处理器先将0x34存储到内存低地址，然后再见0x12存储到内存高地址；假如内存中有数据0xabcd，现在要将其加载到处理器寄存器中，加载时也会做对应的处理，将0xab放在寄存器高位，将0xcd放在寄存器低位。&lt;/p&gt;
+&lt;p&gt;指令中的操作数地址，又有多种不同的寻址方式，立即数寻址、直接寻址、间接寻址、寄存器寻址等，这里后面会做相应的介绍。&lt;/p&gt;
+&lt;h3 id="12-开发环境配置"&gt;1.2 开发环境配置 &lt;a href="#12-%e5%bc%80%e5%8f%91%e7%8e%af%e5%a2%83%e9%85%8d%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;汇编指令特定于处理器的，因此不同的处理器系列、型号对应的汇编指令可能也会有差异，这里使用的是Intel-32架构的处理器，使用汇编器NASM进行汇编操作，其他可选的汇编器还有MASM、TASM、GAS等。&lt;/p&gt;
+&lt;h3 id="13-基本语法"&gt;1.3 基本语法 &lt;a href="#13-%e5%9f%ba%e6%9c%ac%e8%af%ad%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;汇编程序通常包括3个节，分别是data、bss、text节：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;data，用于声明初始化的变量和常量；&lt;/li&gt;
+&lt;li&gt;bss，用于声明未初始化的变量，这部分不会出现在编译后的程序中；&lt;/li&gt;
+&lt;li&gt;text，用于保存程序指令；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;text节中必须包括&amp;quot;&lt;strong&gt;global ${entry}&lt;/strong&gt;&amp;ldquo;声明，${entry}是程序入口，通常定义未_start，见文生义嘛。&lt;/p&gt;
+&lt;p&gt;汇编程序中的注释均以&amp;rdquo;;&amp;ldquo;开头，直到所在行结束。&lt;/p&gt;
+&lt;p&gt;汇编语言程序包括3种不同类型的语句：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;可执行汇编指令；&lt;/li&gt;
+&lt;li&gt;传递给汇编器的指令或伪操作；&lt;/li&gt;
+&lt;li&gt;宏；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;汇编语言语句遵循如下结构：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-nasm"&gt;[标识] 助记符 [操作数] [;注释]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;[]内部的部分是可选的，尤其是标识和注释部分，根据汇编指令的不同，有无操作数、操作数个数、操作数类型等均有所不同。汇编指令中包括了操作码和操作数相关信息，这里的助记符其实就是操作码的符号表示。&lt;/p&gt;</description></item><item><title>框架设计(协议层)：Protoc及其插件工作原理分析(精华版)</title><link>/blog/2017-05-23-protoc%E5%8F%8A%E6%8F%92%E4%BB%B6%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90%E7%B2%BE%E5%8D%8E%E7%89%88/</link><pubDate>Tue, 23 May 2017 16:29:25 +0800</pubDate><guid>/blog/2017-05-23-protoc%E5%8F%8A%E6%8F%92%E4%BB%B6%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90%E7%B2%BE%E5%8D%8E%E7%89%88/</guid><description>&lt;p&gt;在进行protoc插件开发之前，首先要了解protoc的工作原理。protobuf具有诸多优点被广泛使用，由于protoc对proto文件的强大解析能力使我们可以更进一步来开发一些插件，通过插件快速生成特定于proto文件的工具类、配置文件等，从而提高开发效率。&lt;/p&gt;
+&lt;p&gt;本文首先会介绍一下protoc的整体工作原理，然后详细介绍一下protoc对proto文件的解析过程，最后给出编写protoc插件来扩展protoc功能的一个示例（这里以protoc-gen-go插件为例）。&lt;/p&gt;
+&lt;h2 id="1-protoc工作原理分析"&gt;1. protoc工作原理分析 &lt;a href="#1-protoc%e5%b7%a5%e4%bd%9c%e5%8e%9f%e7%90%86%e5%88%86%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="10-protoc源代码准备"&gt;1.0. protoc源代码准备 &lt;a href="#10-protoc%e6%ba%90%e4%bb%a3%e7%a0%81%e5%87%86%e5%a4%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;要想了解protoc的工作机制，查看其源代码了解其核心流程是最靠谱的方法。&lt;/p&gt;
+&lt;p&gt;获取程序源代码的方式如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;git co https://github.com/google/protobuf
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;由于我们工程中常用的protoc版本是v2.5.0，所以这里检出对应版本的tag。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;git ck v2.5.0
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;考虑到可能会进行测试、修改、注释等学习过程，这里最好创建一个新的分支来操作。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;git branch -b ${new-branch-name}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;现在源代码准备好了，下面可以阅读protoc的源码梳理一下其工作原理了。&lt;/p&gt;
+&lt;p&gt;上述git检出后的protobuf路径，记为${protobuf}，后面如果出现${protobuf}请知晓其含义。如果在描述源代码时没有提及代码起始路径${protobuf}，那么起始路径均为${protobuf}。&lt;/p&gt;
+&lt;h3 id="11-protoc执行流程说明"&gt;1.1. protoc执行流程说明 &lt;a href="#11-protoc%e6%89%a7%e8%a1%8c%e6%b5%81%e7%a8%8b%e8%af%b4%e6%98%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;protoc执行流程的相关源码，主要包括如下两个部分。&lt;/p&gt;
+&lt;h4 id="111-protoc程序入口"&gt;1.1.1. protoc程序入口 &lt;a href="#111-protoc%e7%a8%8b%e5%ba%8f%e5%85%a5%e5%8f%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;protoc程序入口为以下源文件main函数，该入口函数中完成protoc命令行接口初始化、编程语言及代码生成器注册后，调用cli.Run(argc,argv)解析proto文件并生成特定语言的源代码。&lt;/p&gt;
+&lt;p&gt;file: src/google/protobuf/compiler/main.cc&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;// Author: kenton@google.com (Kenton Varda)
+// 这个头文件定义了protoc的命令行接口
+#include &amp;lt;google/protobuf/compiler/command_line_interface.h&amp;gt;
+// protoc中内置了对cpp、python、java语言的支持，对其他语言的支持需要以plugin的方式来支持
+#include &amp;lt;google/protobuf/compiler/cpp/cpp_generator.h&amp;gt;
+#include &amp;lt;google/protobuf/compiler/python/python_generator.h&amp;gt;
+#include &amp;lt;google/protobuf/compiler/java/java_generator.h&amp;gt;
+int main(int argc, char* argv[]) {
+// 初始化protoc命令行接口并开启插件
+// - 插件只是普通的可执行程序，其文件名以AllowPlugins参数protoc-开头
+// - 假定protoc --foo_out，那么实际调用的插件是protoc-foo
+google::protobuf::compiler::CommandLineInterface cli;
+cli.AllowPlugins(&amp;quot;protoc-&amp;quot;);
+// Proto2 C++ (指定了--cpp_out将调用cpp::Generator)
+google::protobuf::compiler::cpp::CppGenerator cpp_generator;
+cli.RegisterGenerator(&amp;quot;--cpp_out&amp;quot;, &amp;quot;--cpp_opt&amp;quot;, &amp;amp;cpp_generator,
+&amp;quot;Generate C++ header and source.&amp;quot;);
+// Proto2 Java (指定了--java_out将调用java::Generator)
+google::protobuf::compiler::java::JavaGenerator java_generator;
+cli.RegisterGenerator(&amp;quot;--java_out&amp;quot;, &amp;amp;java_generator,
+&amp;quot;Generate Java source file.&amp;quot;);
+// Proto2 Python (指定了python_out将调用python::Generator)
+google::protobuf::compiler::python::Generator py_generator;
+cli.RegisterGenerator(&amp;quot;--python_out&amp;quot;, &amp;amp;py_generator,
+&amp;quot;Generate Python source file.&amp;quot;);
+return cli.Run(argc, argv);
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id="112-命令接口clirunargcargv执行流程"&gt;1.1.2. 命令接口cli.Run(argc,argv)执行流程 &lt;a href="#112-%e5%91%bd%e4%bb%a4%e6%8e%a5%e5%8f%a3clirunargcargv%e6%89%a7%e8%a1%8c%e6%b5%81%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;cli.Run(&amp;hellip;)中，完成对proto文件的读取、解析，并通过注册的代码生成器或者protoc插件生成特定语言源代码，并最终完成源代码文件的创建。&lt;/p&gt;</description></item><item><title>框架设计(协议层)：Protoc工作原理分析</title><link>/blog/2017-05-16-protoc%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86/</link><pubDate>Fri, 19 May 2017 14:29:25 +0800</pubDate><guid>/blog/2017-05-16-protoc%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86/</guid><description>&lt;p&gt;在进行protoc插件开发之前，首先要了解protoc的工作原理。在protobuf的使用过程中，protoc作为proto文件的编译器，很多开发人员只会用但是不了解其工作原理，更不了解如何扩展其功能。protobuf作为目前常用的数据交换格式在协议开发中被广泛采用，此外，protoc对proto文件的强大解析能力使我们可以开发一些插件，通过插件快速生成特定于proto文件的工具类、配置文件等，从而提高开发效率。&lt;/p&gt;
+&lt;p&gt;本文首先会介绍一下protoc的整体工作机制，然后解释一下protoc对proto文件的解析过程，最后给出编写protoc插件扩展protoc功能的一个示例教程。&lt;/p&gt;
+&lt;h2 id="1-protoc源代码准备"&gt;1. protoc源代码准备 &lt;a href="#1-protoc%e6%ba%90%e4%bb%a3%e7%a0%81%e5%87%86%e5%a4%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;要想了解protoc的工作机制，查看其源代码了解其核心流程是最靠谱的方法。&lt;/p&gt;
+&lt;p&gt;获取程序源代码的方式如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;git co https://github.com/google/protobuf
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;由于我们工程中常用的protoc版本是v2.5.0，所以这里检出对应版本的tag。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;git ck v2.5.0
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;考虑到可能会进行测试、修改、注释等学习过程，这里最好创建一个新的分支来操作。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;git branch ${new-branch-name}
+git ck ${new-branch-name}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;现在源代码准备好了，我比较喜欢使用vim、ctags、cscope来阅读源码，根据个人习惯吧，下面可以阅读protoc的源码梳理以下工作机制。&lt;/p&gt;
+&lt;h2 id="2-protoc源码分析"&gt;2. protoc源码分析 &lt;a href="#2-protoc%e6%ba%90%e7%a0%81%e5%88%86%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;上述git检出后的protobuf路径，记为${protobuf}，后面如果出现${protobuf}请知晓其含义。如果在描述源代码时没有提及起始路径${protobuf}，那么起始路径均为${protobuf}。&lt;/p&gt;
+&lt;h3 id="21-protoc程序入口"&gt;2.1. protoc程序入口 &lt;a href="#21-protoc%e7%a8%8b%e5%ba%8f%e5%85%a5%e5%8f%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;src/google/protobuf/compiler/main.cc中的main函数，为protoc的入口函数。&lt;/p&gt;
+&lt;p&gt;file: src/google/protobuf/compiler/main.cc&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;// Author: kenton@google.com (Kenton Varda)
+// 这个头文件定义了protoc的命令行接口
+#include &amp;lt;google/protobuf/compiler/command_line_interface.h&amp;gt;
+// protoc中内置了对cpp、python、java语言的支持，对其他语言的支持需要以plugin的方式来支持
+#include &amp;lt;google/protobuf/compiler/cpp/cpp_generator.h&amp;gt;
+#include &amp;lt;google/protobuf/compiler/python/python_generator.h&amp;gt;
+#include &amp;lt;google/protobuf/compiler/java/java_generator.h&amp;gt;
+int main(int argc, char* argv[]) {
+// 初始化protoc命令行接口并开启插件
+// - 插件只是普通的可执行程序，其文件名以AllowPlugins参数protoc-开头
+// - 假定protoc --foo_out，那么实际调用的插件是protoc-foo
+google::protobuf::compiler::CommandLineInterface cli;
+cli.AllowPlugins(&amp;quot;protoc-&amp;quot;);
+// Proto2 C++ (指定了--cpp_out将调用cpp::Generator)
+google::protobuf::compiler::cpp::CppGenerator cpp_generator;
+cli.RegisterGenerator(&amp;quot;--cpp_out&amp;quot;, &amp;quot;--cpp_opt&amp;quot;, &amp;amp;cpp_generator,
+&amp;quot;Generate C++ header and source.&amp;quot;);
+// Proto2 Java (指定了--java_out将调用java::Generator)
+google::protobuf::compiler::java::JavaGenerator java_generator;
+cli.RegisterGenerator(&amp;quot;--java_out&amp;quot;, &amp;amp;java_generator,
+&amp;quot;Generate Java source file.&amp;quot;);
+// Proto2 Python (指定了python_out将调用python::Generator)
+google::protobuf::compiler::python::Generator py_generator;
+cli.RegisterGenerator(&amp;quot;--python_out&amp;quot;, &amp;amp;py_generator,
+&amp;quot;Generate Python source file.&amp;quot;);
+// 解析proto、生成源代码(借助内置的generator或者plugins)、创建源代码文件
+return cli.Run(argc, argv);
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="22-protoc命令行接口定义"&gt;2.2. protoc命令行接口定义 &lt;a href="#22-protoc%e5%91%bd%e4%bb%a4%e8%a1%8c%e6%8e%a5%e5%8f%a3%e5%ae%9a%e4%b9%89" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;下面看一下protoc的命令行接口定义，以了解其对命令行flags、options的解释过程以及对后续程序执行逻辑的影响。&lt;/p&gt;</description></item><item><title>网络编程：Linux常见IO模型</title><link>/blog/2017-05-02-linux-common-io-model/</link><pubDate>Tue, 02 May 2017 21:42:13 +0800</pubDate><guid>/blog/2017-05-02-linux-common-io-model/</guid><description>&lt;p&gt;目前Linux下可用的IO模型有5种，分别为阻塞IO、非阻塞IO、IO多路复用、信号驱动IO、异步IO，其中较为成熟且高效、稳定的是IO多路复用模型，因此当前众多网络服务程序几乎都是采用这种IO操作策略。&lt;/p&gt;
+&lt;p&gt;当一个应用程序读写（以读为例）某端口数据时，选择不同IO模型的应用程序，其执行流程也将不同。下面将对选择这5种不同IO模型时的程序的执行情形进行分析，以便了解使用IO复用模型的运行情况和性能优势。&lt;/p&gt;
+&lt;p&gt;一个完整经典的应用程序的数据读取操作可以看做两步：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;等待数据准备好；&lt;/li&gt;
+&lt;li&gt;将数据从内核复制到应用程序进程；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="1-阻塞io模型"&gt;1. 阻塞IO模型 &lt;a href="#1-%e9%98%bb%e5%a1%9eio%e6%a8%a1%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;最流行的IO模型是阻塞IO（Blocking IO）模型，几乎所有刚开始学习IO操作的人员都是使用这个模型，虽然它存在一定的性能缺陷，但是它的确很简单。&lt;/p&gt;
+&lt;p&gt;如下图所示，是利用该模型读取IO端口数据的典型流程。在有些情况下，当系统调用发现用户请求的IO操作不能立刻完成时（比如对IO写操作，缓冲区没有空闲空间或者空闲空间少于待写的数据量；而对于读操作，缓冲区中没有数据可读或者可读数据少于用户请求的数据量），则当前的进程会进入睡眠，也就是进程被IO读写阻塞。但是当数据可以写出或者有数据可供读入时（其他进程或线程从缓冲区中读走了数据后或者向缓冲区写入了数据），系统将会产生中断，唤醒在缓冲区上等待相应事件的进程继续执行。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2017-05-02-Linux-Common-IO-Model/blocking-io.jpg" alt="Blocking-IO-Model"&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;备注：
+有必要在这里进一步解释一下“阻塞IO”的含义。通过阻塞IO系统调用进行IO操作时，以read为例，在内核将数据拷贝到用户程序完成之前，Linux内核会对当前read请求操作的缓冲区（内存中的特殊区域）进行加锁，并且会将调用read的进程的状态设置为
+&lt;strong&gt;“uninterruptible wait”状态（不可中断等待状态）&lt;/strong&gt;，处于该状态的进程将无法参与进程调度。能够参与进程调度的进程的状态必须是处于running状态的进程或者有信号到达的处于interruptible wait状态（可中断等待状态）的进程。当read操作完成时，内核会将对应的缓冲块解锁，然后发出中断请求，内核中的中断服务程序会将阻塞在该缓冲块上的进程的状态修改为running状态以使其重新具备参与进程调度的能力。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="2-非阻塞io模型"&gt;2. 非阻塞IO模型 &lt;a href="#2-%e9%9d%9e%e9%98%bb%e5%a1%9eio%e6%a8%a1%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在有些时候并不希望进程在IO操作未完成时睡眠，而是希望系统调用能够立刻返回一个错误，以报告这一情况，然后进程可以根据需要在适当的时候再重新执行这个IO操作。这就是所谓的非阻塞IO模型。&lt;/p&gt;
+&lt;p&gt;如下图所示，应用程序前几次read系统调用时都没有数据可供返回，此时内核立即返回一个EAGAIN错误代码，程序并不睡眠而是继续调用read，当第四次调用read时数据准备好了，于是执行数据从内核到用户空间的复制操作并成功返回，应用程序接着处理数据。&lt;strong&gt;这种对一个非阻塞IO端口反复调用read进行数据读取的动作称为轮询&lt;/strong&gt;，即应用程序持续轮询内核数据是否准备好。这里的持续轮询操作将导致耗费大量的CPU时间，因此该模型并不推荐使用。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;备注&lt;/strong&gt;：EAGAIN 表示“Resource temporarily unavailable”（资源暂时不可用）。Linux 中定义的其他错误码可以通过 &lt;code&gt;man errno&lt;/code&gt; 查看。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;img src="assets/2017-05-02-Linux-Common-IO-Model/nonblocking-io.jpg" alt="NonBlocking-IO-Model"&gt;&lt;/p&gt;
+&lt;h2 id="3-io多路复用模型"&gt;3. IO多路复用模型 &lt;a href="#3-io%e5%a4%9a%e8%b7%af%e5%a4%8d%e7%94%a8%e6%a8%a1%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;前面介绍了&lt;strong&gt;非阻塞IO模型的问题在于，尽管应用程序可以在当前IO操作不能完成的时候迫使系统调用立刻返回而不至于睡眠，但是却无法知道什么时候再次请求IO操作可以顺利完成，只能周期性地做很多无谓的轮询&lt;/strong&gt;，每隔一段时间就要重新请求一次系统调用，这种轮询策略极大浪费了CPU时间。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;IO多路复用模型就是在此之上的改进，它的好处在于使得应用程序可以同时对多个IO端口进行监控以判断其上的操作是否可以顺利（无阻塞地）完成，达到时间复用的目的&lt;/strong&gt;。进程阻塞在类似于select、poll或epoll这样的系统调用上，而不是阻塞在真正的IO系统调用上，意思也就是说在这些select、poll或者epoll函数内部会代替我们做非阻塞地轮询，那么它的轮询策略是怎样地呢？稍后会进行介绍。&lt;/p&gt;
+&lt;p&gt;select、poll或epoll使得进程可以在多个IO端口上等待IO事件（可读、可写、网络连接请求等）的发生，当有事件发生时再根据发生事件的类型进行适当的IO处理。不过进程在等待IO事件发生时仍然在代码执行序上处于“阻塞”状态，应用程序“阻塞”在这里照样还是无法做其他的工作（尽管可以指定轮询时等待时间的长短）。如果希望进程在没有IO事件要处理时还能做其他的工作，可以考虑分派任务给其他线程、进程，当然也可以在当前线程做，但是不宜过久以免影响处理IO事件。&lt;/p&gt;
+&lt;p&gt;下图是IO多路复用模型的示例。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2017-05-02-Linux-Common-IO-Model/io-multiplexing.jpg" alt="IO-Multiplexing"&gt;&lt;/p&gt;
+&lt;p&gt;IO多路复用模型主要有3种实现形式，select、poll、epoll。&lt;/p&gt;
+&lt;h3 id="31-select"&gt;3.1. select &lt;a href="#31-select" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;#include &amp;lt;sys/select.h&amp;gt;
+//返回值：readfds、writefds、exceptfds中事件就绪的fd的数量
+int select(int nfds, // 最大文件描述符fd+1
+fd_set *restrict readfds, // 等待读取的fds
+fd_set *restrict writefds, // 等待写入的fds
+fd_set *restrict exceptfds, // 异常fds
+struct timeval *restrict timeout); // 超时时间
+//返回值：readfds、writefds、exceptfds中事件就绪的fd的数量
+int pselect(int nfds, // 最大文件描述符fd+1
+fd_set *restrict readfds, // 等待读取的fds
+fd_set *restrict writefds, // 等待写入的fds
+fd_set *restrict exceptfds, // 异常fds
+const struct timespec *restrict timeout, // 超时时间
+const sigset_t *restrict sigmask); // 信号掩码
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;备注：
+IO事件就绪的意思是，执行对应的IO操作时可以无阻塞地完成。例如读事件就绪，表明一定有数据到达，或者已经读取到了数据的结束位置EOF。&lt;/p&gt;</description></item><item><title>网络编程：协程的历史、现在和未来!</title><link>/blog/2017-09-23-%E5%8D%8F%E7%A8%8B%E7%9A%84%E5%8E%86%E5%8F%B2%E7%8E%B0%E5%9C%A8%E5%92%8C%E6%9C%AA%E6%9D%A5/</link><pubDate>Thu, 27 Apr 2017 02:25:36 +0800</pubDate><guid>/blog/2017-09-23-%E5%8D%8F%E7%A8%8B%E7%9A%84%E5%8E%86%E5%8F%B2%E7%8E%B0%E5%9C%A8%E5%92%8C%E6%9C%AA%E6%9D%A5/</guid><description>&lt;p&gt;计算机科学是一门应用科学，几乎所有概念都是为了理解或解决实际问题而生的。协程 (Coroutine) 的出现也不例外。协程的概念，最早可以追溯到写作 COBOL 语言编译器中的技术难题。&lt;/p&gt;
+&lt;h2 id="1从磁带到协程"&gt;1.从磁带到协程 &lt;a href="#1%e4%bb%8e%e7%a3%81%e5%b8%a6%e5%88%b0%e5%8d%8f%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;COBOL 是最早的高级语言之一。编译器则是高级语言必不可少的一部分。现如今，我们对编译器了解，已经到了可以把核心内容浓缩成一本教科书的程度。然而在六十年代，如何写作高效的语言编译器是那个时代绕不过的现实问题。比如，1960 年夏天，D. E. Knuth 就是利用开车横穿美国去加州理工读研究生的时间，对着 Burroughs 205 机器指令集手写 COBOL 编译器。最早提出“协程”概念的 Melvin Conway 的出发点，也是如何写一个只扫描一遍程序 (one-pass) 的 COBOL 编译器。众多的“高手”纷纷投入编译器书写，可见一门新科学发展之初也是筚路蓝缕&lt;/p&gt;
+&lt;p&gt;以现代眼光来看，高级语言编译器实际上是多个步骤组合而成：词法解析，语法解析，语法树构建，以及优化和目标代码生成等等。编译实质上就是从源程序出发，依次将这些步骤的输出作为下一步的输入，最终输出目标代码。在现代计算机上实现这种管道式的架构毫无困难：只需要依次运行，中间结果存为中间文件或放入内存即可。GCC 和 Clang 编译器，以及 ANTLR 构建的编译器，都遵循这样的设计。&lt;/p&gt;
+&lt;p&gt;在 Conway 的设计里，词法和语法解析不再是两个独立运行的步骤，而是交织在一起。编译器的控制流在词法和语法解析之间来回切换：当词法模块读入足够多的 token 时，控制流交给语法分析；当语法分析消化完所有 token 后，控制流交给词法分析。词法和语法分别独立维护自身的运行状态。Conway 构建的这种协同工作机制，需要参与者“让出 (yield)”控制流时，记住自身状态，以便在控制流返回时能够从上次让出的位置恢复(resume)执行。简言之，协程的全部精神就在于控制流的主动让出和恢复。我们熟悉的子过程调用可以看作在返回时让出控制流的一种特殊的协程，其内部状态在返回时被丢弃了，因此不存在“恢复”这个操作。&lt;/p&gt;
+&lt;p&gt;以现在眼光来看，编译器的实现并不必然需要协程。然而，Conway 用协程实现 COBOL 编译器在当时绝不是舍近求远。&lt;/p&gt;
+&lt;h2 id="2自顶向下无需协同"&gt;2.自顶向下，无需协同 &lt;a href="#2%e8%87%aa%e9%a1%b6%e5%90%91%e4%b8%8b%e6%97%a0%e9%9c%80%e5%8d%8f%e5%90%8c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;虽然协程是伴随着高级语言诞生的，它却没有能像子过程一样成为通用编程语言的基本元素。&lt;/p&gt;
+&lt;p&gt;从 1963 年首次提出到上个世纪九十年代，我们在 ALOGL, Pascal, C, FORTRAN 等主流的命令式编程语言中都没有看到原生的协程支持。协程只稀疏地出现在 Simula，Modular-2 (Pascal 升级版) 和 Smalltalk 等相对小众的语言中。协程作为一个比子进程更加通用的概念，在实际编程却没有取代子进程，这一点不得不说是出乎意外的。如果我们结合当时的程序设计思想看，这一点又是意料之中的：协程是不符合那个时代所崇尚的“自顶向下”的程序设计思想的，自然也就不会成为当时主流的命令式编程语言 (imperative programming) 的一部分。&lt;/p&gt;
+&lt;p&gt;正如面向对象的语言是围绕面向对象的开发理念设计一样，命令式编程语言是围绕自顶向下(top-down)的开发理念设计的。在自顶向下的理念指导下，程序被切分为一个主程序和大大小小的子模块，每一个子模块又可能调用更多子模块等等。C 家族语言的 main() 函数就是这种自顶而下思想的体现。在这种理念指导下，各模块形成层次调用关系，而程序设计就是制作这些子过程。在“自顶向下”这种层次化的理念下，具有鲜明层次的子过程调用成为软件系统最自然的组织方式，也是理所当然。相较之下，具有执行中让出和恢复功能的协程在这种架构下无用武之地。可以说，自上而下的设计思想从一开始就排除了对协程的需求。其后的结构化编程(Structural Programming) 思想，更是进一步强化了“子过程调用作为唯一控制结构”的基本假设。在这样的指导思想下，协程一直没有成为当时编程语言的一等公民。&lt;/p&gt;</description></item><item><title>框架设计：Coroutine-Switching</title><link>/blog/2017-04-26-coroutine-switching/</link><pubDate>Wed, 26 Apr 2017 16:23:49 +0800</pubDate><guid>/blog/2017-04-26-coroutine-switching/</guid><description>&lt;h3 id="1-协程coroutine"&gt;1. 协程Coroutine &lt;a href="#1-%e5%8d%8f%e7%a8%8bcoroutine" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;本文提供了一个模拟协程上下文切换过程的测试程序，基本思路是每当希望创建一个coroutine时，就在堆里申请一块内存，然后对内存进行整理，在其中保存预设的硬件上下文等信息（重点设置rbp、rsp、rip（callback）、rdi（callback-arg））。启动协程并进行切换时，通过__SwitchCoroutine__(cur,next)来完成cur向next的切换，切换过程中保存当前上下文信息到cur对应的堆内存中，并提取next对应的堆内存信息还原上下文完成切换。 测试程序中创建了4个coroutine，第1个coroutine只是为了用来启动其他3个，其他3个没有继续调度第一个，原因是第一个coroutine中rip保存的是main.c中__SwitchCoroutine__之后的指令地址，如果让第一个coroutine参与context-switch的话会使得进程结束执行。&lt;/p&gt;
+&lt;p&gt;在看下面的程序之前，需要先了解栈帧的构成、栈帧创建之前caller的动作&amp;amp;创建之后callee的动作、函数返回之前callee的动作&amp;amp;函数返回之后caller的动作，之前看过一篇整理的很不错的文章以供参考C Function Call Conventions and the Stack。&lt;/p&gt;
+&lt;p&gt;ps: 实际上直接使用linux下的ucontext_t实现会更简单，在我的介绍libmill的电子书中有详细介绍。&lt;/p&gt;
+&lt;h4 id="11-协程coroutine声明"&gt;1.1. 协程coroutine声明 &lt;a href="#11-%e5%8d%8f%e7%a8%8bcoroutine%e5%a3%b0%e6%98%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;file: coroutine.h&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;#include &amp;lt;stdint.h&amp;gt;
+typedef int64_t (*EntryCallback)(void*);
+//硬件上下文信息
+struct stRegister
+{
+uint64_t rax;
+uint64_t rbx;
+uint64_t rcx;
+uint64_t rdx;
+uint64_t rsi;
+uint64_t rdi;
+uint64_t r8;
+uint64_t r9;
+uint64_t r10;
+uint64_t r11;
+uint64_t r12;
+uint64_t r13;
+uint64_t r14;
+uint64_t r15;
+uint64_t rbp;
+uint64_t rsp;
+uint64_t rip;
+};
+//协程上下文
+struct stContext
+{
+struct stRegister cpu_register;
+void *arg;
+uint8_t *stack;
+};
+typedef struct stContext Coroutine;
+//创建协程
+Coroutine* CreateCoroutine(EntryCallback entry, void *arg);
+//删除协程
+void DeleteCoroutine(Coroutine *ptr);
+//设置协程栈尺寸
+void SetStackSize(uint32_t size);
+//协程切换
+void __SwitchCoroutine__(Coroutine *cur, const Coroutine *next);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h4 id="12-协程coroutine实现"&gt;1.2. 协程Coroutine实现 &lt;a href="#12-%e5%8d%8f%e7%a8%8bcoroutine%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;file: coroutine.c&lt;/p&gt;</description></item><item><title>网络编程：Java NIO Tutorials</title><link>/blog/2017-04-20-%E5%AD%A6%E4%B9%A0java-nio/</link><pubDate>Wed, 05 Apr 2017 14:56:32 +0800</pubDate><guid>/blog/2017-04-20-%E5%AD%A6%E4%B9%A0java-nio/</guid><description>&lt;h2 id="1-前言"&gt;1 前言 &lt;a href="#1-%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Java NIO，意为Java New IO，是一种相对于Java标准IO、网络API的替代方案。从JDK 1.4开始NIO就被引入了进来，它提供了另一种IO处理的方式，这使得Java在IO处理方面向前迈进了一大步。&lt;/p&gt;
+&lt;h4 id="nio-channel--buffer"&gt;NIO Channel &amp;amp; Buffer &lt;a href="#nio-channel--buffer" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;在Java标准IO里面，IO处理的对象是字节流或字符流，在NIO里面我们处理的对象是channel和buffer，数据读总是从channel中读入到buffer，输入写总是从buffer写入到channel。&lt;/p&gt;
+&lt;h4 id="nio-non-blocking-io"&gt;NIO Non-Blocking IO &lt;a href="#nio-non-blocking-io" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;Java NIO使得我们可以通过非阻塞的方式执行IO处理，例如一个线程请求从channel中读取数据到buffer的时候，在channel执行数据读取操作到buffer的过程中，线程仍然可以执行其他的处理工作，当数据被读取到buffer中之后，线程再去对数据进行处理。数据写的过程也是与此类似。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;备注：&lt;br&gt;
+其实参考glibc中的pthread用户级线程库实现，可以大致想到这种channel、buffer工作模式的一种大致实现，大不了我多开一个用户线程让其执行channel和buffer之间的数据传输工作，处理完之后给原本请求channel读写数据的用户线程发个信号让其进行数据处理。Linux中的AIO就是这么搞的，可以参考《Linux设备驱动开发》。&lt;br&gt;
+大家所描述的没有底层硬件支持的异步，很多都是指的软件代码执行序上的异步，本质上代码还是在以同步的方式执行，只不过在这些同步技术之上结合一些小佐料起到了类似的异步执行的效果。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h4 id="nio-selector"&gt;NIO Selector &lt;a href="#nio-selector" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;Java NIO中有Selector（选择器）的概念，一个selector可以对多个channel上的事件进行监听，例如对多个channel上的连接打开、数据到达事件进行监听，因此一个selector可以用于对多个channel上的连接打开、关闭以及读写事件进行监听、处理。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;备注：&lt;br&gt;
+Linux中的selector本质上是基于epoll实现的，因此可以结合epoll来理解selector。&lt;br&gt;
+channel不过是对网络套接字的封装，buffer不过是对接收缓冲、发送缓冲的封装，selector不过是对epollfd的封装，selector对多个channel的监听，不过是epoll在epollfd上EPOLL_CTL_ADD了多个channel对应的fd，并对其上的事件进行必要的监听。selector轮询事件是否发生，本质上也就是epoll_wait轮询注册的多个fd上是否有事件发生。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;下面将展开介绍Java NIO是如何工作的。&lt;/p&gt;
+&lt;h3 id="2-概要"&gt;2 概要 &lt;a href="#2-%e6%a6%82%e8%a6%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Java NIO包括3个核心组件，即channel、buffer、selector。Java NIO里面包括的类不止这几个，但是我个人认为Java NIO API的核心类就这几个，其他的例如Pipe、FileLock子类的都是配合这3个核心组件使用的工具类，所以这里先重点介绍channel、buffer、selector，后面会在独立章节中对其他类进行介绍。&lt;/p&gt;
+&lt;h4 id="nio-channel--buffer-1"&gt;NIO Channel &amp;amp; Buffer &lt;a href="#nio-channel--buffer-1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;Java NIO中的所有IO操作几乎都是从一个channel开始的，channel可以看做是对一对套接字的封装，例如一个tcp连接。可以从channel中读取数据到buffer，同样也可以将buffer中的数据写入到channel中，下图展示了channel和buffer的这一关系。&lt;/p&gt;
+&lt;p&gt;&lt;img src="data:image/png;base64,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" alt="Overview"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Channel大致有如下几种实现：&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;FileChannel&lt;/li&gt;
+&lt;li&gt;DatagramChannel&lt;/li&gt;
+&lt;li&gt;SocketChannel&lt;/li&gt;
+&lt;li&gt;ServerSocketChannel&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;其中FileChannel主要用于文件io，DatagramChannel主要用于udp网络通信，SocketChannel用于tcp网络通信，而ServerSocketChannel用于建立tcp连接。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Buffer大致有如下几种实现：&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;ByteBuffer&lt;/li&gt;
+&lt;li&gt;CharBuffer&lt;/li&gt;
+&lt;li&gt;DoubleBuffer&lt;/li&gt;
+&lt;li&gt;FloatBuffer&lt;/li&gt;
+&lt;li&gt;IntBuffer&lt;/li&gt;
+&lt;li&gt;LongBuffer&lt;/li&gt;
+&lt;li&gt;ShortBuffer&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;上述多种Buffer的不同之处在于其中存储的数据类型的差异，例如ByteBuffer就是按照直接进行读写，CharBuffer就是按照字符进行读写。&lt;/p&gt;
+&lt;p&gt;Java NIO中海油一种Buffer实现MappedByteBuffer，这种Buffer需要与内存映射文件来配合使用，我们这里暂时先不予介绍。&lt;/p&gt;
+&lt;h4 id="nio-selector-1"&gt;NIO Selector &lt;a href="#nio-selector-1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;一个selector允许一个单一线程对多个channel上的事件进行处理（Linux平台下的selector实现就是基于epoll），一个单一线程也可以对多个channel进行高效的io处理，例如一个可能会创建很多tcp连接每个tcp连接流量不大的情况下，比如构建一个聊天服务。&lt;/p&gt;</description></item><item><title>网络编程：jmp_buf &amp; setjmp &amp; longjmp</title><link>/blog/2017-03-27-jmp_bufsetjmplongjmp/</link><pubDate>Mon, 27 Mar 2017 21:31:13 +0800</pubDate><guid>/blog/2017-03-27-jmp_bufsetjmplongjmp/</guid><description>&lt;p&gt;最近在看spp &amp;amp; libco源码，他们实现协程上下文切换的过程中，都或多或少借鉴了jmp_buf的设计，用以保存协程执行时的现场。协程切换的时候保存当前协程的现场，然后恢复待调度协程的现场。理解是很容易理解，但是总感觉还是有点浅尝辄止了，于是就抽点时间看了下jmp_buf、setjmp、longjmp相关的代码，大体理了下思路。&lt;/p&gt;
+&lt;p&gt;学习整理了一下关于jmp_buf &amp;amp; setjmp &amp;amp; longjmp的内容。&lt;/p&gt;
+&lt;p&gt;linux 4.0内核中jmp_buf这个结构体用于记录硬件上下文信息，可以用于函数内、函数外跳转，goto只能实现函数内跳转。先来看下这个结构体的定义吧，i386架构的处理器与x86_64架构的处理器，对应的jmp_buf结构体定义稍微有些不同，这个很容易理解，寄存器位宽、数量等都有些不同。&lt;/p&gt;
+&lt;p&gt;i386架构：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;// 处理器架构：i386
+// - Linux/arch/x86/um/shared/sysdep/archsetjmp_32.h
+struct __jmp_buf {
+unsigned int __ebx; // 通用数据寄存器之一
+unsigned int __esp; // 栈指针寄存器(进程栈空间由高地址向低地址方向增长)
+unsigned int __ebp; // 基址指针寄存器(记录了当前栈帧的起始地址(进入一个函数后首先执行的便是push %ebp; mov %esp, %ebp))
+unsigned int __esi; // 源变址寄存器
+unsigned int __edi; // 目的编制寄存器
+unsigned int __eip; // 指令指针寄存器(程序计数器PC=CS:IP,二者结合起来确定下一条待执行的机器指令地址)
+};
+typedef struct __jmp_buf jmp_buf[1];
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;x86_64架构：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;// 处理器架构：x86_64
+// - Linux/arch/x86/um/shared/sysdep/archsetjmp_64.h
+struct __jmp_buf {
+unsigned long __rbx; // 通用数据寄存器之一
+unsigned long __rsp; // 栈指针寄存器
+unsigned long __rbp; // 基址指针寄存器
+unsigned long __r12;
+unsigned long __r13;
+unsigned long __r14;
+unsigned long __r15;
+unsigned long __rip;
+};
+typedef struct __jmp_buf jmp_buf[1];
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;但是呢，glibc里面重新定义了这个类型，这里面还对信号掩码进行了考虑。&lt;/p&gt;</description></item><item><title>网络编程：Protobuf编解码</title><link>/blog/2017-02-09-protobuf%E7%BC%96%E8%A7%A3%E7%A0%81/</link><pubDate>Thu, 09 Feb 2017 15:11:38 +0800</pubDate><guid>/blog/2017-02-09-protobuf%E7%BC%96%E8%A7%A3%E7%A0%81/</guid><description>&lt;style&gt;
+img {
+width: 680px;
+padding-bottom: 1rem;
+}
+&lt;/style&gt;
+&lt;p&gt;开发过程中学习学习的一点protobuf编解码的知识，以及对遇到的一些编解码相关问题的总结。&lt;/p&gt;
+&lt;h1 id="1pb数据类型"&gt;1.pb数据类型 &lt;a href="#1pb%e6%95%b0%e6%8d%ae%e7%b1%bb%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;protobuf对message进行编码时，是将message中的各个成员按照key、value组合成一个字节流，这里的key并不是属性的名字，而是varint(tag&amp;laquo;3 | datatype)，其低3位表示字段类型，类型描述见下图。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/protobuf/datatypes.png" alt="datatypes"&gt;&lt;/p&gt;
+&lt;p&gt;当protobuf对一个字节流进行解码的时候，对于那些它不认识的字段会直接跳过，对字节流反串行化操作的代码主要是依赖于各个Message子类的&lt;code&gt;MergePartialFromCodedStream&lt;/code&gt;方法实现，常用的&lt;code&gt;ParseFromString&lt;/code&gt;或者&lt;code&gt;ParseFromArray&lt;/code&gt;方法最终都是调用该方法来完成反串行化任务。&lt;code&gt;MergePartialFromCodedStream&lt;/code&gt;方法中包括了对unknown tag的处理，这部分代码都是protoc自动插入的，所以每个Message子类的对未知tag的处理方式也是一样的，下面通过一个简单的proto文件进行说明。&lt;/p&gt;
+&lt;p&gt;文件名：T.proto&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-protobuf"&gt;package kn.feeds;
+enum FeedType {
+TYPE_RECORD_LIVE = 1;
+TYPE_RECORD_VIDEO = 2;
+//TYPE_RECORD_DAYMOMENT = 3;
+};
+message Feed {
+optional string name = 1;
+optional int32 time = 2;
+optional FeedType type = 3;
+};
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;使用&lt;code&gt;protobuf --cpp_out=. T.proto&lt;/code&gt;进行处理，生成的T.pb.cc中&lt;code&gt;kn::feeds::Feed::MergePartialFromCodedStream&lt;/code&gt;方法的源码如下图所示，其中对不相关代码进行了折叠。&lt;code&gt;switch(....GetFieldNumber(tag))&lt;/code&gt;获取到了tag的编号并进行分别处理，如果是一个unknown tag则进入default处理分支，一般情况下是执行DO_(&amp;hellip;)将这个unknown tag保存到一个unknown_fields vector中。&lt;/p&gt;
+&lt;p&gt;文件名：T.pb.cc，见下图：&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/protobuf/merge_partial_from_coded_stream.png" alt="MergePartialFromCodedStream"&gt;&lt;/p&gt;
+&lt;p&gt;如果新需求中要求改造旧有的pb协议，例如在message中新追加了一些字段，旧代码在进行反串行化的时候并不会读取到新追加的字段，协议改造对旧有服务是不会产生不良影响的。&lt;/p&gt;
+&lt;p&gt;另外，大家一般习惯于使用optional对字段进行修饰，这里就optional字段值是否设置对数据传输的影响也进行一下说明：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;对于message中定义的optional类型的字段field，A给B发消息时，如果A没有显示设置field的值，那么B收到的字节流里面不会包括field字段的信息，B会自动使用proto文件中定义的该字段的默认值。&lt;/li&gt;
+&lt;li&gt;而当A显示设置字段field的值与默认值相同时，传输给B的字节流里面会包括field字段的信息。设置和不设置optional字段对于串行化数据的编码、传输是不同的。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;PS：对于pb2而言，上述描述是正确的。对于pb3的情况，对编码及网络传输数据量又进行了优化，所有的0值都不会在编码时进行编码。如果系统中涉及到pb2、pb3共用，且存在使用pb2的代码中通过判断字段值是否为nil来做特殊逻辑，这里就容易引入问题。而如果全部是pb3协议则不需要考虑这种兼容问题。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id="2varint--zigzag编解码"&gt;2.varint &amp;amp; zigzag编解码 &lt;a href="#2varint--zigzag%e7%bc%96%e8%a7%a3%e7%a0%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;前面列出了protobuf数据类型编码规则，当tag低3位为0时表示varint类型，对于有符号类型、无符号类型其实差别还是挺大的。&lt;/p&gt;</description></item></channel></rss>

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Hugo on</title><link>/tags/hugo/</link><description>Recent content in Hugo on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 12 Jun 2026 08:00:00 +0800</lastBuildDate><atom:link href="/tags/hugo/index.xml" rel="self" type="application/rss+xml"/><item><title>如何把 Notion 页面完美嵌入个人博客</title><link>/blog/2026-06-12-notion-embed-blog-guide/</link><pubDate>Fri, 12 Jun 2026 08:00:00 +0800</pubDate><guid>/blog/2026-06-12-notion-embed-blog-guide/</guid><description>&lt;style&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Hugo on</title><link>/tags/hugo/</link><description>Recent content in Hugo on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 12 Jun 2026 08:00:00 +0800</lastBuildDate><atom:link href="/tags/hugo/index.xml" rel="self" type="application/rss+xml"/><item><title>如何把 Notion 页面完美嵌入个人博客</title><link>/blog/2026-06-12-blog_%E5%8D%9A%E5%AE%A2%E4%B8%AD%E5%B5%8C%E5%85%A5notion%E9%A1%B5%E5%86%85%E5%AE%B9/</link><pubDate>Fri, 12 Jun 2026 08:00:00 +0800</pubDate><guid>/blog/2026-06-12-blog_%E5%8D%9A%E5%AE%A2%E4%B8%AD%E5%B5%8C%E5%85%A5notion%E9%A1%B5%E5%86%85%E5%AE%B9/</guid><description>&lt;style&gt;
 .iframe-container {
 position: relative;
 height: 100vh;
@@ -14,7 +14,7 @@ top: -170px;
 &lt;/style&gt;
 &lt;div class="iframe-container"&gt;
 &lt;iframe src="https://docs.qq.com/doc/DYkxmdENJTGFHd0VY"/&gt;
-&lt;/div&gt;</description></item><item><title>GitHub Actions 中的认证方式：GITHUB_TOKEN、PAT 与 Deploy Key</title><link>/blog/2026-06-11-github-actions-auth-tokens/</link><pubDate>Thu, 11 Jun 2026 12:00:00 +0800</pubDate><guid>/blog/2026-06-11-github-actions-auth-tokens/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;/div&gt;</description></item><item><title>GitHub Actions 中的认证方式：GITHUB_TOKEN、PAT 与 Deploy Key</title><link>/blog/2026-06-11-cicd_github-actions-auth-tokens/</link><pubDate>Thu, 11 Jun 2026 12:00:00 +0800</pubDate><guid>/blog/2026-06-11-cicd_github-actions-auth-tokens/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;我的个人博客采用 Hugo 构建，源代码放在私有仓库 &lt;code&gt;hitzhangjie/myspace&lt;/code&gt;，构建产物需要部署到公开仓库 &lt;code&gt;hitzhangjie/hitzhangjie.github.io&lt;/code&gt;。原先的 workflow 部署在目标仓库上，每次 push 源仓库后还需要手动推一次目标仓库，很痛苦。&lt;/p&gt;
 &lt;p&gt;迁移 workflow 到源仓库（myspace）时，发现 &lt;code&gt;GITHUB_TOKEN&lt;/code&gt; 无法完成跨仓库推送。这引出了一个问题：GitHub Actions 中到底有哪几种认证方式？它们分别怎么配置、作用域是什么？&lt;/p&gt;
 &lt;h1 id="三种认证方式速览"&gt;三种认证方式速览 &lt;a href="#%e4%b8%89%e7%a7%8d%e8%ae%a4%e8%af%81%e6%96%b9%e5%bc%8f%e9%80%9f%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
@@ -51,7 +51,7 @@ top: -170px;
 &lt;h1 id="github_token"&gt;GITHUB_TOKEN &lt;a href="#github_token" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;h2 id="它是什么"&gt;它是什么 &lt;a href="#%e5%ae%83%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;&lt;code&gt;GITHUB_TOKEN&lt;/code&gt; 是 GitHub Actions 在&lt;strong&gt;每次 workflow 运行时自动生成&lt;/strong&gt;的一个临时令牌。你&lt;strong&gt;不需要、也没办法&lt;/strong&gt;手动配置它——在任何仓库的 Settings → Secrets and variables 或 Settings → Deploy keys 里都找不到它。&lt;/p&gt;
-&lt;p&gt;它由 GitHub 在 workflow 启动时注入，workflow 结束后立即失效。&lt;/p&gt;</description></item><item><title>静态站点生成器，为什么选择hugo？</title><link>/blog/2020-05-30-%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8/</link><pubDate>Sat, 30 May 2020 16:58:22 +0800</pubDate><guid>/blog/2020-05-30-%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8/</guid><description>&lt;style&gt;
+&lt;p&gt;它由 GitHub 在 workflow 启动时注入，workflow 结束后立即失效。&lt;/p&gt;</description></item><item><title>静态站点生成器，为什么选择hugo？</title><link>/blog/2020-05-30-blog_%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8/</link><pubDate>Sat, 30 May 2020 16:58:22 +0800</pubDate><guid>/blog/2020-05-30-blog_%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8/</guid><description>&lt;style&gt;
 img {width:680px;}
 video {width:680px;}
 &lt;/style&gt;

@@ -62,17 +62,4 @@ v
 &lt;li&gt;&lt;strong&gt;信号捕获&lt;/strong&gt;：操作系统中断当前线程的执行，将控制权交给 Go 运行时提前注册好的信号处理函数 &lt;code&gt;sighandler&lt;/code&gt;。&lt;/li&gt;
 &lt;/ol&gt;
 &lt;h3 id="为什么选择-sigurg-信号"&gt;为什么选择 SIGURG 信号？ &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e9%80%89%e6%8b%a9-sigurg-%e4%bf%a1%e5%8f%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;在 Unix/Linux 系统中，&lt;code&gt;SIGALRM&lt;/code&gt; 常用于定时器，但容易与 CGO 或用户自定义计时器冲突。而 &lt;code&gt;SIGURG&lt;/code&gt; 在标准应用中极少被显式使用，且各大操作系统对其支持非常成熟，不会触发默认的进程终止，因此是绝佳的&amp;quot;内鬼信号&amp;quot;。&lt;/p&gt;</description></item><item><title>go抢占式调度</title><link>/blog/2021-05-25-go%E6%8A%A2%E5%8D%A0%E5%BC%8F%E8%B0%83%E5%BA%A6/</link><pubDate>Tue, 25 May 2021 13:13:52 +0800</pubDate><guid>/blog/2021-05-25-go%E6%8A%A2%E5%8D%A0%E5%BC%8F%E8%B0%83%E5%BA%A6/</guid><description>&lt;p&gt;SIGURG，在信号处理函数runtime/signal_unix.go:sighandler(&amp;hellip;)函数中又看到对sigPreempt的处理。&lt;/p&gt;
-&lt;p&gt;SIGURG实现抢占式调度：
-对应这个函数doSigPreempt，检查当前g是不是wantAsyncPreempt，ok的话检查是不是isAsyncSafePoint，ok的话，sigctxt.pushCall(funcPC(asyncPreempt), newpc)，这个函数调整PC并注入一个对asyncPreempt的调用。&lt;/p&gt;
-&lt;p&gt;TODO wantAsyncPreempt对应的判断参数是谁去设置的，什么时候设置的？&lt;/p&gt;
-&lt;p&gt;TODO isAsyncSafePoint，safepoint的含义？这个函数的注释以及代码中的if-else已经足够结实清楚什么是safepoint了，以及safepoint的意义了。&lt;/p&gt;
-&lt;p&gt;看下asyncPreempt的逻辑，该函数是在汇编中实现的，首先保存寄存器的值，然后调用asyncPreempt2执行其他处理。&lt;/p&gt;
-&lt;p&gt;g.preemptStop决定是挂起g还是重新调度g：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;如果被抢占的g的g.preemptStop为true，则执行mcall(preemptPark)挂起该g，g的状态被改为preempted，后面什么时机会重新调度它吧。然后执行schedule调度其他goroutine执行；&lt;/li&gt;
-&lt;li&gt;如果g.preemptStop为false，则mcall(gopreempt_m)将g从running改为runnable重新调度一次。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;大致的抢占式调度逻辑就是这样的。&lt;/p&gt;
-&lt;p&gt;ps: func mcall(fn func(*g))，mcall switches from the g to the g0 stack and invokes fn(g),
-where g is the goroutine that made the call.&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;在 Unix/Linux 系统中，&lt;code&gt;SIGALRM&lt;/code&gt; 常用于定时器，但容易与 CGO 或用户自定义计时器冲突。而 &lt;code&gt;SIGURG&lt;/code&gt; 在标准应用中极少被显式使用，且各大操作系统对其支持非常成熟，不会触发默认的进程终止，因此是绝佳的&amp;quot;内鬼信号&amp;quot;。&lt;/p&gt;</description></item></channel></rss>

@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Alfred on</title><link>/categories/alfred/</link><description>Recent content in Alfred on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 31 Jul 2020 14:53:15 +0800</lastBuildDate><atom:link href="/categories/alfred/index.xml" rel="self" type="application/rss+xml"/><item><title>使用awgo开发alfred.workflow</title><link>/blog/2020-07-31-alfred_%E4%BD%BF%E7%94%A8awgo%E5%BC%80%E5%8F%91alfred.workflow/</link><pubDate>Fri, 31 Jul 2020 14:53:15 +0800</pubDate><guid>/blog/2020-07-31-alfred_%E4%BD%BF%E7%94%A8awgo%E5%BC%80%E5%8F%91alfred.workflow/</guid><description>&lt;style&gt;
+img {
+width: 680px;
+}
+&lt;/style&gt;
+&lt;h1 id="本文简介"&gt;本文简介 &lt;a href="#%e6%9c%ac%e6%96%87%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;该workflow主要是为了对 &amp;ldquo;时间戳&amp;rdquo; &amp;amp;&amp;amp; &amp;ldquo;格式化日期+时间字符串&amp;rdquo; 进行快速转换，方便使用。&lt;/p&gt;
+&lt;p&gt;开发人员，经常会涉及到时间相关的转换操作，有个趁手的工具还是很有必要的。&lt;/p&gt;
+&lt;p&gt;我平时使用alfred比较多，自然就想通过workflow的方式来实现，当然用hammerspoon、pet等其他工具也可以。&lt;/p&gt;
+&lt;p&gt;alfred workflow和alfred本身的交互是通过管道方式进行连接的：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;alfred将用户输入的信息转发给匹配的workflow；&lt;/li&gt;
+&lt;li&gt;workflow对接收到的参数进行处理，并将处理的结果按照指定格式输出到stdout；&lt;/li&gt;
+&lt;li&gt;alfred读取stdout中的数据作为响应展示到用户界面；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这里主要使用了awgo来编写workflow，实现逻辑可以参考下代码，逻辑很简单。下面主要介绍下如何使用。&lt;/p&gt;
+&lt;h1 id="如何安装"&gt;如何安装？ &lt;a href="#%e5%a6%82%e4%bd%95%e5%ae%89%e8%a3%85" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;下载项目下 &lt;a href="https://raw.githubusercontent.com/hitzhangjie/alfred-datetime-workflow/master/workflow/Date%20Formats%20Go.alfredworkflow"&gt;workflow/Date Formats Go.alfredworkflow&lt;/a&gt;，双击即可安装。&lt;/p&gt;
+&lt;h1 id="如何使用"&gt;如何使用？ &lt;a href="#%e5%a6%82%e4%bd%95%e4%bd%bf%e7%94%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;运行 &lt;code&gt;datex&lt;/code&gt; 唤起workflow&lt;br&gt;
+&lt;img alt="运行datex换起workflow" src="assets/alfred/1.jpg"/&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;常用转换操作: 获取当前时间对应的Unix时间戳，以及格式化字符串&lt;br&gt;
+&lt;code&gt;datex now&lt;/code&gt;，将当前时间转换为时间戳以及格式化后的字符串(多种日期格式)。&lt;br&gt;
+可以用上下键移动进行选择，当按下回车键时，会将对应的结果拷贝到剪贴板，方便粘贴使用。
+&lt;img alt="获取当前时间" src="assets/alfred/2.jpg"/&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;常用转换操作: 将时间戳转换为对应的格式化字符串&lt;br&gt;
+以时间戳1596137272为例，&lt;code&gt;datex 1596137272&lt;/code&gt;，此时会将时间戳转换为格式化后的字符串。&lt;br&gt;
+选择、复制数据操作类似。
+&lt;img alt="转换时间戳" src="assets/alfred/3.jpg"/&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;常用转换操作: 将格式化字符串转换为时间戳，或其他格式&lt;br&gt;
+以字符串&lt;code&gt;2020-07-30&lt;/code&gt;为例，&lt;code&gt;datex 2020-07-30&lt;/code&gt;，此时会先将其与候选的格式化字符串进行匹配。&lt;br&gt;
+并转换成一个有效的时间戳。 然后再根据此时间戳，转换为其他格式对应的字符串。选择、复制数据操作类似。
+&lt;img alt="转换字符串" src="assets/alfred/4.jpg"/&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;这大致就是该workflow的使用方式。&lt;/p&gt;
+&lt;p&gt;关于日期时间格式转换的workflow，github上已经有几个比较好的实现了，轮子不好用就得自己造。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;实现对timezone支持不好;&lt;/li&gt;
+&lt;li&gt;采用的时间格式不符合国人习惯;&lt;/li&gt;
+&lt;li&gt;掌握awgo开发alfred workflow以后可以写更多效率工具;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;希望这个小工具能帮助到有需要的同学，也给准备开发alfred workflow或使用awgo开发workflow的同学提供一个示例。&lt;/p&gt;
+&lt;h1 id="如何实现"&gt;如何实现？ &lt;a href="#%e5%a6%82%e4%bd%95%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="流程图梳理下逻辑"&gt;流程图梳理下逻辑 &lt;a href="#%e6%b5%81%e7%a8%8b%e5%9b%be%e6%a2%b3%e7%90%86%e4%b8%8b%e9%80%bb%e8%be%91" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;先画个流程图，简单理下思路，思路理清楚了，写代码就快了。&lt;/p&gt;
+&lt;img alt="流程图" src="assets/alfred/0.png"/&gt;
+&lt;h2 id="alfredworkflow编排"&gt;alfred.workflow编排 &lt;a href="#alfredworkflow%e7%bc%96%e6%8e%92" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;好，理清楚思路之后，我们开始尝试对worklow进行编排，如下所示：&lt;/p&gt;
+&lt;img alt="workflow编排" src="assets/alfred/5.jpg"/&gt;
+&lt;p&gt;workflow中包含2个节点：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;节点1，是一个script filter，我们可以配置一个关键字datex来激活它，当然还可以继续输入参数。激活该script filter之后，它将调用我们编写的时间转换程序alfred-datetime-workflow，程序返回的结果将在alfred界面上进行展示，展示的样式是列表。如我们输入datex now，将显示现在的时间戳以及其他格式的datetime字符串。&lt;br&gt;
+&lt;img alt="script filter配置" src="assets/alfred/8.jpg"/&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;节点2，是Copy to Clipboard，它干什么呢？节点1中显示了列表之后，用户选择一个列表项+回车之后，选中的列表项对应的参数值将被传递给该节点作为参数，Copy to Clipboard就是将参数拷贝到剪贴板；&lt;/p&gt;</description></item><item><title>macOS实现高效todolist</title><link>/blog/2019-02-23-alfred_macos%E5%AE%9E%E7%8E%B0%E9%AB%98%E6%95%88todolist/</link><pubDate>Sat, 23 Feb 2019 00:13:00 +0800</pubDate><guid>/blog/2019-02-23-alfred_macos%E5%AE%9E%E7%8E%B0%E9%AB%98%E6%95%88todolist/</guid><description>&lt;style&gt;
+img {
+width: 680px;
+padding-bottom: 1rem;
+}
+&lt;/style&gt;
+&lt;h1 id="高效-todo"&gt;高效 “Todo” &lt;a href="#%e9%ab%98%e6%95%88-todo" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Apple设备上有一个非常好的效率工具“&lt;strong&gt;Calendar.app（日历）&lt;/strong&gt;”，在日历中可以添加待办事项，并且支持按天、周、月、年视图进行快速浏览，是工作、学习的好帮手。工作中，自己的想法、他人的反馈、问题要点等需要快速记录下来，每次唤醒日历进行手动添加还是有点低效，能不能实现更高效地“Todo”呢？
+&lt;img src="assets/todolist/1550882147_45.png" alt="calendar.app"&gt;&lt;/p&gt;
+&lt;p&gt;想象一下手动打开日历，定位到今天，滑动到下方找一个合适的时间点添加待办事项，输入描述信息再回到原来的工作，麻烦！结合Alfred+AppleScript编写了一个Workflow，现在方便多了，实现了如下效果。快捷键快速呼出Alfred交互输入框，然后键入“&lt;strong&gt;todo 待办事项描述信息&lt;/strong&gt;，然后键入“&lt;strong&gt;回车&lt;/strong&gt;”，此时就可以自动添加一条新的待办事项到日历中，是不是方便多了！
+&lt;img src="assets/todolist/1550884138_61.png" alt="todo"&gt;&lt;/p&gt;
+&lt;p&gt;执行上述操作之后：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;若日历程序没启动，添加成功会启动日历并提到前台，展示当前添加的待办事项；&lt;/li&gt;
+&lt;li&gt;若日历程序已启动，添加成功不会再将日历提到前台，在通知中心发一条添加成功的通知；
+&lt;img src="assets/todolist/1550882378_18.png" alt="notify"&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;我想要的高效“Todo”是近似这样的，目前能基本满足我的要求。这里的实现方式是，打开Alfred-&amp;gt;Preferences-&amp;gt;Workflows，新建一个Blank Flow，然后配置如下：
+&lt;img src="assets/todolist/1550882415_51.png" alt="workflow"&gt;
+workflow中todo节点获取输入的待办事项，并将输入信息通过脚本参数的形式传递给后续的osacript进行处理，该脚本负责添加待办事项到日历。workflow中两个节点的配置如下所示：
+&lt;img src="assets/todolist/1550882463_68.png" alt="workflow-node1"&gt;
+&lt;img src="assets/todolist/1550882487_94.png" alt="workflow-node2"&gt;
+完整的脚本代码如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-javascript"&gt;on run
+set theQuery to &amp;quot;{query}&amp;quot;
+--------------------------------------------------------------------------
+-- 今天的开始、结束，用于筛选今天的事件列表
+set todayStart to (current date)
+set time of todayStart to 0
+copy todayStart to todayEnd
+set time of todayEnd to 86400
+-- 待添加事件的开始、结束时间，我喜欢按照时间顺序追加的添加方式
+copy todayStart to todoStart
+set minutes of todoStart to 0
+set seconds of todoStart to 0
+-- 启动Calendar筛选今天内添加的todo事件列表
+tell application &amp;quot;Calendar&amp;quot;
+tell calendar &amp;quot;todo&amp;quot;
+-- 遍历todo事件列表找到最后添加的事件
+set allEvents to (every event where its start date is greater than or equal to todayStart and end date is less than todayEnd)
+repeat with e in allEvents
+set t to start date of e
+if t ≥ todoStart then
+copy t to todoStart
+end if
+end repeat
+-- 继续追加新todo事件
+if hours of todoStart is equal to 0 then
+set hours of todoStart to 8
+else
+set todoStart to todoStart + (1 * hours)
+end if
+set todoEnd to todoStart + (1 * hours)
+make new event with properties {summary:theQuery, start date:todoStart, end date:todoEnd}
+end tell
+-- 启动Calendar显示
+if not running then
+run
+delay 0.25
+activate
+else
+set msg to &amp;quot;添加成功：&amp;quot; &amp;amp; theQuery
+display notification msg
+end if
+end tell
+----------------------------------------------------------------------
+return theQuery
+end run
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;AppleScript不太熟，东拼西凑攒出来这个小工具，还攒了一些其他小工具&amp;hellip; 希望对大家有帮助！&lt;/p&gt;</description></item></channel></rss>

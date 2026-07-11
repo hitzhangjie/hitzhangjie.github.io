@@ -29,7 +29,7 @@ top: -170px;
 sudo update-alternatives --install /usr/bin/java java /opt/jdk-17/bin/java 1 --slave javac ... -- slave javap ...
 sudo update-alternatives --install /usr/bin/java java /opt/jdk-21/bin/java 2 --slave javac ... -- slave javap ...
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;执行版本切换时要异同切换master和slave对应的二进制：&lt;/p&gt;</description></item><item><title>Java NIO Tutorials</title><link>/blog/2017-04-20-%E5%AD%A6%E4%B9%A0java-nio/</link><pubDate>Wed, 05 Apr 2017 14:56:32 +0800</pubDate><guid>/blog/2017-04-20-%E5%AD%A6%E4%B9%A0java-nio/</guid><description>&lt;h2 id="1-前言"&gt;1 前言 &lt;a href="#1-%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;执行版本切换时要异同切换master和slave对应的二进制：&lt;/p&gt;</description></item><item><title>网络编程：Java NIO Tutorials</title><link>/blog/2017-04-20-%E5%AD%A6%E4%B9%A0java-nio/</link><pubDate>Wed, 05 Apr 2017 14:56:32 +0800</pubDate><guid>/blog/2017-04-20-%E5%AD%A6%E4%B9%A0java-nio/</guid><description>&lt;h2 id="1-前言"&gt;1 前言 &lt;a href="#1-%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;Java NIO，意为Java New IO，是一种相对于Java标准IO、网络API的替代方案。从JDK 1.4开始NIO就被引入了进来，它提供了另一种IO处理的方式，这使得Java在IO处理方面向前迈进了一大步。&lt;/p&gt;
 &lt;h4 id="nio-channel--buffer"&gt;NIO Channel &amp;amp; Buffer &lt;a href="#nio-channel--buffer" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
 &lt;p&gt;在Java标准IO里面，IO处理的对象是字节流或字符流，在NIO里面我们处理的对象是channel和buffer，数据读总是从channel中读入到buffer，输入写总是从buffer写入到channel。&lt;/p&gt;

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>ICal on</title><link>/tags/ical/</link><description>Recent content in ICal on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 25 Apr 2020 17:13:14 +0800</lastBuildDate><atom:link href="/tags/ical/index.xml" rel="self" type="application/rss+xml"/><item><title>你的mac有哪些“趁手”的配置呢？</title><link>/blog/2020-04-25-%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/</link><pubDate>Sat, 25 Apr 2020 17:13:14 +0800</pubDate><guid>/blog/2020-04-25-%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/</guid><description>&lt;style&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>ICal on</title><link>/tags/ical/</link><description>Recent content in ICal on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 25 Apr 2020 17:13:14 +0800</lastBuildDate><atom:link href="/tags/ical/index.xml" rel="self" type="application/rss+xml"/><item><title>你的mac有哪些“趁手”的配置呢？</title><link>/blog/2020-04-25-macos_%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/</link><pubDate>Sat, 25 Apr 2020 17:13:14 +0800</pubDate><guid>/blog/2020-04-25-macos_%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/</guid><description>&lt;style&gt;
 img {width:680px;}
 video {width:680px;}
 &lt;/style&gt;
@@ -48,7 +48,7 @@ video {width:680px;}
 &lt;p&gt;&lt;img src="assets/2020-04-25-%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/640-20220625170646007.png" alt="图片"&gt;&lt;/p&gt;
 &lt;p&gt;使用触摸板拖动窗口，默认设置是先点按窗口标题栏，按住不放，再一只手将其拖动，这个操作很不方便，设置下可以直接三指窗口拖动。现实场景中，一般我是通过hammerspoon自定义脚本来完成的：最大化、最小化、居中、左半屏、右半屏等。但是，移动窗口的需求还是有的。&lt;/p&gt;
 &lt;p&gt;&lt;img src="assets/2020-04-25-%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/640-20220625170646286.png" alt="图片"&gt;&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;5 Keyboard&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>macOS实现高效todolist</title><link>/blog/2019-02-23-macos%E5%AE%9E%E7%8E%B0%E9%AB%98%E6%95%88todolist/</link><pubDate>Sat, 23 Feb 2019 00:13:00 +0800</pubDate><guid>/blog/2019-02-23-macos%E5%AE%9E%E7%8E%B0%E9%AB%98%E6%95%88todolist/</guid><description>&lt;style&gt;
+&lt;p&gt;&lt;strong&gt;5 Keyboard&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>macOS实现高效todolist</title><link>/blog/2019-02-23-alfred_macos%E5%AE%9E%E7%8E%B0%E9%AB%98%E6%95%88todolist/</link><pubDate>Sat, 23 Feb 2019 00:13:00 +0800</pubDate><guid>/blog/2019-02-23-alfred_macos%E5%AE%9E%E7%8E%B0%E9%AB%98%E6%95%88todolist/</guid><description>&lt;style&gt;
 img {
 width: 680px;
 padding-bottom: 1rem;

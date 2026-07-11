@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Console on</title><link>/tags/console/</link><description>Recent content in Console on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 11 Jul 2026 17:05:26 +0800</lastBuildDate><atom:link href="/tags/console/index.xml" rel="self" type="application/rss+xml"/><item><title>终端、TTY、PTY、Console：把这些概念一次理清</title><link>/blog/2026-07-11-%E7%90%86%E8%A7%A3%E7%BB%88%E7%AB%AF/</link><pubDate>Sat, 11 Jul 2026 17:05:26 +0800</pubDate><guid>/blog/2026-07-11-%E7%90%86%E8%A7%A3%E7%BB%88%E7%AB%AF/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;写 &lt;a href="/blog/2026-07-11-asciinema-how-it-works/"&gt;asciinema 工作原理&lt;/a&gt; 时，我再次遇到了 Terminal、Console、TTY、PTY、master、slave 和 &lt;code&gt;isatty()&lt;/code&gt;。这些词经常一起出现，却分属硬件历史、内核抽象和用户态程序三个层次。单独看每个定义并不难，把它们放进同一条数据链路时却很容易混淆。&lt;/p&gt;
+&lt;p&gt;日常开发中，我们接触最多的是以下几类对象：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;终端模拟器&lt;/strong&gt;：GNOME Terminal、Windows Terminal、iTerm2，以及编辑器中的终端面板；&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Shell&lt;/strong&gt;：Bash、Zsh、Fish；&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Shell 内置命令&lt;/strong&gt;：&lt;code&gt;cd&lt;/code&gt;、&lt;code&gt;export&lt;/code&gt;、&lt;code&gt;alias&lt;/code&gt;；&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;外部程序&lt;/strong&gt;：&lt;code&gt;ls&lt;/code&gt;、&lt;code&gt;cat&lt;/code&gt;、&lt;code&gt;git&lt;/code&gt;、&lt;code&gt;vim&lt;/code&gt;。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;它们都出现在同一个窗口里，但并不属于同一层。本文从一条主线出发：&lt;strong&gt;键盘输入如何到达 Shell，程序输出又如何回到屏幕&lt;/strong&gt;。理解这条链路后，TTY 与 PTY 的区别、Console 的含义，以及 SSH、容器和重定向中的终端行为都会变得清晰。&lt;/p&gt;
+&lt;h2 id="全局视角打开终端时发生了什么"&gt;全局视角：打开终端时发生了什么 &lt;a href="#%e5%85%a8%e5%b1%80%e8%a7%86%e8%a7%92%e6%89%93%e5%bc%80%e7%bb%88%e7%ab%af%e6%97%b6%e5%8f%91%e7%94%9f%e4%ba%86%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在桌面环境中打开一个终端窗口，典型链路如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt; Keyboard Screen
+│ ▲
+▼ │
+┌────────────────────────────────────────────────────────────┐
+│ Terminal Emulator │
+│ - 将按键转换为字节 │
+│ - 解释程序输出中的控制序列，绘制字符、颜色和光标 │
+└─────────────────────────┬──────────────────────────────────┘
+│ read/write
+PTY master
+⇅
+PTY slave ← 内核 TTY 子系统
+│
+stdin / stdout / stderr
+│
+Shell
+│ fork/exec
+▼
+CLI programs
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;先记住四个结论：&lt;/p&gt;</description></item></channel></rss>

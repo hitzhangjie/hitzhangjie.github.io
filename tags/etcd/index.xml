@@ -1,4 +1,24 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Etcd on</title><link>/tags/etcd/</link><description>Recent content in Etcd on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 08 Jul 2026 12:00:00 +0800</lastBuildDate><atom:link href="/tags/etcd/index.xml" rel="self" type="application/rss+xml"/><item><title>etcd CA 证书续签说明</title><link>/blog/2026-07-08-2-etcd-ca%E8%AF%81%E4%B9%A6%E7%BB%AD%E7%AD%BE%E8%AF%B4%E6%98%8E/</link><pubDate>Wed, 08 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-08-2-etcd-ca%E8%AF%81%E4%B9%A6%E7%BB%AD%E7%AD%BE%E8%AF%B4%E6%98%8E/</guid><description>&lt;h1 id="xyz业务etcd-ca证书续签说明"&gt;XYZ业务ETCD CA证书续签说明 &lt;a href="#xyz%e4%b8%9a%e5%8a%a1etcd-ca%e8%af%81%e4%b9%a6%e7%bb%ad%e7%ad%be%e8%af%b4%e6%98%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Etcd on</title><link>/tags/etcd/</link><description>Recent content in Etcd on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 08 Jul 2026 12:00:00 +0800</lastBuildDate><atom:link href="/tags/etcd/index.xml" rel="self" type="application/rss+xml"/><item><title>Etcd证书有效期延长带来的思考(1)：etcd 标准证书签发流程</title><link>/blog/2026-07-08-1-etcd-%E6%A0%87%E5%87%86%E8%AF%81%E4%B9%A6%E7%AD%BE%E5%8F%91%E6%B5%81%E7%A8%8B/</link><pubDate>Wed, 08 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-08-1-etcd-%E6%A0%87%E5%87%86%E8%AF%81%E4%B9%A6%E7%AD%BE%E5%8F%91%E6%B5%81%E7%A8%8B/</guid><description>&lt;h1 id="标准-etcd-证书签发流程"&gt;标准 etcd 证书签发流程 &lt;a href="#%e6%a0%87%e5%87%86-etcd-%e8%af%81%e4%b9%a6%e7%ad%be%e5%8f%91%e6%b5%81%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;本文档描述 etcd 集群 TLS 的标准证书签发与部署流程，可作为续签、轮换或新建集群时的操作参考。&lt;/p&gt;
+&lt;h2 id="密钥对关系概览"&gt;密钥对关系概览 &lt;a href="#%e5%af%86%e9%92%a5%e5%af%b9%e5%85%b3%e7%b3%bb%e6%a6%82%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;etcd 集群使用 &lt;strong&gt;两套独立的 RSA 密钥对&lt;/strong&gt;：CA 密钥对用于建立信任链并签发节点证书，节点密钥对只提供节点身份的公钥材料（私钥不下发到对端）。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;密钥对 A（CA，仅证书管理机） 密钥对 B（etcd 节点）
+────────────────────────────── ──────────────────────
+ca-key.pem（私钥） etcd-key.pem（私钥）
+│ 自签 │ 公钥写入 CSR
+▼ ▼
+ca.pem（CA 证书） etcd.csr
+│ │
+│ openssl x509 -req │
+│ -CA ca.pem │
+│ -CAkey ca-key.pem ────────────────────┘
+│ │
+│ ▼ CA 签名
+│ etcd.pem（节点证书）
+│ │
+└──────────────┘ 验签时：用 CA 证书（默认 ca.pem）验证 etcd.pem 的签名
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;要点：&lt;/p&gt;</description></item><item><title>Etcd证书有效期延长带来的思考(2)：etcd CA 证书续签说明</title><link>/blog/2026-07-08-2-etcd-ca%E8%AF%81%E4%B9%A6%E7%BB%AD%E7%AD%BE%E8%AF%B4%E6%98%8E/</link><pubDate>Wed, 08 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-08-2-etcd-ca%E8%AF%81%E4%B9%A6%E7%BB%AD%E7%AD%BE%E8%AF%B4%E6%98%8E/</guid><description>&lt;h1 id="xyz业务etcd-ca证书续签说明"&gt;XYZ业务ETCD CA证书续签说明 &lt;a href="#xyz%e4%b8%9a%e5%8a%a1etcd-ca%e8%af%81%e4%b9%a6%e7%bb%ad%e7%ad%be%e8%af%b4%e6%98%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;本目录包含 etcd 集群使用的 TLS 证书与私钥，文件名已与线上部署保持一致。经 OpenSSL 检查后的说明如下。&lt;/p&gt;
 &lt;h2 id="文件清单"&gt;文件清单 &lt;a href="#%e6%96%87%e4%bb%b6%e6%b8%85%e5%8d%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;table&gt;
@@ -39,27 +59,7 @@
 &lt;h2 id="部署与配置加载说明"&gt;部署与配置加载说明 &lt;a href="#%e9%83%a8%e7%bd%b2%e4%b8%8e%e9%85%8d%e7%bd%ae%e5%8a%a0%e8%bd%bd%e8%af%b4%e6%98%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;线上签发、续签与下发步骤见 &amp;ldquo;&lt;strong&gt;ETCD证书签发流程&lt;/strong&gt;&amp;quot;。本节仅记录本环境实际加载情况。&lt;/p&gt;
 &lt;h3 id="etcd-集群配置"&gt;etcd 集群配置 &lt;a href="#etcd-%e9%9b%86%e7%be%a4%e9%85%8d%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;etcd 实际使用 &lt;code&gt;new-ca.pem&lt;/code&gt; 作为信任根：&lt;/p&gt;</description></item><item><title>etcd 标准证书签发流程</title><link>/blog/2026-07-08-1-etcd-%E6%A0%87%E5%87%86%E8%AF%81%E4%B9%A6%E7%AD%BE%E5%8F%91%E6%B5%81%E7%A8%8B/</link><pubDate>Wed, 08 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-08-1-etcd-%E6%A0%87%E5%87%86%E8%AF%81%E4%B9%A6%E7%AD%BE%E5%8F%91%E6%B5%81%E7%A8%8B/</guid><description>&lt;h1 id="标准-etcd-证书签发流程"&gt;标准 etcd 证书签发流程 &lt;a href="#%e6%a0%87%e5%87%86-etcd-%e8%af%81%e4%b9%a6%e7%ad%be%e5%8f%91%e6%b5%81%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
-&lt;p&gt;本文档描述 etcd 集群 TLS 的标准证书签发与部署流程，可作为续签、轮换或新建集群时的操作参考。&lt;/p&gt;
-&lt;h2 id="密钥对关系概览"&gt;密钥对关系概览 &lt;a href="#%e5%af%86%e9%92%a5%e5%af%b9%e5%85%b3%e7%b3%bb%e6%a6%82%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;etcd 集群使用 &lt;strong&gt;两套独立的 RSA 密钥对&lt;/strong&gt;：CA 密钥对用于建立信任链并签发节点证书，节点密钥对只提供节点身份的公钥材料（私钥不下发到对端）。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;密钥对 A（CA，仅证书管理机） 密钥对 B（etcd 节点）
-────────────────────────────── ──────────────────────
-ca-key.pem（私钥） etcd-key.pem（私钥）
-│ 自签 │ 公钥写入 CSR
-▼ ▼
-ca.pem（CA 证书） etcd.csr
-│ │
-│ openssl x509 -req │
-│ -CA ca.pem │
-│ -CAkey ca-key.pem ────────────────────┘
-│ │
-│ ▼ CA 签名
-│ etcd.pem（节点证书）
-│ │
-└──────────────┘ 验签时：用 CA 证书（默认 ca.pem）验证 etcd.pem 的签名
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;要点：&lt;/p&gt;</description></item><item><title>证书校验：OpenSSL 与 Go 的行为差异</title><link>/blog/2026-07-08-3-ssl-%E8%AF%81%E4%B9%A6%E9%AA%8C%E8%AF%81%E6%96%B9%E5%BC%8F%E5%8F%8A%E5%B7%AE%E5%BC%82/</link><pubDate>Wed, 08 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-08-3-ssl-%E8%AF%81%E4%B9%A6%E9%AA%8C%E8%AF%81%E6%96%B9%E5%BC%8F%E5%8F%8A%E5%B7%AE%E5%BC%82/</guid><description>&lt;h1 id="证书校验openssl-与-go-的行为差异"&gt;证书校验：OpenSSL 与 Go 的行为差异 &lt;a href="#%e8%af%81%e4%b9%a6%e6%a0%a1%e9%aa%8copenssl-%e4%b8%8e-go-%e7%9a%84%e8%a1%8c%e4%b8%ba%e5%b7%ae%e5%bc%82" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;etcd 实际使用 &lt;code&gt;new-ca.pem&lt;/code&gt; 作为信任根：&lt;/p&gt;</description></item><item><title>Etcd证书有效期延长带来的思考(3)：证书校验差异 OpenSSL vs. Go</title><link>/blog/2026-07-08-3-ssl-%E8%AF%81%E4%B9%A6%E9%AA%8C%E8%AF%81%E6%96%B9%E5%BC%8F%E5%8F%8A%E5%B7%AE%E5%BC%82/</link><pubDate>Wed, 08 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-08-3-ssl-%E8%AF%81%E4%B9%A6%E9%AA%8C%E8%AF%81%E6%96%B9%E5%BC%8F%E5%8F%8A%E5%B7%AE%E5%BC%82/</guid><description>&lt;h1 id="证书校验openssl-与-go-的行为差异"&gt;证书校验：OpenSSL 与 Go 的行为差异 &lt;a href="#%e8%af%81%e4%b9%a6%e6%a0%a1%e9%aa%8copenssl-%e4%b8%8e-go-%e7%9a%84%e8%a1%8c%e4%b8%ba%e5%b7%ae%e5%bc%82" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;本文档记录对 etcd 集群 TLS 证书链的深入分析，重点说明 &lt;strong&gt;为何 &lt;code&gt;openssl verify&lt;/code&gt; 报错但 etcd 集群正常运行&lt;/strong&gt;，以及对 &lt;strong&gt;OpenSSL / Go 未来版本兼容性&lt;/strong&gt; 的顾虑与应对建议。&lt;/p&gt;
 &lt;h2 id="1-问题背景"&gt;1. 问题背景 &lt;a href="#1-%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;使用以下命令校验时失败：&lt;/p&gt;
@@ -80,57 +80,7 @@ client-cert-auth: true
 &lt;hr&gt;
 &lt;h2 id="2-真实-pki-关系非自签名"&gt;2. 真实 PKI 关系（非自签名） &lt;a href="#2-%e7%9c%9f%e5%ae%9e-pki-%e5%85%b3%e7%b3%bb%e9%9d%9e%e8%87%aa%e7%ad%be%e5%90%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;h3 id="21-易被误判的原因dn-完全相同"&gt;2.1 易被误判的原因：DN 完全相同 &lt;a href="#21-%e6%98%93%e8%a2%ab%e8%af%af%e5%88%a4%e7%9a%84%e5%8e%9f%e5%9b%a0dn-%e5%ae%8c%e5%85%a8%e7%9b%b8%e5%90%8c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;三份证书的 Distinguished Name 完全一致：&lt;/p&gt;</description></item><item><title>附录：etcd 测试证书签发脚本</title><link>/blog/2026-07-08-8-%E9%99%84%E5%BD%95-etcd%E8%AF%81%E4%B9%A6%E7%AD%BE%E5%8F%91%E8%84%9A%E6%9C%AC/</link><pubDate>Wed, 08 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-08-8-%E9%99%84%E5%BD%95-etcd%E8%AF%81%E4%B9%A6%E7%AD%BE%E5%8F%91%E8%84%9A%E6%9C%AC/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
-&lt;p&gt;排查 etcd 证书过期、信任链以及 CA 续签问题时，直接使用生产证书既不安全，也不便于稳定复现。下面的脚本会生成一套固定有效期的测试证书，用来模拟以下场景：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;原 CA 证书 &lt;code&gt;ca.pem&lt;/code&gt; 快要过期，但其私钥 &lt;code&gt;ca-key.pem&lt;/code&gt; 可用；&lt;/li&gt;
-&lt;li&gt;etcd 叶子证书 &lt;code&gt;etcd.pem&lt;/code&gt; 由原 CA 签发，且同时具备服务端和客户端认证用途；&lt;/li&gt;
-&lt;li&gt;使用同一份 CA 私钥重新签发有效期更长的 &lt;code&gt;new-ca.pem&lt;/code&gt;；&lt;/li&gt;
-&lt;li&gt;对比原 CA 与新 CA 的公钥、Subject、有效期，并验证叶子证书能否使用新 CA 建立信任链。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;blockquote&gt;
-&lt;p&gt;本脚本只用于学习和故障复现。证书有效期、Subject、密钥强度及扩展字段均为固定测试配置，不能直接用于生产环境。&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;h1 id="脚本说明"&gt;脚本说明 &lt;a href="#%e8%84%9a%e6%9c%ac%e8%af%b4%e6%98%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
-&lt;p&gt;脚本源码同时保存在 &lt;code&gt;content/blog/infosec/scripts/generate-test-certs.sh&lt;/code&gt;。执行后，证书和私钥会写入脚本所在目录。&lt;/p&gt;
-&lt;h2 id="生成文件"&gt;生成文件 &lt;a href="#%e7%94%9f%e6%88%90%e6%96%87%e4%bb%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;文件&lt;/th&gt;
-&lt;th&gt;作用&lt;/th&gt;
-&lt;th&gt;固定有效期&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;&lt;code&gt;ca-key.pem&lt;/code&gt;&lt;/td&gt;
-&lt;td&gt;原 CA 与续签 CA 共用的 RSA 私钥&lt;/td&gt;
-&lt;td&gt;不适用&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;&lt;code&gt;ca.pem&lt;/code&gt;&lt;/td&gt;
-&lt;td&gt;原自签名 CA 证书&lt;/td&gt;
-&lt;td&gt;2026-01-01 ～ 2026-07-01&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;&lt;code&gt;etcd-key.pem&lt;/code&gt;&lt;/td&gt;
-&lt;td&gt;etcd 叶子证书对应的 RSA 私钥&lt;/td&gt;
-&lt;td&gt;不适用&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;&lt;code&gt;etcd.pem&lt;/code&gt;&lt;/td&gt;
-&lt;td&gt;由 &lt;code&gt;ca.pem&lt;/code&gt; 签发的 etcd 叶子证书&lt;/td&gt;
-&lt;td&gt;2026-01-01 ～ 2027-01-01&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;&lt;code&gt;new-ca.pem&lt;/code&gt;&lt;/td&gt;
-&lt;td&gt;使用 &lt;code&gt;ca-key.pem&lt;/code&gt; 重新签发的 CA 证书&lt;/td&gt;
-&lt;td&gt;2026-01-01 ～ 2027-01-01&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-&lt;p&gt;其中 &lt;code&gt;ca.pem&lt;/code&gt; 被刻意设置为提前过期，用于观察“叶子证书尚未过期，但签发它的 CA 已过期”时的校验结果。&lt;code&gt;new-ca.pem&lt;/code&gt; 与 &lt;code&gt;ca.pem&lt;/code&gt; 复用同一密钥对，因此二者公钥和 Subject Key Identifier 一致，但它们仍是序列号、有效期和签名不同的两张证书。&lt;/p&gt;</description></item><item><title>附录：当前环境证书校验结果</title><link>/blog/2026-07-08-5-%E9%99%84%E5%BD%95-%E5%BD%93%E5%89%8D%E7%8E%AF%E5%A2%83%E8%AF%81%E4%B9%A6%E6%A0%A1%E9%AA%8C%E7%BB%93%E6%9E%9C/</link><pubDate>Wed, 08 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-08-5-%E9%99%84%E5%BD%95-%E5%BD%93%E5%89%8D%E7%8E%AF%E5%A2%83%E8%AF%81%E4%B9%A6%E6%A0%A1%E9%AA%8C%E7%BB%93%E6%9E%9C/</guid><description>&lt;h1 id="附录当前环境证书校验结果"&gt;附录：当前环境证书校验结果 &lt;a href="#%e9%99%84%e5%bd%95%e5%bd%93%e5%89%8d%e7%8e%af%e5%a2%83%e8%af%81%e4%b9%a6%e6%a0%a1%e9%aa%8c%e7%bb%93%e6%9e%9c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;三份证书的 Distinguished Name 完全一致：&lt;/p&gt;</description></item><item><title>Etcd证书有效期延长带来的思考(5)：附录 当前环境证书校验结果</title><link>/blog/2026-07-08-5-%E9%99%84%E5%BD%95-%E5%BD%93%E5%89%8D%E7%8E%AF%E5%A2%83%E8%AF%81%E4%B9%A6%E6%A0%A1%E9%AA%8C%E7%BB%93%E6%9E%9C/</link><pubDate>Wed, 08 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-08-5-%E9%99%84%E5%BD%95-%E5%BD%93%E5%89%8D%E7%8E%AF%E5%A2%83%E8%AF%81%E4%B9%A6%E6%A0%A1%E9%AA%8C%E7%BB%93%E6%9E%9C/</guid><description>&lt;h1 id="附录当前环境证书校验结果"&gt;附录：当前环境证书校验结果 &lt;a href="#%e9%99%84%e5%bd%95%e5%bd%93%e5%89%8d%e7%8e%af%e5%a2%83%e8%af%81%e4%b9%a6%e6%a0%a1%e9%aa%8c%e7%bb%93%e6%9e%9c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;blockquote&gt;
 &lt;p&gt;更新时间：2026-07-08&lt;/p&gt;
 &lt;/blockquote&gt;
@@ -216,7 +166,7 @@ client-cert-auth: true
 &lt;li&gt;&lt;strong&gt;序列号&lt;/strong&gt;：&lt;code&gt;D88A...6FEC&lt;/code&gt;&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;与 ca.pem 关系&lt;/strong&gt;：公钥相同，为同一 CA 密钥对的续签证书&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;注意&lt;/strong&gt;：该证书未包含 X509v3 扩展（无 &lt;code&gt;CA:TRUE&lt;/code&gt; 等标记），作为 CA 使用时需注意兼容性&lt;/li&gt;
-&lt;/ul&gt;</description></item><item><title>附录：运维建议与轮换注意事项</title><link>/blog/2026-07-08-7-%E9%99%84%E5%BD%95-%E8%BF%90%E7%BB%B4%E5%BB%BA%E8%AE%AE%E4%B8%8E%E8%BD%AE%E6%8D%A2%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9/</link><pubDate>Wed, 08 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-08-7-%E9%99%84%E5%BD%95-%E8%BF%90%E7%BB%B4%E5%BB%BA%E8%AE%AE%E4%B8%8E%E8%BD%AE%E6%8D%A2%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9/</guid><description>&lt;h1 id="附录运维建议与轮换注意事项"&gt;附录：运维建议与轮换注意事项 &lt;a href="#%e9%99%84%e5%bd%95%e8%bf%90%e7%bb%b4%e5%bb%ba%e8%ae%ae%e4%b8%8e%e8%bd%ae%e6%8d%a2%e6%b3%a8%e6%84%8f%e4%ba%8b%e9%a1%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;/ul&gt;</description></item><item><title>Etcd证书有效期延长带来的思考(7)：附录 运维建议与轮换注意事项</title><link>/blog/2026-07-08-7-%E9%99%84%E5%BD%95-%E8%BF%90%E7%BB%B4%E5%BB%BA%E8%AE%AE%E4%B8%8E%E8%BD%AE%E6%8D%A2%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9/</link><pubDate>Wed, 08 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-08-7-%E9%99%84%E5%BD%95-%E8%BF%90%E7%BB%B4%E5%BB%BA%E8%AE%AE%E4%B8%8E%E8%BD%AE%E6%8D%A2%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9/</guid><description>&lt;h1 id="附录运维建议与轮换注意事项"&gt;附录：运维建议与轮换注意事项 &lt;a href="#%e9%99%84%e5%bd%95%e8%bf%90%e7%bb%b4%e5%bb%ba%e8%ae%ae%e4%b8%8e%e8%bd%ae%e6%8d%a2%e6%b3%a8%e6%84%8f%e4%ba%8b%e9%a1%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;h2 id="使用建议"&gt;使用建议 &lt;a href="#%e4%bd%bf%e7%94%a8%e5%bb%ba%e8%ae%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;ol&gt;
 &lt;li&gt;
@@ -257,7 +207,57 @@ client-cert-auth: true
 &lt;/ul&gt;
 &lt;/li&gt;
 &lt;li&gt;LB 场景中，证书 SAN 要覆盖业务实际访问目标（CLB 地址或域名），不只覆盖 etcd 成员地址。&lt;/li&gt;
-&lt;/ul&gt;</description></item><item><title>使用etcd做服务发现的13条教训</title><link>/blog/2025-04-25-%E4%BD%BF%E7%94%A8etcd%E5%81%9A%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0%E7%9A%84%E6%95%99%E8%AE%AD/</link><pubDate>Fri, 25 Apr 2025 10:00:00 +0800</pubDate><guid>/blog/2025-04-25-%E4%BD%BF%E7%94%A8etcd%E5%81%9A%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0%E7%9A%84%E6%95%99%E8%AE%AD/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;/ul&gt;</description></item><item><title>Etcd证书有效期延长带来的思考(8)：附录 etcd 测试证书签发脚本</title><link>/blog/2026-07-08-8-%E9%99%84%E5%BD%95-etcd%E8%AF%81%E4%B9%A6%E7%AD%BE%E5%8F%91%E8%84%9A%E6%9C%AC/</link><pubDate>Wed, 08 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-08-8-%E9%99%84%E5%BD%95-etcd%E8%AF%81%E4%B9%A6%E7%AD%BE%E5%8F%91%E8%84%9A%E6%9C%AC/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;排查 etcd 证书过期、信任链以及 CA 续签问题时，直接使用生产证书既不安全，也不便于稳定复现。下面的脚本会生成一套固定有效期的测试证书，用来模拟以下场景：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;原 CA 证书 &lt;code&gt;ca.pem&lt;/code&gt; 快要过期，但其私钥 &lt;code&gt;ca-key.pem&lt;/code&gt; 可用；&lt;/li&gt;
+&lt;li&gt;etcd 叶子证书 &lt;code&gt;etcd.pem&lt;/code&gt; 由原 CA 签发，且同时具备服务端和客户端认证用途；&lt;/li&gt;
+&lt;li&gt;使用同一份 CA 私钥重新签发有效期更长的 &lt;code&gt;new-ca.pem&lt;/code&gt;；&lt;/li&gt;
+&lt;li&gt;对比原 CA 与新 CA 的公钥、Subject、有效期，并验证叶子证书能否使用新 CA 建立信任链。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;本脚本只用于学习和故障复现。证书有效期、Subject、密钥强度及扩展字段均为固定测试配置，不能直接用于生产环境。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id="脚本说明"&gt;脚本说明 &lt;a href="#%e8%84%9a%e6%9c%ac%e8%af%b4%e6%98%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;脚本源码同时保存在 &lt;code&gt;content/blog/infosec/scripts/generate-test-certs.sh&lt;/code&gt;。执行后，证书和私钥会写入脚本所在目录。&lt;/p&gt;
+&lt;h2 id="生成文件"&gt;生成文件 &lt;a href="#%e7%94%9f%e6%88%90%e6%96%87%e4%bb%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;文件&lt;/th&gt;
+&lt;th&gt;作用&lt;/th&gt;
+&lt;th&gt;固定有效期&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;ca-key.pem&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;原 CA 与续签 CA 共用的 RSA 私钥&lt;/td&gt;
+&lt;td&gt;不适用&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;ca.pem&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;原自签名 CA 证书&lt;/td&gt;
+&lt;td&gt;2026-01-01 ～ 2026-07-01&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;etcd-key.pem&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;etcd 叶子证书对应的 RSA 私钥&lt;/td&gt;
+&lt;td&gt;不适用&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;etcd.pem&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;由 &lt;code&gt;ca.pem&lt;/code&gt; 签发的 etcd 叶子证书&lt;/td&gt;
+&lt;td&gt;2026-01-01 ～ 2027-01-01&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;new-ca.pem&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;使用 &lt;code&gt;ca-key.pem&lt;/code&gt; 重新签发的 CA 证书&lt;/td&gt;
+&lt;td&gt;2026-01-01 ～ 2027-01-01&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;其中 &lt;code&gt;ca.pem&lt;/code&gt; 被刻意设置为提前过期，用于观察“叶子证书尚未过期，但签发它的 CA 已过期”时的校验结果。&lt;code&gt;new-ca.pem&lt;/code&gt; 与 &lt;code&gt;ca.pem&lt;/code&gt; 复用同一密钥对，因此二者公钥和 Subject Key Identifier 一致，但它们仍是序列号、有效期和签名不同的两张证书。&lt;/p&gt;</description></item><item><title>使用etcd做服务发现的13条教训</title><link>/blog/2025-04-25-%E4%BD%BF%E7%94%A8etcd%E5%81%9A%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0%E7%9A%84%E6%95%99%E8%AE%AD/</link><pubDate>Fri, 25 Apr 2025 10:00:00 +0800</pubDate><guid>/blog/2025-04-25-%E4%BD%BF%E7%94%A8etcd%E5%81%9A%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0%E7%9A%84%E6%95%99%E8%AE%AD/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;在我们的项目中，我们使用ETCD作为我们的服务注册发现中心，在业务上线前的野蛮生长期，我们大部分时间用在开发产品功能上，对于真正的分布式系统层面可能面临的一些挑战，团队初期并没有花太多时间去打磨。在经历了很多轮的对外CE之后，其实用户量带来的性能层面的挑战极小，与之对应的部署的服务实例数量、机器数量在那个时候也没有构成太多挑战。&lt;/p&gt;
 &lt;p&gt;真正的挑战来自产品上线后，大量用户涌入，产品也成为了爆款，惊喜之余也发现了一些隐藏了很久没有被充分重视的性能缺陷，以及潜在的巨大风险点。可以说，在过去的实践中我们曾经犯过不少错误。如果你们也想在ETCD基础上构建可靠的、高可用的服务注册发现能力，你们需要注意避免犯相同的错误。&lt;/p&gt;
 &lt;h2 id="实践中的13条教训"&gt;实践中的13条教训 &lt;a href="#%e5%ae%9e%e8%b7%b5%e4%b8%ad%e7%9a%8413%e6%9d%a1%e6%95%99%e8%ae%ad" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;

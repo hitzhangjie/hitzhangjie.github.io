@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>证书排查 on</title><link>/tags/%E8%AF%81%E4%B9%A6%E6%8E%92%E6%9F%A5/</link><description>Recent content in 证书排查 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 08 Jul 2026 12:00:00 +0800</lastBuildDate><atom:link href="/tags/%E8%AF%81%E4%B9%A6%E6%8E%92%E6%9F%A5/index.xml" rel="self" type="application/rss+xml"/><item><title>附录：OpenSSL 排查命令速查</title><link>/blog/2026-07-08-4-%E9%99%84%E5%BD%95-openssl%E6%8E%92%E6%9F%A5%E5%91%BD%E4%BB%A4%E9%80%9F%E6%9F%A5/</link><pubDate>Wed, 08 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-08-4-%E9%99%84%E5%BD%95-openssl%E6%8E%92%E6%9F%A5%E5%91%BD%E4%BB%A4%E9%80%9F%E6%9F%A5/</guid><description>&lt;h1 id="附录openssl-排查命令速查"&gt;附录：OpenSSL 排查命令速查 &lt;a href="#%e9%99%84%e5%bd%95openssl-%e6%8e%92%e6%9f%a5%e5%91%bd%e4%bb%a4%e9%80%9f%e6%9f%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="使用说明"&gt;使用说明 &lt;a href="#%e4%bd%bf%e7%94%a8%e8%af%b4%e6%98%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;目的：快速定位“文件内容是否正确、证书与私钥是否配对、证书是否由指定 CA 签发”。&lt;/li&gt;
+&lt;li&gt;建议：先看核心字段，再做配对和验签，最后结合业务程序行为确认。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="1-key-文件私钥查看"&gt;1) key 文件（私钥）查看 &lt;a href="#1-key-%e6%96%87%e4%bb%b6%e7%a7%81%e9%92%a5%e6%9f%a5%e7%9c%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;# 查看私钥基本信息（兼容 RSA/ECDSA）
+openssl pkey -in etcd-key.pem -text -noout
+# 导出公钥（用于和证书公钥比对）
+openssl pkey -in etcd-key.pem -pubout -outform pem
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;重点关注：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;算法类型（RSA / EC）&lt;/li&gt;
+&lt;li&gt;位数（如 2048/4096）&lt;/li&gt;
+&lt;li&gt;是否可正常导出公钥&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="2-ca-证书查看"&gt;2) CA 证书查看 &lt;a href="#2-ca-%e8%af%81%e4%b9%a6%e6%9f%a5%e7%9c%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;# 查看 Subject / Issuer / 有效期 / 序列号
+openssl x509 -in ca.pem -noout -subject -issuer -dates -serial
+# 查看 CA 关键扩展
+openssl x509 -in ca.pem -noout -text | rg &amp;quot;Basic Constraints|Key Usage|Subject Key Identifier|Authority Key Identifier&amp;quot; -n
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;重点关注：&lt;/p&gt;</description></item></channel></rss>

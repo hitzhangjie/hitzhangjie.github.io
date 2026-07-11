@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>证书校验 on</title><link>/tags/%E8%AF%81%E4%B9%A6%E6%A0%A1%E9%AA%8C/</link><description>Recent content in 证书校验 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 08 Jul 2026 12:00:00 +0800</lastBuildDate><atom:link href="/tags/%E8%AF%81%E4%B9%A6%E6%A0%A1%E9%AA%8C/index.xml" rel="self" type="application/rss+xml"/><item><title>证书校验：OpenSSL 与 Go 的行为差异</title><link>/blog/2026-07-08-3-ssl-%E8%AF%81%E4%B9%A6%E9%AA%8C%E8%AF%81%E6%96%B9%E5%BC%8F%E5%8F%8A%E5%B7%AE%E5%BC%82/</link><pubDate>Wed, 08 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-08-3-ssl-%E8%AF%81%E4%B9%A6%E9%AA%8C%E8%AF%81%E6%96%B9%E5%BC%8F%E5%8F%8A%E5%B7%AE%E5%BC%82/</guid><description>&lt;h1 id="证书校验openssl-与-go-的行为差异"&gt;证书校验：OpenSSL 与 Go 的行为差异 &lt;a href="#%e8%af%81%e4%b9%a6%e6%a0%a1%e9%aa%8copenssl-%e4%b8%8e-go-%e7%9a%84%e8%a1%8c%e4%b8%ba%e5%b7%ae%e5%bc%82" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;本文档记录对 etcd 集群 TLS 证书链的深入分析，重点说明 &lt;strong&gt;为何 &lt;code&gt;openssl verify&lt;/code&gt; 报错但 etcd 集群正常运行&lt;/strong&gt;，以及对 &lt;strong&gt;OpenSSL / Go 未来版本兼容性&lt;/strong&gt; 的顾虑与应对建议。&lt;/p&gt;
+&lt;h2 id="1-问题背景"&gt;1. 问题背景 &lt;a href="#1-%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;使用以下命令校验时失败：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;openssl verify -CAfile new-ca.pem etcd.pem
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;输出：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;C=CN, ST=shenzhen, L=shenzhen, O=etcd, OU=System, CN=etcd
+error 18 at 0 depth lookup: self-signed certificate
+error etcd.pem: verification failed
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;但 etcd 集群在如下配置下 &lt;strong&gt;长期稳定运行&lt;/strong&gt;：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-yaml"&gt;trusted-ca-file: /etc/etcd/ssl/new-ca.pem
+cert-file: /etc/etcd/ssl/etcd.pem
+key-file: /etc/etcd/ssl/etcd-key.pem
+client-cert-auth: true
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;初看像是「配置与 PKI 未对齐」，实测与线上行为表明：&lt;strong&gt;集群是正确的，是校验工具的判断逻辑不同&lt;/strong&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="2-真实-pki-关系非自签名"&gt;2. 真实 PKI 关系（非自签名） &lt;a href="#2-%e7%9c%9f%e5%ae%9e-pki-%e5%85%b3%e7%b3%bb%e9%9d%9e%e8%87%aa%e7%ad%be%e5%90%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="21-易被误判的原因dn-完全相同"&gt;2.1 易被误判的原因：DN 完全相同 &lt;a href="#21-%e6%98%93%e8%a2%ab%e8%af%af%e5%88%a4%e7%9a%84%e5%8e%9f%e5%9b%a0dn-%e5%ae%8c%e5%85%a8%e7%9b%b8%e5%90%8c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;三份证书的 Distinguished Name 完全一致：&lt;/p&gt;</description></item><item><title>附录：当前环境证书校验结果</title><link>/blog/2026-07-08-5-%E9%99%84%E5%BD%95-%E5%BD%93%E5%89%8D%E7%8E%AF%E5%A2%83%E8%AF%81%E4%B9%A6%E6%A0%A1%E9%AA%8C%E7%BB%93%E6%9E%9C/</link><pubDate>Wed, 08 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-08-5-%E9%99%84%E5%BD%95-%E5%BD%93%E5%89%8D%E7%8E%AF%E5%A2%83%E8%AF%81%E4%B9%A6%E6%A0%A1%E9%AA%8C%E7%BB%93%E6%9E%9C/</guid><description>&lt;h1 id="附录当前环境证书校验结果"&gt;附录：当前环境证书校验结果 &lt;a href="#%e9%99%84%e5%bd%95%e5%bd%93%e5%89%8d%e7%8e%af%e5%a2%83%e8%af%81%e4%b9%a6%e6%a0%a1%e9%aa%8c%e7%bb%93%e6%9e%9c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;更新时间：2026-07-08&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="校验结果"&gt;校验结果 &lt;a href="#%e6%a0%a1%e9%aa%8c%e7%bb%93%e6%9e%9c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;检查项&lt;/th&gt;
+&lt;th&gt;结果&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;etcd.pem&lt;/code&gt; ↔ &lt;code&gt;etcd-key.pem&lt;/code&gt; 密钥匹配&lt;/td&gt;
+&lt;td&gt;✅ 通过&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;etcd.pem&lt;/code&gt; 由 &lt;code&gt;new-ca.pem&lt;/code&gt; 签发（Go / etcd 实际校验）&lt;/td&gt;
+&lt;td&gt;✅ 通过&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;etcd.pem&lt;/code&gt; 由 &lt;code&gt;new-ca.pem&lt;/code&gt; 签发（&lt;code&gt;openssl verify&lt;/code&gt;）&lt;/td&gt;
+&lt;td&gt;❌ error 18（误报，见说明）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;new-ca.pem&lt;/code&gt; ↔ &lt;code&gt;ca.pem&lt;/code&gt; 公钥&lt;/td&gt;
+&lt;td&gt;✅ 相同（同一 CA 密钥对）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="关键结论"&gt;关键结论 &lt;a href="#%e5%85%b3%e9%94%ae%e7%bb%93%e8%ae%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;etcd.pem&lt;/code&gt; 与 &lt;code&gt;new-ca.pem&lt;/code&gt; 使用了相同 DN（&lt;code&gt;CN=&amp;lt;REDACTED&amp;gt;&lt;/code&gt;）时，&lt;code&gt;openssl verify&lt;/code&gt; 可能将叶子证误判为自签名（error 18）。&lt;/li&gt;
+&lt;li&gt;Go &lt;code&gt;crypto/x509&lt;/code&gt;（etcd 底层）可正确验签并建链，集群运行正常。&lt;/li&gt;
+&lt;li&gt;因此，该场景应以“业务程序真实验签行为 + 工具输出”联合判断，而不是仅依赖 &lt;code&gt;openssl verify&lt;/code&gt; 单点结论。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="信息展示"&gt;信息展示 &lt;a href="#%e4%bf%a1%e6%81%af%e5%b1%95%e7%a4%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;以进行脱敏处理：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;DN 字段：组织/部门/地理信息用 &lt;code&gt;&amp;lt;REDACTED&amp;gt;&lt;/code&gt; 替换&lt;/li&gt;
+&lt;li&gt;IP 字段：保留网段信息，如 &lt;code&gt;21.245.xxx.xxx&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;序列号：保留首尾，如 &lt;code&gt;74B2...B5F2&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;文件路径/主机名：按环境替换为示例值&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="证书详情脱敏摘录"&gt;证书详情（脱敏摘录） &lt;a href="#%e8%af%81%e4%b9%a6%e8%af%a6%e6%83%85%e8%84%b1%e6%95%8f%e6%91%98%e5%bd%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="etcd-keypem节点私钥"&gt;etcd-key.pem（节点私钥） &lt;a href="#etcd-keypem%e8%8a%82%e7%82%b9%e7%a7%81%e9%92%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;算法&lt;/strong&gt;：RSA 2048&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;与 etcd.pem 匹配&lt;/strong&gt;：公钥一致，可配对使用&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="etcdpem节点证书"&gt;etcd.pem（节点证书） &lt;a href="#etcdpem%e8%8a%82%e7%82%b9%e8%af%81%e4%b9%a6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Subject / Issuer&lt;/strong&gt;：&lt;code&gt;C=CN, ST=&amp;lt;REDACTED&amp;gt;, L=&amp;lt;REDACTED&amp;gt;, O=&amp;lt;REDACTED&amp;gt;, OU=&amp;lt;REDACTED&amp;gt;, CN=&amp;lt;REDACTED&amp;gt;&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;有效期&lt;/strong&gt;：2025-11-04 ~ 2125-10-11（GMT）&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;序列号&lt;/strong&gt;：&lt;code&gt;74B2...B5F2&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;算法&lt;/strong&gt;：RSA 2048，SHA256 签名&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;用途&lt;/strong&gt;：Digital Signature, Key Encipherment；TLS Server/Client Authentication&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Basic Constraints&lt;/strong&gt;：&lt;code&gt;CA:FALSE&lt;/code&gt;（非 CA 证书）&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;SAN（IP 地址）&lt;/strong&gt;：
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;127.0.0.1&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;21.xxx.xxx.xxx&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;21.xxx.xxx.xxx&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;21.xxx.xxx.xxx&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;21.xxx.xxx.xxx&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;9.xxx.xxx.xxx&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;9.xxx.xxx.xxx&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;1.xxx.xxx.xxx&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="capem旧-ca"&gt;ca.pem（旧 CA） &lt;a href="#capem%e6%97%a7-ca" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;有效期&lt;/strong&gt;：2025-11-04 ~ 2030-11-03（GMT）&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;序列号&lt;/strong&gt;：&lt;code&gt;4095...1F16&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Basic Constraints&lt;/strong&gt;：&lt;code&gt;CA:TRUE&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;用途&lt;/strong&gt;：Certificate Sign, CRL Sign&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;状态&lt;/strong&gt;：当前仍有效（截至 2026-07-08）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="new-capem新-ca续签"&gt;new-ca.pem（新 CA，续签） &lt;a href="#new-capem%e6%96%b0-ca%e7%bb%ad%e7%ad%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;有效期&lt;/strong&gt;：2026-05-20 ~ 2126-04-26（GMT）&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;序列号&lt;/strong&gt;：&lt;code&gt;D88A...6FEC&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;与 ca.pem 关系&lt;/strong&gt;：公钥相同，为同一 CA 密钥对的续签证书&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;注意&lt;/strong&gt;：该证书未包含 X509v3 扩展（无 &lt;code&gt;CA:TRUE&lt;/code&gt; 等标记），作为 CA 使用时需注意兼容性&lt;/li&gt;
+&lt;/ul&gt;</description></item><item><title>附录：证书文件与校验原理</title><link>/blog/2026-07-08-6-%E9%99%84%E5%BD%95-%E8%AF%81%E4%B9%A6%E6%96%87%E4%BB%B6%E4%B8%8E%E6%A0%A1%E9%AA%8C%E5%8E%9F%E7%90%86/</link><pubDate>Wed, 08 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-08-6-%E9%99%84%E5%BD%95-%E8%AF%81%E4%B9%A6%E6%96%87%E4%BB%B6%E4%B8%8E%E6%A0%A1%E9%AA%8C%E5%8E%9F%E7%90%86/</guid><description>&lt;h1 id="附录证书文件与校验原理"&gt;附录：证书文件与校验原理 &lt;a href="#%e9%99%84%e5%bd%95%e8%af%81%e4%b9%a6%e6%96%87%e4%bb%b6%e4%b8%8e%e6%a0%a1%e9%aa%8c%e5%8e%9f%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="三类文件都包含什么以及如何查看"&gt;三类文件都包含什么，以及如何查看 &lt;a href="#%e4%b8%89%e7%b1%bb%e6%96%87%e4%bb%b6%e9%83%bd%e5%8c%85%e5%90%ab%e4%bb%80%e4%b9%88%e4%bb%a5%e5%8f%8a%e5%a6%82%e4%bd%95%e6%9f%a5%e7%9c%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;TLS 场景里最常见的三类文件是：&lt;code&gt;key&lt;/code&gt;（私钥）、&lt;code&gt;CA 证书&lt;/code&gt;、&lt;code&gt;普通证书（节点/服务证书）&lt;/code&gt;。下面按这三类统一说明。&lt;/p&gt;
+&lt;h3 id="1-key-文件如-etcd-keypem--ca-keypem"&gt;1) key 文件（如 &lt;code&gt;etcd-key.pem&lt;/code&gt; / &lt;code&gt;ca-key.pem&lt;/code&gt;） &lt;a href="#1-key-%e6%96%87%e4%bb%b6%e5%a6%82-etcd-keypem--ca-keypem" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;包含的信息&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;私钥参数（如 RSA 的 &lt;code&gt;d/p/q&lt;/code&gt; 等）&lt;/li&gt;
+&lt;li&gt;对应公钥参数（如 &lt;code&gt;n/e&lt;/code&gt;，属于密钥结构的一部分）&lt;/li&gt;
+&lt;li&gt;不包含 Subject、Issuer、有效期、SAN、签名等证书字段&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;常用查看命令&lt;/strong&gt;：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;# 查看私钥基本信息（建议优先用 pkey，兼容 RSA/ECDSA）
+openssl pkey -in etcd-key.pem -text -noout
+# 仅导出公钥（用于后续比对）
+openssl pkey -in etcd-key.pem -pubout -outform pem
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;私钥可以直接导出公钥，本质上公钥就是由私钥参数推导出来的。但是不能反过来，不能从公钥推导出私钥。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;重点看什么&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;算法类型（RSA / EC）&lt;/li&gt;
+&lt;li&gt;密钥位数（如 2048/4096）&lt;/li&gt;
+&lt;li&gt;是否与证书公钥匹配（见“配对与签发关系检查”文档）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="2-ca-证书文件如-capem--new-capem"&gt;2) CA 证书文件（如 &lt;code&gt;ca.pem&lt;/code&gt; / &lt;code&gt;new-ca.pem&lt;/code&gt;） &lt;a href="#2-ca-%e8%af%81%e4%b9%a6%e6%96%87%e4%bb%b6%e5%a6%82-capem--new-capem" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;包含的信息&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;CA 的公钥（用于验证被它签发的证书）&lt;/li&gt;
+&lt;li&gt;CA 自身身份信息（Subject）&lt;/li&gt;
+&lt;li&gt;颁发者信息（自签时 Subject=Issuer，续签/交叉签名时可能不同）&lt;/li&gt;
+&lt;li&gt;有效期、序列号、签名算法&lt;/li&gt;
+&lt;li&gt;关键扩展（通常应有 &lt;code&gt;Basic Constraints: CA:TRUE&lt;/code&gt;、证书签发用途）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;重点看什么&lt;/strong&gt;：&lt;/p&gt;</description></item></channel></rss>

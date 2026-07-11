@@ -1,4 +1,25 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Go on</title><link>/tags/go/</link><description>Recent content in Go on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 26 Jun 2026 18:42:00 +0800</lastBuildDate><atom:link href="/tags/go/index.xml" rel="self" type="application/rss+xml"/><item><title>深入浅出 Go Safepoints：从编译账本到抢占调度及精确式GC的底层真相</title><link>/blog/2026-06-26-go-safepoints/</link><pubDate>Fri, 26 Jun 2026 18:42:00 +0800</pubDate><guid>/blog/2026-06-26-go-safepoints/</guid><description>&lt;h2 id="深度解密-go-语言的-safepoint从编译账本到抢占调度的底层真相"&gt;深度解密 Go 语言的 Safepoint：从编译账本到抢占调度的底层真相 &lt;a href="#%e6%b7%b1%e5%ba%a6%e8%a7%a3%e5%af%86-go-%e8%af%ad%e8%a8%80%e7%9a%84-safepoint%e4%bb%8e%e7%bc%96%e8%af%91%e8%b4%a6%e6%9c%ac%e5%88%b0%e6%8a%a2%e5%8d%a0%e8%b0%83%e5%ba%a6%e7%9a%84%e5%ba%95%e5%b1%82%e7%9c%9f%e7%9b%b8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Go on</title><link>/tags/go/</link><description>Recent content in Go on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 08 Jul 2026 12:00:00 +0800</lastBuildDate><atom:link href="/tags/go/index.xml" rel="self" type="application/rss+xml"/><item><title>证书校验：OpenSSL 与 Go 的行为差异</title><link>/blog/2026-07-08-3-ssl-%E8%AF%81%E4%B9%A6%E9%AA%8C%E8%AF%81%E6%96%B9%E5%BC%8F%E5%8F%8A%E5%B7%AE%E5%BC%82/</link><pubDate>Wed, 08 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-08-3-ssl-%E8%AF%81%E4%B9%A6%E9%AA%8C%E8%AF%81%E6%96%B9%E5%BC%8F%E5%8F%8A%E5%B7%AE%E5%BC%82/</guid><description>&lt;h1 id="证书校验openssl-与-go-的行为差异"&gt;证书校验：OpenSSL 与 Go 的行为差异 &lt;a href="#%e8%af%81%e4%b9%a6%e6%a0%a1%e9%aa%8copenssl-%e4%b8%8e-go-%e7%9a%84%e8%a1%8c%e4%b8%ba%e5%b7%ae%e5%bc%82" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;本文档记录对 etcd 集群 TLS 证书链的深入分析，重点说明 &lt;strong&gt;为何 &lt;code&gt;openssl verify&lt;/code&gt; 报错但 etcd 集群正常运行&lt;/strong&gt;，以及对 &lt;strong&gt;OpenSSL / Go 未来版本兼容性&lt;/strong&gt; 的顾虑与应对建议。&lt;/p&gt;
+&lt;h2 id="1-问题背景"&gt;1. 问题背景 &lt;a href="#1-%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;使用以下命令校验时失败：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;openssl verify -CAfile new-ca.pem etcd.pem
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;输出：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;C=CN, ST=shenzhen, L=shenzhen, O=etcd, OU=System, CN=etcd
+error 18 at 0 depth lookup: self-signed certificate
+error etcd.pem: verification failed
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;但 etcd 集群在如下配置下 &lt;strong&gt;长期稳定运行&lt;/strong&gt;：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-yaml"&gt;trusted-ca-file: /etc/etcd/ssl/new-ca.pem
+cert-file: /etc/etcd/ssl/etcd.pem
+key-file: /etc/etcd/ssl/etcd-key.pem
+client-cert-auth: true
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;初看像是「配置与 PKI 未对齐」，实测与线上行为表明：&lt;strong&gt;集群是正确的，是校验工具的判断逻辑不同&lt;/strong&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="2-真实-pki-关系非自签名"&gt;2. 真实 PKI 关系（非自签名） &lt;a href="#2-%e7%9c%9f%e5%ae%9e-pki-%e5%85%b3%e7%b3%bb%e9%9d%9e%e8%87%aa%e7%ad%be%e5%90%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="21-易被误判的原因dn-完全相同"&gt;2.1 易被误判的原因：DN 完全相同 &lt;a href="#21-%e6%98%93%e8%a2%ab%e8%af%af%e5%88%a4%e7%9a%84%e5%8e%9f%e5%9b%a0dn-%e5%ae%8c%e5%85%a8%e7%9b%b8%e5%90%8c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;三份证书的 Distinguished Name 完全一致：&lt;/p&gt;</description></item><item><title>深入浅出 Go Safepoints：从编译账本到抢占调度及精确式GC的底层真相</title><link>/blog/2026-06-26-go-safepoints/</link><pubDate>Fri, 26 Jun 2026 18:42:00 +0800</pubDate><guid>/blog/2026-06-26-go-safepoints/</guid><description>&lt;h2 id="深度解密-go-语言的-safepoint从编译账本到抢占调度的底层真相"&gt;深度解密 Go 语言的 Safepoint：从编译账本到抢占调度的底层真相 &lt;a href="#%e6%b7%b1%e5%ba%a6%e8%a7%a3%e5%af%86-go-%e8%af%ad%e8%a8%80%e7%9a%84-safepoint%e4%bb%8e%e7%bc%96%e8%af%91%e8%b4%a6%e6%9c%ac%e5%88%b0%e6%8a%a2%e5%8d%a0%e8%b0%83%e5%ba%a6%e7%9a%84%e5%ba%95%e5%b1%82%e7%9c%9f%e7%9b%b8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;在探讨 Go 语言的高性能并发时，我们经常会听到“非协作式抢占调度”和“精确式垃圾回收（Precise GC）”。而这两个底层特性的交汇点，正是 Safepoint（安全点）。
 如果你去查阅资料，往往只能得到一句宏观的定义：“Safepoint 是程序执行中的一些特定位置，此时状态确定，可以安全暂停。”
 但这并不能解开我们心中的疑惑：Safepoint 到底是什么？它是怎么记录的？为什么有些位置可以被抢占，而有些地方强行抢占就会导致系统崩溃？

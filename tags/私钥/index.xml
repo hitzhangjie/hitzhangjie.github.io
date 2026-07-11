@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>私钥 on</title><link>/tags/%E7%A7%81%E9%92%A5/</link><description>Recent content in 私钥 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 08 Jul 2026 12:00:00 +0800</lastBuildDate><atom:link href="/tags/%E7%A7%81%E9%92%A5/index.xml" rel="self" type="application/rss+xml"/><item><title>附录：证书文件与校验原理</title><link>/blog/2026-07-08-6-%E9%99%84%E5%BD%95-%E8%AF%81%E4%B9%A6%E6%96%87%E4%BB%B6%E4%B8%8E%E6%A0%A1%E9%AA%8C%E5%8E%9F%E7%90%86/</link><pubDate>Wed, 08 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-08-6-%E9%99%84%E5%BD%95-%E8%AF%81%E4%B9%A6%E6%96%87%E4%BB%B6%E4%B8%8E%E6%A0%A1%E9%AA%8C%E5%8E%9F%E7%90%86/</guid><description>&lt;h1 id="附录证书文件与校验原理"&gt;附录：证书文件与校验原理 &lt;a href="#%e9%99%84%e5%bd%95%e8%af%81%e4%b9%a6%e6%96%87%e4%bb%b6%e4%b8%8e%e6%a0%a1%e9%aa%8c%e5%8e%9f%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="三类文件都包含什么以及如何查看"&gt;三类文件都包含什么，以及如何查看 &lt;a href="#%e4%b8%89%e7%b1%bb%e6%96%87%e4%bb%b6%e9%83%bd%e5%8c%85%e5%90%ab%e4%bb%80%e4%b9%88%e4%bb%a5%e5%8f%8a%e5%a6%82%e4%bd%95%e6%9f%a5%e7%9c%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;TLS 场景里最常见的三类文件是：&lt;code&gt;key&lt;/code&gt;（私钥）、&lt;code&gt;CA 证书&lt;/code&gt;、&lt;code&gt;普通证书（节点/服务证书）&lt;/code&gt;。下面按这三类统一说明。&lt;/p&gt;
+&lt;h3 id="1-key-文件如-etcd-keypem--ca-keypem"&gt;1) key 文件（如 &lt;code&gt;etcd-key.pem&lt;/code&gt; / &lt;code&gt;ca-key.pem&lt;/code&gt;） &lt;a href="#1-key-%e6%96%87%e4%bb%b6%e5%a6%82-etcd-keypem--ca-keypem" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;包含的信息&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;私钥参数（如 RSA 的 &lt;code&gt;d/p/q&lt;/code&gt; 等）&lt;/li&gt;
+&lt;li&gt;对应公钥参数（如 &lt;code&gt;n/e&lt;/code&gt;，属于密钥结构的一部分）&lt;/li&gt;
+&lt;li&gt;不包含 Subject、Issuer、有效期、SAN、签名等证书字段&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;常用查看命令&lt;/strong&gt;：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;# 查看私钥基本信息（建议优先用 pkey，兼容 RSA/ECDSA）
+openssl pkey -in etcd-key.pem -text -noout
+# 仅导出公钥（用于后续比对）
+openssl pkey -in etcd-key.pem -pubout -outform pem
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;私钥可以直接导出公钥，本质上公钥就是由私钥参数推导出来的。但是不能反过来，不能从公钥推导出私钥。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;重点看什么&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;算法类型（RSA / EC）&lt;/li&gt;
+&lt;li&gt;密钥位数（如 2048/4096）&lt;/li&gt;
+&lt;li&gt;是否与证书公钥匹配（见“配对与签发关系检查”文档）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="2-ca-证书文件如-capem--new-capem"&gt;2) CA 证书文件（如 &lt;code&gt;ca.pem&lt;/code&gt; / &lt;code&gt;new-ca.pem&lt;/code&gt;） &lt;a href="#2-ca-%e8%af%81%e4%b9%a6%e6%96%87%e4%bb%b6%e5%a6%82-capem--new-capem" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;包含的信息&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;CA 的公钥（用于验证被它签发的证书）&lt;/li&gt;
+&lt;li&gt;CA 自身身份信息（Subject）&lt;/li&gt;
+&lt;li&gt;颁发者信息（自签时 Subject=Issuer，续签/交叉签名时可能不同）&lt;/li&gt;
+&lt;li&gt;有效期、序列号、签名算法&lt;/li&gt;
+&lt;li&gt;关键扩展（通常应有 &lt;code&gt;Basic Constraints: CA:TRUE&lt;/code&gt;、证书签发用途）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;重点看什么&lt;/strong&gt;：&lt;/p&gt;</description></item></channel></rss>

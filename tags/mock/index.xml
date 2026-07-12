@@ -64,7 +64,7 @@ $ r2 ./main
 [0x00459270]&amp;gt; s sym.main.a ;; 查看sym.main.a地址为0x00459250
 [0x00459250]&amp;gt;
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;函数main中调用函数a的过程就这么简单&lt;code&gt;call sym.main.a&lt;/code&gt;，也就是call 0x00459250，再看下a这个函数，它很简单将返回值1存储到[arg_8h]中，就是前一个栈帧中的一个8字节空间，之后的我们就先不关心了。&lt;/p&gt;</description></item><item><title>测试方法：开发者应掌握的系统性测试方法</title><link>/blog/2020-07-01-%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</link><pubDate>Wed, 01 Jul 2020 20:30:01 +0800</pubDate><guid>/blog/2020-07-01-%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</guid><description>&lt;style type="text/css" rel="stylesheet"&gt;
+&lt;p&gt;函数main中调用函数a的过程就这么简单&lt;code&gt;call sym.main.a&lt;/code&gt;，也就是call 0x00459250，再看下a这个函数，它很简单将返回值1存储到[arg_8h]中，就是前一个栈帧中的一个8字节空间，之后的我们就先不关心了。&lt;/p&gt;</description></item><item><title>测试方法：开发者应掌握的系统性测试方法</title><link>/blog/2020-07-01-%E5%8E%8B%E5%8A%9B%E6%B5%8B%E8%AF%95_%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</link><pubDate>Wed, 01 Jul 2020 20:30:01 +0800</pubDate><guid>/blog/2020-07-01-%E5%8E%8B%E5%8A%9B%E6%B5%8B%E8%AF%95_%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</guid><description>&lt;style type="text/css" rel="stylesheet"&gt;
 /* Three image containers (use 25% for four, and 50% for two, etc) */
 .column {
 float: left;

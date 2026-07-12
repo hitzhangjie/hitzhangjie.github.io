@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>非功能性测试 on</title><link>/categories/%E9%9D%9E%E5%8A%9F%E8%83%BD%E6%80%A7%E6%B5%8B%E8%AF%95/</link><description>Recent content in 非功能性测试 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 01 Jul 2020 20:30:01 +0800</lastBuildDate><atom:link href="/categories/%E9%9D%9E%E5%8A%9F%E8%83%BD%E6%80%A7%E6%B5%8B%E8%AF%95/index.xml" rel="self" type="application/rss+xml"/><item><title>测试方法：开发者应掌握的系统性测试方法</title><link>/blog/2020-07-01-%E5%8E%8B%E5%8A%9B%E6%B5%8B%E8%AF%95_%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</link><pubDate>Wed, 01 Jul 2020 20:30:01 +0800</pubDate><guid>/blog/2020-07-01-%E5%8E%8B%E5%8A%9B%E6%B5%8B%E8%AF%95_%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</guid><description>&lt;style type="text/css" rel="stylesheet"&gt;
+/* Three image containers (use 25% for four, and 50% for two, etc) */
+.column {
+float: left;
+width: 50%;
+padding: 5px;
+}
+/* Clear floats after image containers */
+.row::after {
+content: "";
+clear: both;
+display: table;
+}
+.fixsize {
+width: 400px;
+}
+.fullsize {
+width: 680px;
+}
+&lt;/style&gt;
+&lt;p&gt;如何做好测试，是一门系统性的方法学，而不只是一些零零散散的经验。了解并掌握各种测试的目的、方法是非常有必要的。&lt;/p&gt;
+&lt;p&gt;最近工作中也在推动测试相关的一些事项，有一点感触，这里先简单总结下常见测试方法的目的，大致包括如下几类。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;1. 研发流程中构建环节&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;冒烟测试&lt;br&gt;
+该术语，取自集成电路开发领域，集成电路在测试之前，先要加电检查，如果没有冒烟才能进行后续的测试。冒烟测试并不是测试过程的一个阶段，它是软件构建过程中的一个环节，它包含一些非常基础的测试，如保证编译通过、部分核心用例通过，它随每次构建触发，处于持续集成的一个环节。英文表述为BVT测试，Build Verification Testing，从中更能感受的到。将其理解为测试的一个阶段，是一个巨大的误区。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;2. 功能性指标相关测试&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;功能测试&lt;br&gt;
+软件需求说明中对软件需要的功能进行了描述，软件需求分析阶段会对需求说明进行详细分析，并整理出相关的规格说明，包括每个用例的输入、输出等等。功能测试，其实也就是对这里的软件需求规格说明进行测试用例的覆盖，考察的是对各个点、异常路径的把控程度。在实际研发过程中，开发人员一般会先自测通过后，再转给测试团队进行进一步的测试。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;回归测试&lt;br&gt;
+之前已经测试过的用例，可以沉淀下来，供以后进行回归，已发现软件变更、升级期间是否引入了bug。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;其他&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;3. 非功能性指标相关测试&lt;/strong&gt;&lt;/p&gt;
+&lt;div class="row"&gt;
+&lt;div class="column"&gt;&lt;img class="fixsize" alt="性能测试曲线" src="assets/testing/性能测试曲线.png"/&gt;&lt;/div&gt;
+&lt;div class="column"&gt;&lt;img class="fixsize" alt="并发请求响应时间" src="assets/testing/并发请求响应时间.png"/&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;性能测试 (how much + how fast)&lt;br&gt;
+对软件的性能指标进行测试，以验证是否达到预期设计的性能要求。在软件设计之初，需求方一般会提出明确的性能要求，如希望支撑N个用户的并发访问请求，希望响应时间能控制在2s以内等等。除了用户提出的性能指标要求，软件设计人员在系统设计的时候，也会对系统中交互的各个子系统、组件之间的性能有一定要求，如各组件通信响应时间在100ms以内等。&lt;br&gt;
+性能测试，是对系统的一个检验，检验是否达到了预期的设计标准。性能测试，通常可以参考系统最大吞吐量时的请求量级、响应时间，来确定系统的最佳运行点，科学合理地部署设备资源来平衡性能和成本。&lt;br&gt;
+性能测试，通常会和负载测试、压力测试等结合起来，以获得系统的最佳运行点、系统最大负载点、系统崩溃点。&lt;/p&gt;</description></item></channel></rss>

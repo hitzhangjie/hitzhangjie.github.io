@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>RAFT on</title><link>/categories/raft/</link><description>Recent content in RAFT on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 05 Sep 2021 00:47:15 +0800</lastBuildDate><atom:link href="/categories/raft/index.xml" rel="self" type="application/rss+xml"/><item><title>分布式系统：如何使用raft算法开发强一致kv存储系统</title><link>/blog/2021-09-04-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F_%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8raft%E5%BC%80%E5%8F%91%E5%BC%BA%E4%B8%80%E8%87%B4kv%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F/</link><pubDate>Sun, 05 Sep 2021 00:47:15 +0800</pubDate><guid>/blog/2021-09-04-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F_%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8raft%E5%BC%80%E5%8F%91%E5%BC%BA%E4%B8%80%E8%87%B4kv%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F/</guid><description>&lt;h2 id="本文内容"&gt;本文内容 &lt;a href="#%e6%9c%ac%e6%96%87%e5%86%85%e5%ae%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;本文结合etcd源码来进行介绍，etcd/contrib/raftexample提供了一个基于etcd/raft实现的kv存储系统。从该示例出发，我们来看一看如何基于raft算法开发一个强一致的kv存储系统。&lt;/p&gt;
+&lt;p&gt;看完本文的源码分析后，上手一个raft强一致系统开发就不是什么难事了。&lt;/p&gt;
+&lt;p&gt;ps：假定读者已经阅读并理解了raft论文，这里有我的&lt;a href="https://github.com/hitzhangjie/distributed-system-series/blob/master/papers/In%20Search%20of%20an%20Understandable%20Consensus%20Algorithm%20(Extended%20Version).pdf"&gt;批注版的In Search of an Understandable Consensus Algorithm.pdf&lt;/a&gt;，读起来可能会好理解点。&lt;/p&gt;
+&lt;h2 id="etcdraft"&gt;etcd/raft &lt;a href="#etcdraft" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;etcd服务端程序入口：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/server/main.go"&gt;源码&lt;/a&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;启动过程中区分当前节点类型：根据data-dir目录下的目录名member/proxy/empty来区分，然后启动etcd实例或者proxy；&lt;/li&gt;
+&lt;li&gt;启动etcd服务节点：startEtcd这个函数，逻辑主要包括启动供集群节点间通信的rafthttp服务，以及供客户端请求的服务；&lt;/li&gt;
+&lt;li&gt;启动etcd proxy：startProxy这个函数，逻辑主要是启动etcd代理；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;etcd哪些部分值得学习：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;etcd proxy从项目功能上来说虽然很重要，但是从学习角度来说没那么有价值，不看这个；&lt;/li&gt;
+&lt;li&gt;etcd server从项目功能上来说是核心，但是我们也没有必要学习所有的请求处理逻辑，重点是关注读写操作时如何基于raft实现强一致；&lt;/li&gt;
+&lt;li&gt;raft：这部分是raft算法的核心实现，从理解raft论文到算法工程化需要额外做出巨大的优化，这些知识点往往是通用的，重点掌握；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;raft部分：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;pb协议：
+&lt;ul&gt;
+&lt;li&gt;raft peers的通信协议，see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/raftpb/raft.proto"&gt;源码&lt;/a&gt;；&lt;/li&gt;
+&lt;li&gt;raft算法中提到核心的几个rpc就是Vote、AppendEntries，但是工程中需要考虑更多，详见上述pb中的enum MessageType；&lt;/li&gt;
+&lt;li&gt;上述pb中的message Message类型定义了rpc通信过程中的请求/响应，不同rpc通过MessageType type字段区分；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;状态机：
+&lt;ul&gt;
+&lt;li&gt;raft实现数据一致性是通过replicated log（复制日志）实现的，这里的replicated log有时也称为WAL（write ahead log）；&lt;/li&gt;
+&lt;li&gt;raft算法中，每个节点raftnode可能处于以下状态中的一种：follower、candidate、precandidate、leader；&lt;/li&gt;
+&lt;li&gt;raft算法中，每个节点的状态可以通过一个状态机来建模；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;了解了这些基础知识之后，我们结合etcd/contrib/raftexample来解释下raft如何选举，以及leader遇到写操作如何保证数据强一致。&lt;/p&gt;
+&lt;h2 id="etcdraft如何进行leader选举"&gt;etcd/raft如何进行leader选举 &lt;a href="#etcdraft%e5%a6%82%e4%bd%95%e8%bf%9b%e8%a1%8cleader%e9%80%89%e4%b8%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;newRaftNode&lt;/strong&gt;
+newRaftNode，see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/contrib/raftexample/raft.go?L87:6"&gt;源码&lt;/a&gt;，这个函数包括创建一个var rc raftNode，然后rc.startRaft()，这个函数包含非常重要的几个部分：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;startNode，see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/node.go?L218:6"&gt;源码&lt;/a&gt;，这个主要是建立好raftnode启动时的一些初始状态转换，有一个for事件循环处理，如改变raftnode的状态：tick函数、step函数，以及一些message的处理等等；&lt;/li&gt;
+&lt;li&gt;serveRaft：&lt;/li&gt;
+&lt;li&gt;serveChannels：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/contrib/raftexample/raft.go?L402"&gt;源码&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;startNode&lt;/strong&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如何查看这部分源码呢，首先从启动一个raftnode开始吧：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/node.go?L214:4"&gt;源码&lt;/a&gt;；&lt;/li&gt;
+&lt;li&gt;StartNode函数启动一个raftnode，节点刚启动的时候state都是follower：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/raft.go?L360"&gt;源码&lt;/a&gt;；&lt;/li&gt;
+&lt;li&gt;StartNode→Bootstrap(peers)通过配置告诉当前raftnode有多少个raftpeers，然后这些raftpeers加入与当前节点所在的集群属于变更配置，也要记录到raftlog中；&lt;/li&gt;
+&lt;li&gt;raftnode真正跑起来是在这里：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/node.go?L303:16"&gt;源码&lt;/a&gt;，这里有个大的for循环，node的主要逻辑都在这里了；
+&lt;ul&gt;
+&lt;li&gt;tickElection：for/switch-case n.tickC，选举逻辑，此时如果当前raftnode为follower或者candidate吧，此时的tick函数为tickElection，如果选举超时时间过了并且没收到leader的heartbeat来重置选举超时时间，此时会将MsgHup消息类型传入step函数中，将当前follower变为candidate发起选举：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/raft.go?L645"&gt;源码&lt;/a&gt;。这里的选举在raft论文中是直接就是选举动作，但是工程上做了优化，引入了一个可选的两阶段选举prevote。虽然可以tick是触发了tickElection，但是这个后续执行中会检查当前节点是否有资格成为leader，不一定有资格（比如自身的WAL不满足条件）。&lt;/li&gt;
+&lt;li&gt;假如有资格发起选举，则会调用becomeCandidate，会将当前raftnode的term+1，并且step函数变为stepCandidate。然后会调用r.poll来判断是否胜选：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/raft.go?L803"&gt;源码&lt;/a&gt;，其实这里是判断的自己给自己投票的话能否胜选，对于single raftnode的集群有用，假如是多节点集群那么这里无法胜选，继续看。ps：如果胜选就becomeLeader成为leader了。如果不是单节点，就要通过r.send发送投票给各个peers：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/raft.go?L833"&gt;源码&lt;/a&gt;。这里的r.send并不是真的网络发送，而是记录到r.msgs里面等下处理这里的r.msgs。注意这里r.send的时候已经编程了MsgVote类型了，表示投票请求，后续也应该收到MsgVoteResp。&lt;/li&gt;
+&lt;li&gt;r.msgs什么时候处理呢？还是前面我们提到的这个大循环体，每轮循环都会检查r.msgs中有没有message要处理：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/node.go?L316"&gt;源码&lt;/a&gt;，这里的函数n.rn.HasReady()方法检查到len(r.msgs)&amp;gt;0，则认为有消息要处理，这个消息最终会被包装到一个Ready{}事件中，这个事件会被丢到n.readyc这个chan中，什么时候处理在下面serveChannels中介绍。&lt;/li&gt;
+&lt;li&gt;becomeLeader：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/raft.go?L724"&gt;源码&lt;/a&gt;，step函数变为stepLeader，tick函数则变成tickHeartbeat，意味着当前为leader需要给followers定时发送heartbeat来重置它们的选举超时时间，那么heartbeat是什么形式的呢？其实就是通过appendEntry，只不过entry为空，用这种空的entry来表示心跳。leader就要担负起write请求的重任了。&lt;/li&gt;
+&lt;li&gt;但是如果没胜选的话，raftnode的状态就是candidate，step函数未stepCandidate，下面会继续用到。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;serveChannels&lt;/strong&gt;：
+前面关于r.msgs的消息没跟踪到在哪里处理的，我们看下是不是在serveChannels里面？
+serveChannels: see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/contrib/raftexample/raft.go?L402"&gt;源码&lt;/a&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;这个函数里面也有一个for事件循环，当它发现rc.node.Ready()有var rd Ready{}事件可处理时，如果rd上有非空的snapshot，就写入storage，然后将rd.Entries也记录到rd.HardState，然后将rd.Entries也写入storage，最后将rd.Messages发送到peers。我们感觉voteMsg是在这个时候发送给peers的，到底是不是呢：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/contrib/raftexample/raft.go?L459:4"&gt;源码&lt;/a&gt;。是的，这里的rd事件就是从raftnode.Ready()从发从其raftnode.readyc这个channel中取出来的。取出来后通过transport发送出去，这样voteMsg就发送出去了，那么投票的响应又是什么时候收到、什么时候处理的呢？&lt;/li&gt;
+&lt;li&gt;startRaft/AddPeer的时候会调用startPeer，内部会开始循环收包，收peer发来的raftmessage放入一个recvc chan中，startPeer中专门开启了一个goroutine来检查recvc中有没有peer发送来的消息，比如peer发送给我们的voteMsg的响应包：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/server/etcdserver/api/rafthttp/peer.go?L177"&gt;源码&lt;/a&gt;。这里通过raft.Process(ctx,m)对raftmessage进行处理。如何处理是在这个示例代码中定义的：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/contrib/raftexample/raft.go?L499"&gt;源码&lt;/a&gt;，即调用step函数进行处理。我们再往回看下，发送这个消息前已经把节点的step函数修改为了stepCandidate，那我们再看下这个函数里面干了啥，猜测应该有判断是否收到多数投票确认的逻辑；&lt;/li&gt;
+&lt;li&gt;stepCandidate：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/raft.go?L1399:7"&gt;源码&lt;/a&gt;，我们不考虑可选的prevote阶段，很显然这个消息MsgVote的响应类型应该是MsgVoteResp，如果是的话，就继续r.poll检查下是否胜选吧，如果胜选了，则自己becomeLeader，然后广播appendEntries，这里append是干啥，是为了通治其他peers更新commit index吧。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这样leader选举就完成了！！！&lt;/p&gt;</description></item></channel></rss>

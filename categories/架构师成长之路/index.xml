@@ -362,7 +362,157 @@ for (int i=0; i&amp;lt;LENGTH; i++) {
 result[i] = nums1[i] + nums2[i];
 }
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;现在，我们考虑使用SSE、AVX2分别对其进行处理。&lt;/p&gt;</description></item><item><title>安全编程：检测并解决数值计算溢出问题</title><link>/blog/2023-03-03-%E5%AE%89%E5%85%A8%E7%BC%96%E7%A8%8B_%E6%A3%80%E6%B5%8B%E5%B9%B6%E8%A7%A3%E5%86%B3%E8%AE%A1%E7%AE%97%E6%BA%A2%E5%87%BA%E9%97%AE%E9%A2%98/</link><pubDate>Fri, 03 Mar 2023 02:04:11 +0800</pubDate><guid>/blog/2023-03-03-%E5%AE%89%E5%85%A8%E7%BC%96%E7%A8%8B_%E6%A3%80%E6%B5%8B%E5%B9%B6%E8%A7%A3%E5%86%B3%E8%AE%A1%E7%AE%97%E6%BA%A2%E5%87%BA%E9%97%AE%E9%A2%98/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;现在，我们考虑使用SSE、AVX2分别对其进行处理。&lt;/p&gt;</description></item><item><title>Netflix自适应过载保护算法</title><link>/blog/2023-04-18-%E8%BF%87%E8%BD%BD%E4%BF%9D%E6%8A%A4_netflix%E8%87%AA%E9%80%82%E5%BA%94%E8%BF%87%E8%BD%BD%E4%BF%9D%E6%8A%A4/</link><pubDate>Tue, 18 Apr 2023 23:38:09 +0800</pubDate><guid>/blog/2023-04-18-%E8%BF%87%E8%BD%BD%E4%BF%9D%E6%8A%A4_netflix%E8%87%AA%E9%80%82%E5%BA%94%E8%BF%87%E8%BD%BD%E4%BF%9D%E6%8A%A4/</guid><description>&lt;h3 id="思路简介"&gt;思路简介 &lt;a href="#%e6%80%9d%e8%b7%af%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;a href="https://github.com/Netflix/concurrency-limits"&gt;Netflix/concurrency-limits&lt;/a&gt;，基于Java实现的，star 2.9k+，也有go语言的第三方实现&lt;a href="https://github.com/platinummonkey/go-concurrency-limits"&gt;platinummonkey/go-concurrency-limits&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;平时大家评估服务负载、容量、最佳qps是如何做的，往往是先压测看服务能抗多少qps，然后请求方取个75%*qps作为一个阈值，然后请求方通过令牌桶、漏洞之类的来进行控制。但是对于很多个节点、需要动态扩缩容场景，这个固定值很快就会失效……当然有分布式频控的搞法……netflix的思路是与其将重点放在如何告知客户端设置qps，还不如让客户端能根据rtt自动算出下阶段的最大请求量来，这个是借鉴了little’s law以及tcp的拥塞控制。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;它这里vegas算法估计的limit是这么算的 L * (1-minRTT/sampleRTT)，&lt;/li&gt;
+&lt;li&gt;然后还有个gradient2优化，来平滑下&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="详细设计"&gt;详细设计 &lt;a href="#%e8%af%a6%e7%bb%86%e8%ae%be%e8%ae%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;这个库提供了很多的limiter实现：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;fixed，固定值，并发请求的时刻量不能超过这个fixedlimiter的值，这个值不变&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;aimd，基于loss的，请求成功就加性增，遇到失败就乘性减&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;windowed，基于滑动窗口实现的，每个窗口期内有一个limiter（成员delegate）,可以是前面提到的fixed、aimd等limiter&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;vegas&lt;/strong&gt;，是基于测量的rtt的，另外也会考虑丢包。它实际上是确定了这么几个负载阶段：&lt;strong&gt;请求没有排队、请求有少量排队、请求有多一点排队、请求有很多排队&lt;/strong&gt;。每次采样后会更新最新的limit，更新时会首先根据当前minRTT和sampleRTT以及当前limit来算一下接下里的queueSize，然后检查queueSize处于上面哪个阶段，然后使用对数操作进行平滑对当前的limit进行增大、缩小的调整。&lt;/p&gt;
+&lt;img src="assets/2023-04-19-netflix自适应过载保护/image-20230419002404109.png" alt="vegas算法" class="myimg" /&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;gradient&lt;/strong&gt;，它这里和vegas的实现思想上是一致的，只是对于inflight*2≥estimatedLimit时的处理逻辑不一样，vegas是将排队严重情况分成了几个阶段用不同的函数来调整limit，gradient是用了一个“梯度”的方法来调整，大致上是当前estimatedLimit * gradient + queueSize…这个算法的平滑处理能理解，但是不是那么“想象“象其效果。&lt;/p&gt;
+&lt;p&gt;仔细看下，多揣摩几遍还是可以想象的出来的 😂&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;gradient2，它这里是对gradient的一个优化，什么优化呢？gradient是基于测量minRTT的，这会有个问题，minRTT还是比较敏感的，对于测量tcp的包（因为通常都会分片、分片大小往往都是确定的）没啥问题还挺好的。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;但是使用minRTT来测量RPC就不是特别好，因为RPC请求，不同接口的请求可能大小变化挺大的，即使是相同接口的请求可能变化也比较明显的。所以使用avgRTT要比minRTT更友好些，不至于limit的“抖动”，可能会导致过度的load shedding，造成不必要的请求被拦截。&lt;/p&gt;
+&lt;p&gt;然后这里的avgRTT怎么算呢？从开始到现在的请求RTT的平均值？这里其实用的一个指数平均，一方面有平均值的作用能避免minRTT的上述问题；另一方面，使用的指数平均，0.8&lt;em&gt;longtermRTT + 0.2&lt;/em&gt;sampleRTT，这样也能尽可能反映当前时刻的负载信息。&lt;/p&gt;
+&lt;p&gt;另外这里的tolerance=2.0是说，如果遇到sampleRTT=tolerance*longtermRTT时，可以容忍这么长耗时的请求而不降低limit，仍然可以按照原速率发送，如果超了tolerance下的设置，那么梯度gradient就会小于1.0，此时limit就会被调低。limit调低时也会被smooth参数进一步平滑下。&lt;/p&gt;
+&lt;p&gt;当从过载中恢复时，因为longtermRTT也被搞大了，如果不加处理，可能会有较长一段时间才能恢复到≤sampleRTT，这会有个问题，如果不能尽快恢复longtermRTT，则有可能持续增加发包速率再次导致过载。为了尽快恢复longtermRTT到正常值让发包速率处于steady状态，会判断&lt;code&gt;longrtt / shortrtt&amp;gt;2&lt;/code&gt;时会给longrtt*0.95尽快调低longrtt。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;img src="assets/2023-04-19-netflix自适应过载保护/image-20230419002750477.png" alt="gradient2算法" class="myimg" /&gt;
+&lt;h3 id="调查总结"&gt;调查总结 &lt;a href="#%e8%b0%83%e6%9f%a5%e6%80%bb%e7%bb%93" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;总结一下，vegas、gradient都是基于minRTT进行测量的，对于RPC场景而言可能并非最佳选择。相比之下gradient2是基于longtermRTT指数平均代替了minRTT，对RPC场景适应性可能更好。&lt;/p&gt;
+&lt;p&gt;除了RTT，它们都考虑了负载steady、overload情况下的不同阶段以及调整策略（主要是increase limit、decrease limit时如何做到平滑）。可以测试下gradient2先有个直观认识。&lt;/p&gt;
+&lt;h3 id="一点后话"&gt;一点后话 &lt;a href="#%e4%b8%80%e7%82%b9%e5%90%8e%e8%af%9d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;当你的系统是一个大型的分布式系统，集群也需要动态扩缩容，系统中的负载类型不同，同一个服务的不同接口处理耗时不同，即便是相同接口不同请求处理耗时也有明显不同，这个时候常规的基于“请求配额”的传统过载保护机制是不怎么有效的。&lt;/p&gt;
+&lt;p&gt;最初有这种想法，是在看点做内容处理链路的时候，注意到有些服务是计算密集型的（如OCR模块），有些是IO密集型的，有些图文发表请求里面只有一张图片，有的有多张图片，有的文章比较短，有的文章比较长，这都会影响你的系统负载、处理耗时，如何科学的评估负载进而确定合理的请求配额，是一件比较困难的事情。&lt;/p&gt;
+&lt;p&gt;后面开始思考如何评估“负载”这样的问题，可能会想CPU使用率、内存使用率高、IO利用率高、网卡利用率高，实际上不同workload类型对资源的使用情况不同，这些指标高还真不一定就是负载高。如果涉及到具体语言，可能会去想Java、Go GC STW问题……&lt;/p&gt;
+&lt;p&gt;预期纠结这些，不如更高屋建瓴地站在宏观角度看看，如果负载高了会发生什么？系统负载开始变高之后，是可以把其当做一个黑盒通过外部观测来观察出来的。Netflix的过载保护算法正是从这里触发，看似简单的实现，但是并不是不着边际。整个网络世界得以正常运转的TCP拥塞控制也是建立在RTT、Loss观测基础上的，Netflix也将其Vegas Limiter命名成了Vegas，正是因为它借鉴了TCP vegas拥塞控制算法（TCP Reno的替代算法）。&lt;/p&gt;</description></item><item><title>压测之接口lo的妙用</title><link>/blog/2023-04-14-%E5%8E%8B%E5%8A%9B%E6%B5%8B%E8%AF%95_%E5%8E%8B%E6%B5%8B%E4%B9%8B%E6%8E%A5%E5%8F%A3lo%E7%9A%84%E5%A6%99%E7%94%A8/</link><pubDate>Fri, 14 Apr 2023 03:10:08 +0000</pubDate><guid>/blog/2023-04-14-%E5%8E%8B%E5%8A%9B%E6%B5%8B%E8%AF%95_%E5%8E%8B%E6%B5%8B%E4%B9%8B%E6%8E%A5%E5%8F%A3lo%E7%9A%84%E5%A6%99%E7%94%A8/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;前一篇文章介绍了本地开发机压测时如何为每个待压测分配CPU资源（其实是taskset进行绑核，由于没有其他负载可以近似为分配CPU资源），本文继续介绍下如何让压测变得更真实一点，那就是网络IO这块，在本地通信时往往使用的是loopback接口，但是loopback并不是一个真实的网卡设备，它基本没有什么硬件网卡设备的传输速率的限制，也没有网络传输过程中的传输延迟。&lt;/p&gt;
+&lt;p&gt;这样的话，我们在压测的时候，网络方面的开销就几乎体现不出来，比如说，你想看下在4g网络下客户端、服务器之间网络通信数据包多大时打开数据压缩更有价值……&lt;/p&gt;
+&lt;p&gt;在我的测试过程中我希望能尽可能简化测试工作的同时，也能保证该有的环境的真实性，于是就有了本文对loopback接口的一点探索。&lt;/p&gt;
+&lt;h2 id="认识本地lo"&gt;认识本地lo &lt;a href="#%e8%ae%a4%e8%af%86%e6%9c%ac%e5%9c%b0lo" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Linux中的Loopback接口是一个虚拟网络接口，允许在同一主机上运行的应用程序之间通信。它通常被称为“lo”接口，具有IP地址127.0.0.1。&lt;/p&gt;
+&lt;p&gt;Loopback接口在内核中使用Loopback驱动程序实现，创建一个虚拟网络接口，并将所有传入的数据转发到本地协议栈。当一个应用程序将数据发送到loopback接口时，数据会被回送到协议栈，并像从另一个网络接口到达一样转发。 在Linux中，Loopback接口的一个重要用例是用于测试和调试网络应用程序。通过通过Loopback接口发送和接收数据，应用程序可以模拟网络流量，而不实际发送或接收来自物理或虚拟网络接口的数据。&lt;/p&gt;
+&lt;p&gt;Loopback接口还由一些网络协议使用，例如Kubernetes kube-proxy IPVS，OSPF和其他需要在同一主机上的进程之间通信的网络相关软件。&lt;/p&gt;
+&lt;p&gt;总之，Linux中的Loopback接口是一个虚拟网络接口，为在同一主机上运行的应用程序提供了一种通信通道。它在内核中使用Loopback驱动程序实现，并且在测试、调试和网络相关软件中具有许多实际用例。&lt;/p&gt;
+&lt;h2 id="认识netem"&gt;认识netem &lt;a href="#%e8%ae%a4%e8%af%86netem" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 Linux 中，ip 命令中的 netem 是一个网络模拟工具。它允许您对网络连接进行各种修改，例如，添加延迟、丢包以及增加噪声等，以便在网络环境下测试应用程序的性能和稳定性。使用 netem 工具，您可以模拟各种不同的网络条件，包括高延迟、高带宽和低带宽等，以便更好地测试和优化应用程序在各种网络条件下的行为。&lt;/p&gt;
+&lt;p&gt;Netem 已经成为 Linux 网络模拟和测试工具的标准选择之一，同时也是在诸如交换机、路由器和 WAN 加速器等网络设备上进行隔离测试和仿真时的一个有用工具。通过使用 netem，您可以更好地了解您的应用程序在不同网络条件下的行为，并且能够更好地进行演示和培训。&lt;/p&gt;
+&lt;h2 id="利用本地lo"&gt;利用本地lo &lt;a href="#%e5%88%a9%e7%94%a8%e6%9c%ac%e5%9c%b0lo" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;如何使用netem让本地loopback接口更好地模拟真实网络情况呢？下面就来简单说一下。&lt;/p&gt;
+&lt;h3 id="启用netem"&gt;启用netem &lt;a href="#%e5%90%af%e7%94%a8netem" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;首先，需要启用内核模块netem：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;sudo yum install -y kmod
+sudo modprobe sch_netem
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="模拟网络延迟"&gt;模拟网络延迟 &lt;a href="#%e6%a8%a1%e6%8b%9f%e7%bd%91%e7%bb%9c%e5%bb%b6%e8%bf%9f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;然后，如果loopback接口的每次的收、发操作模拟一定的网络延迟：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;sudo yum install iproute-tc
+or
+sudo yum install iproute
+sudo tc qdisc add dev lo root netem delay 1ms
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这样的话就相当于一个rtt增加了2ms，为了验证这个，你可以在执行上述模拟前后，分别看下ping localhost的延迟。&lt;/p&gt;</description></item><item><title>压测之taskset的妙用</title><link>/blog/2023-04-13-%E5%8E%8B%E5%8A%9B%E6%B5%8B%E8%AF%95_%E5%8E%8B%E6%B5%8B%E4%B9%8Btaskset%E7%9A%84%E5%A6%99%E7%94%A8/</link><pubDate>Thu, 13 Apr 2023 03:22:15 +0800</pubDate><guid>/blog/2023-04-13-%E5%8E%8B%E5%8A%9B%E6%B5%8B%E8%AF%95_%E5%8E%8B%E6%B5%8B%E4%B9%8Btaskset%E7%9A%84%E5%A6%99%E7%94%A8/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;想测试下gRPC框架的性能，设计了如下服务拓扑来对gRPC框架各组件、特性、参数配置下的性能进行探索。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;压力源程序 perfclient ---请求-&amp;gt; perfserver1 ---请求-&amp;gt; perfserver2
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;压力源程序perfclient会并发发送请求给服务perfserver1，perfserver1则会继续请求perfserver2，然后perfserver2回包给perfserver1，perfserver1收到响应后内部完成处理逻辑后继续回包给perfclient。&lt;/p&gt;
+&lt;p&gt;perfclient每隔一段时间会打印下请求的请求量、成功量、失败量，以及qps、耗时信息。需要注意的事，这里再统计耗时信息的时候，除了avg、min、max耗时，还需要percentile(or quantile）百分位耗时，后者更具有说服力。&lt;/p&gt;
+&lt;p&gt;现在呢？遇到点问题，正常我需要将上述压力源程序、被压测服务perfserver1、perfserver2尽力部署到不同的机器上，让它们之间避免相互影响，同时部署的机器上也应该注意没有其他负载会干扰到我们的测试，但是问题来了：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;可能有机器，但是部署起来太麻烦了，可能每调整下测试点就要要操作多台机器&lt;/li&gt;
+&lt;li&gt;可能有机器，但是云平台存在超卖的情况，母机负载大影响到了虚拟机负载稳定性&lt;/li&gt;
+&lt;li&gt;可能有机器，但是ci/cd流水线执行耗时太久了&lt;/li&gt;
+&lt;li&gt;可能没机器，只有一台本地开发机&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;有没有什么其他简单好用的办法呢？我觉得有，资源隔离下啊。&lt;/p&gt;
+&lt;h2 id="认识taskset"&gt;认识taskset &lt;a href="#%e8%ae%a4%e8%af%86taskset" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;taskset，是linux下用来进行绑核设置的一个工具，我们可以借助它对上述不同的3个进程的cpu资源进行限定，如压力源程序perfclient需要能多生成些请求，我们给它分配7~10 4个cpu core，perfserver1负载会稍微比perfserver2高点，但如果是纯echo的话也多不了读少，给perfserver1分配2个cpu core，给perfserver2也分2个。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;taskset -a -p 7,8,9,10 `pidof perfclient`
+taskset -a -p 3,4 `pidof perfserver1`
+taskset -a -p 5,6 `pidof perfserver2`
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这样上述几个进程就被分别设置到了不同的cpu cores上执行，意味着当他们把cpu跑满时，他们能抗的负载大致就是这个比例。&lt;/p&gt;
+&lt;p&gt;解释下选项-a：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;taskset如果不指定选项-a，则知会对当前进程名对应的主进程进行绑核设置，不会对进程中的其他线程进行设置，当然也不会对后续新创建的线程进行设置。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;加了-a，taskset就会对执行命令时，该进程pid下的所有线程进行统一的绑核设置，但是如果后续创建了新线程，新线程不会被绑核。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;那么如果一个程序是多线程程序，且线程数不是固定的，会在以后新创建、销毁动态变化的，这种该怎么解决呢？&lt;/p&gt;
+&lt;h2 id="go天然多线程"&gt;go天然多线程 &lt;a href="#go%e5%a4%a9%e7%84%b6%e5%a4%9a%e7%ba%bf%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;go程序天然是多线程程序，那应该如何进行绑核设置呢？如果只是为了限制进程使用的cpu资源，直接使用runtime.GOMAXPROC(x)进行设置不行吗？不行！&lt;/p&gt;
+&lt;p&gt;该函数只是说限制同时在运行的线程数，并没有像taskset那样将线程绑到核上，这意味着这些go程序线程的执行有可能会在cpu core上迁移，这样的话通过top命令查看cpu core负载情况，就不好判断哪个core的负载是因为哪个进程引起的…对吧。&lt;/p&gt;
+&lt;p&gt;另一个问题，go程序的GMP调度模型会在必要时自动创建新的线程出来，用来执行goroutines，这里问题就来了，我需要动态感知当前进程下的所有线程。go语言或者标准库都没有提供线程层面的东西来获取，那我们怎么获取呢？&lt;/p&gt;
+&lt;h3 id="go如何绑核"&gt;go如何绑核 &lt;a href="#go%e5%a6%82%e4%bd%95%e7%bb%91%e6%a0%b8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Linux下面每个进程都有一个pid，对应的虚拟文件系统/proc/&lt;pid&gt;/tasks下面就是该进程pid下的所有线程信息。理论上可以定时获取里面的pid，然后再去taskset -p绑核，或者说go启动一个协程定时调用下&lt;code&gt;taskset -a -p &amp;lt;pid&amp;gt;&lt;/code&gt;，可以简洁明了搞定。&lt;/p&gt;
+&lt;p&gt;这样就可以搞定绑核设置：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;for {
+cmd := exec.Command(&amp;quot;taskset&amp;quot;, &amp;quot;-a&amp;quot;, &amp;quot;-p 1,2,3,4&amp;quot;, os.Getpid())
+cmd.Run()
+time.Sleep(time.Second*5)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="测试结果"&gt;测试结果 &lt;a href="#%e6%b5%8b%e8%af%95%e7%bb%93%e6%9e%9c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;执行top命令后，可以press 1，然后可以看到具体每个cpu core上的负载。在压测的时候就简单多了，因为进程下线程被绑核到特定的几个cpu core了，所以可以看对应core的负载来归一化当前服务的负载信息。&lt;/p&gt;</description></item><item><title>从排队论到过载保护算法</title><link>/blog/2023-04-12-%E8%BF%87%E8%BD%BD%E4%BF%9D%E6%8A%A4_%E4%BB%8E%E6%8E%92%E9%98%9F%E8%AE%BA%E5%88%B0%E8%BF%87%E8%BD%BD%E4%BF%9D%E6%8A%A4%E7%AE%97%E6%B3%95/</link><pubDate>Wed, 12 Apr 2023 10:38:09 +0800</pubDate><guid>/blog/2023-04-12-%E8%BF%87%E8%BD%BD%E4%BF%9D%E6%8A%A4_%E4%BB%8E%E6%8E%92%E9%98%9F%E8%AE%BA%E5%88%B0%E8%BF%87%E8%BD%BD%E4%BF%9D%E6%8A%A4%E7%AE%97%E6%B3%95/</guid><description>&lt;h2 id="排队论简介"&gt;排队论简介 &lt;a href="#%e6%8e%92%e9%98%9f%e8%ae%ba%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;排队论的精髓是通过数学模型和分析方法来研究排队系统的性能和行为。排队系统是指由一些服务设施和一些顾客组成的系统，顾客需要排队等待服务。排队论的目标是研究如何优化排队系统的性能，以提高服务质量和效率。&lt;/p&gt;
+&lt;p&gt;排队论的核心是建立数学模型来描述排队系统的行为。这些模型通常基于随机过程和概率论，用于描述顾客到达的随机性、服务时间的随机性以及服务设施的数量和性能等因素。通过分析这些模型，可以得出排队系统的性能指标，如平均等待时间、平均逗留时间、系统利用率等等。&lt;/p&gt;
+&lt;p&gt;排队论的应用非常广泛，涉及到许多领域，如交通运输、通信网络、制造业、医疗保健等等。在这些领域中，排队论可以用来优化资源利用、提高服务质量、降低成本等等。&lt;/p&gt;
+&lt;p&gt;总之，排队论的精髓是通过数学模型和分析方法来研究排队系统的性能和行为，以优化系统的性能和效率。&lt;/p&gt;
+&lt;h2 id="公式及应用"&gt;公式及应用 &lt;a href="#%e5%85%ac%e5%bc%8f%e5%8f%8a%e5%ba%94%e7%94%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;排队论是一个非常广泛的领域，其中涉及到许多不同的理论公式和应用。以下是一些常见的排队论理论公式和计算机系统中的应用：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Little&amp;rsquo;s Law：L = λW，其中L表示系统中平均顾客数，λ表示到达率，W表示平均逗留时间。这个公式表明，系统中平均顾客数等于到达率乘以平均逗留时间。在计算机系统中，这个公式可以用来计算系统中的平均并发请求数，以及系统的响应时间和吞吐量。&lt;/li&gt;
+&lt;li&gt;Kendall&amp;rsquo;s Notation：A/B/C/K/N，其中A表示到达过程的类型，B表示服务时间的分布类型，C表示服务设施的数量，K表示服务设施的排队规则，N表示系统容量。这个符号表示了排队系统的基本特征，可以用来描述和比较不同的排队系统。&lt;/li&gt;
+&lt;li&gt;M/M/1队列：这是一个经典的排队模型，其中到达过程和服务时间都是指数分布，服务设施数量为1。这个模型可以用来计算系统的平均等待时间、平均逗留时间、系统利用率等指标。在计算机系统中，这个模型可以用来分析单个服务器的性能。&lt;/li&gt;
+&lt;li&gt;M/M/m队列：这是一个扩展的M/M/1队列模型，其中服务设施数量为m。这个模型可以用来计算系统的平均等待时间、平均逗留时间、系统利用率等指标。在计算机系统中，这个模型可以用来分析多个服务器的性能。&lt;/li&gt;
+&lt;li&gt;网络队列模型：这是一个用于分析计算机网络性能的排队模型，其中网络节点被建模为队列，数据包被建模为顾客。这个模型可以用来计算网络的吞吐量、延迟、丢包率等指标。&lt;/li&gt;
+&lt;li&gt;负载均衡算法：这是一种用于优化计算机系统性能的算法，通过将负载均衡地分配到多个服务器上，以提高系统的吞吐量和可靠性。排队论可以用来分析负载均衡算法的性能和效率。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;这些理论公式和应用只是排队论中的一部分，排队论还涉及到许多其他的理论和应用，如排队网络、排队模拟、排队优化等等。&lt;/p&gt;
+&lt;h2 id="浅谈littles-law"&gt;浅谈Little&amp;rsquo;s Law &lt;a href="#%e6%b5%85%e8%b0%88littles-law" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="简要说明"&gt;简要说明 &lt;a href="#%e7%ae%80%e8%a6%81%e8%af%b4%e6%98%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Little&amp;rsquo;s Law是一个基本的排队论原理，它描述了在一个&lt;strong&gt;稳定的系统&lt;/strong&gt;中，平均顾客数、平均等待时间和平均服务率之间的关系。该原理最初由美国数学家John Little在1961年提出，被广泛应用于各种排队系统的性能分析和优化。&lt;/p&gt;
+&lt;p&gt;Little&amp;rsquo;s Law的问题背景是排队系统，例如银行、超市、餐厅等等。在这些系统中，顾客到达、等待和离开的过程构成了一个排队模型。Little&amp;rsquo;s Law的目的是通过分析这个模型，来解决如何优化排队系统的问题。&lt;/p&gt;
+&lt;p&gt;Little&amp;rsquo;s Law的核心公式是：&lt;strong&gt;L = λW&lt;/strong&gt;，其中L表示平均顾客数，λ表示平均到达率，W表示平均等待时间。这个公式告诉我们，如果我们知道了平均到达速率和平均等待时间，就可以计算出平均顾客数。反之亦然，如果我们知道了平均顾客数和平均等待时间，就可以计算出平均到达速率。这个公式可以帮助我们更好地理解排队系统的性能，并且指导我们如何优化排队系统。&lt;/p&gt;
+&lt;h3 id="应用案例"&gt;应用案例 &lt;a href="#%e5%ba%94%e7%94%a8%e6%a1%88%e4%be%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;以下是一些应用Little&amp;rsquo;s Law的案例：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;在一个银行分行，平均每小时有100名顾客到达，平均等待时间为10分钟，那么该分行的平均顾客数是多少？根据Little&amp;rsquo;s Law，L = λW = 100 * 10 / 60 = 16.67，因此该分行的平均顾客数为16.67人。&lt;/li&gt;
+&lt;li&gt;一家餐厅想要提高服务质量，他们决定增加服务员的数量。根据Little&amp;rsquo;s Law，如果他们想要减少平均等待时间，他们需要增加服务员的数量，以提高服务率。如果他们想要减少平均顾客数，他们需要减少到达率，例如通过减少广告宣传或者提高价格等方式。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id="在线服务领域"&gt;在线服务领域 &lt;a href="#%e5%9c%a8%e7%ba%bf%e6%9c%8d%e5%8a%a1%e9%a2%86%e5%9f%9f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="理解littles-law"&gt;理解little&amp;rsquo;s law &lt;a href="#%e7%90%86%e8%a7%a3littles-law" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;将其应用到我们熟悉的在线服务领域的话，可以达到稳态的前提下，调整下相关参数：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;队列平均长度可视为同时被服务的请求个数，即服务并发度Concurrency，&lt;/li&gt;
+&lt;li&gt;队列人数到达(速)率可视为服务吞吐Throughput，&lt;/li&gt;
+&lt;li&gt;平均服务时间可视为服务平均处理延迟Latency（可细分为等待延迟+处理延迟），&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这样可以得到另一个版本的Little&amp;rsquo;s Law，Concurrency=Throughput * Latency。&lt;/p&gt;
+&lt;p&gt;简单理解下这里的公式。假设请求都是单线程处理，每个请求只会占用一个cpu core，则服务并发度Concurrency就是cpu core的个数；每个请求的处理平均时间为Latency（单位为秒），则1秒内一个cpu core可以处理的请求数为 1/Latency；因此，1秒内可处理的总请求个数也就可以确定：Throughput = Concurrency * (1/ Latency)，进一步就可以得到公式：Concurrency = Throughput * Latency……所以，还是好理解的。&lt;/p&gt;</description></item><item><title>安全编程：检测并解决数值计算溢出问题</title><link>/blog/2023-03-03-%E5%AE%89%E5%85%A8%E7%BC%96%E7%A8%8B_%E6%A3%80%E6%B5%8B%E5%B9%B6%E8%A7%A3%E5%86%B3%E8%AE%A1%E7%AE%97%E6%BA%A2%E5%87%BA%E9%97%AE%E9%A2%98/</link><pubDate>Fri, 03 Mar 2023 02:04:11 +0800</pubDate><guid>/blog/2023-03-03-%E5%AE%89%E5%85%A8%E7%BC%96%E7%A8%8B_%E6%A3%80%E6%B5%8B%E5%B9%B6%E8%A7%A3%E5%86%B3%E8%AE%A1%E7%AE%97%E6%BA%A2%E5%87%BA%E9%97%AE%E9%A2%98/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;数据类型是个好东西，类型定义了一种数据组成以及允许在其上进行的操作。
 数据类型是个好东西，它定义了一种最基础的“安全”，类型安全。&lt;/p&gt;
 &lt;p&gt;我们在进行数值运算时，有可能会“超出”类型本身的值域，但是受限于位宽限制，进而表现为“上溢出”。以a+b为例：&lt;/p&gt;
@@ -414,7 +564,59 @@ ps：不好理解？把值域想象成一个转盘，delta不可能让v在值域
 &lt;p&gt;我们想检测下如何更好地发现一些造成溢出的边界条件，我们使用go fuzztest来帮助发现潜在的问题。
 我们设置了边界附近的值作为seed scorpus，这样方便go fuzztest引擎使用mutator微调输入参数时能够覆盖到边界条件。&lt;/p&gt;
 &lt;p&gt;其实也可以使用go fuzztest的随机构造输入的模式，但是这样往往需要执行更多的时间才有助于发现问题。
-ps：改天再写篇文章详细介绍下go fuzztest内部是如何工作的。&lt;/p&gt;</description></item><item><title>框架设计：一致性hash负载均衡方案的思考</title><link>/blog/2022-08-06-%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1_%E4%B8%80%E8%87%B4%E6%80%A7hash%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1%E6%96%B9%E6%A1%88%E7%9A%84%E6%80%9D%E8%80%83/</link><pubDate>Sat, 06 Aug 2022 17:16:57 +0800</pubDate><guid>/blog/2022-08-06-%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1_%E4%B8%80%E8%87%B4%E6%80%A7hash%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1%E6%96%B9%E6%A1%88%E7%9A%84%E6%80%9D%E8%80%83/</guid><description>&lt;h1 id="常见的负载均衡策略"&gt;常见的负载均衡策略 &lt;a href="#%e5%b8%b8%e8%a7%81%e7%9a%84%e8%b4%9f%e8%bd%bd%e5%9d%87%e8%a1%a1%e7%ad%96%e7%95%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+ps：改天再写篇文章详细介绍下go fuzztest内部是如何工作的。&lt;/p&gt;</description></item><item><title>分布式系统：分布式锁方案的思考</title><link>/blog/2022-09-25-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F_%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81%E6%96%B9%E6%A1%88%E7%9A%84%E6%80%9D%E8%80%83/</link><pubDate>Sun, 25 Sep 2022 15:31:53 +0800</pubDate><guid>/blog/2022-09-25-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F_%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81%E6%96%B9%E6%A1%88%E7%9A%84%E6%80%9D%E8%80%83/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在微服务架构下，经常面临一些事务性处理需要考虑一致性的场景，笔者工作过程中，很多场景最终都采取了可用性优先、数据最终一致的方案。最后我们可能也会结合一些对账之类的手段来发现异常并修复不一致的数据。&lt;/p&gt;
+&lt;p&gt;归根结底，是因为微服务架构下上述事务性处理方案没有保证刚性事务的ACID原则，其弱化了对A、C的控制，OK，这种方案并非不可接受的，只要业务场景适用即可。这里还有一点就是I（Isolation）的原则，如何保证微服务架构下事务处理的隔离性呢？&lt;/p&gt;
+&lt;p&gt;分布式锁，就是大家常用的方案，只不过关于对分布式锁的认识，可能大家认识的程度并没有自己认为的那么到位。&lt;/p&gt;
+&lt;h2 id="常见方案分类"&gt;常见方案分类 &lt;a href="#%e5%b8%b8%e8%a7%81%e6%96%b9%e6%a1%88%e5%88%86%e7%b1%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;分布式锁，归根究底是为了保证任务的排他性执行。但是为了排他性执行的初衷却可能是不同的，所以我们接下来会先按照要解决问题进行分类。然后呢，考虑到可用性、正确性，实现分布式锁的具体方法也是不同的，然后我们也可以按照实现方式进行分类。&lt;/p&gt;
+&lt;h3 id="按解决问题分类"&gt;按解决问题分类 &lt;a href="#%e6%8c%89%e8%a7%a3%e5%86%b3%e9%97%ae%e9%a2%98%e5%88%86%e7%b1%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;解决效率类问题&lt;/strong&gt;：为了避免资源浪费，如每天统计下业务下所有服务接口成功率数据，这类定时任务也是多机部署的避免单点问题，但是只要一台机器执行就行了，属于解决效率类问题。没有必要多台机器执行，但是即便都执行了也没啥影响，只是后面执行的覆盖掉前面的执行了，仅此而已。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;解决正确性问题&lt;/strong&gt;：任务必须排他性执行，如果并发执行则存在正确性问题。比如用户购买游戏道具时需要读取玩家金币数、扣金币、写回，这里涉及到典型的Read、Modify、Write的问题，如果这个操作时序不是排他性的，就掺杂着重置、送礼等各种可能修改金币的操作时序，则会导致正确性问题。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="按实现方式分类"&gt;按实现方式分类 &lt;a href="#%e6%8c%89%e5%ae%9e%e7%8e%b0%e6%96%b9%e5%bc%8f%e5%88%86%e7%b1%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;基于缓存实现：比如利用redis、memcache等实现，分布式缓存一般提供了get、set的能力，允许给key、value指定版本、排他性、过期时间属性，来实现分布式锁。&lt;/li&gt;
+&lt;li&gt;基于共识算法实现：比如etcd、zk这类底层有raft、zab共识算法支撑的组件，借助他们可以比较可靠的实现分布式锁，至少能保证分配锁时不会导致client错误持有锁。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;在实际实现、使用分布式锁时，我们多数时候是冲着正确性去的，但是方案本身其实是不完备的，但是我们却将其当做了“正确的”。&lt;/p&gt;
+&lt;h2 id="常见方案介绍"&gt;常见方案介绍 &lt;a href="#%e5%b8%b8%e8%a7%81%e6%96%b9%e6%a1%88%e4%bb%8b%e7%bb%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="基于redis单机版"&gt;基于redis单机版 &lt;a href="#%e5%9f%ba%e4%ba%8eredis%e5%8d%95%e6%9c%ba%e7%89%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;比较常见的就是单机版的redis实现版本，如下所示：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;# 加锁操作
+SET resource_name my_random_value NX PX 30000
+# 解锁操作
+if redis.call(&amp;quot;get&amp;quot;,KEYS[1]) == ARGV[1] then
+return redis.call(&amp;quot;del&amp;quot;,KEYS[1])
+else
+return 0
+end
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;实际情况是单机版redis存在单点问题，为了解决这个问题，通常又会给redis master挂个slave来备份数据，但是redis的备份机制是异步的，所以仍然存在主备切换时丢失锁数据而导致的错误加锁情况，解决不了正确性。&lt;/p&gt;
+&lt;h3 id="基于redis集群版"&gt;基于redis集群版 &lt;a href="#%e5%9f%ba%e4%ba%8eredis%e9%9b%86%e7%be%a4%e7%89%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;集群版的redis，用的比较多的是redlock算法。redlock算法主要是解决单点故障问题，它的主要思想是，假设集群中有N个（建议值5）master节点，这些master节点及其replicas各自维护一些不相干的keyslots。加锁时，client先获取本地时间，然后串行地向N个节点发起请求，是串行的。&lt;/p&gt;
+&lt;p&gt;至于详细的实现，redis官网上有这些推荐实现的github repo链接，可以自己去找找看。&lt;/p&gt;
+&lt;p&gt;其实这个算法也解决不了网络波动、分区极端场景下，依然会导致client错误持有锁的情况，比如1、2、3、4、5个节点，一开始网络正常client1持有了1、2、3上的锁，后面网络波动导致client只能访问3、4、5，并且3发生了主备切换而备份上缺少数据，client依然能在3、4、5上获得相同锁。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;尽管redlock算法提出了一些可以缓解正确性被破坏的想法，但是仍然不能保证分配锁时的正确性。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3 id="基于etcd实现"&gt;基于etcd实现 &lt;a href="#%e5%9f%ba%e4%ba%8eetcd%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;etcd本身是基于raft算法实现的副本的状态复制，是有可靠的共识理论支撑的工程实现，另外etcd号称其raft算法实现有着比paxos算法更好的性能（这个没求证，多数情况下paxos算法可能性能更优点，也不一定非得有master节点），感兴趣的可以自行了解。&lt;/p&gt;
+&lt;p&gt;基于etcd的分布式锁实现，已经内置在etcd中了，直接使用即可。&lt;/p&gt;
+&lt;p&gt;因为示例代码的篇幅原因、go.mod设置等，我们就不在这里占用太多篇幅了，感兴趣的可以直接查看这里的示例代码：https://github.com/hitzhangjie/codemaster/blob/master/distlock/main.go。&lt;/p&gt;
+&lt;h3 id="思考下"&gt;思考下 &lt;a href="#%e6%80%9d%e8%80%83%e4%b8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;我们从解决效率问题的分布式锁，到解决正确性问题的分布式锁，对锁分配正确性的要求提升了一档，关于其实现方案，也从基于redis、redis集群版的方案，也过渡到了基于raft算法的etcd实现（其他的基于paxos、zab共识算法的类似就不介绍了），我们解决了锁服务分配锁时的正确性问题，但是这样就能保证任务排他性执行了吗？&lt;/p&gt;
+&lt;p&gt;不能！client在使用锁的时候，可能会出现如下情况：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;client出现了崩溃、逻辑bug，导致锁没有被正确地释放掉，如果锁没有过期时间，将导致其他client加锁时出现死锁；&lt;/li&gt;
+&lt;li&gt;client加锁时设置过期时间，但是过期时间可能设置的过短，锁过期被etcd清理然后又重新分配给了其他client，然后旧client还以为自己别锁保护的临界区内还可以肆意妄为，导致并发执行错误；&lt;/li&gt;
+&lt;li&gt;client加锁时设置了合理的过期时间，但是自身因为其他原因出现了一定时间阻塞，恢复后继续执行，但是锁实际已经过期被释放；&lt;/li&gt;
+&lt;li&gt;client执行操作时锁确实是有效的，但是在其发起对下游的请求后，下游继续处理期间锁过期，其他client持有了锁并发继续执行操作；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;看到没，即便是锁分配是正确的，client使用锁时依然无法100%保证正确性，这个问题能100%解决吗？不能，但是可以尽可能缓解，比如合理设置锁过期时间，比如请求方调用下游服务时，把锁信息带给下游让下游能够去锁服务校验锁有效性。&lt;/p&gt;
+&lt;h2 id="google-chubby"&gt;google chubby &lt;a href="#google-chubby" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;chubby是谷歌内部的专用的锁服务，没有对外部开源，但是通过其发表的论文，开源社区实现了zookeeper。这里只简单介绍下chubby的核心思想。&lt;/p&gt;</description></item><item><title>框架设计：一致性hash负载均衡方案的思考</title><link>/blog/2022-08-06-%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1_%E4%B8%80%E8%87%B4%E6%80%A7hash%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1%E6%96%B9%E6%A1%88%E7%9A%84%E6%80%9D%E8%80%83/</link><pubDate>Sat, 06 Aug 2022 17:16:57 +0800</pubDate><guid>/blog/2022-08-06-%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1_%E4%B8%80%E8%87%B4%E6%80%A7hash%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1%E6%96%B9%E6%A1%88%E7%9A%84%E6%80%9D%E8%80%83/</guid><description>&lt;h1 id="常见的负载均衡策略"&gt;常见的负载均衡策略 &lt;a href="#%e5%b8%b8%e8%a7%81%e7%9a%84%e8%b4%9f%e8%bd%bd%e5%9d%87%e8%a1%a1%e7%ad%96%e7%95%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;客户端完成被调服务的服务发现后，获得了一批实例节点列表，现在要借助合适的负载均衡算法来选择一个实例完成请求处理。&lt;/p&gt;
 &lt;p&gt;常见的负载均衡算法包括：&lt;/p&gt;
 &lt;ul&gt;
@@ -938,11 +1140,77 @@ mysql&amp;gt; show status like 'last_query_cost';
 &lt;h3 id="shared-buffers-between-user-and-kernel-space"&gt;shared buffers between user and kernel space &lt;a href="#shared-buffers-between-user-and-kernel-space" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;linux sk_buffers结构，其中有个指针记录着要发送的数据（application buffer中）的地址，避免了从application buffer到kernel buffer的拷贝；&lt;/p&gt;
 &lt;h3 id="different-system-calls-sendfile-splice-etc"&gt;different system calls, sendfile, splice, etc &lt;a href="#different-system-calls-sendfile-splice-etc" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;先说sendfile，sendfile允许在fd之间直接传送数据，进出sendfile上下文切换只需两次，数据直接从源fd对应的kernel buffer（dma从设备上拷贝过去）到目的socketfd的socket buffer拷贝，完全绕过了应用程序buffer及其拷贝；&lt;/p&gt;</description></item><item><title>培养技术领导力</title><link>/blog/2021-08-17-%E5%9F%B9%E5%85%BB%E6%8A%80%E6%9C%AF%E9%A2%86%E5%AF%BC%E5%8A%9B/</link><pubDate>Tue, 17 Aug 2021 22:11:58 +0800</pubDate><guid>/blog/2021-08-17-%E5%9F%B9%E5%85%BB%E6%8A%80%E6%9C%AF%E9%A2%86%E5%AF%BC%E5%8A%9B/</guid><description>&lt;p&gt;关于如何培养自己的技术领导力，文章&lt;a href="https://slack.engineering/technical-leadership-getting-started/"&gt;technical leadership: getting started&lt;/a&gt; 中作者分享了自己的心得。&lt;/p&gt;
+&lt;p&gt;先说sendfile，sendfile允许在fd之间直接传送数据，进出sendfile上下文切换只需两次，数据直接从源fd对应的kernel buffer（dma从设备上拷贝过去）到目的socketfd的socket buffer拷贝，完全绕过了应用程序buffer及其拷贝；&lt;/p&gt;</description></item><item><title>分布式系统：如何使用raft算法开发强一致kv存储系统</title><link>/blog/2021-09-04-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F_%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8raft%E5%BC%80%E5%8F%91%E5%BC%BA%E4%B8%80%E8%87%B4kv%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F/</link><pubDate>Sun, 05 Sep 2021 00:47:15 +0800</pubDate><guid>/blog/2021-09-04-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F_%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8raft%E5%BC%80%E5%8F%91%E5%BC%BA%E4%B8%80%E8%87%B4kv%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F/</guid><description>&lt;h2 id="本文内容"&gt;本文内容 &lt;a href="#%e6%9c%ac%e6%96%87%e5%86%85%e5%ae%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;本文结合etcd源码来进行介绍，etcd/contrib/raftexample提供了一个基于etcd/raft实现的kv存储系统。从该示例出发，我们来看一看如何基于raft算法开发一个强一致的kv存储系统。&lt;/p&gt;
+&lt;p&gt;看完本文的源码分析后，上手一个raft强一致系统开发就不是什么难事了。&lt;/p&gt;
+&lt;p&gt;ps：假定读者已经阅读并理解了raft论文，这里有我的&lt;a href="https://github.com/hitzhangjie/distributed-system-series/blob/master/papers/In%20Search%20of%20an%20Understandable%20Consensus%20Algorithm%20(Extended%20Version).pdf"&gt;批注版的In Search of an Understandable Consensus Algorithm.pdf&lt;/a&gt;，读起来可能会好理解点。&lt;/p&gt;
+&lt;h2 id="etcdraft"&gt;etcd/raft &lt;a href="#etcdraft" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;etcd服务端程序入口：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/server/main.go"&gt;源码&lt;/a&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;启动过程中区分当前节点类型：根据data-dir目录下的目录名member/proxy/empty来区分，然后启动etcd实例或者proxy；&lt;/li&gt;
+&lt;li&gt;启动etcd服务节点：startEtcd这个函数，逻辑主要包括启动供集群节点间通信的rafthttp服务，以及供客户端请求的服务；&lt;/li&gt;
+&lt;li&gt;启动etcd proxy：startProxy这个函数，逻辑主要是启动etcd代理；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;etcd哪些部分值得学习：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;etcd proxy从项目功能上来说虽然很重要，但是从学习角度来说没那么有价值，不看这个；&lt;/li&gt;
+&lt;li&gt;etcd server从项目功能上来说是核心，但是我们也没有必要学习所有的请求处理逻辑，重点是关注读写操作时如何基于raft实现强一致；&lt;/li&gt;
+&lt;li&gt;raft：这部分是raft算法的核心实现，从理解raft论文到算法工程化需要额外做出巨大的优化，这些知识点往往是通用的，重点掌握；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;raft部分：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;pb协议：
+&lt;ul&gt;
+&lt;li&gt;raft peers的通信协议，see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/raftpb/raft.proto"&gt;源码&lt;/a&gt;；&lt;/li&gt;
+&lt;li&gt;raft算法中提到核心的几个rpc就是Vote、AppendEntries，但是工程中需要考虑更多，详见上述pb中的enum MessageType；&lt;/li&gt;
+&lt;li&gt;上述pb中的message Message类型定义了rpc通信过程中的请求/响应，不同rpc通过MessageType type字段区分；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;状态机：
+&lt;ul&gt;
+&lt;li&gt;raft实现数据一致性是通过replicated log（复制日志）实现的，这里的replicated log有时也称为WAL（write ahead log）；&lt;/li&gt;
+&lt;li&gt;raft算法中，每个节点raftnode可能处于以下状态中的一种：follower、candidate、precandidate、leader；&lt;/li&gt;
+&lt;li&gt;raft算法中，每个节点的状态可以通过一个状态机来建模；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;了解了这些基础知识之后，我们结合etcd/contrib/raftexample来解释下raft如何选举，以及leader遇到写操作如何保证数据强一致。&lt;/p&gt;
+&lt;h2 id="etcdraft如何进行leader选举"&gt;etcd/raft如何进行leader选举 &lt;a href="#etcdraft%e5%a6%82%e4%bd%95%e8%bf%9b%e8%a1%8cleader%e9%80%89%e4%b8%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;newRaftNode&lt;/strong&gt;
+newRaftNode，see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/contrib/raftexample/raft.go?L87:6"&gt;源码&lt;/a&gt;，这个函数包括创建一个var rc raftNode，然后rc.startRaft()，这个函数包含非常重要的几个部分：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;startNode，see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/node.go?L218:6"&gt;源码&lt;/a&gt;，这个主要是建立好raftnode启动时的一些初始状态转换，有一个for事件循环处理，如改变raftnode的状态：tick函数、step函数，以及一些message的处理等等；&lt;/li&gt;
+&lt;li&gt;serveRaft：&lt;/li&gt;
+&lt;li&gt;serveChannels：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/contrib/raftexample/raft.go?L402"&gt;源码&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;startNode&lt;/strong&gt;:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如何查看这部分源码呢，首先从启动一个raftnode开始吧：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/node.go?L214:4"&gt;源码&lt;/a&gt;；&lt;/li&gt;
+&lt;li&gt;StartNode函数启动一个raftnode，节点刚启动的时候state都是follower：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/raft.go?L360"&gt;源码&lt;/a&gt;；&lt;/li&gt;
+&lt;li&gt;StartNode→Bootstrap(peers)通过配置告诉当前raftnode有多少个raftpeers，然后这些raftpeers加入与当前节点所在的集群属于变更配置，也要记录到raftlog中；&lt;/li&gt;
+&lt;li&gt;raftnode真正跑起来是在这里：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/node.go?L303:16"&gt;源码&lt;/a&gt;，这里有个大的for循环，node的主要逻辑都在这里了；
+&lt;ul&gt;
+&lt;li&gt;tickElection：for/switch-case n.tickC，选举逻辑，此时如果当前raftnode为follower或者candidate吧，此时的tick函数为tickElection，如果选举超时时间过了并且没收到leader的heartbeat来重置选举超时时间，此时会将MsgHup消息类型传入step函数中，将当前follower变为candidate发起选举：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/raft.go?L645"&gt;源码&lt;/a&gt;。这里的选举在raft论文中是直接就是选举动作，但是工程上做了优化，引入了一个可选的两阶段选举prevote。虽然可以tick是触发了tickElection，但是这个后续执行中会检查当前节点是否有资格成为leader，不一定有资格（比如自身的WAL不满足条件）。&lt;/li&gt;
+&lt;li&gt;假如有资格发起选举，则会调用becomeCandidate，会将当前raftnode的term+1，并且step函数变为stepCandidate。然后会调用r.poll来判断是否胜选：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/raft.go?L803"&gt;源码&lt;/a&gt;，其实这里是判断的自己给自己投票的话能否胜选，对于single raftnode的集群有用，假如是多节点集群那么这里无法胜选，继续看。ps：如果胜选就becomeLeader成为leader了。如果不是单节点，就要通过r.send发送投票给各个peers：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/raft.go?L833"&gt;源码&lt;/a&gt;。这里的r.send并不是真的网络发送，而是记录到r.msgs里面等下处理这里的r.msgs。注意这里r.send的时候已经编程了MsgVote类型了，表示投票请求，后续也应该收到MsgVoteResp。&lt;/li&gt;
+&lt;li&gt;r.msgs什么时候处理呢？还是前面我们提到的这个大循环体，每轮循环都会检查r.msgs中有没有message要处理：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/node.go?L316"&gt;源码&lt;/a&gt;，这里的函数n.rn.HasReady()方法检查到len(r.msgs)&amp;gt;0，则认为有消息要处理，这个消息最终会被包装到一个Ready{}事件中，这个事件会被丢到n.readyc这个chan中，什么时候处理在下面serveChannels中介绍。&lt;/li&gt;
+&lt;li&gt;becomeLeader：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/raft.go?L724"&gt;源码&lt;/a&gt;，step函数变为stepLeader，tick函数则变成tickHeartbeat，意味着当前为leader需要给followers定时发送heartbeat来重置它们的选举超时时间，那么heartbeat是什么形式的呢？其实就是通过appendEntry，只不过entry为空，用这种空的entry来表示心跳。leader就要担负起write请求的重任了。&lt;/li&gt;
+&lt;li&gt;但是如果没胜选的话，raftnode的状态就是candidate，step函数未stepCandidate，下面会继续用到。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;serveChannels&lt;/strong&gt;：
+前面关于r.msgs的消息没跟踪到在哪里处理的，我们看下是不是在serveChannels里面？
+serveChannels: see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/contrib/raftexample/raft.go?L402"&gt;源码&lt;/a&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;这个函数里面也有一个for事件循环，当它发现rc.node.Ready()有var rd Ready{}事件可处理时，如果rd上有非空的snapshot，就写入storage，然后将rd.Entries也记录到rd.HardState，然后将rd.Entries也写入storage，最后将rd.Messages发送到peers。我们感觉voteMsg是在这个时候发送给peers的，到底是不是呢：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/contrib/raftexample/raft.go?L459:4"&gt;源码&lt;/a&gt;。是的，这里的rd事件就是从raftnode.Ready()从发从其raftnode.readyc这个channel中取出来的。取出来后通过transport发送出去，这样voteMsg就发送出去了，那么投票的响应又是什么时候收到、什么时候处理的呢？&lt;/li&gt;
+&lt;li&gt;startRaft/AddPeer的时候会调用startPeer，内部会开始循环收包，收peer发来的raftmessage放入一个recvc chan中，startPeer中专门开启了一个goroutine来检查recvc中有没有peer发送来的消息，比如peer发送给我们的voteMsg的响应包：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/server/etcdserver/api/rafthttp/peer.go?L177"&gt;源码&lt;/a&gt;。这里通过raft.Process(ctx,m)对raftmessage进行处理。如何处理是在这个示例代码中定义的：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/contrib/raftexample/raft.go?L499"&gt;源码&lt;/a&gt;，即调用step函数进行处理。我们再往回看下，发送这个消息前已经把节点的step函数修改为了stepCandidate，那我们再看下这个函数里面干了啥，猜测应该有判断是否收到多数投票确认的逻辑；&lt;/li&gt;
+&lt;li&gt;stepCandidate：see &lt;a href="https://sourcegraph.com/github.com/etcd-io/etcd/-/blob/raft/raft.go?L1399:7"&gt;源码&lt;/a&gt;，我们不考虑可选的prevote阶段，很显然这个消息MsgVote的响应类型应该是MsgVoteResp，如果是的话，就继续r.poll检查下是否胜选吧，如果胜选了，则自己becomeLeader，然后广播appendEntries，这里append是干啥，是为了通治其他peers更新commit index吧。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这样leader选举就完成了！！！&lt;/p&gt;</description></item><item><title>培养技术领导力</title><link>/blog/2021-08-17-%E5%9F%B9%E5%85%BB%E6%8A%80%E6%9C%AF%E9%A2%86%E5%AF%BC%E5%8A%9B/</link><pubDate>Tue, 17 Aug 2021 22:11:58 +0800</pubDate><guid>/blog/2021-08-17-%E5%9F%B9%E5%85%BB%E6%8A%80%E6%9C%AF%E9%A2%86%E5%AF%BC%E5%8A%9B/</guid><description>&lt;p&gt;关于如何培养自己的技术领导力，文章&lt;a href="https://slack.engineering/technical-leadership-getting-started/"&gt;technical leadership: getting started&lt;/a&gt; 中作者分享了自己的心得。&lt;/p&gt;
 &lt;p&gt;读后深有感触，现在做一个简单的总结。总结不拘泥于原文结构，根据个人感悟重新整理下。&lt;/p&gt;
-&lt;p&gt;塑造领导力的3个层次：leading self，leading others，leading organizations。没有人天生就是专家，在成为专家的路线上，我们就要沿着这3个层次慢慢锻炼提升自己。&lt;/p&gt;
+&lt;p&gt;塑造领导力的3个层次：lead yourself，lead others，lead organizations。没有人天生就是专家，在成为专家的路线上，我们就要沿着这3个层次慢慢锻炼提升自己。&lt;/p&gt;
 &lt;h1 id="成为专家"&gt;成为专家 &lt;a href="#%e6%88%90%e4%b8%ba%e4%b8%93%e5%ae%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
-&lt;p&gt;想起10000小时定律，要成为领域专家是需要付出大量的实践的，过程中要不断提升自己的实践能力、技术视野、对公司业务价值及目标的理解。能否成为真正的专家，靠的不是运气，而是稳定持续地有力输出，again and again and again…consistently！这里就要求自己先做到leading self，把自己做到最好，起到表率的作用。然后再尝试靠技术领导力去leading others，leading organizations。&lt;/p&gt;
+&lt;p&gt;想起10000小时定律，要成为领域专家是需要付出大量的实践的，过程中要不断提升自己的实践能力、技术视野、对公司业务价值及目标的理解。能否成为真正的专家，靠的不是运气，而是稳定持续地有力输出，again and again and again…consistently！这里就要求自己先做到lead yourself，把自己做到最好，起到表率的作用。然后再尝试靠技术领导力去lead others，lead organizations。&lt;/p&gt;
 &lt;h1 id="善于分享"&gt;善于分享 &lt;a href="#%e5%96%84%e4%ba%8e%e5%88%86%e4%ba%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;提高这里的输出，也不能总是依靠个人能力。如果你想走得够快，你可能选择自己走；如果你想走得更远，那必须依靠团队的力量。对于掌握的知识、技能，藏着掖着并不是在帮你，因为你没有正向激励到身边的人，没有在恰当的时候塑造有力的技术影响力，更没有帮助大家提升到更接近的段位来一场更漂亮的团战。是时候地分享自己掌握的知识、技能，也减少他人对自己的依赖，侧面上可以赢取更多的时间放在更有价值的事情上。知识是没有穷尽的，总会有更值得钻研的领域等着去探索。&lt;/p&gt;
 &lt;h1 id="有效沟通"&gt;有效沟通 &lt;a href="#%e6%9c%89%e6%95%88%e6%b2%9f%e9%80%9a" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
@@ -1413,91 +1681,7 @@ $ r2 ./main
 [0x00459270]&amp;gt; s sym.main.a ;; 查看sym.main.a地址为0x00459250
 [0x00459250]&amp;gt;
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;函数main中调用函数a的过程就这么简单&lt;code&gt;call sym.main.a&lt;/code&gt;，也就是call 0x00459250，再看下a这个函数，它很简单将返回值1存储到[arg_8h]中，就是前一个栈帧中的一个8字节空间，之后的我们就先不关心了。&lt;/p&gt;</description></item><item><title>x64汇编开发介绍</title><link>/blog/2020-08-20-x64%E6%B1%87%E7%BC%96%E5%BC%80%E5%8F%91%E4%BB%8B%E7%BB%8D/</link><pubDate>Thu, 20 Aug 2020 20:27:19 +0800</pubDate><guid>/blog/2020-08-20-x64%E6%B1%87%E7%BC%96%E5%BC%80%E5%8F%91%E4%BB%8B%E7%BB%8D/</guid><description>&lt;p&gt;最近在工作和学习中发现，其实汇编是非常重要的，即便现在高级语言已经非常方便了，但是了解汇编对于深入理解计算机系统，以及一些高深的知识点是不可或缺的。举几个例子，比如说Linux操作系统有一个系统调用函数叫Fork我们都知道Fork的返回值在子进程中是0，在父进程中是非0，那这个是如何实现的呢？对于不了解汇编的人也很难有能力去阅读Linux操作系统源码，只能道听途说了解到个大概原因。再比如接下来要讲的gomonkey测试框架实现的一些指令patching操作，这些都是与汇编操作分不开的。甚至你想了解下上下文切换开销，你都需要深入了解下指令执行周期等等的问题。&lt;/p&gt;
-&lt;p&gt;不懂汇编，不妨碍你开发上层应用，但是对你的深度就是一道坎，你很难跨国这个鸿沟去窥探更底层的一些原理。&lt;/p&gt;
-&lt;p&gt;有感而发，今天就回顾下intel官方开发发布的x64汇编知识，做一个简单的回顾，也为后面研究gomonkey指令patching等等做一些准备和铺垫。&lt;/p&gt;
-&lt;h2 id="介绍"&gt;介绍 &lt;a href="#%e4%bb%8b%e7%bb%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;大家使用x86汇编来写一些对性能比较敏感的程序嗯，这个情况已经持续很多年了嗯，但是现在32位机器应逐渐被64位机器取代了，对应的汇编代码也发生了变化。这篇文章主要就是介绍x64汇编的，如果不了解x86汇编也没什么大碍，当然了解的话理解起来会更简单一点。&lt;/p&gt;
-&lt;p&gt;x64是一个通用的名字，它表示的是对Intel以及AMD 32位指令集架构的一个64位扩展。AMD首先引入了x64指令集，最初叫x86-64，后面又改成了AMD64。Intel呢，将其支持64位指令集的架构称之为IA-32e，后面又改成了EMT64。这两个版本之间有一点细微的不兼容的地方，但是大部分指令在两个版本上都可以很好的工作，相关的细节可以参考Intel开发手册&lt;a href="http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html"&gt;Intel 64 And IA-32 Architectures Software Developer&amp;rsquo;s Manuals&lt;/a&gt;，以及AMD64架构的技术文档。我们将这两个版本的交集部分称之为x64。不要将x64与64位Intel Itanium架构（称之为IA-64）混为一谈。&lt;/p&gt;
-&lt;p&gt;这篇文章没有涉及硬件相关的细节，如caches、分支预测，以及其他高级话题。文章最后会给出一些这些领域的参考手册供了解更多。&lt;/p&gt;
-&lt;p&gt;汇编语言，往往会用来编写对性能要求比较苛刻的程序或其中的一部分。但是对大部分普通程序员来说，与其让其写汇编，还不如写cc++然后配上一个好的编译器来的实在，后者编译器优化的性能可能比其写出的汇编代码质量更高。汇编语言对于调试代码也是有用的，有时一个编译器可能生成了一些不正确的汇编指令，通过调试器在程序中单步调试可以帮助定位到问题的原因。代码优化器，有时也会犯错。汇编的另外一个用途，你可以用它来研究没有源码的程序。反汇编让你能够改变、修复现有的可执行程序（推荐下几个工具hopper or cutter）。如果你想了解或者调查为什么某种编程语言比较慢，其他的比较快之类的问题，汇编也是你的好帮手。最后吧，掌握汇编知识，对于诊断一些恶意软件，也是必不可少的技能。&lt;/p&gt;
-&lt;h2 id="架构"&gt;架构 &lt;a href="#%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;当要去学习特定平台的汇编时，首先应该学习的是，该平台的寄存器集合。&lt;/p&gt;
-&lt;h3 id="通用架构"&gt;通用架构 &lt;a href="#%e9%80%9a%e7%94%a8%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;64位寄存器允许容纳更大的尺寸的数据，或者是地址，所以我们定义的更多的类型，将1个字节byte定义成8bits，将1个字word定义成16bits，将一个双字double word定义成32bits，将一个四字quadword定义成64位，将一个八字double quadword定义成128bits。关于字节序的问题，Intel是小端字节序，意味着低有效位存储在内存的低地址中。&lt;/p&gt;
-&lt;p&gt;&lt;img src="https://software.intel.com/content/dam/develop/external/us/en/images/29529-figure-1-181178.jpg" alt="通用架构"&gt;&lt;/p&gt;
-&lt;p&gt;上图显示了16个64bits的通用目的寄存器，前8个被命名成rax、rbx、rcx、rdx、rbp、rsi、rdi、rsp，这个命名和历史原因有关系，后面8个被命名成了r8&lt;del&gt;r15。如果前8个自己存器名，将字符r换成e，就变成了对应的地位的32位寄存器，比如rax的低32位是eax。类似地，如果想访问低16位，就直接把前缀去掉，如AX就是访问的rax的低16位，如果低8位呢，那就是AL了，AH就是次低8位（8&lt;/del&gt;15位）。新加的8个寄存器r8~r15可以用类似的方式来访问低位数据，如r8（qword），r8d（lower dword），r8w（lowest word）、r8b（lowest byte MASM风格，intel风格是r8l）。注意没有r8h这种表示法。&lt;/p&gt;
-&lt;p&gt;使用REX操作码前缀去访问新添加的这8个通用寄存器的字节时，有一些限制，不能像访问之前的8个通用寄存器一样通过AH、BH、CH、DH来访问，并且一次只能访问一个（如R11B），但是可以使用AL、BL、CL、DL，为啥来，因为它就是强制要求将AH、BH、CH、DH转换成BPL、SPL、DIL、SIL来使用。&lt;/p&gt;
-&lt;p&gt;64位指令指针寄存器RIP，指向下一条要执行的指令的低质，并且支持64位平坦内存模型，当前操作系统中的内存地址布局将在后面提及。&lt;/p&gt;
-&lt;p&gt;栈指针寄存器RSP，指向当前刚push进栈的元素空间地址，也就是栈顶了，栈从高地址向低地址方向增长。栈用来存储调用例程（函数）的返回值、传递参数，或者用以支持ABI中的调用惯例（如保存调用方现场）。&lt;/p&gt;
-&lt;p&gt;RFLAGS寄存器，用来存储一些标识信息，它用来标识一些操作的结果（如是否溢出、运算结果的正负等）或者控制处理器的执行。这在x86 32位寄存器EFLAGS中就已经形成了这些，现在在以前基础上又添加了高32位，用来预留支持扩展，当前是没有使用的。下表列出了最常使用的一些flags。大多数其他flags是用于操作系统级别的任务。&lt;/p&gt;
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th style="text-align: left"&gt;Symbol&lt;/th&gt;
-&lt;th style="text-align: left"&gt;Bit&lt;/th&gt;
-&lt;th style="text-align: left"&gt;Name&lt;/th&gt;
-&lt;th style="text-align: left"&gt;Set if&amp;hellip;&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td style="text-align: left"&gt;CF&lt;/td&gt;
-&lt;td style="text-align: left"&gt;0&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Carry&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Operation generated a carry or borrow&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style="text-align: left"&gt;PF&lt;/td&gt;
-&lt;td style="text-align: left"&gt;2&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Parity&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Last byte has even number of 1&amp;rsquo;s, else 0&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style="text-align: left"&gt;AF&lt;/td&gt;
-&lt;td style="text-align: left"&gt;4&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Adjust&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Denotes Binary Coded Decimal in-byte carry&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style="text-align: left"&gt;ZF&lt;/td&gt;
-&lt;td style="text-align: left"&gt;6&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Zero&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Result was 0&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style="text-align: left"&gt;SF&lt;/td&gt;
-&lt;td style="text-align: left"&gt;7&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Sign&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Most significant bit of result is 1&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style="text-align: left"&gt;OF&lt;/td&gt;
-&lt;td style="text-align: left"&gt;11&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Overflow&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Overflow on signed operation&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style="text-align: left"&gt;&lt;/td&gt;
-&lt;td style="text-align: left"&gt;&lt;/td&gt;
-&lt;td style="text-align: left"&gt;&lt;/td&gt;
-&lt;td style="text-align: left"&gt;&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style="text-align: left"&gt;DF&lt;/td&gt;
-&lt;td style="text-align: left"&gt;10&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Direction&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Direction string instructions operate (increment or decrement)&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td style="text-align: left"&gt;ID&lt;/td&gt;
-&lt;td style="text-align: left"&gt;21&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Identification&lt;/td&gt;
-&lt;td style="text-align: left"&gt;Changeability denotes presence of CPUID instruction&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-&lt;p&gt;浮点运算单元（FPU，Floating Point Unit）包含了8个寄存器FPR0-FPR7，还有状态寄存器、控制寄存器，以及其他的几个寄存器。FPR0-7这几个寄存器，每个都可以存储下表中列出的数据类型的值。浮点操作遵从IEEE 754标准。注意，大多数c/c++编译器支持32位和64位的float、double数据类型，但是没有支持80位的浮点数据类型，但是汇编是支持的。这8个寄存器和另外8个MMX？寄存器实际上是共享的同一组物理寄存器。&lt;/p&gt;</description></item><item><title>go开发如何做测试(2)：选择合适的测试框架</title><link>/blog/2020-08-19-go%E5%BC%80%E5%8F%91%E5%A6%82%E4%BD%95%E5%81%9A%E6%B5%8B%E8%AF%95%E9%80%89%E6%8B%A9%E5%90%88%E9%80%82%E7%9A%84%E6%B5%8B%E8%AF%95%E6%A1%86%E6%9E%B6/</link><pubDate>Wed, 19 Aug 2020 00:40:31 +0800</pubDate><guid>/blog/2020-08-19-go%E5%BC%80%E5%8F%91%E5%A6%82%E4%BD%95%E5%81%9A%E6%B5%8B%E8%AF%95%E9%80%89%E6%8B%A9%E5%90%88%E9%80%82%E7%9A%84%E6%B5%8B%E8%AF%95%E6%A1%86%E6%9E%B6/</guid><description>&lt;p&gt;开发除了编写代码，也应该关注如何保证代码的可测试性，以及维护有效的测试用例。最近团队对单测要求不断提高，也将之前收集、积累的一点测试相关的内容记录分享下。这篇主要总结下常见的测试框架的优缺点。&lt;/p&gt;
+&lt;p&gt;函数main中调用函数a的过程就这么简单&lt;code&gt;call sym.main.a&lt;/code&gt;，也就是call 0x00459250，再看下a这个函数，它很简单将返回值1存储到[arg_8h]中，就是前一个栈帧中的一个8字节空间，之后的我们就先不关心了。&lt;/p&gt;</description></item><item><title>go开发如何做测试(2)：选择合适的测试框架</title><link>/blog/2020-08-19-go%E5%BC%80%E5%8F%91%E5%A6%82%E4%BD%95%E5%81%9A%E6%B5%8B%E8%AF%95%E9%80%89%E6%8B%A9%E5%90%88%E9%80%82%E7%9A%84%E6%B5%8B%E8%AF%95%E6%A1%86%E6%9E%B6/</link><pubDate>Wed, 19 Aug 2020 00:40:31 +0800</pubDate><guid>/blog/2020-08-19-go%E5%BC%80%E5%8F%91%E5%A6%82%E4%BD%95%E5%81%9A%E6%B5%8B%E8%AF%95%E9%80%89%E6%8B%A9%E5%90%88%E9%80%82%E7%9A%84%E6%B5%8B%E8%AF%95%E6%A1%86%E6%9E%B6/</guid><description>&lt;p&gt;开发除了编写代码，也应该关注如何保证代码的可测试性，以及维护有效的测试用例。最近团队对单测要求不断提高，也将之前收集、积累的一点测试相关的内容记录分享下。这篇主要总结下常见的测试框架的优缺点。&lt;/p&gt;
 &lt;p&gt;如何做好测试，是一门系统性的方法学，而不只是一些零零散散的经验。根据测试目的的不同，对测试方法可以作如下分类：&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;稳定性测试&lt;/li&gt;
@@ -1735,70 +1919,7 @@ rpc BuyApple(BuyAppleReq) returns(BuyAppleRsp); // CMD_BuyApple
 rpc SellApple(SellAppleReq) returns(SellAppleRsp); // CMD_SellApple
 }
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;使用goneat命令行工具来创建一个新的go-neat服务：&lt;/p&gt;</description></item><item><title>工程素养：Google CR指引如何推进代码评审</title><link>/blog/2019-09-10-%E5%B7%A5%E7%A8%8B%E7%B4%A0%E5%85%BB_%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E5%9C%B0%E8%BF%9B%E8%A1%8C%E4%BB%A3%E7%A0%81review/</link><pubDate>Tue, 10 Sep 2019 17:26:01 +0800</pubDate><guid>/blog/2019-09-10-%E5%B7%A5%E7%A8%8B%E7%B4%A0%E5%85%BB_%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E5%9C%B0%E8%BF%9B%E8%A1%8C%E4%BB%A3%E7%A0%81review/</guid><description>&lt;p&gt;最近学习了Google的CodeReview指引，整理了其中一些比较有价值的点，分享给大家。&lt;/p&gt;
-&lt;h1 id="google-code-review-guidelines"&gt;Google Code Review Guidelines &lt;a href="#google-code-review-guidelines" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
-&lt;p&gt;Google积累了很多最佳实践，涉及不同的开发语言、项目，&lt;a href="https://google.github.io/eng-practices"&gt;这些文档&lt;/a&gt;，将Google工程师多年来积攒的一些最佳实践经验进行了总结并分享给众开发者。学习下这里的经验，我们在进行项目开发、开源协同的过程中，相信也可以从中受益。&lt;/p&gt;
-&lt;p&gt;Google目前公开的最佳实践相关文档，目前包括：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href="https://google.github.io/eng-practices/review/"&gt;Google&amp;rsquo;s Code Review Guidelines&lt;/a&gt;，Google代码review指引，包含以下两个系列的内容：
-&lt;ul&gt;
-&lt;li&gt;&lt;a href="https://google.github.io/eng-practices/review/reviewer/"&gt;The Code Reviewer&amp;rsquo;s Guide&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href="https://google.github.io/eng-practices/review/developer/"&gt;The Change Author&amp;rsquo;s Guide&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;这了涉及到Google内部使用的一些术语，先提下：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;CL: 代表changelist，表示一个提交到VCS的修改，或者等待review的修改，也有组织称之为change或patch；&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;LGTM：代表Looks Good to ME，负责代码review的开发者对没有问题的CL进行的评论，表明代码看上去OK；&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h1 id="the-code-reviewer"&gt;&lt;a href="https://google.github.io/eng-practices/review/"&gt;The Code Reviewer&amp;rsquo;s Guide&lt;/a&gt; &lt;a href="#the-code-reviewer" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
-&lt;p&gt;从代码reviewer的角度出发，介绍下Google内部积累的一些good practices。&lt;/p&gt;
-&lt;h2 id="introduction"&gt;Introduction &lt;a href="#introduction" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;Code Review（代码评审）指的是让第三者来阅读作者修改的代码，以发现代码中存在的问题。包括Google在内的很多公司会通能过Code Review的方式来保证代码和产品的质量。&lt;/p&gt;
-&lt;p&gt;前文已有提及，CR相关内容主要包括如下两个系列：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href="https://google.github.io/eng-practices/review/reviewer/"&gt;The Code Reviewer&amp;rsquo;s Guide&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href="https://google.github.io/eng-practices/review/developer/"&gt;The Change Author&amp;rsquo;s Guide&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;这里先介绍下CR过程中应该做什么，或者CR的目标是什么。&lt;/p&gt;
-&lt;h2 id="what-do-code-reviewers-look-for"&gt;What Do Code Reviewers Look For? &lt;a href="#what-do-code-reviewers-look-for" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;Code review应该关注如下方面：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Design：程序设计、架构设计是否设计合理&lt;/li&gt;
-&lt;li&gt;Functionality：代码功能是否符合作者预期，代码行为是否用户友好&lt;/li&gt;
-&lt;li&gt;Complexity：实现是否能简化，代码可读性是否良好，接口是否易用&lt;/li&gt;
-&lt;li&gt;Tests：是否提供了正确、设计良好的自动化测试、单元测试&lt;/li&gt;
-&lt;li&gt;Naming：变量名、类名、方法名等字面量的选择是否清晰、精炼&lt;/li&gt;
-&lt;li&gt;Comments：是否编写了清晰的、有用的注释&lt;/li&gt;
-&lt;li&gt;Style：代码风格是否符合规范&lt;/li&gt;
-&lt;li&gt;Documentation：修改代码的同时，是否同步更新了相关文档&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h2 id="picking-the-best-reviewers"&gt;Picking the Best Reviewers &lt;a href="#picking-the-best-reviewers" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;一般，Code review之前，我们应该确定谁才是最好的、最合适的reviewer，这个reviewer应该**“有能力在比较合理的时间内对代码修改是否OK做出透彻、全面的判断”**。通常reviewer应该是编写被修改代码的owner，可能他是相关项目、相关源文件、相关代码行的创建者或者修改者，意味着我们发起Code review时，同一个项目可能需要涉及到多个reviewer进行Code review，让不同的、最合适的reviewer来review CL中涉及到的不同部分。&lt;/p&gt;</description></item><item><title>网络编程：write closed tcpconn</title><link>/blog/2018-12-20-write-closed-tcpconn/</link><pubDate>Thu, 20 Dec 2018 23:11:29 +0800</pubDate><guid>/blog/2018-12-20-write-closed-tcpconn/</guid><description>&lt;h1 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
-&lt;p&gt;&lt;strong&gt;tcp client: write to a half-closed tcp connection!&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;这里探讨一下这个问题，Write to a closed tcp connection的问题。在深入讨论这些问题之前，首先要了解tcp state diagram，为此文末特地附上了经典的tcp状态转换图。&lt;/p&gt;
-&lt;p&gt;我们的场景是这样的，tcp server已经启动，然后tcp client主动建立连接请求，连接成功建立后，tcp client并不立即发送数据而是等待一段时间之后才会发送数据（这种在client端的tcp连接池中非常常见），tcp server端为了防止连接被滥用，会每隔30s钟检查一下tcp连接是否空闲，如果两次检查都发现tcp连接空闲则主动将连接关闭。&lt;/p&gt;
-&lt;h1 id="原因分析"&gt;原因分析 &lt;a href="#%e5%8e%9f%e5%9b%a0%e5%88%86%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
-&lt;p&gt;此时tcp server端会调用 &lt;code&gt;conn.Close()&lt;/code&gt;方法，该方法最终会导致传输层发送tcp FIN包给对端，tcp client这边的机器收到FIN包后会回一个ACK，然后呢？tcp client不会继续发FIN包给tcp server吗？不会！仅此而已。问题就是这么诞生的，什么问题呢，tcp client仍然可以发包，但是 &lt;code&gt;n, err := tcpconn.Write(...)&lt;/code&gt;这个时候并不会检测到 &lt;code&gt;err != nil&lt;/code&gt;，只有等到 &lt;code&gt;n, err := tcpconn.Read(...)&lt;/code&gt;的时候才会发现err为io.EOF，这个时候才能判断得知tcp server已经把连接销毁了。&lt;/p&gt;
-&lt;p&gt;从RPC框架角度而言，希望为client维护的tcp连接池是高效可用的，所以想对上述情况下的客户端连接进行检测，避免连接池中存在上述被tcp server关闭的连接。&lt;/p&gt;
-&lt;p&gt;再简单总结下tcp server、tcp client两端的不同处理逻辑：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;从tcp server的视角来看，&lt;/p&gt;
-&lt;p&gt;tcp server调用的conn.Close()，对应的是系统调用close，tcp server端认为它已经彻底关闭这个连接了！&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;从tcp client的视角来看，&lt;/p&gt;
-&lt;p&gt;这个连接是我主动建立的，我还没有给你发送FIN包发起关闭序列呢，因此这个连接仍然是可以使用的。tcp client认为tcp server只是关闭了写端，没有关闭读端，因此tcp client仍然是可写的，并且socket被设置成了nonblocking，conn.Write()仍然是成功返回的，返回的err == nil。但是当真正传输层执行数据发送的时候，tcp server端认为这个连接已销毁，因此会返回RST！这个时候上层go代码因为已经返回已经感知不到写的时候存在错误，这个RST会将tcp client端的socket标记为已关闭。下次tcpconn.Read的时候就能感知到io.EOF错误了，如果再发起一次tcpconn.Write也可以立即返回错误。&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h1 id="关于close与shutdown"&gt;关于close与shutdown &lt;a href="#%e5%85%b3%e4%ba%8eclose%e4%b8%8eshutdown" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
-&lt;p&gt;假如tcp server调用的不是conn.Close()，而是conn.CloseWrite()，这个对应的系统调用shutdown(SHUT_WR)，那只表示写端关闭，这个时候tcp client发送数据过去，tcp server端返回的就不是RST了，而是正常的ACK，因为tcp server端也认为这个连接只是关闭了写端。&lt;/p&gt;</description></item><item><title>大规模分布式跟踪系统dapper</title><link>/blog/2018-10-03-%E5%A4%A7%E8%A7%84%E6%A8%A1%E5%88%86%E5%B8%83%E5%BC%8F%E8%B7%9F%E8%B8%AA%E7%B3%BB%E7%BB%9Fdapper/</link><pubDate>Wed, 03 Oct 2018 22:58:42 +0800</pubDate><guid>/blog/2018-10-03-%E5%A4%A7%E8%A7%84%E6%A8%A1%E5%88%86%E5%B8%83%E5%BC%8F%E8%B7%9F%E8%B8%AA%E7%B3%BB%E7%BB%9Fdapper/</guid><description>&lt;style&gt;
+&lt;p&gt;使用goneat命令行工具来创建一个新的go-neat服务：&lt;/p&gt;</description></item><item><title>大规模分布式跟踪系统dapper</title><link>/blog/2018-10-03-%E5%A4%A7%E8%A7%84%E6%A8%A1%E5%88%86%E5%B8%83%E5%BC%8F%E8%B7%9F%E8%B8%AA%E7%B3%BB%E7%BB%9Fdapper/</link><pubDate>Wed, 03 Oct 2018 22:58:42 +0800</pubDate><guid>/blog/2018-10-03-%E5%A4%A7%E8%A7%84%E6%A8%A1%E5%88%86%E5%B8%83%E5%BC%8F%E8%B7%9F%E8%B8%AA%E7%B3%BB%E7%BB%9Fdapper/</guid><description>&lt;style&gt;
 img {
 width: 680px;
 padding-bottom: 1rem;
@@ -1911,173 +2032,7 @@ func LoadIniCfg(filepath string) (*IniCfg, error) {
 func LoadPropCfg(filepath string) (*PropCfg, error) {
 }
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;运行&lt;code&gt;godoc -http=:6060&lt;/code&gt;找到对应的package kisslulu/conf即可预览文档中对package、type、func的介绍。&lt;/p&gt;</description></item><item><title>Assembly Language</title><link>/blog/2017-10-14-%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80_assembly-language/</link><pubDate>Sat, 14 Oct 2017 20:13:35 +0800</pubDate><guid>/blog/2017-10-14-%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80_assembly-language/</guid><description>&lt;p&gt;处理器是算逻运算、控制操作的执行部件，它只能识别机器指令并执行动作。机器指令是一系列的0、1字符串，本质上对应了总线上的高低电平信号，所以机器语言都是特定于硬件的。&lt;/p&gt;
-&lt;p&gt;由于0、1字符串很难记忆，用机器语言开发是一个老大难的问题，汇编语言因此被开发出来用于代替机器语言。汇编指令只是机器指令中操作码的助记符，因此汇编语言仍然是机器强相关的，不同的处理器其对应的汇编指令也不同。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;学习汇编语言有助于理解：&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;程序是如何与操作系统、处理器、bios进行交互的；&lt;/li&gt;
-&lt;li&gt;数据如何在内存中以及外设中表示的；&lt;/li&gt;
-&lt;li&gt;处理器如何访问、执行指令；&lt;/li&gt;
-&lt;li&gt;指令如何访问、处理数据；&lt;/li&gt;
-&lt;li&gt;程序如何访问外设；&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;其他使用汇编语言的优势：&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;消耗更少的内存和处理器执行时间；&lt;/li&gt;
-&lt;li&gt;允许以更简单的方式来完成硬件特定的复杂作业；&lt;/li&gt;
-&lt;li&gt;适用于时间敏感的作业；&lt;/li&gt;
-&lt;li&gt;适用于编写中断服务程序和内存驻留程序；&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3 id="11-pc硬件的基本特征"&gt;1.1 PC硬件的基本特征 &lt;a href="#11-pc%e7%a1%ac%e4%bb%b6%e7%9a%84%e5%9f%ba%e6%9c%ac%e7%89%b9%e5%be%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;机器指令是0、1字符串，分别表示ON、OFF，对应数字信号的高低电平。机器中的最低存储单位是bit，通常8bit构成一个byte，为了对数据传输过程中传输数据的有效性进行检查，通常会在数据byte发送之后再追加一个奇偶校验bit。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;奇校验：保证8bit数据+1bit校验位中的1的个数为奇数；&lt;/li&gt;
-&lt;li&gt;偶校验：保证8bit数据+1bit校验位中的1的个数为偶数；&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;发送方、接收方遵循相同的奇偶校验规则，如果接收方收到数据后发现奇偶校验不正确，则表示可能硬件出错，或者出现了电平扰动。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;处理器支持如下数据尺寸：&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;|:&amp;mdash;|:&amp;mdash;&amp;mdash;|
-|Word|2 bytes|
-|Doubleword|4 bytes|
-|Quadword|8 bytes|
-|Paragraph|16 bytes|
-|Kilobyte|2^10 bytes|
-|Megabyte|2^20 bytes|&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;二进制 &amp;amp; 十六进制系统：&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;二进制天然适用于计算机计算领域，0、1刚好代表数字电路中的高低电平；而十六进制是用于对比较长的二进制数值进行更加优雅地简写，使我们表示起来更加清晰、简单。&lt;/p&gt;
-&lt;p&gt;二进制、十六进制的相关运算，特别是涉及到原码、反码、补码、移码的运算，需要重点了解下，建议参考《计算机组成原理》相关章节。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;访问内存中的数据：&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;处理器控制指令执行的过程可以简化为”取指令-指令移码-指令执行“的循环体，一个”取指令-指令译码-指令执行“周期称之为一个机器周期。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;取指周期：根据CS、IP从内存指定位置取指令，并存储到指令寄存器IR；&lt;/li&gt;
-&lt;li&gt;译码周期：根据IR中的指令，分析出操作码OP、操作数或操作数地址；&lt;/li&gt;
-&lt;li&gt;执行周期：根据分析出的OP、操作数或操作地址信息执行相应的动作；&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;Intel架构的处理器在内存中存储时是采用的小端字节序，意味着一个多字节数值的低字节部分将在低地址存储，高字节部分将在高地址存储，但是在处理器寄存器中存储时低字节部分就在低字节，高字节部分就在高字节，所以在处理器寄存器、内存之间存储、加载数据时需要做字节序方面的转换。&lt;/p&gt;
-&lt;p&gt;以处理器寄存器中数值0x1234为例，现在要将其存储到内存中，处理器先将0x34存储到内存低地址，然后再见0x12存储到内存高地址；假如内存中有数据0xabcd，现在要将其加载到处理器寄存器中，加载时也会做对应的处理，将0xab放在寄存器高位，将0xcd放在寄存器低位。&lt;/p&gt;
-&lt;p&gt;指令中的操作数地址，又有多种不同的寻址方式，立即数寻址、直接寻址、间接寻址、寄存器寻址等，这里后面会做相应的介绍。&lt;/p&gt;
-&lt;h3 id="12-开发环境配置"&gt;1.2 开发环境配置 &lt;a href="#12-%e5%bc%80%e5%8f%91%e7%8e%af%e5%a2%83%e9%85%8d%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;汇编指令特定于处理器的，因此不同的处理器系列、型号对应的汇编指令可能也会有差异，这里使用的是Intel-32架构的处理器，使用汇编器NASM进行汇编操作，其他可选的汇编器还有MASM、TASM、GAS等。&lt;/p&gt;
-&lt;h3 id="13-基本语法"&gt;1.3 基本语法 &lt;a href="#13-%e5%9f%ba%e6%9c%ac%e8%af%ad%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;汇编程序通常包括3个节，分别是data、bss、text节：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;data，用于声明初始化的变量和常量；&lt;/li&gt;
-&lt;li&gt;bss，用于声明未初始化的变量，这部分不会出现在编译后的程序中；&lt;/li&gt;
-&lt;li&gt;text，用于保存程序指令；&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;text节中必须包括&amp;quot;&lt;strong&gt;global ${entry}&lt;/strong&gt;&amp;ldquo;声明，${entry}是程序入口，通常定义未_start，见文生义嘛。&lt;/p&gt;
-&lt;p&gt;汇编程序中的注释均以&amp;rdquo;;&amp;ldquo;开头，直到所在行结束。&lt;/p&gt;
-&lt;p&gt;汇编语言程序包括3种不同类型的语句：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;可执行汇编指令；&lt;/li&gt;
-&lt;li&gt;传递给汇编器的指令或伪操作；&lt;/li&gt;
-&lt;li&gt;宏；&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;汇编语言语句遵循如下结构：&lt;/p&gt;
-&lt;pre&gt;&lt;code class="language-nasm"&gt;[标识] 助记符 [操作数] [;注释]
-&lt;/code&gt;&lt;/pre&gt;
-&lt;blockquote&gt;
-&lt;p&gt;[]内部的部分是可选的，尤其是标识和注释部分，根据汇编指令的不同，有无操作数、操作数个数、操作数类型等均有所不同。汇编指令中包括了操作码和操作数相关信息，这里的助记符其实就是操作码的符号表示。&lt;/p&gt;</description></item><item><title>框架设计(协议层)：Protoc及其插件工作原理分析(精华版)</title><link>/blog/2017-05-23-protoc%E5%8F%8A%E6%8F%92%E4%BB%B6%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90%E7%B2%BE%E5%8D%8E%E7%89%88/</link><pubDate>Tue, 23 May 2017 16:29:25 +0800</pubDate><guid>/blog/2017-05-23-protoc%E5%8F%8A%E6%8F%92%E4%BB%B6%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86%E5%88%86%E6%9E%90%E7%B2%BE%E5%8D%8E%E7%89%88/</guid><description>&lt;p&gt;在进行protoc插件开发之前，首先要了解protoc的工作原理。protobuf具有诸多优点被广泛使用，由于protoc对proto文件的强大解析能力使我们可以更进一步来开发一些插件，通过插件快速生成特定于proto文件的工具类、配置文件等，从而提高开发效率。&lt;/p&gt;
-&lt;p&gt;本文首先会介绍一下protoc的整体工作原理，然后详细介绍一下protoc对proto文件的解析过程，最后给出编写protoc插件来扩展protoc功能的一个示例（这里以protoc-gen-go插件为例）。&lt;/p&gt;
-&lt;h2 id="1-protoc工作原理分析"&gt;1. protoc工作原理分析 &lt;a href="#1-protoc%e5%b7%a5%e4%bd%9c%e5%8e%9f%e7%90%86%e5%88%86%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;h3 id="10-protoc源代码准备"&gt;1.0. protoc源代码准备 &lt;a href="#10-protoc%e6%ba%90%e4%bb%a3%e7%a0%81%e5%87%86%e5%a4%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;要想了解protoc的工作机制，查看其源代码了解其核心流程是最靠谱的方法。&lt;/p&gt;
-&lt;p&gt;获取程序源代码的方式如下：&lt;/p&gt;
-&lt;pre&gt;&lt;code class="language-c"&gt;git co https://github.com/google/protobuf
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;由于我们工程中常用的protoc版本是v2.5.0，所以这里检出对应版本的tag。&lt;/p&gt;
-&lt;pre&gt;&lt;code class="language-c"&gt;git ck v2.5.0
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;考虑到可能会进行测试、修改、注释等学习过程，这里最好创建一个新的分支来操作。&lt;/p&gt;
-&lt;pre&gt;&lt;code class="language-c"&gt;git branch -b ${new-branch-name}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;现在源代码准备好了，下面可以阅读protoc的源码梳理一下其工作原理了。&lt;/p&gt;
-&lt;p&gt;上述git检出后的protobuf路径，记为${protobuf}，后面如果出现${protobuf}请知晓其含义。如果在描述源代码时没有提及代码起始路径${protobuf}，那么起始路径均为${protobuf}。&lt;/p&gt;
-&lt;h3 id="11-protoc执行流程说明"&gt;1.1. protoc执行流程说明 &lt;a href="#11-protoc%e6%89%a7%e8%a1%8c%e6%b5%81%e7%a8%8b%e8%af%b4%e6%98%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;protoc执行流程的相关源码，主要包括如下两个部分。&lt;/p&gt;
-&lt;h4 id="111-protoc程序入口"&gt;1.1.1. protoc程序入口 &lt;a href="#111-protoc%e7%a8%8b%e5%ba%8f%e5%85%a5%e5%8f%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
-&lt;p&gt;protoc程序入口为以下源文件main函数，该入口函数中完成protoc命令行接口初始化、编程语言及代码生成器注册后，调用cli.Run(argc,argv)解析proto文件并生成特定语言的源代码。&lt;/p&gt;
-&lt;p&gt;file: src/google/protobuf/compiler/main.cc&lt;/p&gt;
-&lt;pre&gt;&lt;code class="language-c"&gt;// Author: kenton@google.com (Kenton Varda)
-// 这个头文件定义了protoc的命令行接口
-#include &amp;lt;google/protobuf/compiler/command_line_interface.h&amp;gt;
-// protoc中内置了对cpp、python、java语言的支持，对其他语言的支持需要以plugin的方式来支持
-#include &amp;lt;google/protobuf/compiler/cpp/cpp_generator.h&amp;gt;
-#include &amp;lt;google/protobuf/compiler/python/python_generator.h&amp;gt;
-#include &amp;lt;google/protobuf/compiler/java/java_generator.h&amp;gt;
-int main(int argc, char* argv[]) {
-// 初始化protoc命令行接口并开启插件
-// - 插件只是普通的可执行程序，其文件名以AllowPlugins参数protoc-开头
-// - 假定protoc --foo_out，那么实际调用的插件是protoc-foo
-google::protobuf::compiler::CommandLineInterface cli;
-cli.AllowPlugins(&amp;quot;protoc-&amp;quot;);
-// Proto2 C++ (指定了--cpp_out将调用cpp::Generator)
-google::protobuf::compiler::cpp::CppGenerator cpp_generator;
-cli.RegisterGenerator(&amp;quot;--cpp_out&amp;quot;, &amp;quot;--cpp_opt&amp;quot;, &amp;amp;cpp_generator,
-&amp;quot;Generate C++ header and source.&amp;quot;);
-// Proto2 Java (指定了--java_out将调用java::Generator)
-google::protobuf::compiler::java::JavaGenerator java_generator;
-cli.RegisterGenerator(&amp;quot;--java_out&amp;quot;, &amp;amp;java_generator,
-&amp;quot;Generate Java source file.&amp;quot;);
-// Proto2 Python (指定了python_out将调用python::Generator)
-google::protobuf::compiler::python::Generator py_generator;
-cli.RegisterGenerator(&amp;quot;--python_out&amp;quot;, &amp;amp;py_generator,
-&amp;quot;Generate Python source file.&amp;quot;);
-return cli.Run(argc, argv);
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;h4 id="112-命令接口clirunargcargv执行流程"&gt;1.1.2. 命令接口cli.Run(argc,argv)执行流程 &lt;a href="#112-%e5%91%bd%e4%bb%a4%e6%8e%a5%e5%8f%a3clirunargcargv%e6%89%a7%e8%a1%8c%e6%b5%81%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
-&lt;p&gt;cli.Run(&amp;hellip;)中，完成对proto文件的读取、解析，并通过注册的代码生成器或者protoc插件生成特定语言源代码，并最终完成源代码文件的创建。&lt;/p&gt;</description></item><item><title>框架设计(协议层)：Protoc工作原理分析</title><link>/blog/2017-05-16-protoc%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86/</link><pubDate>Fri, 19 May 2017 14:29:25 +0800</pubDate><guid>/blog/2017-05-16-protoc%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86/</guid><description>&lt;p&gt;在进行protoc插件开发之前，首先要了解protoc的工作原理。在protobuf的使用过程中，protoc作为proto文件的编译器，很多开发人员只会用但是不了解其工作原理，更不了解如何扩展其功能。protobuf作为目前常用的数据交换格式在协议开发中被广泛采用，此外，protoc对proto文件的强大解析能力使我们可以开发一些插件，通过插件快速生成特定于proto文件的工具类、配置文件等，从而提高开发效率。&lt;/p&gt;
-&lt;p&gt;本文首先会介绍一下protoc的整体工作机制，然后解释一下protoc对proto文件的解析过程，最后给出编写protoc插件扩展protoc功能的一个示例教程。&lt;/p&gt;
-&lt;h2 id="1-protoc源代码准备"&gt;1. protoc源代码准备 &lt;a href="#1-protoc%e6%ba%90%e4%bb%a3%e7%a0%81%e5%87%86%e5%a4%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;要想了解protoc的工作机制，查看其源代码了解其核心流程是最靠谱的方法。&lt;/p&gt;
-&lt;p&gt;获取程序源代码的方式如下：&lt;/p&gt;
-&lt;pre&gt;&lt;code class="language-c"&gt;git co https://github.com/google/protobuf
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;由于我们工程中常用的protoc版本是v2.5.0，所以这里检出对应版本的tag。&lt;/p&gt;
-&lt;pre&gt;&lt;code class="language-c"&gt;git ck v2.5.0
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;考虑到可能会进行测试、修改、注释等学习过程，这里最好创建一个新的分支来操作。&lt;/p&gt;
-&lt;pre&gt;&lt;code class="language-c"&gt;git branch ${new-branch-name}
-git ck ${new-branch-name}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;现在源代码准备好了，我比较喜欢使用vim、ctags、cscope来阅读源码，根据个人习惯吧，下面可以阅读protoc的源码梳理以下工作机制。&lt;/p&gt;
-&lt;h2 id="2-protoc源码分析"&gt;2. protoc源码分析 &lt;a href="#2-protoc%e6%ba%90%e7%a0%81%e5%88%86%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;上述git检出后的protobuf路径，记为${protobuf}，后面如果出现${protobuf}请知晓其含义。如果在描述源代码时没有提及起始路径${protobuf}，那么起始路径均为${protobuf}。&lt;/p&gt;
-&lt;h3 id="21-protoc程序入口"&gt;2.1. protoc程序入口 &lt;a href="#21-protoc%e7%a8%8b%e5%ba%8f%e5%85%a5%e5%8f%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;src/google/protobuf/compiler/main.cc中的main函数，为protoc的入口函数。&lt;/p&gt;
-&lt;p&gt;file: src/google/protobuf/compiler/main.cc&lt;/p&gt;
-&lt;pre&gt;&lt;code class="language-c"&gt;// Author: kenton@google.com (Kenton Varda)
-// 这个头文件定义了protoc的命令行接口
-#include &amp;lt;google/protobuf/compiler/command_line_interface.h&amp;gt;
-// protoc中内置了对cpp、python、java语言的支持，对其他语言的支持需要以plugin的方式来支持
-#include &amp;lt;google/protobuf/compiler/cpp/cpp_generator.h&amp;gt;
-#include &amp;lt;google/protobuf/compiler/python/python_generator.h&amp;gt;
-#include &amp;lt;google/protobuf/compiler/java/java_generator.h&amp;gt;
-int main(int argc, char* argv[]) {
-// 初始化protoc命令行接口并开启插件
-// - 插件只是普通的可执行程序，其文件名以AllowPlugins参数protoc-开头
-// - 假定protoc --foo_out，那么实际调用的插件是protoc-foo
-google::protobuf::compiler::CommandLineInterface cli;
-cli.AllowPlugins(&amp;quot;protoc-&amp;quot;);
-// Proto2 C++ (指定了--cpp_out将调用cpp::Generator)
-google::protobuf::compiler::cpp::CppGenerator cpp_generator;
-cli.RegisterGenerator(&amp;quot;--cpp_out&amp;quot;, &amp;quot;--cpp_opt&amp;quot;, &amp;amp;cpp_generator,
-&amp;quot;Generate C++ header and source.&amp;quot;);
-// Proto2 Java (指定了--java_out将调用java::Generator)
-google::protobuf::compiler::java::JavaGenerator java_generator;
-cli.RegisterGenerator(&amp;quot;--java_out&amp;quot;, &amp;amp;java_generator,
-&amp;quot;Generate Java source file.&amp;quot;);
-// Proto2 Python (指定了python_out将调用python::Generator)
-google::protobuf::compiler::python::Generator py_generator;
-cli.RegisterGenerator(&amp;quot;--python_out&amp;quot;, &amp;amp;py_generator,
-&amp;quot;Generate Python source file.&amp;quot;);
-// 解析proto、生成源代码(借助内置的generator或者plugins)、创建源代码文件
-return cli.Run(argc, argv);
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;h3 id="22-protoc命令行接口定义"&gt;2.2. protoc命令行接口定义 &lt;a href="#22-protoc%e5%91%bd%e4%bb%a4%e8%a1%8c%e6%8e%a5%e5%8f%a3%e5%ae%9a%e4%b9%89" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;下面看一下protoc的命令行接口定义，以了解其对命令行flags、options的解释过程以及对后续程序执行逻辑的影响。&lt;/p&gt;</description></item><item><title>网络编程：Linux常见IO模型</title><link>/blog/2017-05-02-linux-common-io-model/</link><pubDate>Tue, 02 May 2017 21:42:13 +0800</pubDate><guid>/blog/2017-05-02-linux-common-io-model/</guid><description>&lt;p&gt;目前Linux下可用的IO模型有5种，分别为阻塞IO、非阻塞IO、IO多路复用、信号驱动IO、异步IO，其中较为成熟且高效、稳定的是IO多路复用模型，因此当前众多网络服务程序几乎都是采用这种IO操作策略。&lt;/p&gt;
+&lt;p&gt;运行&lt;code&gt;godoc -http=:6060&lt;/code&gt;找到对应的package kisslulu/conf即可预览文档中对package、type、func的介绍。&lt;/p&gt;</description></item><item><title>网络编程：Linux常见IO模型</title><link>/blog/2017-05-02-linux-common-io-model/</link><pubDate>Tue, 02 May 2017 21:42:13 +0800</pubDate><guid>/blog/2017-05-02-linux-common-io-model/</guid><description>&lt;p&gt;目前Linux下可用的IO模型有5种，分别为阻塞IO、非阻塞IO、IO多路复用、信号驱动IO、异步IO，其中较为成熟且高效、稳定的是IO多路复用模型，因此当前众多网络服务程序几乎都是采用这种IO操作策略。&lt;/p&gt;
 &lt;p&gt;当一个应用程序读写（以读为例）某端口数据时，选择不同IO模型的应用程序，其执行流程也将不同。下面将对选择这5种不同IO模型时的程序的执行情形进行分析，以便了解使用IO复用模型的运行情况和性能优势。&lt;/p&gt;
 &lt;p&gt;一个完整经典的应用程序的数据读取操作可以看做两步：&lt;/p&gt;
 &lt;ul&gt;
@@ -2257,41 +2212,4 @@ unsigned long __rip;
 };
 typedef struct __jmp_buf jmp_buf[1];
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;但是呢，glibc里面重新定义了这个类型，这里面还对信号掩码进行了考虑。&lt;/p&gt;</description></item><item><title>网络编程：Protobuf编解码</title><link>/blog/2017-02-09-protobuf%E7%BC%96%E8%A7%A3%E7%A0%81/</link><pubDate>Thu, 09 Feb 2017 15:11:38 +0800</pubDate><guid>/blog/2017-02-09-protobuf%E7%BC%96%E8%A7%A3%E7%A0%81/</guid><description>&lt;style&gt;
-img {
-width: 680px;
-padding-bottom: 1rem;
-}
-&lt;/style&gt;
-&lt;p&gt;开发过程中学习学习的一点protobuf编解码的知识，以及对遇到的一些编解码相关问题的总结。&lt;/p&gt;
-&lt;h1 id="1pb数据类型"&gt;1.pb数据类型 &lt;a href="#1pb%e6%95%b0%e6%8d%ae%e7%b1%bb%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
-&lt;p&gt;protobuf对message进行编码时，是将message中的各个成员按照key、value组合成一个字节流，这里的key并不是属性的名字，而是varint(tag&amp;laquo;3 | datatype)，其低3位表示字段类型，类型描述见下图。&lt;/p&gt;
-&lt;p&gt;&lt;img src="assets/protobuf/datatypes.png" alt="datatypes"&gt;&lt;/p&gt;
-&lt;p&gt;当protobuf对一个字节流进行解码的时候，对于那些它不认识的字段会直接跳过，对字节流反串行化操作的代码主要是依赖于各个Message子类的&lt;code&gt;MergePartialFromCodedStream&lt;/code&gt;方法实现，常用的&lt;code&gt;ParseFromString&lt;/code&gt;或者&lt;code&gt;ParseFromArray&lt;/code&gt;方法最终都是调用该方法来完成反串行化任务。&lt;code&gt;MergePartialFromCodedStream&lt;/code&gt;方法中包括了对unknown tag的处理，这部分代码都是protoc自动插入的，所以每个Message子类的对未知tag的处理方式也是一样的，下面通过一个简单的proto文件进行说明。&lt;/p&gt;
-&lt;p&gt;文件名：T.proto&lt;/p&gt;
-&lt;pre&gt;&lt;code class="language-protobuf"&gt;package kn.feeds;
-enum FeedType {
-TYPE_RECORD_LIVE = 1;
-TYPE_RECORD_VIDEO = 2;
-//TYPE_RECORD_DAYMOMENT = 3;
-};
-message Feed {
-optional string name = 1;
-optional int32 time = 2;
-optional FeedType type = 3;
-};
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;使用&lt;code&gt;protobuf --cpp_out=. T.proto&lt;/code&gt;进行处理，生成的T.pb.cc中&lt;code&gt;kn::feeds::Feed::MergePartialFromCodedStream&lt;/code&gt;方法的源码如下图所示，其中对不相关代码进行了折叠。&lt;code&gt;switch(....GetFieldNumber(tag))&lt;/code&gt;获取到了tag的编号并进行分别处理，如果是一个unknown tag则进入default处理分支，一般情况下是执行DO_(&amp;hellip;)将这个unknown tag保存到一个unknown_fields vector中。&lt;/p&gt;
-&lt;p&gt;文件名：T.pb.cc，见下图：&lt;/p&gt;
-&lt;p&gt;&lt;img src="assets/protobuf/merge_partial_from_coded_stream.png" alt="MergePartialFromCodedStream"&gt;&lt;/p&gt;
-&lt;p&gt;如果新需求中要求改造旧有的pb协议，例如在message中新追加了一些字段，旧代码在进行反串行化的时候并不会读取到新追加的字段，协议改造对旧有服务是不会产生不良影响的。&lt;/p&gt;
-&lt;p&gt;另外，大家一般习惯于使用optional对字段进行修饰，这里就optional字段值是否设置对数据传输的影响也进行一下说明：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;对于message中定义的optional类型的字段field，A给B发消息时，如果A没有显示设置field的值，那么B收到的字节流里面不会包括field字段的信息，B会自动使用proto文件中定义的该字段的默认值。&lt;/li&gt;
-&lt;li&gt;而当A显示设置字段field的值与默认值相同时，传输给B的字节流里面会包括field字段的信息。设置和不设置optional字段对于串行化数据的编码、传输是不同的。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;blockquote&gt;
-&lt;p&gt;PS：对于pb2而言，上述描述是正确的。对于pb3的情况，对编码及网络传输数据量又进行了优化，所有的0值都不会在编码时进行编码。如果系统中涉及到pb2、pb3共用，且存在使用pb2的代码中通过判断字段值是否为nil来做特殊逻辑，这里就容易引入问题。而如果全部是pb3协议则不需要考虑这种兼容问题。&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;h1 id="2varint--zigzag编解码"&gt;2.varint &amp;amp; zigzag编解码 &lt;a href="#2varint--zigzag%e7%bc%96%e8%a7%a3%e7%a0%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
-&lt;p&gt;前面列出了protobuf数据类型编码规则，当tag低3位为0时表示varint类型，对于有符号类型、无符号类型其实差别还是挺大的。&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;但是呢，glibc里面重新定义了这个类型，这里面还对信号掩码进行了考虑。&lt;/p&gt;</description></item></channel></rss>

@@ -1,4 +1,87 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blog on</title><link>/blog/</link><description>Recent content in Blog on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:49:55 +0000</lastBuildDate><atom:link href="/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>终端、TTY、PTY、Console：把这些概念一次理清</title><link>/blog/2026-07-11-%E7%90%86%E8%A7%A3%E7%BB%88%E7%AB%AF/</link><pubDate>Sat, 11 Jul 2026 17:05:26 +0800</pubDate><guid>/blog/2026-07-11-%E7%90%86%E8%A7%A3%E7%BB%88%E7%AB%AF/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blog on</title><link>/blog/</link><description>Recent content in Blog on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:49:55 +0000</lastBuildDate><atom:link href="/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>系统测试：Benchmark+性能测试+可用性测试+安全性测试+BVT测试</title><link>/blog/2020-07-01-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/</link><pubDate>Mon, 13 Jul 2026 20:30:01 +0800</pubDate><guid>/blog/2020-07-01-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/</guid><description>&lt;style type="text/css" rel="stylesheet"&gt;
+/* Three image containers (use 25% for four, and 50% for two, etc) */
+.column {
+float: left;
+width: 50%;
+padding: 5px;
+}
+/* Clear floats after image containers */
+.row::after {
+content: "";
+clear: both;
+display: table;
+}
+.fixsize {
+width: 400px;
+}
+.fullsize {
+width: 680px;
+}
+&lt;/style&gt;
+&lt;p&gt;如果说功能测试回答的是&amp;quot;做得对不对&amp;quot;，那性能测试回答的就是&amp;quot;做得快不快、稳不稳&amp;quot;。两者共同构成了软件质量的完整图景。本文将系统梳理非功能性测试的各个层次，以及它们在工程实践中的定位。&lt;/p&gt;
+&lt;h2 id="1-功能测试-vs-非功能测试"&gt;1. 功能测试 vs 非功能测试 &lt;a href="#1-%e5%8a%9f%e8%83%bd%e6%b5%8b%e8%af%95-vs-%e9%9d%9e%e5%8a%9f%e8%83%bd%e6%b5%8b%e8%af%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在进入正题之前，先厘清二者的分界线：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;维度&lt;/th&gt;
+&lt;th&gt;功能测试&lt;/th&gt;
+&lt;th&gt;非功能测试&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;核心问题&lt;/td&gt;
+&lt;td&gt;软件是否按预期工作？&lt;/td&gt;
+&lt;td&gt;软件工作得怎么样？&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;关注点&lt;/td&gt;
+&lt;td&gt;正确性、完整性&lt;/td&gt;
+&lt;td&gt;性能、稳定、安全、可用性&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;测试方式&lt;/td&gt;
+&lt;td&gt;给定输入，断言输出&lt;/td&gt;
+&lt;td&gt;施加负载，观察系统表现&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;典型工具&lt;/td&gt;
+&lt;td&gt;go test, gomock&lt;/td&gt;
+&lt;td&gt;wrk, vegeta, JMeter, go test -bench&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;失败含义&lt;/td&gt;
+&lt;td&gt;有 bug&lt;/td&gt;
+&lt;td&gt;有性能瓶颈、安全隐患&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;一句话概括：&lt;strong&gt;功能测试保证&amp;quot;能用&amp;quot;，非功能测试保证&amp;quot;好用&amp;quot;。&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>Go自动化测试全景指南</title><link>/blog/2026-07-13-go%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B5%8B%E8%AF%95%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/</link><pubDate>Mon, 13 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-13-go%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B5%8B%E8%AF%95%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/</guid><description>&lt;h1 id="go-自动化功能测试全景指南"&gt;Go 自动化功能测试全景指南 &lt;a href="#go-%e8%87%aa%e5%8a%a8%e5%8c%96%e5%8a%9f%e8%83%bd%e6%b5%8b%e8%af%95%e5%85%a8%e6%99%af%e6%8c%87%e5%8d%97" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;如何做好测试，是一门系统性的方法学，而不只是一些零零散散的经验。本文结合 Go 开发实践，从可测试性设计、测试编写、Mock 策略，到消除 Flaky Tests，系统性梳理自动化功能测试的各个关键环节。&lt;/p&gt;
+&lt;h2 id="1-可测试性设计"&gt;1. 可测试性设计 &lt;a href="#1-%e5%8f%af%e6%b5%8b%e8%af%95%e6%80%a7%e8%ae%be%e8%ae%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;测试的第一步不是写测试，而是&lt;strong&gt;让代码可测试&lt;/strong&gt;。如果代码一运行 &lt;code&gt;go test&lt;/code&gt; 就因为写死路径、全局状态等问题直接 panic，后面的工作都无从谈起。&lt;/p&gt;
+&lt;h3 id="11-依赖注入而非硬编码"&gt;1.1 依赖注入，而非硬编码 &lt;a href="#11-%e4%be%9d%e8%b5%96%e6%b3%a8%e5%85%a5%e8%80%8c%e9%9d%9e%e7%a1%ac%e7%bc%96%e7%a0%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;最常见的可测试性杀手是硬编码的外部依赖：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;// 不可测试：硬编码文件路径
+func LoadConfig() (*Config, error) {
+data, err := os.ReadFile(&amp;quot;/etc/app/config.yaml&amp;quot;)
+if err != nil {
+return nil, err
+}
+// ...
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;// 可测试：通过接口或参数注入
+func LoadConfig(path string) (*Config, error) {
+data, err := os.ReadFile(path)
+if err != nil {
+return nil, err
+}
+// ...
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;同样的道理适用于数据库连接、HTTP 客户端、缓存等。&lt;strong&gt;凡是会变的东西，都应该作为依赖传入，而非在函数内部直接构造。&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>终端、TTY、PTY、Console：把这些概念一次理清</title><link>/blog/2026-07-11-%E7%90%86%E8%A7%A3%E7%BB%88%E7%AB%AF/</link><pubDate>Sat, 11 Jul 2026 17:05:26 +0800</pubDate><guid>/blog/2026-07-11-%E7%90%86%E8%A7%A3%E7%BB%88%E7%AB%AF/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;写 &lt;a href="/blog/2026-07-11-asciinema-how-it-works/"&gt;asciinema 工作原理&lt;/a&gt; 时，我再次遇到了 Terminal、Console、TTY、PTY、master、slave 和 &lt;code&gt;isatty()&lt;/code&gt;。这些词经常一起出现，却分属硬件历史、内核抽象和用户态程序三个层次。单独看每个定义并不难，把它们放进同一条数据链路时却很容易混淆。&lt;/p&gt;
 &lt;p&gt;日常开发中，我们接触最多的是以下几类对象：&lt;/p&gt;
 &lt;ol&gt;
@@ -1808,7 +1891,7 @@ result[i] = nums1[i] + nums2[i];
 &lt;p&gt;当你的系统是一个大型的分布式系统，集群也需要动态扩缩容，系统中的负载类型不同，同一个服务的不同接口处理耗时不同，即便是相同接口不同请求处理耗时也有明显不同，这个时候常规的基于“请求配额”的传统过载保护机制是不怎么有效的。&lt;/p&gt;
 &lt;p&gt;最初有这种想法，是在看点做内容处理链路的时候，注意到有些服务是计算密集型的（如OCR模块），有些是IO密集型的，有些图文发表请求里面只有一张图片，有的有多张图片，有的文章比较短，有的文章比较长，这都会影响你的系统负载、处理耗时，如何科学的评估负载进而确定合理的请求配额，是一件比较困难的事情。&lt;/p&gt;
 &lt;p&gt;后面开始思考如何评估“负载”这样的问题，可能会想CPU使用率、内存使用率高、IO利用率高、网卡利用率高，实际上不同workload类型对资源的使用情况不同，这些指标高还真不一定就是负载高。如果涉及到具体语言，可能会去想Java、Go GC STW问题……&lt;/p&gt;
-&lt;p&gt;预期纠结这些，不如更高屋建瓴地站在宏观角度看看，如果负载高了会发生什么？系统负载开始变高之后，是可以把其当做一个黑盒通过外部观测来观察出来的。Netflix的过载保护算法正是从这里触发，看似简单的实现，但是并不是不着边际。整个网络世界得以正常运转的TCP拥塞控制也是建立在RTT、Loss观测基础上的，Netflix也将其Vegas Limiter命名成了Vegas，正是因为它借鉴了TCP vegas拥塞控制算法（TCP Reno的替代算法）。&lt;/p&gt;</description></item><item><title>压测之接口lo的妙用</title><link>/blog/2023-04-14-%E5%8E%8B%E5%8A%9B%E6%B5%8B%E8%AF%95_%E5%8E%8B%E6%B5%8B%E4%B9%8B%E6%8E%A5%E5%8F%A3lo%E7%9A%84%E5%A6%99%E7%94%A8/</link><pubDate>Fri, 14 Apr 2023 03:10:08 +0000</pubDate><guid>/blog/2023-04-14-%E5%8E%8B%E5%8A%9B%E6%B5%8B%E8%AF%95_%E5%8E%8B%E6%B5%8B%E4%B9%8B%E6%8E%A5%E5%8F%A3lo%E7%9A%84%E5%A6%99%E7%94%A8/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;预期纠结这些，不如更高屋建瓴地站在宏观角度看看，如果负载高了会发生什么？系统负载开始变高之后，是可以把其当做一个黑盒通过外部观测来观察出来的。Netflix的过载保护算法正是从这里触发，看似简单的实现，但是并不是不着边际。整个网络世界得以正常运转的TCP拥塞控制也是建立在RTT、Loss观测基础上的，Netflix也将其Vegas Limiter命名成了Vegas，正是因为它借鉴了TCP vegas拥塞控制算法（TCP Reno的替代算法）。&lt;/p&gt;</description></item><item><title>压测之接口lo的妙用</title><link>/blog/2023-04-14-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E5%8E%8B%E6%B5%8B%E4%B9%8B%E6%8E%A5%E5%8F%A3lo%E7%9A%84%E5%A6%99%E7%94%A8/</link><pubDate>Fri, 14 Apr 2023 03:10:08 +0000</pubDate><guid>/blog/2023-04-14-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E5%8E%8B%E6%B5%8B%E4%B9%8B%E6%8E%A5%E5%8F%A3lo%E7%9A%84%E5%A6%99%E7%94%A8/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;前一篇文章介绍了本地开发机压测时如何为每个待压测分配CPU资源（其实是taskset进行绑核，由于没有其他负载可以近似为分配CPU资源），本文继续介绍下如何让压测变得更真实一点，那就是网络IO这块，在本地通信时往往使用的是loopback接口，但是loopback并不是一个真实的网卡设备，它基本没有什么硬件网卡设备的传输速率的限制，也没有网络传输过程中的传输延迟。&lt;/p&gt;
 &lt;p&gt;这样的话，我们在压测的时候，网络方面的开销就几乎体现不出来，比如说，你想看下在4g网络下客户端、服务器之间网络通信数据包多大时打开数据压缩更有价值……&lt;/p&gt;
 &lt;p&gt;在我的测试过程中我希望能尽可能简化测试工作的同时，也能保证该有的环境的真实性，于是就有了本文对loopback接口的一点探索。&lt;/p&gt;
@@ -1834,7 +1917,7 @@ or
 sudo yum install iproute
 sudo tc qdisc add dev lo root netem delay 1ms
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;这样的话就相当于一个rtt增加了2ms，为了验证这个，你可以在执行上述模拟前后，分别看下ping localhost的延迟。&lt;/p&gt;</description></item><item><title>压测之taskset的妙用</title><link>/blog/2023-04-13-%E5%8E%8B%E5%8A%9B%E6%B5%8B%E8%AF%95_%E5%8E%8B%E6%B5%8B%E4%B9%8Btaskset%E7%9A%84%E5%A6%99%E7%94%A8/</link><pubDate>Thu, 13 Apr 2023 03:22:15 +0800</pubDate><guid>/blog/2023-04-13-%E5%8E%8B%E5%8A%9B%E6%B5%8B%E8%AF%95_%E5%8E%8B%E6%B5%8B%E4%B9%8Btaskset%E7%9A%84%E5%A6%99%E7%94%A8/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;这样的话就相当于一个rtt增加了2ms，为了验证这个，你可以在执行上述模拟前后，分别看下ping localhost的延迟。&lt;/p&gt;</description></item><item><title>压测之taskset的妙用</title><link>/blog/2023-04-13-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E5%8E%8B%E6%B5%8B%E4%B9%8Btaskset%E7%9A%84%E5%A6%99%E7%94%A8/</link><pubDate>Thu, 13 Apr 2023 03:22:15 +0800</pubDate><guid>/blog/2023-04-13-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E5%8E%8B%E6%B5%8B%E4%B9%8Btaskset%E7%9A%84%E5%A6%99%E7%94%A8/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;想测试下gRPC框架的性能，设计了如下服务拓扑来对gRPC框架各组件、特性、参数配置下的性能进行探索。&lt;/p&gt;
 &lt;pre&gt;&lt;code class="language-bash"&gt;压力源程序 perfclient ---请求-&amp;gt; perfserver1 ---请求-&amp;gt; perfserver2
 &lt;/code&gt;&lt;/pre&gt;
@@ -5449,7 +5532,7 @@ width: 680px;
 &lt;p&gt;Java中对volatile的定义：&lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;8.3.1.4. &lt;code&gt;volatile&lt;/code&gt; Fields&lt;/p&gt;
-&lt;p&gt;The Java programming language allows threads to access shared variables (&lt;a href="https://docs.oracle.com/javase/specs/jls/se7/html/jls-17.html#jls-17.1"&gt;§17.1&lt;/a&gt;). As a rule, to ensure that shared variables are consistently and reliably updated, a thread should ensure that it has exclusive use of such variables by obtaining a lock that, conventionally, enforces mutual exclusion for those shared variables.&lt;/p&gt;</description></item><item><title>测试方法：开发者应掌握的系统性测试方法</title><link>/blog/2020-07-01-%E5%8E%8B%E5%8A%9B%E6%B5%8B%E8%AF%95_%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</link><pubDate>Wed, 01 Jul 2020 20:30:01 +0800</pubDate><guid>/blog/2020-07-01-%E5%8E%8B%E5%8A%9B%E6%B5%8B%E8%AF%95_%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</guid><description>&lt;style type="text/css" rel="stylesheet"&gt;
+&lt;p&gt;The Java programming language allows threads to access shared variables (&lt;a href="https://docs.oracle.com/javase/specs/jls/se7/html/jls-17.html#jls-17.1"&gt;§17.1&lt;/a&gt;). As a rule, to ensure that shared variables are consistently and reliably updated, a thread should ensure that it has exclusive use of such variables by obtaining a lock that, conventionally, enforces mutual exclusion for those shared variables.&lt;/p&gt;</description></item><item><title>系统测试：开发者应掌握的系统性测试方法</title><link>/blog/2020-07-01-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</link><pubDate>Wed, 01 Jul 2020 20:30:01 +0800</pubDate><guid>/blog/2020-07-01-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</guid><description>&lt;style type="text/css" rel="stylesheet"&gt;
 /* Three image containers (use 25% for four, and 50% for two, etc) */
 .column {
 float: left;

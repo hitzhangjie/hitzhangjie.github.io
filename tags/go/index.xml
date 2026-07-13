@@ -1,4 +1,28 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Go on</title><link>/tags/go/</link><description>Recent content in Go on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 08 Jul 2026 12:00:00 +0800</lastBuildDate><atom:link href="/tags/go/index.xml" rel="self" type="application/rss+xml"/><item><title>Etcd证书有效期延长带来的思考(3)：证书校验差异 OpenSSL vs. Go</title><link>/blog/2026-07-08-3-ssl-%E8%AF%81%E4%B9%A6%E9%AA%8C%E8%AF%81%E6%96%B9%E5%BC%8F%E5%8F%8A%E5%B7%AE%E5%BC%82/</link><pubDate>Wed, 08 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-08-3-ssl-%E8%AF%81%E4%B9%A6%E9%AA%8C%E8%AF%81%E6%96%B9%E5%BC%8F%E5%8F%8A%E5%B7%AE%E5%BC%82/</guid><description>&lt;h1 id="证书校验openssl-与-go-的行为差异"&gt;证书校验：OpenSSL 与 Go 的行为差异 &lt;a href="#%e8%af%81%e4%b9%a6%e6%a0%a1%e9%aa%8copenssl-%e4%b8%8e-go-%e7%9a%84%e8%a1%8c%e4%b8%ba%e5%b7%ae%e5%bc%82" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Go on</title><link>/tags/go/</link><description>Recent content in Go on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 13 Jul 2026 12:00:00 +0800</lastBuildDate><atom:link href="/tags/go/index.xml" rel="self" type="application/rss+xml"/><item><title>Go自动化测试全景指南</title><link>/blog/2026-07-13-go%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B5%8B%E8%AF%95%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/</link><pubDate>Mon, 13 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-13-go%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B5%8B%E8%AF%95%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/</guid><description>&lt;h1 id="go-自动化功能测试全景指南"&gt;Go 自动化功能测试全景指南 &lt;a href="#go-%e8%87%aa%e5%8a%a8%e5%8c%96%e5%8a%9f%e8%83%bd%e6%b5%8b%e8%af%95%e5%85%a8%e6%99%af%e6%8c%87%e5%8d%97" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;如何做好测试，是一门系统性的方法学，而不只是一些零零散散的经验。本文结合 Go 开发实践，从可测试性设计、测试编写、Mock 策略，到消除 Flaky Tests，系统性梳理自动化功能测试的各个关键环节。&lt;/p&gt;
+&lt;h2 id="1-可测试性设计"&gt;1. 可测试性设计 &lt;a href="#1-%e5%8f%af%e6%b5%8b%e8%af%95%e6%80%a7%e8%ae%be%e8%ae%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;测试的第一步不是写测试，而是&lt;strong&gt;让代码可测试&lt;/strong&gt;。如果代码一运行 &lt;code&gt;go test&lt;/code&gt; 就因为写死路径、全局状态等问题直接 panic，后面的工作都无从谈起。&lt;/p&gt;
+&lt;h3 id="11-依赖注入而非硬编码"&gt;1.1 依赖注入，而非硬编码 &lt;a href="#11-%e4%be%9d%e8%b5%96%e6%b3%a8%e5%85%a5%e8%80%8c%e9%9d%9e%e7%a1%ac%e7%bc%96%e7%a0%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;最常见的可测试性杀手是硬编码的外部依赖：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;// 不可测试：硬编码文件路径
+func LoadConfig() (*Config, error) {
+data, err := os.ReadFile(&amp;quot;/etc/app/config.yaml&amp;quot;)
+if err != nil {
+return nil, err
+}
+// ...
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;// 可测试：通过接口或参数注入
+func LoadConfig(path string) (*Config, error) {
+data, err := os.ReadFile(path)
+if err != nil {
+return nil, err
+}
+// ...
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;同样的道理适用于数据库连接、HTTP 客户端、缓存等。&lt;strong&gt;凡是会变的东西，都应该作为依赖传入，而非在函数内部直接构造。&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>Etcd证书有效期延长带来的思考(3)：证书校验差异 OpenSSL vs. Go</title><link>/blog/2026-07-08-3-ssl-%E8%AF%81%E4%B9%A6%E9%AA%8C%E8%AF%81%E6%96%B9%E5%BC%8F%E5%8F%8A%E5%B7%AE%E5%BC%82/</link><pubDate>Wed, 08 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-08-3-ssl-%E8%AF%81%E4%B9%A6%E9%AA%8C%E8%AF%81%E6%96%B9%E5%BC%8F%E5%8F%8A%E5%B7%AE%E5%BC%82/</guid><description>&lt;h1 id="证书校验openssl-与-go-的行为差异"&gt;证书校验：OpenSSL 与 Go 的行为差异 &lt;a href="#%e8%af%81%e4%b9%a6%e6%a0%a1%e9%aa%8copenssl-%e4%b8%8e-go-%e7%9a%84%e8%a1%8c%e4%b8%ba%e5%b7%ae%e5%bc%82" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;本文档记录对 etcd 集群 TLS 证书链的深入分析，重点说明 &lt;strong&gt;为何 &lt;code&gt;openssl verify&lt;/code&gt; 报错但 etcd 集群正常运行&lt;/strong&gt;，以及对 &lt;strong&gt;OpenSSL / Go 未来版本兼容性&lt;/strong&gt; 的顾虑与应对建议。&lt;/p&gt;
 &lt;h2 id="1-问题背景"&gt;1. 问题背景 &lt;a href="#1-%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;使用以下命令校验时失败：&lt;/p&gt;
@@ -1599,7 +1623,7 @@ output = flag.String(&amp;quot;output&amp;quot;, &amp;quot;&amp;quot;, &amp;quot
 gopkg = flag.String(&amp;quot;gopkg&amp;quot;, &amp;quot;gobin&amp;quot;, &amp;quot;write transformed data to *.go, whose package is $package&amp;quot;)
 )
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;我们的工具将从input对应的文件中读取文件内容，并转换成一个output对应的go文件中的导出变量。如果input是一个目录呢，我们则需要对目录下文件进行遍历处理。由于静态资源文件数据可能较大，这里需要进行gzip压缩（对于文本压缩率可高达80%左右）有助于减少go binary文件尺寸。&lt;/p&gt;</description></item><item><title>测试方法：开发者应掌握的系统性测试方法</title><link>/blog/2020-07-01-%E5%8E%8B%E5%8A%9B%E6%B5%8B%E8%AF%95_%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</link><pubDate>Wed, 01 Jul 2020 20:30:01 +0800</pubDate><guid>/blog/2020-07-01-%E5%8E%8B%E5%8A%9B%E6%B5%8B%E8%AF%95_%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</guid><description>&lt;style type="text/css" rel="stylesheet"&gt;
+&lt;p&gt;我们的工具将从input对应的文件中读取文件内容，并转换成一个output对应的go文件中的导出变量。如果input是一个目录呢，我们则需要对目录下文件进行遍历处理。由于静态资源文件数据可能较大，这里需要进行gzip压缩（对于文本压缩率可高达80%左右）有助于减少go binary文件尺寸。&lt;/p&gt;</description></item><item><title>系统测试：开发者应掌握的系统性测试方法</title><link>/blog/2020-07-01-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</link><pubDate>Wed, 01 Jul 2020 20:30:01 +0800</pubDate><guid>/blog/2020-07-01-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</guid><description>&lt;style type="text/css" rel="stylesheet"&gt;
 /* Three image containers (use 25% for four, and 50% for two, etc) */
 .column {
 float: left;

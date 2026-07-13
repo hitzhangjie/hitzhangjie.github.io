@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Stress-Test on</title><link>/tags/stress-test/</link><description>Recent content in Stress-Test on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 13 Jul 2026 20:30:01 +0800</lastBuildDate><atom:link href="/tags/stress-test/index.xml" rel="self" type="application/rss+xml"/><item><title>系统测试：Benchmark+性能测试+可用性测试+安全性测试+BVT测试</title><link>/blog/2020-07-01-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/</link><pubDate>Mon, 13 Jul 2026 20:30:01 +0800</pubDate><guid>/blog/2020-07-01-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/</guid><description>&lt;style type="text/css" rel="stylesheet"&gt;
+/* Three image containers (use 25% for four, and 50% for two, etc) */
+.column {
+float: left;
+width: 50%;
+padding: 5px;
+}
+/* Clear floats after image containers */
+.row::after {
+content: "";
+clear: both;
+display: table;
+}
+.fixsize {
+width: 400px;
+}
+.fullsize {
+width: 680px;
+}
+&lt;/style&gt;
+&lt;p&gt;如果说功能测试回答的是&amp;quot;做得对不对&amp;quot;，那性能测试回答的就是&amp;quot;做得快不快、稳不稳&amp;quot;。两者共同构成了软件质量的完整图景。本文将系统梳理非功能性测试的各个层次，以及它们在工程实践中的定位。&lt;/p&gt;
+&lt;h2 id="1-功能测试-vs-非功能测试"&gt;1. 功能测试 vs 非功能测试 &lt;a href="#1-%e5%8a%9f%e8%83%bd%e6%b5%8b%e8%af%95-vs-%e9%9d%9e%e5%8a%9f%e8%83%bd%e6%b5%8b%e8%af%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在进入正题之前，先厘清二者的分界线：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;维度&lt;/th&gt;
+&lt;th&gt;功能测试&lt;/th&gt;
+&lt;th&gt;非功能测试&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;核心问题&lt;/td&gt;
+&lt;td&gt;软件是否按预期工作？&lt;/td&gt;
+&lt;td&gt;软件工作得怎么样？&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;关注点&lt;/td&gt;
+&lt;td&gt;正确性、完整性&lt;/td&gt;
+&lt;td&gt;性能、稳定、安全、可用性&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;测试方式&lt;/td&gt;
+&lt;td&gt;给定输入，断言输出&lt;/td&gt;
+&lt;td&gt;施加负载，观察系统表现&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;典型工具&lt;/td&gt;
+&lt;td&gt;go test, gomock&lt;/td&gt;
+&lt;td&gt;wrk, vegeta, JMeter, go test -bench&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;失败含义&lt;/td&gt;
+&lt;td&gt;有 bug&lt;/td&gt;
+&lt;td&gt;有性能瓶颈、安全隐患&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;一句话概括：&lt;strong&gt;功能测试保证&amp;quot;能用&amp;quot;，非功能测试保证&amp;quot;好用&amp;quot;。&lt;/strong&gt;&lt;/p&gt;</description></item></channel></rss>

@@ -1,4 +1,28 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Mock on</title><link>/tags/mock/</link><description>Recent content in Mock on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 23 Aug 2020 15:41:28 +0800</lastBuildDate><atom:link href="/tags/mock/index.xml" rel="self" type="application/rss+xml"/><item><title>Monkey Patching in Go</title><link>/blog/2020-08-23-monkey_patching_in_go/</link><pubDate>Sun, 23 Aug 2020 15:41:28 +0800</pubDate><guid>/blog/2020-08-23-monkey_patching_in_go/</guid><description>&lt;p&gt;前几天写了篇&lt;a href="https://hitzhangjie.github.io/blog/2020-08-20-x64%E6%B1%87%E7%BC%96%E5%BC%80%E5%8F%91%E4%BB%8B%E7%BB%8D/"&gt;x64汇编开发介绍&lt;/a&gt;的文章，当时有提到接下来会介绍下go中如何实现monkey patching，嗯，今天就来说下这个事情。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Mock on</title><link>/tags/mock/</link><description>Recent content in Mock on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 13 Jul 2026 12:00:00 +0800</lastBuildDate><atom:link href="/tags/mock/index.xml" rel="self" type="application/rss+xml"/><item><title>Go自动化测试全景指南</title><link>/blog/2026-07-13-go%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B5%8B%E8%AF%95%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/</link><pubDate>Mon, 13 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-13-go%E8%87%AA%E5%8A%A8%E5%8C%96%E6%B5%8B%E8%AF%95%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/</guid><description>&lt;h1 id="go-自动化功能测试全景指南"&gt;Go 自动化功能测试全景指南 &lt;a href="#go-%e8%87%aa%e5%8a%a8%e5%8c%96%e5%8a%9f%e8%83%bd%e6%b5%8b%e8%af%95%e5%85%a8%e6%99%af%e6%8c%87%e5%8d%97" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;如何做好测试，是一门系统性的方法学，而不只是一些零零散散的经验。本文结合 Go 开发实践，从可测试性设计、测试编写、Mock 策略，到消除 Flaky Tests，系统性梳理自动化功能测试的各个关键环节。&lt;/p&gt;
+&lt;h2 id="1-可测试性设计"&gt;1. 可测试性设计 &lt;a href="#1-%e5%8f%af%e6%b5%8b%e8%af%95%e6%80%a7%e8%ae%be%e8%ae%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;测试的第一步不是写测试，而是&lt;strong&gt;让代码可测试&lt;/strong&gt;。如果代码一运行 &lt;code&gt;go test&lt;/code&gt; 就因为写死路径、全局状态等问题直接 panic，后面的工作都无从谈起。&lt;/p&gt;
+&lt;h3 id="11-依赖注入而非硬编码"&gt;1.1 依赖注入，而非硬编码 &lt;a href="#11-%e4%be%9d%e8%b5%96%e6%b3%a8%e5%85%a5%e8%80%8c%e9%9d%9e%e7%a1%ac%e7%bc%96%e7%a0%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;最常见的可测试性杀手是硬编码的外部依赖：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;// 不可测试：硬编码文件路径
+func LoadConfig() (*Config, error) {
+data, err := os.ReadFile(&amp;quot;/etc/app/config.yaml&amp;quot;)
+if err != nil {
+return nil, err
+}
+// ...
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;// 可测试：通过接口或参数注入
+func LoadConfig(path string) (*Config, error) {
+data, err := os.ReadFile(path)
+if err != nil {
+return nil, err
+}
+// ...
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;同样的道理适用于数据库连接、HTTP 客户端、缓存等。&lt;strong&gt;凡是会变的东西，都应该作为依赖传入，而非在函数内部直接构造。&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>Monkey Patching in Go</title><link>/blog/2020-08-23-monkey_patching_in_go/</link><pubDate>Sun, 23 Aug 2020 15:41:28 +0800</pubDate><guid>/blog/2020-08-23-monkey_patching_in_go/</guid><description>&lt;p&gt;前几天写了篇&lt;a href="https://hitzhangjie.github.io/blog/2020-08-20-x64%E6%B1%87%E7%BC%96%E5%BC%80%E5%8F%91%E4%BB%8B%E7%BB%8D/"&gt;x64汇编开发介绍&lt;/a&gt;的文章，当时有提到接下来会介绍下go中如何实现monkey patching，嗯，今天就来说下这个事情。&lt;/p&gt;
 &lt;h1 id="monkey-patching-简介"&gt;Monkey Patching 简介 &lt;a href="#monkey-patching-%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;monkey patching，一说到这个，很多熟悉go的同学可能会联想起gomonkey这个mock测试框架。该术语的定义取决于使用它的社区。在Ruby，Python 和许多其他动态编程语言中，“monkey patching”一词仅指在运行时对类或模块的动态修改，其目的是为了修补现有的第三方代码，以此作为解决方法。错误或功能无法正常运行。根据其不同的意图，在运行时修改类的其他形式也具有不同的名称。例如，在Zope和Plone中，安全补丁通常是使用动态类修改来提供的，但它们被称为热修补程序(hot fixes)。&lt;/p&gt;
 &lt;p&gt;monkey patching，它常用于如下场景：&lt;/p&gt;
@@ -64,7 +88,7 @@ $ r2 ./main
 [0x00459270]&amp;gt; s sym.main.a ;; 查看sym.main.a地址为0x00459250
 [0x00459250]&amp;gt;
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;函数main中调用函数a的过程就这么简单&lt;code&gt;call sym.main.a&lt;/code&gt;，也就是call 0x00459250，再看下a这个函数，它很简单将返回值1存储到[arg_8h]中，就是前一个栈帧中的一个8字节空间，之后的我们就先不关心了。&lt;/p&gt;</description></item><item><title>测试方法：开发者应掌握的系统性测试方法</title><link>/blog/2020-07-01-%E5%8E%8B%E5%8A%9B%E6%B5%8B%E8%AF%95_%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</link><pubDate>Wed, 01 Jul 2020 20:30:01 +0800</pubDate><guid>/blog/2020-07-01-%E5%8E%8B%E5%8A%9B%E6%B5%8B%E8%AF%95_%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</guid><description>&lt;style type="text/css" rel="stylesheet"&gt;
+&lt;p&gt;函数main中调用函数a的过程就这么简单&lt;code&gt;call sym.main.a&lt;/code&gt;，也就是call 0x00459250，再看下a这个函数，它很简单将返回值1存储到[arg_8h]中，就是前一个栈帧中的一个8字节空间，之后的我们就先不关心了。&lt;/p&gt;</description></item><item><title>系统测试：开发者应掌握的系统性测试方法</title><link>/blog/2020-07-01-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</link><pubDate>Wed, 01 Jul 2020 20:30:01 +0800</pubDate><guid>/blog/2020-07-01-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E5%BC%80%E5%8F%91%E8%80%85%E5%BA%94%E6%8E%8C%E6%8F%A1%E7%9A%84%E7%B3%BB%E7%BB%9F%E6%80%A7%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95/</guid><description>&lt;style type="text/css" rel="stylesheet"&gt;
 /* Three image containers (use 25% for four, and 50% for two, etc) */
 .column {
 float: left;

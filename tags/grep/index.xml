@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Grep on</title><link>/tags/grep/</link><description>Recent content in Grep on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 10 Dec 2017 14:32:38 +0800</lastBuildDate><atom:link href="/tags/grep/index.xml" rel="self" type="application/rss+xml"/><item><title>常用 Shell 命令备忘</title><link>/blog/2017-12-10-admin-shell-cmds/</link><pubDate>Sun, 10 Dec 2017 14:32:38 +0800</pubDate><guid>/blog/2017-12-10-admin-shell-cmds/</guid><description>&lt;h1 id="常用命令"&gt;常用命令 &lt;a href="#%e5%b8%b8%e7%94%a8%e5%91%bd%e4%bb%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="0-基础知识"&gt;0 基础知识 &lt;a href="#0-%e5%9f%ba%e7%a1%80%e7%9f%a5%e8%af%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="01-停止解析命令行选项"&gt;0.1 停止解析命令行选项“&amp;ndash;” &lt;a href="#01-%e5%81%9c%e6%ad%a2%e8%a7%a3%e6%9e%90%e5%91%bd%e4%bb%a4%e8%a1%8c%e9%80%89%e9%a1%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;一般Linux下命令行参数可以通过两种方式来指定，一种是短选项“-?”，一种是长选项“&amp;ndash;？”，当希望停止解析命令行参数，将后续参数全部当做文件名来处理时，可以添加“&amp;ndash;”来告诉shell停止解析命令行参数。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/admin-shell-cmds/15129179511703.jpg" alt=""&gt;&lt;/p&gt;
+&lt;h3 id="02-tail--grep查看日志"&gt;0.2 tail &amp;amp; grep查看日志 &lt;a href="#02-tail--grep%e6%9f%a5%e7%9c%8b%e6%97%a5%e5%bf%97" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;tail选项-f，即&amp;ndash;follow，会跟踪日志文件中后续追加的内容；&lt;/p&gt;
+&lt;p&gt;grep选项&amp;ndash;line-buffered会使得grep工作在行缓冲模式，虽然有点性能低下，但是查看日志确实比较有效，能够立即输出打印的日志；
+grep选项&lt;code&gt;--color&lt;/code&gt;可以对grep到的字符串进行高亮显示；
+grep选项&lt;code&gt;-E&lt;/code&gt;开启正则表达式搜索，例如一次搜索要匹配多个uin，可通过&lt;code&gt;-E 'uin1 | uin2 '&lt;/code&gt;来完成；
+grep选项&lt;code&gt;-A、-B、-C&lt;/code&gt;可以控制显示匹配行的上下区域范围，以显示更多关联的事件信息；
+grep选项&lt;code&gt;-n&lt;/code&gt;可以显示匹配行在日志文件中的行号，方便打开日志文件定位到具体的行；&lt;/p&gt;
+&lt;h3 id="03-find命令"&gt;0.3 find命令 &lt;a href="#03-find%e5%91%bd%e4%bb%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;find命令不仅可以支持搜索，而且可以对搜索到的结果执行某些动作！例如搜索到之后直接执行删除动作：&lt;code&gt;find -iname pattern -delete&lt;/code&gt;。
+find命令在执行搜索过程中，搜索的pattern使用的是shell中默认的匹配模式，&lt;code&gt;?&lt;/code&gt;代表任意单个字符，而&lt;code&gt;*&lt;/code&gt;代表任意数量的字符！
+find命令在执行搜索的过程中，还可以指定是否跟踪符号链接，&lt;code&gt;-P、-L、-H&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;有时磁盘告警（只读告警）不是因为文件太大把磁盘塞满了，而是小文件太多把磁盘inode节点用光了，可以用这里的命令来查下文件数量最多的目录，然后清理一下。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-sh"&gt;find /[^udp]*/ -type f | awk -F / -v OFS=/ '{$NF=&amp;quot;&amp;quot;;dir[$0]++}END{for(i in dir)print dir[i]&amp;quot; &amp;quot;i}' | sort -k1 -nr | head
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="04-单引号双引号变量替换问题"&gt;0.4 单引号&amp;amp;双引号变量替换问题 &lt;a href="#04-%e5%8d%95%e5%bc%95%e5%8f%b7%e5%8f%8c%e5%bc%95%e5%8f%b7%e5%8f%98%e9%87%8f%e6%9b%bf%e6%8d%a2%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;val=123
+echo '$val' $val 单引号变量不替换
+echo &amp;quot;$val&amp;quot; 123 双引号变量替换
+echo '&amp;quot;$val&amp;quot;' &amp;quot;$val&amp;quot; 单引号内即便有双引号也不替换，双引号作为普通字符展示
+echo &amp;quot;'$val'&amp;quot; '123' 双引号内即便有单引号也执行替换，单引号作为普通字符展示
+echo ''$val'' 123 单引号内又有单引号，执行变量替换，内部嵌套的单引号不展示
+echo &amp;quot;&amp;quot;$val&amp;quot;&amp;quot; 123 双引号内又有双引号，执行变量替换，内部嵌套的双引号不展示
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="05-dfdu查看磁盘占用情况"&gt;0.5 df、du查看磁盘占用情况 &lt;a href="#05-dfdu%e6%9f%a5%e7%9c%8b%e7%a3%81%e7%9b%98%e5%8d%a0%e7%94%a8%e6%83%85%e5%86%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;查看各个分区占用情况：&lt;code&gt;df -h&lt;/code&gt;，加参数&lt;code&gt;-s&lt;/code&gt;查看所有分区汇总的占用情况；&lt;/p&gt;</description></item></channel></rss>

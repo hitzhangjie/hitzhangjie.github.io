@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Multiprocessor on</title><link>/tags/multiprocessor/</link><description>Recent content in Multiprocessor on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 04 Jan 2019 12:18:24 +0800</lastBuildDate><atom:link href="/tags/multiprocessor/index.xml" rel="self" type="application/rss+xml"/><item><title>Cache 一致性协议</title><link>/blog/2019-01-04-kernel-cache%E4%B8%80%E8%87%B4%E6%80%A7%E5%8D%8F%E8%AE%AE/</link><pubDate>Fri, 04 Jan 2019 12:18:24 +0800</pubDate><guid>/blog/2019-01-04-kernel-cache%E4%B8%80%E8%87%B4%E6%80%A7%E5%8D%8F%E8%AE%AE/</guid><description>&lt;p&gt;cache一致性实现机制，主要包括基于snooping和基于directory两种机制，一致性机制解决的是如何观测cpu read/write操作事件，两种各有优缺点：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;snooping，在cpu数量、core数量比较少的情况下，snooping可以减少req/rsp的数量，是基于广播的，效率比较高，但是在cpu、core数量比较多的情况下难以水平扩展，为了满足广播需要增加依赖的总线带宽；&lt;/li&gt;
+&lt;li&gt;directory，在cpu数量、core数量比较多的情况下，更加适用，可以平行扩展cpu、core数量，不需要增加总线带宽，但是由于是计算cpu或者core之间的点对点请求，没有广播，req/rsp次数会比较多，会增加一定的延时；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;cache一致性算法，主要包括write-through（写直达）或者write-back（写回），write-back并不是当cache中数据更新时立即写回，而是在稍后的某个时机再写回。写直达会严重降低cpu吞吐量，所以现如今的主流处理器中通常采用write-back算法。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;write-through&lt;/li&gt;
+&lt;li&gt;write-back
+&lt;ul&gt;
+&lt;li&gt;write-invalidate，当某个core（如core 1）的cache被修改为最新数据后，总线观测到更新，将写事件同步到其他core（如core n），将其他core对应相同内存地址的cache entry标记为invalidate，后续core n继续读取相同内存地址数据时，发现已经invalidate，会再次请求内存中最新数据。&lt;/li&gt;
+&lt;li&gt;write-update，当某个core（如core 1）的cache被修改为最新数据后，将写事件同步到其他core，此时其他core（如core n）立即读取最新数据（如更新为core 1中数据）。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="coherence-mechanismsedit"&gt;Coherence mechanisms[&lt;a href="https://en.wikipedia.org/w/index.php?title=Cache_coherence&amp;amp;action=edit&amp;amp;section=3"&gt;edit&lt;/a&gt;] &lt;a href="#coherence-mechanismsedit" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;The two most common mechanisms of ensuring coherency are &lt;em&gt;snooping&lt;/em&gt; and &lt;em&gt;directory-based&lt;/em&gt;, each having their own benefits and drawbacks. Snooping based protocols tend to be faster, if enough &lt;a href="https://en.wikipedia.org/wiki/Memory_bandwidth"&gt;bandwidth&lt;/a&gt; is available, since all transactions are a request/response seen by all processors. The drawback is that snooping isn&amp;rsquo;t scalable. Every request must be broadcast to all nodes in a system, meaning that as the system gets larger, the size of the (logical or physical) bus and the bandwidth it provides must grow. Directories, on the other hand, tend to have longer latencies (with a 3 hop request/forward/respond) but use much less bandwidth since messages are point to point and not broadcast. For this reason, many of the larger systems (&amp;gt;64 processors) use this type of cache coherence.&lt;/p&gt;</description></item></channel></rss>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>X86 on</title><link>/tags/x86/</link><description>Recent content in X86 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 10 Dec 2017 23:19:17 +0800</lastBuildDate><atom:link href="/tags/x86/index.xml" rel="self" type="application/rss+xml"/><item><title>GDT / LDT 与 TSS</title><link>/blog/2017-12-10-kernel-gdt-ldt/</link><pubDate>Sun, 10 Dec 2017 23:19:17 +0800</pubDate><guid>/blog/2017-12-10-kernel-gdt-ldt/</guid><description>&lt;p&gt;每个进程在gdt中存储两项，分别是tss和ldt，Linux源码中对两个结构体的定义如下。&lt;/p&gt;
+&lt;h3 id="tss任务状态段"&gt;tss，任务状态段 &lt;a href="#tss%e4%bb%bb%e5%8a%a1%e7%8a%b6%e6%80%81%e6%ae%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;tss中维持了与进程相关的处理器硬件上下文信息，主要是用于进程切换，其在内核源码中对应的数据结构为struct tss_struct，定义如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;286 struct tss_struct {
+287         /*
+288          * The hardware state:
+289          */
+290         struct x86_hw_tss       x86_tss;
+291
+292         /*
+293          * The extra 1 is there because the CPU will access an
+294          * additional byte beyond the end of the IO permission
+295          * bitmap. The extra byte must be all 1 bits, and must
+296          * be within the limit.
+297          */
+298         unsigned long           io_bitmap[IO_BITMAP_LONGS + 1];
+299
+300 #ifdef CONFIG_X86_32
+301         /*
+302          * Space for the temporary SYSENTER stack.
+303          */
+304         unsigned long           SYSENTER_stack_canary;
+305         unsigned long           SYSENTER_stack[64];
+306 #endif
+307
+308 } ____cacheline_aligned;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;其中结构体struct x86_hw_tss x86_tss中存储的是处理器中各个寄存器的值（根据处理器架构不同定义的结构体内容也不同），定义如下：&lt;/p&gt;</description></item></channel></rss>

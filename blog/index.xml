@@ -1170,7 +1170,74 @@ top: -170px;
 &lt;p&gt;但是：
 1）其他任务可能会涉及到阻塞、唤醒，也会涉及到奖励、惩罚导致的动态优先级、动态时间片调整。
 2）我们创建的线程也是系统的一部分，它的时间片也会因为其他进程动态优先级变化而变化。
-3）而且即使我们确定了任务的执行时间片，抢占检测时，只要有vruntime比它小一个时间片的，就可以被抢占，不一定执行完自己的时间片。&lt;/p&gt;</description></item><item><title>Redis设计与实现</title><link>/blog/2025-04-04-redis/</link><pubDate>Fri, 04 Apr 2025 14:32:38 +0800</pubDate><guid>/blog/2025-04-04-redis/</guid><description>&lt;h1 id="redis介绍"&gt;Redis介绍 &lt;a href="#redis%e4%bb%8b%e7%bb%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+3）而且即使我们确定了任务的执行时间片，抢占检测时，只要有vruntime比它小一个时间片的，就可以被抢占，不一定执行完自己的时间片。&lt;/p&gt;</description></item><item><title>QRCode/二维码是如何工作的</title><link>/blog/2025-04-11-how_qrcode_works/</link><pubDate>Fri, 11 Apr 2025 12:00:00 +0800</pubDate><guid>/blog/2025-04-11-how_qrcode_works/</guid><description>&lt;h1 id="二维码是如何工作的"&gt;二维码是如何工作的 &lt;a href="#%e4%ba%8c%e7%bb%b4%e7%a0%81%e6%98%af%e5%a6%82%e4%bd%95%e5%b7%a5%e4%bd%9c%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;1994年日本的株式会社电波东洋（Denso Wave）设计了二维码用来追踪产品组装，那时候使用场景还很单一。到了2010年移动互联网时代二维码开始大放异彩，比如微信扫码加好友、扫码点餐、扫码支付等等，这些已经变成了大家日常衣食住行的一部分。日常生活中虽然经常使用，但是很多人并不理解二维码，因为不理解也多了一些担心，尤其是老年人。本文对二维码的构成比如数据编码、解码方式，以及二维码可以存储哪些信息，二维码的类型，以及在移动设备、PC上如何扫码，以及扫码时的安全性问题进行简单描述。&lt;/p&gt;
+&lt;h2 id="揭秘二维码从工业追踪到移动支付安全与便捷背后的原理"&gt;揭秘二维码：从工业追踪到移动支付，安全与便捷背后的原理 &lt;a href="#%e6%8f%ad%e7%a7%98%e4%ba%8c%e7%bb%b4%e7%a0%81%e4%bb%8e%e5%b7%a5%e4%b8%9a%e8%bf%bd%e8%b8%aa%e5%88%b0%e7%a7%bb%e5%8a%a8%e6%94%af%e4%bb%98%e5%ae%89%e5%85%a8%e4%b8%8e%e4%be%bf%e6%8d%b7%e8%83%8c%e5%90%8e%e7%9a%84%e5%8e%9f%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;二维码，这个看似简单的黑白方块，已经深深融入了我们的日常生活。从微信扫码、点餐支付，到各类活动的入场验证，它无处不在。然而，很多人虽然经常使用，却对其背后的原理和安全性存在疑问。本文将带你深入了解二维码的历史、应用、构成、类型、扫码方式以及安全性问题，让你对这个神奇的工具有更全面的认识。&lt;/p&gt;
+&lt;h3 id="1-二维码的诞生工业追踪的开端"&gt;1. 二维码的诞生：工业追踪的开端 &lt;a href="#1-%e4%ba%8c%e7%bb%b4%e7%a0%81%e7%9a%84%e8%af%9e%e7%94%9f%e5%b7%a5%e4%b8%9a%e8%bf%bd%e8%b8%aa%e7%9a%84%e5%bc%80%e7%ab%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;二维码并非横空出世。它的故事始于1994年，由日本的株式会社电波东洋（Denso Wave）发明设计。最初，二维码并非为了方便移动支付或社交互动，而是为了解决工业生产中的追踪问题。当时，传统的条形码只能存储少量信息，且只能从一个方向读取。为了满足汽车制造行业对产品组装流程追踪的需求，电波东洋设计了二维码，它能够存储更多信息，并且可以从任何角度读取，极大地提高了生产效率和质量控制。最初的二维码主要用于追踪汽车零部件的组装流程，记录零件的生产日期、批次、以及装配过程等信息。&lt;/p&gt;
+&lt;h3 id="2-移动互联网时代的爆发二维码的普及"&gt;2. 移动互联网时代的爆发：二维码的普及 &lt;a href="#2-%e7%a7%bb%e5%8a%a8%e4%ba%92%e8%81%94%e7%bd%91%e6%97%b6%e4%bb%a3%e7%9a%84%e7%88%86%e5%8f%91%e4%ba%8c%e7%bb%b4%e7%a0%81%e7%9a%84%e6%99%ae%e5%8f%8a" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;二维码真正走进大众视野，并大放异彩，是随着移动互联网时代的到来。2010年左右，随着智能手机的普及和移动支付的兴起，二维码开始在中国爆发式增长。微信的出现更是加速了二维码的普及。微信扫码加好友、扫码点餐、扫码支付等功能，迅速渗透到人们的衣食住行，成为了日常生活中不可或缺的一部分。如今，无论是在餐厅、商店、活动现场，还是在广告宣传单页上，二维码的身影随处可见。它已经成为了连接线上与线下世界的桥梁，极大地提升了生活效率和便利性。&lt;/p&gt;
+&lt;h3 id="3-安全疑虑为什么不敢放心用于支付"&gt;3. 安全疑虑：为什么不敢放心用于支付？ &lt;a href="#3-%e5%ae%89%e5%85%a8%e7%96%91%e8%99%91%e4%b8%ba%e4%bb%80%e4%b9%88%e4%b8%8d%e6%95%a2%e6%94%be%e5%bf%83%e7%94%a8%e4%ba%8e%e6%94%af%e4%bb%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;尽管二维码带来了极大的便利，但围绕它的安全性问题也一直存在。很多人虽然习惯了使用二维码进行支付、获取信息等操作，因为不了解所以也多了一些担心，对扫码的安全性存在疑虑，尤其是中老年人很很怕在支付类场景中上当受骗。当然这种担忧并非空穴来风。二维码本身是一种信息载体，其安全性取决于其所包含的信息以及读取和使用这些信息的过程。如果二维码被恶意篡改，或者被攻击者利用，可能会导致用户的信息泄露，甚至财产损失。例如，攻击者可能会替换二维码中的链接地址，诱导用户访问恶意网站，窃取用户的银行卡信息、密码等敏感数据。&lt;/p&gt;
+&lt;h3 id="4-揭秘二维码的构成与类型从数据编码到扫码方式"&gt;4. 揭秘二维码的构成与类型：从数据编码到扫码方式 &lt;a href="#4-%e6%8f%ad%e7%a7%98%e4%ba%8c%e7%bb%b4%e7%a0%81%e7%9a%84%e6%9e%84%e6%88%90%e4%b8%8e%e7%b1%bb%e5%9e%8b%e4%bb%8e%e6%95%b0%e6%8d%ae%e7%bc%96%e7%a0%81%e5%88%b0%e6%89%ab%e7%a0%81%e6%96%b9%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;为了消除大众对二维码的疑虑，我们需要了解二维码是如何工作的。&lt;/p&gt;
+&lt;h4 id="数据编码"&gt;数据编码 &lt;a href="#%e6%95%b0%e6%8d%ae%e7%bc%96%e7%a0%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;&lt;strong&gt;数据编码：&lt;/strong&gt; 二维码首先需要将要存储的信息进行编码。不同的二维码类型支持不同的编码模式，以适应不同类型的数据。常见的编码模式包括：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Numeric Mode:&lt;/strong&gt; 用于存储数字，编码效率较高。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Alphanumeric Mode:&lt;/strong&gt; 用于存储数字、大写字母和一些特殊字符。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Byte Mode:&lt;/strong&gt; 用于存储任意字节数据，例如汉字、二进制文件等。需要注意的是，Byte Mode 的编码效率相对较低，且需要指定字符集（例如 UTF-8, GBK）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Kanji Mode:&lt;/strong&gt; 专门用于存储汉字，效率较高，但仅适用于支持日语字符集的二维码。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;ECI (Error Correction Information) Mode:&lt;/strong&gt; 用于存储特定的错误纠正信息，允许二维码在一定程度上抵抗损坏。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;编码过程会将这些数据转换成一系列的二进制数据，然后根据二维码的结构和纠错等级，将这些二进制数据映射到黑白模块的排列，最终构成二维码的图案。不同的纠错等级会影响二维码的容错能力，但也会降低二维码的存储容量。&lt;/p&gt;
+&lt;h4 id="数据解码"&gt;数据解码 &lt;a href="#%e6%95%b0%e6%8d%ae%e8%a7%a3%e7%a0%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;&lt;strong&gt;解码方式：&lt;/strong&gt; 当我们使用手机或扫描仪扫描二维码时，设备会读取二维码图案中的黑白模块，并将其转换回原始数据。解码过程主要包括以下步骤：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;定位与校正：&lt;/strong&gt; 扫描仪首先需要定位二维码，并校正其角度和畸变。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;采样：&lt;/strong&gt; 扫描仪对二维码图案进行采样，将黑白模块转换为二进制数据。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;纠错：&lt;/strong&gt; 根据二维码的纠错等级，使用纠错算法恢复可能损坏的数据。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;模式识别：&lt;/strong&gt; 识别数据所使用的编码模式（例如 Numeric, Alphanumeric, Byte）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;解码：&lt;/strong&gt; 根据识别的编码模式，将二进制数据转换回原始数据。例如，如果识别为 Byte 模式，则需要根据指定的字符集（例如 UTF-8）将二进制数据转换回汉字或其他字符。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;解码过程需要考虑二维码的结构、纠错等级和编码模式，才能准确地恢复原始数据。&lt;/p&gt;</description></item><item><title>TOTP/Authenticator.app 如何工作的</title><link>/blog/2025-04-10-how_totp_works/</link><pubDate>Thu, 10 Apr 2025 12:00:00 +0800</pubDate><guid>/blog/2025-04-10-how_totp_works/</guid><description>&lt;h2 id="authenticatorapp如何工作的"&gt;Authenticator.app如何工作的 &lt;a href="#authenticatorapp%e5%a6%82%e4%bd%95%e5%b7%a5%e4%bd%9c%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Authenticator.app (例如 Google Authenticator) 是一种常用的双重验证工具，它能显著提升账户安全性。本文将深入探讨 Authenticator.app 的工作原理，揭示它如何生成和验证 6 位数的验证码。&lt;/p&gt;
+&lt;h3 id="核心技术totp-time-based-one-time-password"&gt;核心技术：TOTP (Time-based One-time Password) &lt;a href="#%e6%a0%b8%e5%bf%83%e6%8a%80%e6%9c%aftotp-time-based-one-time-password" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Authenticator.app 采用一种名为 TOTP (时间基的一次性密码) 的技术。其核心思想是：服务器和客户端（你的手机）使用相同的密钥和时间信息，通过相同的算法计算出一个验证码。&lt;/p&gt;
+&lt;h3 id="工作流程详解"&gt;工作流程详解 &lt;a href="#%e5%b7%a5%e4%bd%9c%e6%b5%81%e7%a8%8b%e8%af%a6%e8%a7%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;密钥生成与共享:&lt;/strong&gt; 当你启用双重验证时，网站或应用会生成一个唯一的密钥（secret key）。这个密钥既存储在服务器端，也同步到你的 Authenticator.app 中。网站一般会以二维码的形式显示，并要求我们通过Authenticator.app扫描二维码的形式来同步这个密钥信息到app中。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;时间同步:&lt;/strong&gt; TOTP 的核心是时间。Authenticator.app 和服务器都需要使用相同的时钟，通常使用网络时间协议 (NTP) 来保持时间同步。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;TOTP 算法:&lt;/strong&gt; Authenticator.app 使用以下步骤计算验证码：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;它将密钥和当前时间（通常是 Unix 时间戳）作为输入。&lt;/li&gt;
+&lt;li&gt;它使用 HMAC-based One-time Password (HOTP) 算法，结合密钥和时间戳进行计算。&lt;/li&gt;
+&lt;li&gt;计算结果是一个长数字，然后截取其中的一部分（通常是最后6位）作为验证码。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;服务器端验证:&lt;/strong&gt; 当你登录时，服务器会：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;获取你账户的密钥。&lt;/li&gt;
+&lt;li&gt;根据当前时间，使用相同的 TOTP 算法计算出一个验证码。&lt;/li&gt;
+&lt;li&gt;将计算出的验证码与你输入的验证码进行比较。如果两者匹配，则验证成功。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id="时间窗口容错机制"&gt;时间窗口：容错机制 &lt;a href="#%e6%97%b6%e9%97%b4%e7%aa%97%e5%8f%a3%e5%ae%b9%e9%94%99%e6%9c%ba%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;你可能会问：如果服务器和手机在不同的时间点计算验证码，时间戳肯定不一样，怎么保证验证成功呢？&lt;/p&gt;
+&lt;p&gt;答案在于 &lt;strong&gt;时间窗口 (Time Window)&lt;/strong&gt;。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;服务器会计算出当前时间前后 15 秒内可能出现的验证码。&lt;/li&gt;
+&lt;li&gt;Authenticator.app 也会计算当前时间前后 15 秒内可能出现的验证码。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;即使你的手机打开 Authenticator.app 的时间略微晚于服务器计算验证码的时间，只要你的验证码在服务器允许的 15 秒时间窗口内，服务器仍然会认为你的验证码是正确的。&lt;/p&gt;</description></item><item><title>Redis设计与实现</title><link>/blog/2025-04-04-redis/</link><pubDate>Fri, 04 Apr 2025 14:32:38 +0800</pubDate><guid>/blog/2025-04-04-redis/</guid><description>&lt;h1 id="redis介绍"&gt;Redis介绍 &lt;a href="#redis%e4%bb%8b%e7%bb%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;Redis是一种“&lt;strong&gt;内存数据库&lt;/strong&gt;”，作为“&lt;strong&gt;分布式缓存&lt;/strong&gt;”组件选型的可选项之一，我认为开发者应该掌握Redis如何使用并了解其相关实现细节，因为Redis设计简单、性能优异，不仅仅可以拿来作为组件使用，也可以指导我们后续的软件架构设计。&lt;/p&gt;
 &lt;p&gt;这本书《Redis设计与实现 黄健宏》，作者以通俗易懂的语言、合理的文章脉络组织阐明了Redis的常用操作、命令实现以及涉及到的底层数据结构，从入门到精通的典范。此外对Redis集群的一些高阶特性也做了介绍，如Redis主从节点的全量同步、部分同步的实现，介绍了sentinel借助主节点心跳、其他sentinel节点判断主节点主观、客观离线的细节，以及sentinel leader选举，Redis主节点的重新选举等等。应该算是本不错的好书！作者也写了不少伪代码、示例，很用心！推荐一下！&lt;/p&gt;
 &lt;p&gt;&lt;img src="assets/2025-04-04-redis/redis-cover.png" alt="cover.png"&gt;&lt;/p&gt;
@@ -6163,7 +6230,78 @@ return memhash(p, h, 8)
 }
 }
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;f==0或者f!=f是两种极端情况，不考虑直接看f64hash里面调用方法memhash(p, h, 8)，memhash实现，省略无关代码：&lt;/p&gt;</description></item><item><title>macOS实现高效todolist</title><link>/blog/2019-02-23-alfred_macos%E5%AE%9E%E7%8E%B0%E9%AB%98%E6%95%88todolist/</link><pubDate>Sat, 23 Feb 2019 00:13:00 +0800</pubDate><guid>/blog/2019-02-23-alfred_macos%E5%AE%9E%E7%8E%B0%E9%AB%98%E6%95%88todolist/</guid><description>&lt;style&gt;
+&lt;p&gt;f==0或者f!=f是两种极端情况，不考虑直接看f64hash里面调用方法memhash(p, h, 8)，memhash实现，省略无关代码：&lt;/p&gt;</description></item><item><title>Daemonize：两次 fork 与脱离控制终端</title><link>/blog/2019-04-15-kernel-daemonize/</link><pubDate>Mon, 15 Apr 2019 21:14:57 +0800</pubDate><guid>/blog/2019-04-15-kernel-daemonize/</guid><description>&lt;p&gt;服务以daemon方式运行，是我们经常要实现的一种能力，两次&lt;code&gt;fork&lt;/code&gt;是大家熟悉的，但是有些可能是大家没了解过的。&lt;/p&gt;
+&lt;h1 id="为什么要以daemon方式运行"&gt;为什么要以Daemon方式运行？ &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e8%a6%81%e4%bb%a5daemon%e6%96%b9%e5%bc%8f%e8%bf%90%e8%a1%8c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;程序启动后以daemon方式运行，其实是想达到如下目的：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;可以脱离控制终端，在终端会话关闭的时候服务程序可以继续在后台运行；&lt;/li&gt;
+&lt;li&gt;关闭标准输入、输出、错误，终端的输入不会影响到服务端，服务端输出也不会影响终端；&lt;/li&gt;
+&lt;li&gt;屏蔽某些信号，如SIGHUP、SIGINT、SIGPIPE等（SIGKILL和SIGTERM不能被捕获、阻塞或忽略）；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id="如何实现daemon方式运行"&gt;如何实现Daemon方式运行？ &lt;a href="#%e5%a6%82%e4%bd%95%e5%ae%9e%e7%8e%b0daemon%e6%96%b9%e5%bc%8f%e8%bf%90%e8%a1%8c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;首先来明白几个进程管理相关的概念：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;会话，是一个或者多个进程组的集合。会话中创建的第一个进程称为会话首进程，会话首进程可以通过调用&lt;code&gt;open(&amp;quot;/dev/tty&amp;quot;, ...)&lt;/code&gt;来获取对控制终端的控制。会话，包含一个前台进程组和若干后台进程组，终端产生的中断、退出信号将传递给前台进程组中所有进程；调制解调器的挂断信号，则会发送给会话的控制进程（会话首进程），其实往往就是bash程序。&lt;/li&gt;
+&lt;li&gt;进程组，通常管道线可以用来将前后的几个进程编入一个进程组中，例如proc1 | proc2 &amp;amp;将创建
+一个包含进程proc1和proc2的进程组，并且是后台进程组。进程组中的首进程，称为进程组组长，非组长进程可以通过调用&lt;code&gt;setsid(void)&lt;/code&gt;来创建一个新的会话，并且此时的非组长进程将变为会话的首进程，并且没有控制终端；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;下图展示了常见的Unix/Linux环境下的控制终端、控制进程（会话首进程）、前台进程组、后台进程组的关系，这里的login可以理解为&lt;code&gt;bash --login&lt;/code&gt;，当在shell中执行一个程序时（如我们的服务P），此时会bash会fork并执行exec(P,&amp;hellip;)，fork的时候已经完成了stdin\stdout\stderr的相关设置，它们被关联到了控制终端。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/kernel-daemonize/terminal.gif" alt="control terminal unix"&gt;&lt;/p&gt;
+&lt;p&gt;也就是说进程P一开始是有控制控端的，它有对控制终端的读写权限，并且会接受控制终端相关的信号，如SIGINT。现在想将让其脱离控制控端，如何实现呢？通过创建“&lt;strong&gt;会话非首进程&lt;/strong&gt;”，可以创建daemon进程，要执行fork-setsid-fork：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;P需要先离开当前会话才可以脱离控制终端，它可以创建一个新会话，但是现在它是进程组组长，不能执行setsid。P需要先执行一次fork生成子进程P’，变成非进程组组长，此时就可以执行setsid创建新会话了；&lt;/li&gt;
+&lt;li&gt;子进程P’现在调用setsid创建新会话，P‘成为新会话的首进程，新进程组的组长，并且没有控制终端，这样看来似乎已经ok了。但是考虑到不同系统的兼容性，在某些遵循System V Rules的系统上，因为其是会话首进程，仍有可能调用open(&amp;ldquo;dev/tty&amp;rdquo;,&amp;hellip;)`重新获取控制终端；&lt;/li&gt;
+&lt;li&gt;因此，建议子进程P’再fork一次生成子进程P‘’，P’‘变为会话非首进程，此时P’‘将彻底失去对控制终端的控制。意味着P’‘不会再受到控制终端输入、信号的影响，服务输出也不会影响到控制终端。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id="可能大家对fork不了解的地方"&gt;可能大家对fork不了解的地方？ &lt;a href="#%e5%8f%af%e8%83%bd%e5%a4%a7%e5%ae%b6%e5%af%b9fork%e4%b8%8d%e4%ba%86%e8%a7%a3%e7%9a%84%e5%9c%b0%e6%96%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;系统调用fork会复制进程地址空间，但是并不会继承所有的线程，只有调用fork()的线程能够得到继承，child process里面只有调用fork()的那个线程的副本，其他线程的副本是不存在的。详见后面的“&lt;strong&gt;fork测试&lt;/strong&gt;”部分。&lt;/p&gt;
+&lt;p&gt;那如果一个多线程程序要支持平滑重启怎么办呢？可以实现，只是比较复杂，而我们见到的很多支持平滑重启的软件产品，不少是单线程多进程架构的，如Nginx！&lt;/p&gt;
+&lt;p&gt;不需要考虑fork时线程复制的问题，如果硬要实现，那就要把线程上下文信息保存起来，等fork之后再根据保存的上下文信息还原出当时的多线程状态，如何还原？可能要还原可能不需要还原，根据场景来看。比如某些场景下，可能只是需要保存当前的请求以及处理状态就可以了，这种就比较简单；如果要100%还原当时的线程状态那就很困难，可能无法实现。&lt;/p&gt;
+&lt;h1 id="golang如何实现daemon"&gt;golang如何实现daemon？ &lt;a href="#golang%e5%a6%82%e4%bd%95%e5%ae%9e%e7%8e%b0daemon" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;建议借助外部工具daemonize或操作系统工具systemd、upstart、launchd，来实现go服务daemon方式运行，不建议自己实现：go程序天然是多线程程序，不能确定编程人员在何处启动goroutine（引入新线程）。github上有个实现：&lt;a href="https://github.com/sevlyar/go-daemon"&gt;https://github.com/sevlyar/go-daemon&lt;/a&gt;，可以了解下，但是不建议goneat框架层实现或者集成。另外golang官方也有一个相关的issue讨论过这个问题：https://github.com/golang/go/issues/227。&lt;/p&gt;
+&lt;h1 id="附录fork测试"&gt;附录：fork测试 &lt;a href="#%e9%99%84%e5%bd%95fork%e6%b5%8b%e8%af%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;stdlib.h&amp;gt;
+#include &amp;lt;pthread.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+#include &amp;lt;sys/types.h&amp;gt;
+void* tfunc1(void *args) {
+printf(&amp;quot;tfunc1, get pid:%u, tid:%u\n&amp;quot;, getpid(), pthread_self());
+sleep(60);
+}
+void* tfunc2(void *args) {
+printf(&amp;quot;tfunc2, get pid:%u, tid:%u\n&amp;quot;, getpid(), pthread_self());
+sleep(60);
+}
+int main(int argc, char *argv[])
+{
+int ret;
+pthread_t t1, t2;
+ret = pthread_create(&amp;amp;t1, NULL, tfunc1, NULL);
+ret = pthread_create(&amp;amp;t2, NULL, tfunc2, NULL);
+pid_t pid = fork();
+if (pid != 0) { // parent process
+printf(&amp;quot;create process, pid:%u\n&amp;quot;, pid);
+} else { // child process
+sleep(60); // hold to check how many threads has been copied from parent process
+}
+sleep(60);
+return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;[root@VM_1_34_centos ~]# ./main
+tfunc2, get pid:2672, tid:397674240
+tfunc1, get pid:2672, tid:406066944
+create process, pid:2675
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;top -H -p 2675
+Threads: 1 total, 0 running, 1 sleeping, 0 stopped, 0 zombie
+%Cpu(s): 0.1 us, 0.1 sy, 0.0 ni, 99.8 id, 0.0 wa, 0.0 hi, 0.0 si, 0.0 st
+KiB Mem : 16171652 total, 3413496 free, 450324 used, 12307832 buff/cache
+KiB Swap: 0 total, 0 free, 0 used. 15009260 avail Mem
+PID USER PR NI VIRT RES SHR S %CPU %MEM TIME+ COMMAND
+2675 root 20 0 25968 140 0 S 0.0 0.0 0:00.00 main
+&lt;/code&gt;&lt;/pre&gt;</description></item><item><title>macOS实现高效todolist</title><link>/blog/2019-02-23-alfred_macos%E5%AE%9E%E7%8E%B0%E9%AB%98%E6%95%88todolist/</link><pubDate>Sat, 23 Feb 2019 00:13:00 +0800</pubDate><guid>/blog/2019-02-23-alfred_macos%E5%AE%9E%E7%8E%B0%E9%AB%98%E6%95%88todolist/</guid><description>&lt;style&gt;
 img {
 width: 680px;
 padding-bottom: 1rem;
@@ -6232,7 +6370,237 @@ end tell
 return theQuery
 end run
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;AppleScript不太熟，东拼西凑攒出来这个小工具，还攒了一些其他小工具&amp;hellip; 希望对大家有帮助！&lt;/p&gt;</description></item><item><title>设计工具Mermaid</title><link>/blog/2019-01-03-%E8%AE%BE%E8%AE%A1%E5%B7%A5%E5%85%B7mermaid/</link><pubDate>Thu, 03 Jan 2019 16:07:00 +0800</pubDate><guid>/blog/2019-01-03-%E8%AE%BE%E8%AE%A1%E5%B7%A5%E5%85%B7mermaid/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是Mermaid语法和使用，用以在markdown文档中绘制各类图表。&lt;/p&gt;
+&lt;p&gt;AppleScript不太熟，东拼西凑攒出来这个小工具，还攒了一些其他小工具&amp;hellip; 希望对大家有帮助！&lt;/p&gt;</description></item><item><title>Linux 内核参数</title><link>/blog/2019-02-12-kernel-%E5%86%85%E6%A0%B8%E5%8F%82%E6%95%B0/</link><pubDate>Tue, 12 Feb 2019 10:49:01 +0800</pubDate><guid>/blog/2019-02-12-kernel-%E5%86%85%E6%A0%B8%E5%8F%82%E6%95%B0/</guid><description>&lt;h1 id="1-tcpip内核参数"&gt;1 tcpip内核参数 &lt;a href="#1-tcpip%e5%86%85%e6%a0%b8%e5%8f%82%e6%95%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;所有的TCP/IP调优参数都位于/proc/sys/net/目录，下面是最重要、常用的tcp/ip调优参数：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;内核参数&lt;/th&gt;
+&lt;th&gt;参数用途&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/net/core/rmem_max&lt;/td&gt;
+&lt;td&gt;最大的TCP数据接收缓冲&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/net/core/wmem_max&lt;/td&gt;
+&lt;td&gt;最大的TCP数据发送缓冲&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/net/ipv4/tcp_timestamps&lt;/td&gt;
+&lt;td&gt;时间戳(请参考RFC 1323)在TCP包头增加12个字节&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/net/ipv4/tcp_sack&lt;/td&gt;
+&lt;td&gt;选择应答&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/net/ipv4/tcp_window_scaling&lt;/td&gt;
+&lt;td&gt;支持更大的tcp滑动窗口，如果tcp窗口最大超过64KB，必须设置该参数值为1&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;rmem_default&lt;/td&gt;
+&lt;td&gt;默认的接收窗口大小&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;rmem_max&lt;/td&gt;
+&lt;td&gt;接收窗口的最大大小&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;wmem_default&lt;/td&gt;
+&lt;td&gt;默认的发送窗口大小&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;wmem_max&lt;/td&gt;
+&lt;td&gt;发送窗口的最大大小&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h1 id="2-system内核参数"&gt;2 System内核参数 &lt;a href="#2-system%e5%86%85%e6%a0%b8%e5%8f%82%e6%95%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;内核参数&lt;/th&gt;
+&lt;th&gt;参数用途&lt;/th&gt;
+&lt;th&gt;defv&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/fs/super-max&lt;/td&gt;
+&lt;td&gt;该文件指定超级块处理程序的最大数目。mount的任何文件系统需要使用超级块，所以如果挂装了大量文件系统，则可能会用尽超级块处理程序。&lt;/td&gt;
+&lt;td&gt;256&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/fs/super-nr&lt;/td&gt;
+&lt;td&gt;该文件显示当前已分配超级块的数目。该文件是只读的，仅用于显示信息。&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/kernel/proc/sys/kernel/acct&lt;/td&gt;
+&lt;td&gt;该文件有三个可配置值，根据包含日志的文件系统上可用空间的数量（以百分比表示），这些值控制何时开始进行进程记帐：- 如果可用空间低于这个百分比值，停止进程记帐；- 如果可用空间高于这个百分比值，开始进程记帐；- 检查上面两个值的频率（以秒为单位）；通过空格分隔开的一串数字来设置该选项的值。&lt;/td&gt;
+&lt;td&gt;2 4 30&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/kernel/ctrl-alt-del&lt;/td&gt;
+&lt;td&gt;控制系统在接收到 ctrl+alt+delete 按键组合时如何反应。值为0，表示捕获ctrl+alt+delete，平滑关闭系统，类似shutdown命令；值为1，表示不捕获ctrl+alt+delete，非平滑关闭，类似于关电源。&lt;/td&gt;
+&lt;td&gt;0&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/kernel/domainname&lt;/td&gt;
+&lt;td&gt;配置网络域名。它没有缺省值，也许已经设置了域名，也许没有设置。&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/kernel/hostname&lt;/td&gt;
+&lt;td&gt;配置网络主机名。它没有缺省值，也许已经设置了主机名，也许没有设置。&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/ss/kernel/msgmax&lt;/td&gt;
+&lt;td&gt;该文件指定了从一个进程发送到另一个进程的消息的最大长度。进程间的消息传递是在内核的内存中进行，不会交换到磁盘上，所以如果增加该值，则将增加操作系统所使用的内存数量。&lt;/td&gt;
+&lt;td&gt;8192&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/kernel/msgmnb&lt;/td&gt;
+&lt;td&gt;该文件指定在一个消息队列中最大的字节数。&lt;/td&gt;
+&lt;td&gt;16384&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/kernel/msgmni&lt;/td&gt;
+&lt;td&gt;该文件指定消息队列标识的最大数目。&lt;/td&gt;
+&lt;td&gt;16&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/kernel/panic&lt;/td&gt;
+&lt;td&gt;该文件表示如果发生“内核严重错误（kernel panic）”，则内核在重新引导之前等待的时间（以秒为单位）。0表示，在发生内核严重错误时将禁止重新引导。&lt;/td&gt;
+&lt;td&gt;0&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/kernel/printk&lt;/td&gt;
+&lt;td&gt;根据日志记录消息的重要性，定义将其发送到何处。关于不同日志级别的更多信息，请阅读 syslog(2) 联机帮助页。该文件有四个数字值，该文件的四个值为： 控制台日志级别：优先级高于该值的消息将被打印至控制台；&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;缺省消息日志级别：将用该优先级来打印没有优先级的消息；&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;最低控制台日志级别：控制台日志级别可被设置的最小值（最高优先级）；&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;缺省控制台日志级别：控制台日志级别的缺省值；&lt;/td&gt;
+&lt;td&gt;6 4 1 7&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/kernel/shmall&lt;/td&gt;
+&lt;td&gt;任何给定时刻系统上可以使用的共享内存的总量（以字节为单位）。&lt;/td&gt;
+&lt;td&gt;2097152&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/kernel/shmax&lt;/td&gt;
+&lt;td&gt;内核所允许的最大共享内存段的大小（以字节为单位）。&lt;/td&gt;
+&lt;td&gt;33554432&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/kernel/shmmni&lt;/td&gt;
+&lt;td&gt;整个系统共享内存段的最大数目。&lt;/td&gt;
+&lt;td&gt;4096&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/kernel/sysrq&lt;/td&gt;
+&lt;td&gt;值为非零，则激活 System Request Key。&lt;/td&gt;
+&lt;td&gt;0&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/kernel/threads-max&lt;/td&gt;
+&lt;td&gt;内核所能使用的线程的最大数目。&lt;/td&gt;
+&lt;td&gt;2048&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/net/proc/sys/net/core/message_burst&lt;/td&gt;
+&lt;td&gt;写新的警告消息所需的时间（以 1/10 秒为单位）；在这个时间内所接收到的其它警告消息会被丢弃。这用于防止某些企图用消息“淹没”您系统的人发起的拒绝服务（Denial of Service）攻击。&lt;/td&gt;
+&lt;td&gt;50 (5s)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/net/core/message_cost&lt;/td&gt;
+&lt;td&gt;与每个警告消息相关的成本值。该值越大，越有可能忽略警告消息。&lt;/td&gt;
+&lt;td&gt;5&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/net/core/netdev_max_backlog&lt;/td&gt;
+&lt;td&gt;在接口接收数据包的速率比内核处理这些包的速率快时，允许送到队列的数据包的最大数目。&lt;/td&gt;
+&lt;td&gt;300&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/net/core/optmem_max&lt;/td&gt;
+&lt;td&gt;每个套接字所允许的最大缓冲区的大小。&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/net/core/rmem_default&lt;/td&gt;
+&lt;td&gt;接收套接字缓冲区大小的缺省值（以字节为单位）。&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/net/core/rmem_max&lt;/td&gt;
+&lt;td&gt;接收套接字缓冲区大小的最大值（以字节为单位）。&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/net/core/wmem_default&lt;/td&gt;
+&lt;td&gt;发送套接字缓冲区大小的缺省值（以字节为单位）。&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/net/core/wmem_max&lt;/td&gt;
+&lt;td&gt;发送套接字缓冲区大小的最大值（以字节为单位）。&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/net/ipv4/proc/sys/net/ipv6&lt;/td&gt;
+&lt;td&gt;所有 IPv4/v6 的参数都被记录在内核源代码文档中。请参阅文件 /usr/src/linux/Documentation/networking/ip-sysctl.txt。&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;/proc/sys/vm/proc/sys/vm/buffermem&lt;/td&gt;
+&lt;td&gt;缓冲区内存占整个系统内存的数量（以百分比表示）。它有三个值，通过空格相隔的一串数字来设置：- 用于缓冲区的内存的最低百分比；&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;ul&gt;
+&lt;li&gt;如果系统内存所剩不多，且系统内存正在不断减少，系统将试图维护缓冲区内存的数量；&lt;/li&gt;
+&lt;li&gt;用于缓冲区的内存的最高百分比； | 2 10 60 |
+| /proc/sys/vm/freepages | 系统如何应对各种级别的可用内存。它有三个值，通过空格相隔的一串数字来设置：- 如果系统中可用页面的数目大于最低限制，则允许内核分配一些内存；- 如果系统中可用页面的数目小于这一限制，则内核将以较积极的方式启动交换，以释放内存，从而维持系统性能。 - 内核将试图保持这个数量的系统内存可用，低于这个值将启动内核交换。 | 512 768 1024 |
+| /proc/sys/vm/kswapd | 控制内核如何进行内存交换。它有三个值，通过空格相隔的一串数字来设置：- 内核试图一次释放的最大页面数目。如果想增加内存交换过程中的带宽，则需要增加该值。 - 内核在每次交换中试图释放页面的最少次数。&lt;/li&gt;
+&lt;li&gt;内核在一次交换中所写页面的数目。这对系统性能影响最大。这个值越大，交换的数据越多，花在磁盘寻道上的时间越少。然而，这个值太大会因“淹没”请求队列而反过来影响系统性能。 | 512 32 8 |
+| /proc/sys/vm/pagecache | 该文件与 /proc/sys/vm/buffermem 的工作内容一样，但它是针对文件的内存映射和一般高速缓存。 | |&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id="3-临时修改配置"&gt;3 临时修改配置 &lt;a href="#3-%e4%b8%b4%e6%97%b6%e4%bf%ae%e6%94%b9%e9%85%8d%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;/proc是虚拟文件系统，它是操作系统对上层暴露的与内核通信的一个接口，该目录下的所有内容都是临时性的，重新启动系统后任何修改都会丢失。因此如果是想临时性的调整内核参数，可以直接通过命令&lt;code&gt;echo&lt;/code&gt;来修改/proc下的对应项目内容。&lt;/p&gt;</description></item><item><title>Cache 一致性协议</title><link>/blog/2019-01-04-kernel-cache%E4%B8%80%E8%87%B4%E6%80%A7%E5%8D%8F%E8%AE%AE/</link><pubDate>Fri, 04 Jan 2019 12:18:24 +0800</pubDate><guid>/blog/2019-01-04-kernel-cache%E4%B8%80%E8%87%B4%E6%80%A7%E5%8D%8F%E8%AE%AE/</guid><description>&lt;p&gt;cache一致性实现机制，主要包括基于snooping和基于directory两种机制，一致性机制解决的是如何观测cpu read/write操作事件，两种各有优缺点：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;snooping，在cpu数量、core数量比较少的情况下，snooping可以减少req/rsp的数量，是基于广播的，效率比较高，但是在cpu、core数量比较多的情况下难以水平扩展，为了满足广播需要增加依赖的总线带宽；&lt;/li&gt;
+&lt;li&gt;directory，在cpu数量、core数量比较多的情况下，更加适用，可以平行扩展cpu、core数量，不需要增加总线带宽，但是由于是计算cpu或者core之间的点对点请求，没有广播，req/rsp次数会比较多，会增加一定的延时；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;cache一致性算法，主要包括write-through（写直达）或者write-back（写回），write-back并不是当cache中数据更新时立即写回，而是在稍后的某个时机再写回。写直达会严重降低cpu吞吐量，所以现如今的主流处理器中通常采用write-back算法。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;write-through&lt;/li&gt;
+&lt;li&gt;write-back
+&lt;ul&gt;
+&lt;li&gt;write-invalidate，当某个core（如core 1）的cache被修改为最新数据后，总线观测到更新，将写事件同步到其他core（如core n），将其他core对应相同内存地址的cache entry标记为invalidate，后续core n继续读取相同内存地址数据时，发现已经invalidate，会再次请求内存中最新数据。&lt;/li&gt;
+&lt;li&gt;write-update，当某个core（如core 1）的cache被修改为最新数据后，将写事件同步到其他core，此时其他core（如core n）立即读取最新数据（如更新为core 1中数据）。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="coherence-mechanismsedit"&gt;Coherence mechanisms[&lt;a href="https://en.wikipedia.org/w/index.php?title=Cache_coherence&amp;amp;action=edit&amp;amp;section=3"&gt;edit&lt;/a&gt;] &lt;a href="#coherence-mechanismsedit" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;The two most common mechanisms of ensuring coherency are &lt;em&gt;snooping&lt;/em&gt; and &lt;em&gt;directory-based&lt;/em&gt;, each having their own benefits and drawbacks. Snooping based protocols tend to be faster, if enough &lt;a href="https://en.wikipedia.org/wiki/Memory_bandwidth"&gt;bandwidth&lt;/a&gt; is available, since all transactions are a request/response seen by all processors. The drawback is that snooping isn&amp;rsquo;t scalable. Every request must be broadcast to all nodes in a system, meaning that as the system gets larger, the size of the (logical or physical) bus and the bandwidth it provides must grow. Directories, on the other hand, tend to have longer latencies (with a 3 hop request/forward/respond) but use much less bandwidth since messages are point to point and not broadcast. For this reason, many of the larger systems (&amp;gt;64 processors) use this type of cache coherence.&lt;/p&gt;</description></item><item><title>设计工具Mermaid</title><link>/blog/2019-01-03-%E8%AE%BE%E8%AE%A1%E5%B7%A5%E5%85%B7mermaid/</link><pubDate>Thu, 03 Jan 2019 16:07:00 +0800</pubDate><guid>/blog/2019-01-03-%E8%AE%BE%E8%AE%A1%E5%B7%A5%E5%85%B7mermaid/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是Mermaid语法和使用，用以在markdown文档中绘制各类图表。&lt;/p&gt;
 &lt;h1 id="mermaid"&gt;Mermaid &lt;a href="#mermaid" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;h2 id="1-flow-chart"&gt;1 Flow Chart &lt;a href="#1-flow-chart" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;pre&gt;&lt;code class="language-mermaid"&gt;graph LR
@@ -6294,7 +6662,40 @@ Class01 : size()
 Class01 : int chimp
 Class01 : int gorilla
 Class08 &amp;lt;--&amp;gt; C2: Cool label
-&lt;/code&gt;&lt;/pre&gt;</description></item><item><title>tcp write closed tcpconn</title><link>/blog/2018-12-20-%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B_write-closed-tcpconn/</link><pubDate>Thu, 20 Dec 2018 23:11:29 +0800</pubDate><guid>/blog/2018-12-20-%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B_write-closed-tcpconn/</guid><description>&lt;h1 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;/code&gt;&lt;/pre&gt;</description></item><item><title>epoll 实现</title><link>/blog/2019-01-01-epoll%E5%AE%9E%E7%8E%B0/</link><pubDate>Tue, 01 Jan 2019 22:21:24 +0800</pubDate><guid>/blog/2019-01-01-epoll%E5%AE%9E%E7%8E%B0/</guid><description>&lt;p&gt;在深入探究epoll实现之前，先来回顾一下epoll的用法，以便大家看具体实现时容易建立起实现、应用之间的联系。&lt;/p&gt;
+&lt;h1 id="epoll-api回顾"&gt;epoll api回顾 &lt;a href="#epoll-api%e5%9b%9e%e9%a1%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;先简单回顾下如何使用C库封装的3个epoll相关的系统调用。更详细的用法参见http://www.cnblogs.com/apprentice89/archive/2013/05/06/3063039.html&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;int epoll_create(int size);
+int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);
+int epoll_wait(int epfd, struct epoll_event *events,int maxevents, int timeout);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;使用起来很清晰，首先要调用epoll_create建立一个epoll fd。参数size是内核保证能够正确处理的最大文件描述符数目（现在内核使用红黑树组织epoll相关数据结构，不再使用这个参数）。
+epoll_ctl可以操作上面建立的epoll fd，例如，将刚建立的socket fd加入到epoll中让其监控，或者把 epoll正在监控的某个socket fd移出epoll，不再监控它等等。
+epoll_wait在调用时，在给定的timeout时间内，当在监控的这些文件描述符中的某些文件描述符上有事件发生时，就返回用户态的进程。&lt;/p&gt;
+&lt;h1 id="epoll-vs-pollselect"&gt;epoll vs poll/select &lt;a href="#epoll-vs-pollselect" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;epoll为什么高效（相比select），仅从上面的调用方式就可以看出epoll比select/poll的一个优势：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;select/poll每次调用都要传递所要监控的所有fd给select/poll系统调用（这意味着每次调用都要将fd列表从用户态拷贝到内核态，当fd数目很多时，这会造成低效）。而每次调用epoll_wait时（作用相当于调用select/poll），不需要再传递fd列表给内核，因为已经在epoll_ctl中将需要监控的fd告诉了内核（epoll_ctl不需要每次都拷贝所有的fd，只需要进行增量式操作）。所以，在调用epoll_create之后，内核已经在内核态开始准备数据结构存放要监控的fd了。每次epoll_ctl只是对这个数据结构进行简单的维护。&lt;/li&gt;
+&lt;li&gt;此外，内核使用了slab机制，为epoll提供了快速的数据结构：在内核里，一切皆文件。所以，epoll向内核注册了一个文件系统，用于存储上述的被监控的fd。当你调用epoll_create时，就会在这个虚拟的epoll文件系统里创建一个file结点。当然这个file不是普通文件，它只服务于epoll。epoll在被内核初始化时（操作系统启动），同时会开辟出epoll自己的内核高速cache区，用于安置每一个我们想监控的fd，这些fd会以红黑树的形式保存在内核cache里，以支持快速的查找、插入、删除。这个内核高速cache区，就是建立连续的物理内存页，然后在之上建立slab层，简单的说，就是物理上分配好你想要的size的内存对象，每次使用时都是使用空闲的已分配好的对象。&lt;/li&gt;
+&lt;li&gt;epoll的第三个优势在于：当我们调用epoll_ctl往里塞入百万个fd时，epoll_wait仍然可以飞快的返回，并有效的将发生事件的fd给我们用户。这是由于我们在调用epoll_create时，内核除了帮我们在epoll文件系统里建了个file结点，在内核cache里建了个红黑树用于存储以后epoll_ctl传来的fd外，还会再建立一个list链表，用于存储准备就绪的事件，当epoll_wait调用时，仅仅观察这个list链表里有没有数据即可。有数据就返回，没有数据就sleep，等到timeout时间到后即使链表没数据也返回。所以，epoll_wait非常高效。而且，通常情况下即使我们要监控百万计的fd，大多一次也只返回很少量的准备就绪fd而已，所以，epoll_wait仅需要从内核态copy少量的fd到用户态而已。那么，这个准备就绪list链表是怎么维护的呢？当我们执行epoll_ctl时，除了把fd放到epoll文件系统里file对象对应的红黑树上之外，还会给内核中断处理程序注册一个回调函数，告诉内核，如果这个fd的中断到了，就把它放到准备就绪list链表里。所以，当一个fd（例如socket）上有数据到了，内核在把设备（例如网卡）上的数据copy到内核中后就来把fd（socket）插入到准备就绪list链表里了。 如此，一颗红黑树，一张准备就绪fd链表，少量的内核cache，就帮我们解决了大并发下的fd（socket）处理问题。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id="epoll内部逻辑"&gt;epoll内部逻辑 &lt;a href="#epoll%e5%86%85%e9%83%a8%e9%80%bb%e8%be%91" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;ol&gt;
+&lt;li&gt;执行epoll_create时，创建了红黑树和就绪list链表。&lt;/li&gt;
+&lt;li&gt;执行epoll_ctl时，如果增加fd（socket），则检查在红黑树中是否存在，存在立即返回，不存在则添加到红黑树上，然后向内核注册回调函数，用于当中断事件来临时向准备就绪list链表中插入数据。&lt;/li&gt;
+&lt;li&gt;执行epoll_wait时立刻返回准备就绪链表里的数据即可。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;源码分析如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;static int __init eventpoll_init(void)
+{
+mutex_init(&amp;amp;pmutex);
+ep_poll_safewake_init(&amp;amp;psw);
+epi_cache = kmem_cache_create(&amp;quot;eventpoll_epi&amp;quot;, sizeof(struct epitem), 0, SLAB_HWCACHE_ALIGN|EPI_SLAB_DEBUG|SLAB_PANIC, NULL);
+pwq_cache = kmem_cache_create(&amp;quot;eventpoll_pwq&amp;quot;, sizeof(struct eppoll_entry), 0, EPI_SLAB_DEBUG|SLAB_PANIC, NULL);
+return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;epoll用kmem_cache_create（slab分配器）分配内存用来存放struct epitem和struct eppoll_entry。&lt;/p&gt;</description></item><item><title>tcp write closed tcpconn</title><link>/blog/2018-12-20-%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B_write-closed-tcpconn/</link><pubDate>Thu, 20 Dec 2018 23:11:29 +0800</pubDate><guid>/blog/2018-12-20-%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B_write-closed-tcpconn/</guid><description>&lt;h1 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;&lt;strong&gt;tcp client: write to a half-closed tcp connection!&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;这里探讨一下这个问题，Write to a closed tcp connection的问题。在深入讨论这些问题之前，首先要了解tcp state diagram，为此文末特地附上了经典的tcp状态转换图。&lt;/p&gt;
 &lt;p&gt;我们的场景是这样的，tcp server已经启动，然后tcp client主动建立连接请求，连接成功建立后，tcp client并不立即发送数据而是等待一段时间之后才会发送数据（这种在client端的tcp连接池中非常常见），tcp server端为了防止连接被滥用，会每隔30s钟检查一下tcp连接是否空闲，如果两次检查都发现tcp连接空闲则主动将连接关闭。&lt;/p&gt;
@@ -6352,7 +6753,16 @@ Class08 &amp;lt;--&amp;gt; C2: Cool label
 &lt;h2 id="13-silly-window-syndrome"&gt;1.3 Silly Window Syndrome &lt;a href="#13-silly-window-syndrome" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;Silly Window Syndrome翻译成中文就是“糊涂窗口综合症”。正如你上面看到的一样，如果我们的接收方太忙了，来不及取走Receive Windows里的数据，那么，就会导致发送方越来越小。到最后，如果接收方腾出几个字节并告诉发送方现在有几个字节的window，而我们的发送方会义无反顾地发送这几个字节。&lt;/p&gt;
 &lt;p&gt;要知道，我们的TCP+IP头有40个字节，为了几个字节，要达上这么大的开销，这太不经济了。&lt;/p&gt;
-&lt;p&gt;另外，你需要知道网络上有个MTU，对于以太网来说，MTU是1500字节，除去TCP+IP头的40个字节，真正的数据传输可以有1460，这就是所谓的MSS（Max Segment Size）注意，TCP的RFC定义这个MSS的默认值是536，这是因为 &lt;a href="http://tools.ietf.org/html/rfc791"&gt;RFC 791&lt;/a&gt;里说了任何一个IP设备都得最少接收576尺寸的大小（实际上来说576是拨号的网络的MTU，而576减去IP头的20个字节就是536）。&lt;/p&gt;</description></item><item><title>ELK Stack 集中式日志管理</title><link>/blog/2018-10-12-%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7_elk/</link><pubDate>Fri, 12 Oct 2018 12:00:00 +0800</pubDate><guid>/blog/2018-10-12-%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7_elk/</guid><description>&lt;h1 id="what-is-elk-stack-"&gt;What is ELK Stack ? &lt;a href="#what-is-elk-stack-" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;另外，你需要知道网络上有个MTU，对于以太网来说，MTU是1500字节，除去TCP+IP头的40个字节，真正的数据传输可以有1460，这就是所谓的MSS（Max Segment Size）注意，TCP的RFC定义这个MSS的默认值是536，这是因为 &lt;a href="http://tools.ietf.org/html/rfc791"&gt;RFC 791&lt;/a&gt;里说了任何一个IP设备都得最少接收576尺寸的大小（实际上来说576是拨号的网络的MTU，而576减去IP头的20个字节就是536）。&lt;/p&gt;</description></item><item><title>REUSEPORT vs REUSEADDR</title><link>/blog/2018-11-24-kernel-reuseport-vs-reuseaddr/</link><pubDate>Sat, 24 Nov 2018 10:17:22 +0800</pubDate><guid>/blog/2018-11-24-kernel-reuseport-vs-reuseaddr/</guid><description>&lt;p&gt;&lt;strong&gt;REUSEPORT vs REUSEADDR&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这是我见过的最REUSEPORT和REUSEADDR最全面的解释和回答了，在stackover上1360赞同（包含我的一票）👍，简单总结下，详情还是建议想读以下内容，特别是不同操作系统的区别：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;TCP/UDP连接（UDP无连接但可以connect），由五元组表示：&amp;lt;协议类型，源ip，源端口，目的ip，目的端口&amp;gt;；&lt;/li&gt;
+&lt;li&gt;REUSEADDR解决的是监听本地任意地址0.0.0.0:port与另一个监听本地特定地址相同端口a.b.c.d:port的问题；&lt;/li&gt;
+&lt;li&gt;REUSEPORT解决多个sockets（可能归属于相同或者不同的进程）是否允许bind到相同端口的问题，Linux下为了避免port hijack，只允许euid相同的进程bind到相同的port（bind设置socket源port，connect设置socket目的端口），同时对于tcp listen socket、udp socket还会进行“均匀的”流量分发，也是一个轻量的负载均衡方案。fuser&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;ps: REUSEADDR还可以快速复用TIME_WAIT状态的地址(ipport)，比如服务器重启后重新listen同一个地址，但是单独这个选项不允许多个active listeners复用这个地址。&lt;/p&gt;
+&lt;p&gt;原文出自：&lt;a href="https://stackoverflow.com/a/14388707/3817040"&gt;reuseport &amp;amp; reuseaddr, how they differ?&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Welcome to the wonderful world of portability&amp;hellip; or rather the lack of it. Before we start analyzing these two options in detail and take a deeper look how different operating systems handle them, it should be noted that the BSD socket implementation is the mother of all socket implementations. Basically all other systems copied the BSD socket implementation at some point in time (or at least its interfaces) and then started evolving it on their own. Of course the BSD socket implementation was evolved as well at the same time and thus systems that copied it later got features that were lacking in systems that copied it earlier. Understanding the BSD socket implementation is the key to understanding all other socket implementations, so you should read about it even if you don&amp;rsquo;t care to ever write code for a BSD system.&lt;/p&gt;</description></item><item><title>ELK Stack 集中式日志管理</title><link>/blog/2018-10-12-%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7_elk/</link><pubDate>Fri, 12 Oct 2018 12:00:00 +0800</pubDate><guid>/blog/2018-10-12-%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7_elk/</guid><description>&lt;h1 id="what-is-elk-stack-"&gt;What is ELK Stack ? &lt;a href="#what-is-elk-stack-" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;ELK Stack，包括了ElasticSearch(E)、LogStash(L)、Kibana(K)。这三个产品都是由Elastic开发、维护的，其中：&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;ElasticSearch是一个基于Lucence搜索引擎构建的NoSQL数据库；&lt;/li&gt;
@@ -6612,7 +7022,63 @@ padding-bottom: 1rem;
 &lt;li&gt;&lt;strong&gt;其他语言与中间件生态&lt;/strong&gt;：并不只有 C/Unix 这一支。例如 &lt;strong&gt;CORBA&lt;/strong&gt;（Common Object Request Broker Architecture，OMG 在 1990 年代推动）在当时跨语言、跨平台的分布式对象调用里极有名；同一时期前后还有 DCOM、Java RMI 等。它们和今天的“RPC 框架”形态不同，但核心动机类似：让远程调用尽量像本地调用，并配套命名、定位、桩代码生成等机制。&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;所以，若只从“最近十年 RPC 很火”来理解，很容易把问题看成全新课题；翻一翻那些年代久远的 RFC，再看看 rpcbind，以及 CORBA 一类中间件，会更清楚：注册、发现、地址透明、stub/IDL 等，&lt;strong&gt;老问题换了新皮&lt;/strong&gt;，反复被各代基础设施重新实现了一遍。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;Steve Vinoski&lt;/strong&gt; 在一次 Youtube 分享中介绍了 rpc 演进的过程，&lt;a href="https://www.youtube.com/watch?v=so6fNXLFixg&amp;amp;index=5&amp;amp;list=PL74sKVuaebMJipJ71p3ntfI57WWDMiVGI"&gt;点击观看分享&lt;/a&gt;。&lt;/p&gt;</description></item><item><title>Assembly Language</title><link>/blog/2017-10-14-%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80_assembly-language/</link><pubDate>Sat, 14 Oct 2017 20:13:35 +0800</pubDate><guid>/blog/2017-10-14-%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80_assembly-language/</guid><description>&lt;p&gt;处理器是算逻运算、控制操作的执行部件，它只能识别机器指令并执行动作。机器指令是一系列的0、1字符串，本质上对应了总线上的高低电平信号，所以机器语言都是特定于硬件的。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Steve Vinoski&lt;/strong&gt; 在一次 Youtube 分享中介绍了 rpc 演进的过程，&lt;a href="https://www.youtube.com/watch?v=so6fNXLFixg&amp;amp;index=5&amp;amp;list=PL74sKVuaebMJipJ71p3ntfI57WWDMiVGI"&gt;点击观看分享&lt;/a&gt;。&lt;/p&gt;</description></item><item><title>GDT / LDT 与 TSS</title><link>/blog/2017-12-10-kernel-gdt-ldt/</link><pubDate>Sun, 10 Dec 2017 23:19:17 +0800</pubDate><guid>/blog/2017-12-10-kernel-gdt-ldt/</guid><description>&lt;p&gt;每个进程在gdt中存储两项，分别是tss和ldt，Linux源码中对两个结构体的定义如下。&lt;/p&gt;
+&lt;h3 id="tss任务状态段"&gt;tss，任务状态段 &lt;a href="#tss%e4%bb%bb%e5%8a%a1%e7%8a%b6%e6%80%81%e6%ae%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;tss中维持了与进程相关的处理器硬件上下文信息，主要是用于进程切换，其在内核源码中对应的数据结构为struct tss_struct，定义如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;286 struct tss_struct {
+287         /*
+288          * The hardware state:
+289          */
+290         struct x86_hw_tss       x86_tss;
+291
+292         /*
+293          * The extra 1 is there because the CPU will access an
+294          * additional byte beyond the end of the IO permission
+295          * bitmap. The extra byte must be all 1 bits, and must
+296          * be within the limit.
+297          */
+298         unsigned long           io_bitmap[IO_BITMAP_LONGS + 1];
+299
+300 #ifdef CONFIG_X86_32
+301         /*
+302          * Space for the temporary SYSENTER stack.
+303          */
+304         unsigned long           SYSENTER_stack_canary;
+305         unsigned long           SYSENTER_stack[64];
+306 #endif
+307
+308 } ____cacheline_aligned;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;其中结构体struct x86_hw_tss x86_tss中存储的是处理器中各个寄存器的值（根据处理器架构不同定义的结构体内容也不同），定义如下：&lt;/p&gt;</description></item><item><title>常用 Shell 命令备忘</title><link>/blog/2017-12-10-admin-shell-cmds/</link><pubDate>Sun, 10 Dec 2017 14:32:38 +0800</pubDate><guid>/blog/2017-12-10-admin-shell-cmds/</guid><description>&lt;h1 id="常用命令"&gt;常用命令 &lt;a href="#%e5%b8%b8%e7%94%a8%e5%91%bd%e4%bb%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="0-基础知识"&gt;0 基础知识 &lt;a href="#0-%e5%9f%ba%e7%a1%80%e7%9f%a5%e8%af%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="01-停止解析命令行选项"&gt;0.1 停止解析命令行选项“&amp;ndash;” &lt;a href="#01-%e5%81%9c%e6%ad%a2%e8%a7%a3%e6%9e%90%e5%91%bd%e4%bb%a4%e8%a1%8c%e9%80%89%e9%a1%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;一般Linux下命令行参数可以通过两种方式来指定，一种是短选项“-?”，一种是长选项“&amp;ndash;？”，当希望停止解析命令行参数，将后续参数全部当做文件名来处理时，可以添加“&amp;ndash;”来告诉shell停止解析命令行参数。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/admin-shell-cmds/15129179511703.jpg" alt=""&gt;&lt;/p&gt;
+&lt;h3 id="02-tail--grep查看日志"&gt;0.2 tail &amp;amp; grep查看日志 &lt;a href="#02-tail--grep%e6%9f%a5%e7%9c%8b%e6%97%a5%e5%bf%97" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;tail选项-f，即&amp;ndash;follow，会跟踪日志文件中后续追加的内容；&lt;/p&gt;
+&lt;p&gt;grep选项&amp;ndash;line-buffered会使得grep工作在行缓冲模式，虽然有点性能低下，但是查看日志确实比较有效，能够立即输出打印的日志；
+grep选项&lt;code&gt;--color&lt;/code&gt;可以对grep到的字符串进行高亮显示；
+grep选项&lt;code&gt;-E&lt;/code&gt;开启正则表达式搜索，例如一次搜索要匹配多个uin，可通过&lt;code&gt;-E 'uin1 | uin2 '&lt;/code&gt;来完成；
+grep选项&lt;code&gt;-A、-B、-C&lt;/code&gt;可以控制显示匹配行的上下区域范围，以显示更多关联的事件信息；
+grep选项&lt;code&gt;-n&lt;/code&gt;可以显示匹配行在日志文件中的行号，方便打开日志文件定位到具体的行；&lt;/p&gt;
+&lt;h3 id="03-find命令"&gt;0.3 find命令 &lt;a href="#03-find%e5%91%bd%e4%bb%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;find命令不仅可以支持搜索，而且可以对搜索到的结果执行某些动作！例如搜索到之后直接执行删除动作：&lt;code&gt;find -iname pattern -delete&lt;/code&gt;。
+find命令在执行搜索过程中，搜索的pattern使用的是shell中默认的匹配模式，&lt;code&gt;?&lt;/code&gt;代表任意单个字符，而&lt;code&gt;*&lt;/code&gt;代表任意数量的字符！
+find命令在执行搜索的过程中，还可以指定是否跟踪符号链接，&lt;code&gt;-P、-L、-H&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;有时磁盘告警（只读告警）不是因为文件太大把磁盘塞满了，而是小文件太多把磁盘inode节点用光了，可以用这里的命令来查下文件数量最多的目录，然后清理一下。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-sh"&gt;find /[^udp]*/ -type f | awk -F / -v OFS=/ '{$NF=&amp;quot;&amp;quot;;dir[$0]++}END{for(i in dir)print dir[i]&amp;quot; &amp;quot;i}' | sort -k1 -nr | head
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="04-单引号双引号变量替换问题"&gt;0.4 单引号&amp;amp;双引号变量替换问题 &lt;a href="#04-%e5%8d%95%e5%bc%95%e5%8f%b7%e5%8f%8c%e5%bc%95%e5%8f%b7%e5%8f%98%e9%87%8f%e6%9b%bf%e6%8d%a2%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;val=123
+echo '$val' $val 单引号变量不替换
+echo &amp;quot;$val&amp;quot; 123 双引号变量替换
+echo '&amp;quot;$val&amp;quot;' &amp;quot;$val&amp;quot; 单引号内即便有双引号也不替换，双引号作为普通字符展示
+echo &amp;quot;'$val'&amp;quot; '123' 双引号内即便有单引号也执行替换，单引号作为普通字符展示
+echo ''$val'' 123 单引号内又有单引号，执行变量替换，内部嵌套的单引号不展示
+echo &amp;quot;&amp;quot;$val&amp;quot;&amp;quot; 123 双引号内又有双引号，执行变量替换，内部嵌套的双引号不展示
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="05-dfdu查看磁盘占用情况"&gt;0.5 df、du查看磁盘占用情况 &lt;a href="#05-dfdu%e6%9f%a5%e7%9c%8b%e7%a3%81%e7%9b%98%e5%8d%a0%e7%94%a8%e6%83%85%e5%86%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;查看各个分区占用情况：&lt;code&gt;df -h&lt;/code&gt;，加参数&lt;code&gt;-s&lt;/code&gt;查看所有分区汇总的占用情况；&lt;/p&gt;</description></item><item><title>Assembly Language</title><link>/blog/2017-10-14-%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80_assembly-language/</link><pubDate>Sat, 14 Oct 2017 20:13:35 +0800</pubDate><guid>/blog/2017-10-14-%E7%BC%96%E7%A8%8B%E8%AF%AD%E8%A8%80_assembly-language/</guid><description>&lt;p&gt;处理器是算逻运算、控制操作的执行部件，它只能识别机器指令并执行动作。机器指令是一系列的0、1字符串，本质上对应了总线上的高低电平信号，所以机器语言都是特定于硬件的。&lt;/p&gt;
 &lt;p&gt;由于0、1字符串很难记忆，用机器语言开发是一个老大难的问题，汇编语言因此被开发出来用于代替机器语言。汇编指令只是机器指令中操作码的助记符，因此汇编语言仍然是机器强相关的，不同的处理器其对应的汇编指令也不同。&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;学习汇编语言有助于理解：&lt;/strong&gt;&lt;/p&gt;
 &lt;ul&gt;

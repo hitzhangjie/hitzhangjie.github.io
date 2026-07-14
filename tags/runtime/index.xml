@@ -196,31 +196,101 @@ RET
 &lt;p&gt;放置过程中，如果p.runqueue满了怎么办，将其放置到调度器schedt.queue这个全局队列中。&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;3 wakeup()逻辑&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;这个函数内部执行startm(p, spinning)，来找一个m来执行goroutine，具体是怎么做的呢？&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2021-05-24-%E8%BF%90%E8%A1%8C%E6%97%B6_goroutine%E6%98%AF%E5%A6%82%E4%BD%95%E5%88%9B%E5%BB%BA%E5%90%AF%E5%8A%A8%E7%9A%84/1784032874297.png" alt="1784032874297"&gt;&lt;/p&gt;
 &lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;如果没有指定p，比如新建goroutine时，此时会尝试检查有没有空闲的p，没有的话就直接返回了，相当于当前一次没有执行成功，那么只能下次调度的时候再执行这个新建的goroutine了；&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;现在有空闲的p，我们还缺什么，m！然后mget找一个空闲的m，如果没有空闲的，就newm创建一个新的，本质上是通过clone系统调用创建的新的线程。然后将这个m和这个p关联起来，m.nextp = p。值得一提的是clone出来的线程对应的线程处理函数是mstart，mstart使用汇编写的，内部实际调用的是mstart0，它内部又请求mstart1，获取当前g：&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;如果g.m==&amp;amp;m0，则执行mstartm0完成信号处理注册，继续执行其他；&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;获取当前m.mstartfn，即线程处理函数，执行该函数，如果该函数会执行结束那还要继续执行；&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;如果当前g.m不是m0，那么要将g.m.nextp与当前m关联起来，为什么呢？m执行调度时用这个p呗，执行它的queue中的goroutine呗；&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;执行调度schedule()逻辑，这个函数调用一次就是执行一轮调度，逻辑就是寻找一个可运行的goroutine然后执行。这个函数比较有意思了，有些goroutine是通过lockOSThread绑定了执行它的线程的，这样的goroutine只能用那个绑定的m来执行，未绑定的则无此限制。
+&lt;li&gt;如果没有指定p，比如新建goroutine时，此时会尝试检查有没有空闲的p，没有的话就直接返回了，相当于当前一次没有执行成功，那么只能下次调度的时候再执行这个新建的goroutine了；&lt;/li&gt;
+&lt;li&gt;现在有空闲的p，我们还缺什么，m！然后mget找一个空闲的m，如果没有空闲的，就newm创建一个新的，本质上是通过clone系统调用创建的新的线程。然后将这个m和这个p关联起来，m.nextp = p。值得一提的是clone出来的线程对应的线程处理函数是mstart，mstart使用汇编写的，内部实际调用的是mstart0，它内部又请求mstart1，获取当前g：&lt;/li&gt;
+&lt;li&gt;如果g.m==&amp;amp;m0，则执行mstartm0完成信号处理注册，继续执行其他；&lt;/li&gt;
+&lt;li&gt;获取当前m.mstartfn，即线程处理函数，执行该函数，如果该函数会执行结束那还要继续执行；&lt;/li&gt;
+&lt;li&gt;如果当前g.m不是m0，那么要将g.m.nextp与当前m关联起来，为什么呢？m执行调度时用这个p呗，执行它的queue中的goroutine呗；&lt;/li&gt;
+&lt;li&gt;执行调度schedule()逻辑，这个函数调用一次就是执行一轮调度，逻辑就是寻找一个可运行的goroutine然后执行。这个函数比较有意思了，有些goroutine是通过lockOSThread绑定了执行它的线程的，这样的goroutine只能用那个绑定的m来执行，未绑定的则无此限制。
 lockedg：这个schedule函数先获取当前g，如果发现当前g.m.lockedg不为0，表示有一个g通过lockOSThread绑定到了g.m，这个时候先停掉当前m，让其把p交出来，等下次有线程schedule里面调度执行lockedg时再唤醒该m，此时m被parked，p被空出来了。再调用execute(lockedg, inheritTime)，将该lockedg设置为当前g.m.curg，并修改装改为_Grunning，然后下面gogo(&amp;amp;gp.sched)恢复该待执行goroutine的上下文，执行之，execute函数never returns。可以想象下，如果一个m有g locked，那么每次调度都会先优先执行该goroutine？
 剩下的逻辑：获取当前g.m.p，&amp;hellip;..一堆有的没的逻辑，会通过findRunnable找一个可以运行的g来执行，最后也是调用execute来执行gp。
-netpoller：值得一提的是这个函数里面会通过findRunnable来查找一个可执行的g，除了从p.queue、schedt.queue、其他p.queue中找可运行的goroutine外，也包括从netpoller中获取等待网络IO事件就绪的g。&lt;/p&gt;
-&lt;/li&gt;
+netpoller：值得一提的是这个函数里面会通过findRunnable来查找一个可执行的g，除了从p.queue、schedt.queue、其他p.queue中找可运行的goroutine外，也包括从netpoller中获取等待网络IO事件就绪的g。&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;到这里就可以算是结束了，到这里基本就了解了整个goroutine从创建到执行的完整逻辑了。当然这个后面还有点逻辑，目前也没搞懂写来干嘛的，先不管后面这个逻辑吧。&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;然后notewakeup唤醒阻塞在&amp;amp;m.park上的一个proc，这个是做什么呢？意思是说，如果之前m执行（执行某个goroutine的代码）时，因为某个原因阻塞了（这个原因通常用目标对象的事件地址来表示，如&amp;amp;m.park），现在这个条件满足了，现在将其唤醒继续执行。我们不禁想问，这里的&amp;amp;m.park表示的是什么呢？&lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;ps：这里用到了futex来实现轻量级地锁获取+获取失败阻塞、锁释放+唤醒阻塞线程操作，see https://lwn.net/Articles/360699/。&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;ps：这里用到了futex来实现轻量级地锁获取+获取失败阻塞、锁释放+唤醒阻塞线程操作，see https://lwn.net/Articles/360699/。&lt;/p&gt;</description></item><item><title>Dave Cheney - 7 ways to Profile Go Applications</title><link>/blog/2019-07-06-7-ways-to-profile-go-applications/</link><pubDate>Sat, 06 Jul 2019 12:00:00 +0800</pubDate><guid>/blog/2019-07-06-7-ways-to-profile-go-applications/</guid><description>&lt;p&gt;&lt;a href="https://www.youtube.com/watch?v=2h_NFBFrciI"&gt;Golang UK Conference 2016 - Dave Cheney - Seven ways to Profile Go Applications&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;此文源于Dave之前的分享，看完这些方法确实学习到了很多东西，包括profile的工作原理、实践经验。分享中提及的工具有点旧了，有些已经不再维护、更新，如uber官方也已经将go-torch标记为deprecated。&lt;/p&gt;
+&lt;p&gt;建议后续profile的时候使用google官方提供的工具&lt;code&gt;pprof&lt;/code&gt;，它除了cpu、memory、block等基础的profile能力外，也提供了flamegraph等能力，也提供了方便易用的web界面，非常好用，使用方式pprof和&lt;code&gt;go tool pprof&lt;/code&gt;也是一致的。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;go get -u -v github.com/google/pprof
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;当然如果条件允许直接打开浏览器访问&lt;code&gt;http://ip:port/debug/pprof&lt;/code&gt;更加方便，可以灵活切换不同的采样统计维度。也可以下载trace文件使用&lt;code&gt;go tool trace ./trace&lt;/code&gt;来进一步分析程序中的执行情况，如goroutine、网络阻塞、同步阻塞、系统调用阻塞、调度器延时等的执行情况。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/7-Ways-to-Profile-Go-Applications/image-20190706154548233.png" alt="image-20190706154548233"&gt;&lt;/p&gt;
+&lt;p&gt;也可以下载trace文件（上述页面中点击下载，或者&lt;code&gt;wget http://ip:port/debug/pprof/trace&lt;/code&gt;）使用&lt;code&gt;go tool trace ./trace&lt;/code&gt;来进一步分析程序中的执行情况，如goroutine、网络阻塞、同步阻塞、系统调用阻塞、调度器延时等的执行情况。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/7-Ways-to-Profile-Go-Applications/image-20190706155345681.png" alt="image-20190706155345681"&gt;&lt;/p&gt;
+&lt;p&gt;需要注意的是，CPU profile便于观察throughput方面的问题，但是latency方面的问题，还是要看trace！可以参考：&lt;a href="https://www.youtube.com/watch?v=Lxt8Vqn4JiQ"&gt;Golang UK Conference 2017 | Filippo Valsorda - Fighting latency: the CPU profiler is not your ally&lt;/a&gt;.&lt;/p&gt;
+&lt;h1 id="no1-time"&gt;No.1 time &lt;a href="#no1-time" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;The first method of profiling any program is &lt;code&gt;time&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;time is a shell builtin. The format is specified by POSIX.2&lt;/p&gt;</description></item><item><title>Go 网络 IO 与 SIGPIPE：closed connection 为何不会把进程打挂</title><link>/blog/2019-04-18-go-network-sigpipe/</link><pubDate>Thu, 18 Apr 2019 12:00:00 +0800</pubDate><guid>/blog/2019-04-18-go-network-sigpipe/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;SIGPIPE 的默认行为是让进程 crash。进程需要通过 &lt;code&gt;sigaction&lt;/code&gt; 显式忽略或自行处理该信号；如果语言运行时接管了信号处理，行为就会不同。&lt;/p&gt;
+&lt;p&gt;本文从网络 IO 场景出发，看 Go 如何优雅处理写 closed TCP 连接时的 SIGPIPE 问题，避免服务进程因此挂掉——也能再次体会 Go 在工程细节上的用心。&lt;/p&gt;
+&lt;h2 id="问题场景"&gt;问题场景 &lt;a href="#%e9%97%ae%e9%a2%98%e5%9c%ba%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;对一个已关闭的 &lt;code&gt;tcpconn&lt;/code&gt; 执行写操作，Go 里可能有不同表现。典型场景是 client 通过连接池访问 server：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Server 主动关闭连接&lt;/strong&gt;：server 认为连接空闲，执行 &lt;code&gt;conn.Close()&lt;/code&gt;；client 端写一次、再写一次，会报 &lt;strong&gt;broken pipe&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;本端已 Close 再写&lt;/strong&gt;：server 侧已 &lt;code&gt;conn.Close()&lt;/code&gt;，再对本连接写一次或多次，会报 &lt;strong&gt;use of closed network connection&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;SIGPIPE 疑问&lt;/strong&gt;：出现 broken pipe 时，进程为什么没有被 SIGPIPE 打死？&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id="broken-pipe-vs-use-of-closed-network-connection"&gt;broken pipe vs use of closed network connection &lt;a href="#broken-pipe-vs-use-of-closed-network-connection" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;场景一（broken pipe）&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Client 第一次写时，server 会回 FIN 或 RST，client 刚感知到对端连接销毁，但上层应用还没有调用 &lt;code&gt;conn.Close()&lt;/code&gt; 销毁本端 fd（见下文 &lt;code&gt;mutexClosed&lt;/code&gt; 标记）。第二次写会走到 &lt;code&gt;syscall.Write(...)&lt;/code&gt;，返回 &lt;code&gt;EPIPE&lt;/code&gt;，上层 &lt;code&gt;err.Error()&lt;/code&gt; 即：&lt;/p&gt;</description></item><item><title>go gpm scheduler case 2</title><link>/blog/2019-03-18-go-gpm-scheduler-case-2/</link><pubDate>Mon, 18 Mar 2019 12:00:00 +0800</pubDate><guid>/blog/2019-03-18-go-gpm-scheduler-case-2/</guid><description>&lt;p&gt;在双核四线程机器上测试，如下代码，程序不会正常执行结束，这也是探索go runtime scheduler的一个好例子：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;package main
+import &amp;quot;fmt&amp;quot;
+import &amp;quot;time&amp;quot;
+import &amp;quot;runtime&amp;quot;
+func main() {
+var x int
+threads := runtime.GOMAXPROCS(0)
+//threads := runtime.GOMAXPROCS(0) - 1
+for i := 0; i &amp;lt; threads; i++ {
+go func() {
+for {
+x++
+}
+}()
+}
+time.Sleep(time.Second)
+fmt.Println(&amp;quot;x =&amp;quot;, x)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这里runtime.GOMAXPROCS(0)返回值为4，dlv调试可以看到也确实创建了4个协程main.main.func1，其中两个正在调度，thread 676143, thread 676142，而另外两个协程则没有分配调度它的线程，即还没有开始调度。也好理解，因为每个func1协程都是在死循环里面执行密集计算，没有让度cpu的时机。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/go-gpm-scheduler-case-2/image-20190318142345866.png" alt="image-20190318142345866"&gt;&lt;/p&gt;
+&lt;p&gt;另外main.main这个是main goroutine，它跑在独立的线程thread 676049中。但是因为我们设置的runtime.GOMAXPROCS(0)为默认值4，表示新创建的goroutine可以和main goroutine共享相同的cpu资源P，也就是允许其他goroutine和main goroutine抢占P运行。那func1对应的goroutine占着cpu资源不放，main goroutine也就获得不了可继续调度的机会了。所以上述代码永远不会结束！&lt;/p&gt;
+&lt;p&gt;如果把threads := GOMAXPROCS(0) - 1，设置为物理核数数减1，那么新创建的协程就不会占满所有的P，main goroutine就可以在空闲的P上获得被调度的机会。程序就可以正常执行结束。&lt;/p&gt;</description></item><item><title>*Go Data Structures: Interfaces*</title><link>/blog/2019-03-03-go-interface/</link><pubDate>Sun, 03 Mar 2019 12:00:00 +0800</pubDate><guid>/blog/2019-03-03-go-interface/</guid><description>&lt;h1 id="go-data-structures-interfaces"&gt;&lt;em&gt;Go Data Structures: Interfaces&lt;/em&gt; &lt;a href="#go-data-structures-interfaces" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;a href="https://swtch.com/~rsc/"&gt;&lt;em&gt;Russ Cox&lt;/em&gt;&lt;/a&gt; Posted on Tuesday, December 1, 2009.&lt;/p&gt;
+&lt;p&gt;的lliGo&amp;rsquo;s interfaces—static, checked at compile time, dynamic when asked for—are, for me, the most exciting part of Go from a language design point of view. If I could export one feature of Go into other languages, it would be interfaces.&lt;/p&gt;
+&lt;p&gt;This post is my take on the implementation of interface values in the “gc” compilers: 6g, 8g, and 5g. Over at Airs, Ian Lance Taylor has written&lt;a href="http://www.airs.com/blog/archives/277"&gt;two&lt;/a&gt; &lt;a href="http://www.airs.com/blog/archives/276"&gt;posts&lt;/a&gt; about the implementation of interface values in &lt;code&gt;gccgo&lt;/code&gt;. The implementations are more alike than different: the biggest difference is that this post has pictures.&lt;/p&gt;</description></item><item><title>go gpm scheduler case</title><link>/blog/2019-03-03-go-gpm-scheduler-case/</link><pubDate>Sun, 03 Mar 2019 12:00:00 +0800</pubDate><guid>/blog/2019-03-03-go-gpm-scheduler-case/</guid><description>&lt;p&gt;“&lt;strong&gt;纸上得来终觉浅，绝知此事要躬行&lt;/strong&gt;”，相信很多人都听说过go runtime scheduler - G.P.M work-stealing scheduler，而且讲的头头是道，但是究竟理解多少呢，在实际工作中遇到相关问题又能否分析、定位准确，就又是另一回事了，“纸上谈兵”者自古有之，今天也一样。搞技术的，最好还是能够知根知底，别含糊。&lt;/p&gt;
+&lt;p&gt;举这么个示例，大家猜一猜输出结果会是什么。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;package main
+import &amp;quot;sync&amp;quot;
+import &amp;quot;fmt&amp;quot;
+import &amp;quot;runtime&amp;quot;
+func main() {
+runtime.GOMAXPROCS(1)
+wg := sync.WaitGroup{}
+wg.Add(10)
+for i := 0; i &amp;lt; 10; i++ {
+go func(i int) {
+fmt.Println(&amp;quot;ii: &amp;quot;, i)
+wg.Done()
+}(i)
+}
+wg.Wait()
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;程序多次运行后，输出结果均如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;ii: 9
+ii: 0
+ii: 1
+ii: 2
+ii: 3
+ii: 4
+ii: 5
+ii: 6
+ii: 7
+ii: 8
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;为什么多次运行后的结果，结果都是一样的呢？按常理，多个goroutine被调度的顺序应该不是完全固定的，为什么执行顺序总是&lt;code&gt;9, 0, 1, 2, 3, …, 8&lt;/code&gt;呢，好吧，可能是因为我们限制了&lt;code&gt;runtime.GOMAXPROCS(1)&lt;/code&gt;的缘故，那么为什么总是先输出&lt;code&gt;9&lt;/code&gt;呢，而后面的又是按照固定顺序&lt;code&gt;0, 1, 2, 3, …, 8&lt;/code&gt;呢？&lt;/p&gt;</description></item></channel></rss>

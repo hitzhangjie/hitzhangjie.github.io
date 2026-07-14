@@ -20,7 +20,19 @@
 ↓
 对端网卡 → 内核 → 应用层
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;系统调用的语义是&amp;quot;数据已提交给内核&amp;quot;，它&lt;strong&gt;不会&lt;/strong&gt;等待数据通过网卡发送出去，更不会等待对端的 TCP ACK。这是有意为之的设计——如果每个 &lt;code&gt;write&lt;/code&gt; 都要等到对端确认，那么一次 RTT 就会阻塞调用线程，性能将完全不可接受（后面还会细说）。&lt;/p&gt;</description></item><item><title>TCP/IP网络安全篇</title><link>/blog/2013-09-30-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8tcpipnetworksecurity/</link><pubDate>Mon, 30 Sep 2013 02:08:29 +0800</pubDate><guid>/blog/2013-09-30-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8tcpipnetworksecurity/</guid><description>&lt;p&gt;《TCP/IP 网络安全篇》，作者是日本的寺田真敏 萱岛 信。&lt;/p&gt;
+&lt;p&gt;系统调用的语义是&amp;quot;数据已提交给内核&amp;quot;，它&lt;strong&gt;不会&lt;/strong&gt;等待数据通过网卡发送出去，更不会等待对端的 TCP ACK。这是有意为之的设计——如果每个 &lt;code&gt;write&lt;/code&gt; 都要等到对端确认，那么一次 RTT 就会阻塞调用线程，性能将完全不可接受（后面还会细说）。&lt;/p&gt;</description></item><item><title>Go 网络 IO 与 SIGPIPE：closed connection 为何不会把进程打挂</title><link>/blog/2019-04-18-go-network-sigpipe/</link><pubDate>Thu, 18 Apr 2019 12:00:00 +0800</pubDate><guid>/blog/2019-04-18-go-network-sigpipe/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;SIGPIPE 的默认行为是让进程 crash。进程需要通过 &lt;code&gt;sigaction&lt;/code&gt; 显式忽略或自行处理该信号；如果语言运行时接管了信号处理，行为就会不同。&lt;/p&gt;
+&lt;p&gt;本文从网络 IO 场景出发，看 Go 如何优雅处理写 closed TCP 连接时的 SIGPIPE 问题，避免服务进程因此挂掉——也能再次体会 Go 在工程细节上的用心。&lt;/p&gt;
+&lt;h2 id="问题场景"&gt;问题场景 &lt;a href="#%e9%97%ae%e9%a2%98%e5%9c%ba%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;对一个已关闭的 &lt;code&gt;tcpconn&lt;/code&gt; 执行写操作，Go 里可能有不同表现。典型场景是 client 通过连接池访问 server：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Server 主动关闭连接&lt;/strong&gt;：server 认为连接空闲，执行 &lt;code&gt;conn.Close()&lt;/code&gt;；client 端写一次、再写一次，会报 &lt;strong&gt;broken pipe&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;本端已 Close 再写&lt;/strong&gt;：server 侧已 &lt;code&gt;conn.Close()&lt;/code&gt;，再对本连接写一次或多次，会报 &lt;strong&gt;use of closed network connection&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;SIGPIPE 疑问&lt;/strong&gt;：出现 broken pipe 时，进程为什么没有被 SIGPIPE 打死？&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id="broken-pipe-vs-use-of-closed-network-connection"&gt;broken pipe vs use of closed network connection &lt;a href="#broken-pipe-vs-use-of-closed-network-connection" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;场景一（broken pipe）&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Client 第一次写时，server 会回 FIN 或 RST，client 刚感知到对端连接销毁，但上层应用还没有调用 &lt;code&gt;conn.Close()&lt;/code&gt; 销毁本端 fd（见下文 &lt;code&gt;mutexClosed&lt;/code&gt; 标记）。第二次写会走到 &lt;code&gt;syscall.Write(...)&lt;/code&gt;，返回 &lt;code&gt;EPIPE&lt;/code&gt;，上层 &lt;code&gt;err.Error()&lt;/code&gt; 即：&lt;/p&gt;</description></item><item><title>TCP/IP网络安全篇</title><link>/blog/2013-09-30-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8tcpipnetworksecurity/</link><pubDate>Mon, 30 Sep 2013 02:08:29 +0800</pubDate><guid>/blog/2013-09-30-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8tcpipnetworksecurity/</guid><description>&lt;p&gt;《TCP/IP 网络安全篇》，作者是日本的寺田真敏 萱岛 信。&lt;/p&gt;
 &lt;p&gt;感谢作者理论与实践结合的教学方式，简单地介绍了网络安全的方方面面，让
 我学起来也是很有兴趣，真诚地向寺田真敏先生道一声谢谢。&lt;/p&gt;
 &lt;p&gt;下面是我对本书学习过程中的一个总结，难免有理解偏差之处，还需在以后的

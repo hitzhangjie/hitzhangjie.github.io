@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Go性能优化 on</title><link>/categories/go%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/</link><description>Recent content in Go性能优化 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 12 Dec 2023 12:42:47 +0800</lastBuildDate><atom:link href="/categories/go%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/index.xml" rel="self" type="application/rss+xml"/><item><title>观测Go函数调用：go-ftrace 设计实现</title><link>/blog/2023-12-12-%E8%A7%82%E6%B5%8Bgo%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8go-ftrace%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</link><pubDate>Tue, 12 Dec 2023 12:42:47 +0800</pubDate><guid>/blog/2023-12-12-%E8%A7%82%E6%B5%8Bgo%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8go-ftrace%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</guid><description>&lt;style&gt;
+img {
+width: 680px;
+padding-bottom: 1rem;
+}
+&lt;/style&gt;
+&lt;h2 id="前言"&gt;前言 &lt;a href="#%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;不久前在团队内部做了点eBPF相关的技术分享，过程中介绍了下eBPF的诞生以及在安全、高性能网络、可观测性、tracing&amp;amp;profiling等领域的实践以及巨大潜力。另外，在我们项目开发测试过程中，也希望对go程序的性能有更好的把控，所以对“上帝视角”的追求是会上瘾的，所以我们也探索了下如何基于eBPF技术对go程序进行无侵入式地观测。&lt;/p&gt;
+&lt;p&gt;分享过程中也演示了下我现阶段开发的go函数调用可观测性工具。下面是我的分享PPT，感兴趣的话可以打开阅读：&lt;a href="https://docs.qq.com/slide/DYkNxdUxGZ2xReVBn"&gt;eBPF原理及应用分享&lt;/a&gt;，欢迎一起学习交流。&lt;/p&gt;
+&lt;h2 id="基础知识"&gt;基础知识 &lt;a href="#%e5%9f%ba%e7%a1%80%e7%9f%a5%e8%af%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;本文重点不在于eBPF扫盲，但是如果有eBPF的基础的话，再看本文对go-ftrace的介绍会事半功倍。所以如果对eBPF没什么了解，可以先看看我的分享PPT，或者其他资料，知道个大概。&lt;/p&gt;
+&lt;p&gt;go-ftrace主要是对go程序中的函数调用进行跟踪并统计其耗时信息，也可以获取函数调用过程中的参数信息，这样结合起来，你可以看到不同输入下的处理耗时的差异。&lt;/p&gt;
+&lt;p&gt;我们在前一篇文章里介绍了如何使用go-ftrace来跟踪go程序中的某些函数，甚至获取其执行过程中的函数参数信息。本文来详细介绍下go-ftrace的设计实现。&lt;/p&gt;
+&lt;h3 id="内核视角"&gt;内核视角 &lt;a href="#%e5%86%85%e6%a0%b8%e8%a7%86%e8%a7%92" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;自打1993年bpf（berkeley packet filter）技术出现以来，这种CFG-based（control flow graph）的字节码指令集+虚拟机的方案就取代了当时的Tree-based cspf （cmu/standford packet filter）方案，而后几年在Linux内核中引入了bpf，定位是用来做些tcpdump之类的包过滤分析，在后来Linux内核中引入了kprobe技术，允许用户在内核模块中通过kprobe跟踪内核中的一些函数来进行观测、分析，此后的很多年，bpf技术一直在改进，逐渐演化成一个独立的eBPF子系统，kprobe、uprobe也可以直接回调eBPF程序，使得整个Linux内核变得可编程，而且是安全的。&lt;/p&gt;
+&lt;p&gt;从跟踪角度来看，有静态跟踪、动态跟踪两种方式，静态跟踪主要是Linux内核中的一些tracepoints，动态跟踪主要是借助kprobe、uprobe技术。如果你阅读过我之前写的调试器的书籍（还未100%完成），你肯定会对“指令patch”技术有所了解，其实kprobe、uprobe技术的工作原理也是借助指令patch。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;当我们通过系统调用bpf通知内核在指令地址pc处添加一个kprobe或者uprobe时，内核会将对应地址处的指令（有可能是多个字节）用一个一字节指令Int 3 (0xcc)代替，并在内核数据结构中记录下原指令内容，以及这个地址处是否是一个kprobe、uprobe。&lt;/li&gt;
+&lt;li&gt;当内核执行到这个指令0xcc时，它会触发一个异常，进而会执行Linux内核中断服务程序对其进行处理，内核会检查这个地址pc处是否有相关的kprobe、uprobe，有的话就跳过去执行，每个kprobe、uprobe实际上包含了prehandler、原指令、posthandler。先执行prehandler，如果返回码ok则继续执行原指令，再执行posthandler；如果prehandler返回错误码，那就不往后执行了，通过这个办法也可以拦截某些系统调用，如seccomp-bpf技术。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;大致就是这样的一个过程，仔细深究的话kprobe、uprobe工作起来稍微有点差异。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;注册kprobe你只需要告诉内核一个符号即可，比如一个系统调用名，内核会自己计算出这个符号对应的指令地址；&lt;/li&gt;
+&lt;li&gt;而注册一个uprobe的话，举个例子，go main.main函数，内核是不认识这个符号的，它也不知道main.main的地址该如何计算出来，就需要我们自己先算出来它的地址（实际上是相对于ELF文件开头的偏移量），然后再传给内核；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="调试知识"&gt;调试知识 &lt;a href="#%e8%b0%83%e8%af%95%e7%9f%a5%e8%af%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;那么针对不同的编程语言写的程序，如何指定一个符号来计算出对应的指令地址呢？这就是挑战点之一，不过在调试领域这个问题早就已经解决了，我们可以借鉴下来解决计算指定函数名的指令地址的问题。&lt;/p&gt;
+&lt;p&gt;&lt;a href="https://dwarfstd.org/doc/DWARF5.pdf"&gt;DWARF&lt;/a&gt;，是一种调试信息标准，目前是使用最广泛的调试信息格式。其实有多种调试信息格式，但是从对不同编程语言、不同特性、数据编解码效率的优势来看，它确实更胜一筹，所以现在主流编程语言生成的调试信息基本都是支持DWARF或者优先考虑DWARF。&lt;/p&gt;
+&lt;p&gt;以go语言为例，当我们执行go build编译一个可执行程序时，以ELF binary文件为例，编译器、链接器会生成一些&lt;code&gt;.[z]debug_&lt;/code&gt;开头的sections，这些sections中的数据就是调试信息。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;常见的ELF sections及其存储的内容如下:&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;.debug_abbrev, 存储.debug_info中使用的缩写信息；&lt;/li&gt;
+&lt;li&gt;.debug_arranges, 存储一个加速访问的查询表，通过内存地址查询对应编译单元信息；&lt;/li&gt;
+&lt;li&gt;.debug_frame, 存储调用栈帧信息；&lt;/li&gt;
+&lt;li&gt;.debug_info, 存储核心DWARF数据，包含了描述变量、代码等的DIEs；&lt;/li&gt;
+&lt;li&gt;.debug_line, 存储行号表程序 (程序指令由行号表状态机执行，执行后构建出完整的行号表)&lt;/li&gt;
+&lt;li&gt;.debug_loc, 存储location描述信息；&lt;/li&gt;
+&lt;li&gt;.debug_macinfo, 存储宏相关描述信息；&lt;/li&gt;
+&lt;li&gt;.debug_pubnames, 存储一个加速访问的查询表，通过名称查询全局对象和函数；&lt;/li&gt;
+&lt;li&gt;.debug_pubtypes, 存储一个加速访问的查询表，通过名称查询全局类型；&lt;/li&gt;
+&lt;li&gt;.debug_ranges, 存储DIEs中引用的address ranges；&lt;/li&gt;
+&lt;li&gt;.debug_str, 存储.debug_info中引用的字符串表，也是通过偏移量来引用；&lt;/li&gt;
+&lt;li&gt;.debug_types, 存储描述数据类型相关的DIEs；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;以我们的go-ftrace为例，我们想跟踪某个函数的执行，就得先通过函数名找到对应的地址，怎么找呢？就是借助前面提到的这些.debug_ sections。简单说就是我们可以通过这些不同的调试信息构建起对go源码层面的全局视图，并且能在源码和内存表示（包括指令地址）之间建立起一种映射关系。&lt;/p&gt;</description></item><item><title>Linux性能问题排查60s</title><link>/blog/2023-09-08-%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5_linux%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A560s/</link><pubDate>Fri, 08 Sep 2023 16:30:30 +0800</pubDate><guid>/blog/2023-09-08-%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5_linux%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A560s/</guid><description>&lt;h3 id="简介"&gt;简介 &lt;a href="#%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;最近在阅读Gregg大佬著作《BPF Performance Tools》，其中一小节作者提到了其在Netflix工程团队中践行的一个性能排查checklist，当遇到Linux性能问题时，前60s往往是借助这个checklist来进行排查，如果有必要，缩小范围后再借助其他工具进行进一步排查。我觉得这个简短的checklist还挺实用的，特地摘录出来分享下。&lt;/p&gt;
+&lt;h3 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;这个checklist可以用来指导排查任意Linux性能问题，当我们知道有台机器性能（疑似）有问题时，我们就可以登录这台机器，按照这个checklist来进行前60s的快速分析。这也是Gregg自己以及Netflix工程团队实践中总结出来的。&lt;/p&gt;
+&lt;p&gt;对于很多刚入行后台开发的同学而言，我觉得这个还是比较有价值的，应该在日常工作中不断实践、不断加深对性能影响因素的理解。有位技术扎实的同事曾经这样说，一切都是可计算的、可量化的，比如判断对特定工作负载瓶颈是什么，cpu、内存、网卡？链路长短，网络延迟，然后大致的系统吞吐量是什么样的？他大致就能推算出来。&lt;/p&gt;
+&lt;p&gt;其实，Jeff Dean曾经在论文里给出过一些开发人员应该知晓的latency数据：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;L1 cache reference ......................... 0.5 ns
+Branch mispredict ............................ 5 ns
+L2 cache reference ........................... 7 ns
+Mutex lock/unlock ........................... 25 ns
+Main memory reference ...................... 100 ns
+Compress 1K bytes with Zippy ............. 3,000 ns = 3 µs
+Send 2K bytes over 1 Gbps network ....... 20,000 ns = 20 µs
+SSD random read ........................ 150,000 ns = 150 µs
+Read 1 MB sequentially from memory ..... 250,000 ns = 250 µs
+Round trip within same datacenter ...... 500,000 ns = 0.5 ms
+Read 1 MB sequentially from SSD* ..... 1,000,000 ns = 1 ms
+Disk seek ........................... 10,000,000 ns = 10 ms
+Read 1 MB sequentially from disk .... 20,000,000 ns = 20 ms
+Send packet CA-&amp;gt;Netherlands-&amp;gt;CA .... 150,000,000 ns = 150 ms
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;有开发者将上述数据进行了可视化，以方便从视觉上更直观的感受差别：&lt;/p&gt;</description></item><item><title>Dave Cheney - 7 ways to Profile Go Applications</title><link>/blog/2019-07-06-7-ways-to-profile-go-applications/</link><pubDate>Sat, 06 Jul 2019 12:00:00 +0800</pubDate><guid>/blog/2019-07-06-7-ways-to-profile-go-applications/</guid><description>&lt;p&gt;&lt;a href="https://www.youtube.com/watch?v=2h_NFBFrciI"&gt;Golang UK Conference 2016 - Dave Cheney - Seven ways to Profile Go Applications&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;此文源于Dave之前的分享，看完这些方法确实学习到了很多东西，包括profile的工作原理、实践经验。分享中提及的工具有点旧了，有些已经不再维护、更新，如uber官方也已经将go-torch标记为deprecated。&lt;/p&gt;
+&lt;p&gt;建议后续profile的时候使用google官方提供的工具&lt;code&gt;pprof&lt;/code&gt;，它除了cpu、memory、block等基础的profile能力外，也提供了flamegraph等能力，也提供了方便易用的web界面，非常好用，使用方式pprof和&lt;code&gt;go tool pprof&lt;/code&gt;也是一致的。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;go get -u -v github.com/google/pprof
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;当然如果条件允许直接打开浏览器访问&lt;code&gt;http://ip:port/debug/pprof&lt;/code&gt;更加方便，可以灵活切换不同的采样统计维度。也可以下载trace文件使用&lt;code&gt;go tool trace ./trace&lt;/code&gt;来进一步分析程序中的执行情况，如goroutine、网络阻塞、同步阻塞、系统调用阻塞、调度器延时等的执行情况。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/7-Ways-to-Profile-Go-Applications/image-20190706154548233.png" alt="image-20190706154548233"&gt;&lt;/p&gt;
+&lt;p&gt;也可以下载trace文件（上述页面中点击下载，或者&lt;code&gt;wget http://ip:port/debug/pprof/trace&lt;/code&gt;）使用&lt;code&gt;go tool trace ./trace&lt;/code&gt;来进一步分析程序中的执行情况，如goroutine、网络阻塞、同步阻塞、系统调用阻塞、调度器延时等的执行情况。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/7-Ways-to-Profile-Go-Applications/image-20190706155345681.png" alt="image-20190706155345681"&gt;&lt;/p&gt;
+&lt;p&gt;需要注意的是，CPU profile便于观察throughput方面的问题，但是latency方面的问题，还是要看trace！可以参考：&lt;a href="https://www.youtube.com/watch?v=Lxt8Vqn4JiQ"&gt;Golang UK Conference 2017 | Filippo Valsorda - Fighting latency: the CPU profiler is not your ally&lt;/a&gt;.&lt;/p&gt;
+&lt;h1 id="no1-time"&gt;No.1 time &lt;a href="#no1-time" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;The first method of profiling any program is &lt;code&gt;time&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;time is a shell builtin. The format is specified by POSIX.2&lt;/p&gt;</description></item></channel></rss>

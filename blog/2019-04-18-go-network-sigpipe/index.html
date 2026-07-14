@@ -1,0 +1,323 @@
+<!doctype html><html lang=en-US><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-regular.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-500.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-700.woff2 type=font/woff2 crossorigin><script>window.__LAYOUT_WIDTH_DEFAULT__="standard"</script><script>(()=>{(function(){var t,n={compact:1,standard:1,wide:1,fullscreen:1},s="layout-width-v",o="3",e=null,i=null;try{e=localStorage.getItem("layout-width"),i=localStorage.getItem(s)}catch{}if(i!==o){e==="standard"?e="compact":e==="compact"?e="standard":e==="normal"?e="compact":e==="reading"&&(e="wide");try{e&&localStorage.setItem("layout-width",e),localStorage.setItem(s,o)}catch{}}t=window.__LAYOUT_WIDTH_DEFAULT__||"standard",n[t]||(t="standard"),e&&!n[e]&&(e=null),document.documentElement.setAttribute("data-layout-width",e||t)})()})()</script><link rel=stylesheet href=/main.48b118c415f36d2afac016c829b1faadf21e9296228aeb694c8ca053e943a35a874b048d472862b939d6b6dce3beb683223a0a28f07faf0bbe20bc0112564a2c.css integrity="sha512-SLEYxBXzbSr6wBbIKbH6rfIekpYiiutpTIygU+lDo1qHSwSNRyhiuTnWttzjvraDIjoKKPB/rwu+ILwBElZKLA==" crossorigin=anonymous><noscript><style>img.lazyload{display:none}</style></noscript><meta name=robots content="index, follow"><meta name=googlebot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><meta name=bingbot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><title>Go 网络 IO 与 SIGPIPE：closed connection 为何不会把进程打挂 - MySpace</title><meta name=description content="从连接池场景出发，区分 broken pipe 与 use of closed network connection，并梳理 Go runtime 对 EPIPE / SIGPIPE、conn.Write、conn.Close 的处理路径。"><link rel=canonical href=/blog/2019-04-18-go-network-sigpipe/><meta property="og:locale" content="en_US"><meta property="og:type" content="article"><meta property="og:title" content="Go 网络 IO 与 SIGPIPE：closed connection 为何不会把进程打挂"><meta property="og:description" content="从连接池场景出发，区分 broken pipe 与 use of closed network connection，并梳理 Go runtime 对 EPIPE / SIGPIPE、conn.Write、conn.Close 的处理路径。"><meta property="og:url" content="/blog/2019-04-18-go-network-sigpipe/"><meta property="og:site_name" content="MySpace"><meta property="article:published_time" content="2019-04-18T12:00:00+08:00"><meta property="article:modified_time" content="2026-07-14T21:09:03+08:00"><meta property="og:image" content="/doks.png"><meta property="og:image:alt" content="MySpace"><meta name=twitter:card content="summary_large_image"><meta name=twitter:site content="@hitzhangjie"><meta name=twitter:creator content="@hitzhangjie"><meta name=twitter:title content="Go 网络 IO 与 SIGPIPE：closed connection 为何不会把进程打挂"><meta name=twitter:description content="从连接池场景出发，区分 broken pipe 与 use of closed network connection，并梳理 Go runtime 对 EPIPE / SIGPIPE、conn.Write、conn.Close 的处理路径。"><meta name=twitter:image content="/doks.png"><meta name=twitter:image:alt content="Go 网络 IO 与 SIGPIPE：closed connection 为何不会把进程打挂"><script type=application/ld+json>{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/1","name":"","url":"/","sameAs":["https://twitter.com/hitzhangjie","https://www.linkedin.com/in/hitzhangjie/","https://github.com/hitzhangjie"],"image":{"@type":"ImageObject","@id":"/#/schema/image/1","url":"/\u003cnil\u003e","width":null,"height":null,"caption":""}},{"@type":"WebSite","@id":"/#/schema/website/1","url":"/","name":"MySpace","description":"MySpace is a hitzhangjie\u0027s personal space, for blogs, books, journey, thinkings.","publisher":{"@id":"/#/schema/person/1"}},{"@type":"WebPage","@id":"/blog/2019-04-18-go-network-sigpipe/","url":"/blog/2019-04-18-go-network-sigpipe/","name":"Go 网络 IO 与 SIGPIPE：closed connection 为何不会把进程打挂","description":"从连接池场景出发，区分 broken pipe 与 use of closed network connection，并梳理 Go runtime 对 EPIPE \/ SIGPIPE、conn.Write、conn.Close 的处理路径。","isPartOf":{"@id":"/#/schema/website/1"},"about":{"@id":"/#/schema/person/1"},"datePublished":"2019-04-18T12:00:00CET","dateModified":"2026-07-14T21:09:03CET","breadcrumb":{"@id":"/blog/2019-04-18-go-network-sigpipe/#/schema/breadcrumb/1"},"primaryImageOfPage":{"@id":"/blog/2019-04-18-go-network-sigpipe/#/schema/image/2"},"inLanguage":"","potentialAction":[{"@type":"ReadAction","target":["/blog/2019-04-18-go-network-sigpipe/"]}]},{"@type":"BreadcrumbList","@id":"/blog/2019-04-18-go-network-sigpipe/#/schema/breadcrumb/1","name":"Breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"item":{"@type":"WebPage","@id":"/","url":"/","name":"Home"}},{"@type":"ListItem","position":2,"item":{"@id":"/blog2019-04-18-go-network-sigpipe/"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Article","@id":"/#/schema/article/1","headline":"Go 网络 IO 与 SIGPIPE：closed connection 为何不会把进程打挂","description":"从连接池场景出发，区分 broken pipe 与 use of closed network connection，并梳理 Go runtime 对 EPIPE \/ SIGPIPE、conn.Write、conn.Close 的处理路径。","isPartOf":{"@id":"/blog/2019-04-18-go-network-sigpipe/"},"mainEntityOfPage":{"@id":"/blog/2019-04-18-go-network-sigpipe/"},"datePublished":"2019-04-18T12:00:00CET","dateModified":"2026-07-14T21:09:03CET","author":{"@id":"/#/schema/person/2"},"publisher":{"@id":"/#/schema/person/1"},"image":{"@id":"/blog/2019-04-18-go-network-sigpipe/#/schema/image/2"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/2","name":null,"sameAs":[]}]},{"@context":"https://schema.org","@graph":[{"@type":"ImageObject","@id":"/blog/2019-04-18-go-network-sigpipe/#/schema/image/2","url":"/doks.png","contentUrl":"/doks.png","caption":"Go 网络 IO 与 SIGPIPE：closed connection 为何不会把进程打挂"}]}]}</script><meta name=theme-color content="#fff"><link rel=icon href=/favicon.ico sizes=any><link rel=icon type=image/svg+xml href=/favicon.svg><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest crossorigin=use-credentials href=/site.webmanifest><script type=text/javascript src='https://platform-api.sharethis.com/js/sharethis.js#property=607868a58d7101001829a8df&product=sop' async></script><style>[alt~=sharing]{border:0;box-shadow:none}div#st-1{text-align:unset}div#st-1 .st-btn{height:24px;padding:0 4px}div#st-1 .st-btn>img{top:4.2px}div#st-2 .st-btn{height:24px;padding:0 4px}div#st-2 .st-btn>img{top:4.2px}</style><script async src="https://www.googletagmanager.com/gtag/js?id=UA-168027530-1"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","UA-168027530-1")</script></head><body class="blog single d-flex flex-column min-vh-100"><div class=sticky-top><div class=header-bar></div><header class="navbar navbar-expand-lg navbar-light doks-navbar"><nav class="container-xxl flex-wrap flex-lg-nowrap" aria-label="Main navigation"><a class="navbar-brand order-0" href=/ aria-label=MySpace>MySpace
+</a><button class="btn btn-menu order-2 d-block d-lg-none" type=button data-bs-toggle=offcanvas data-bs-target=#offcanvasDoks aria-controls=offcanvasDoks aria-label="Open main menu">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div class="offcanvas offcanvas-end border-0 py-lg-1" tabindex=-1 id=offcanvasDoks data-bs-backdrop=true aria-labelledby=offcanvasDoksLabel><div class="header-bar d-lg-none"></div><div class="offcanvas-header d-lg-none"><h2 class="h5 offcanvas-title ps-2" id=offcanvasDoksLabel><a class=text-dark href=/>MySpace</a></h2><button type=button class="btn-close text-reset me-2" data-bs-dismiss=offcanvas aria-label="Close main menu"></button></div><div class="offcanvas-body p-4 p-lg-0"><ul class="nav flex-column flex-lg-row align-items-lg-center mt-2 mt-lg-0 ms-lg-2 me-lg-auto"><li class=nav-item><a class="nav-link ps-0 py-1 active" href=/blog/>Blog</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/books/>Books</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/landscape>Landscape</a></li></ul><hr class="text-black-50 my-4 d-lg-none"><form class="doks-search position-relative flex-grow-1 ms-lg-auto me-lg-2"><input id=search class="form-control is-search" type=search placeholder="Search docs..." aria-label="Search docs..." autocomplete=off><div id=suggestions class="shadow bg-white rounded d-none"></div></form><hr class="text-black-50 my-4 d-lg-none"><ul class="nav flex-column flex-lg-row"><li class=nav-item><a class="nav-link social-link" href=https://twitter.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg><small class="ms-2 d-lg-none">Twitter</small></a></li><li class=nav-item><a class="nav-link social-link" href=https://github.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37.0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44.0 0020 4.77 5.07 5.07.0 0019.91 1S18.73.65 16 2.48a13.38 13.38.0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07.0 005 4.77 5.44 5.44.0 003.5 8.55c0 5.42 3.3 6.61 6.44 7A3.37 3.37.0 009 18.13V22"/></svg><small class="ms-2 d-lg-none">GitHub</small></a></li><li class="nav-item layout-width-dropdown"><a class="nav-link layout-width-dropdown-btn" href=# data-bs-toggle=dropdown aria-expanded=false aria-label=切换布局宽度 title=切换布局宽度><span class=lw-icon-standard><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-compact><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-wide><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span><span class=lw-icon-fullscreen><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg></span></a><ul class="dropdown-menu dropdown-menu-end"><li><button class="dropdown-item layout-width-option" data-layout-value=compact>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span>紧凑布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=standard>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>标准布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=wide>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span>宽松布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=fullscreen>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>全屏布局</button></li></ul></li></ul></div></div></nav></header></div><div class="wrap container-xxl" role=document><div class=content><div class="row flex-xl-nowrap" data-layout-width=standard><div class="col-lg-4 col-xl-3 docs-sidebar"><nav class=docs-links aria-label="Main navigation"><h3>Tag List</h3><ol><li><a href=/tags/go/>go</a></li><li><a href=/tags/runtime/>runtime</a></li><li><a href=/tags/network/>network</a></li><li><a href=/tags/sigpipe/>sigpipe</a></li><li><a href=/tags/internals/>internals</a></li></ol></nav></div><main class="docs-content col-lg-12 col-xl-10"><h1>Go 网络 IO 与 SIGPIPE：closed connection 为何不会把进程打挂</h1><p><small>Posted 2019-04-18 12:00 +0800 by <a class="stretched-link position-relative" href>ZhangJie</a>&nbsp;&dash;&nbsp;<strong>8&nbsp;min read</strong></small><p><div style=display:flex><div>分享:&nbsp;&nbsp;</div><div><div class=sharethis-inline-share-buttons></div></div></div><hr><p class=lead></p><h2 id=背景>背景 <a href=#%e8%83%8c%e6%99%af class=anchor aria-hidden=true>#</a><a href=#背景 class=anchor aria-hidden=true>#</a></h2><p>SIGPIPE 的默认行为是让进程 crash。进程需要通过 <code>sigaction</code> 显式忽略或自行处理该信号；如果语言运行时接管了信号处理，行为就会不同。</p><p>本文从网络 IO 场景出发，看 Go 如何优雅处理写 closed TCP 连接时的 SIGPIPE 问题，避免服务进程因此挂掉——也能再次体会 Go 在工程细节上的用心。</p><h2 id=问题场景>问题场景 <a href=#%e9%97%ae%e9%a2%98%e5%9c%ba%e6%99%af class=anchor aria-hidden=true>#</a><a href=#问题场景 class=anchor aria-hidden=true>#</a></h2><p>对一个已关闭的 <code>tcpconn</code> 执行写操作，Go 里可能有不同表现。典型场景是 client 通过连接池访问 server：</p><ol><li><strong>Server 主动关闭连接</strong>：server 认为连接空闲，执行 <code>conn.Close()</code>；client 端写一次、再写一次，会报 <strong>broken pipe</strong>。</li><li><strong>本端已 Close 再写</strong>：server 侧已 <code>conn.Close()</code>，再对本连接写一次或多次，会报 <strong>use of closed network connection</strong>。</li><li><strong>SIGPIPE 疑问</strong>：出现 broken pipe 时，进程为什么没有被 SIGPIPE 打死？</li></ol><h3 id=broken-pipe-vs-use-of-closed-network-connection>broken pipe vs use of closed network connection <a href=#broken-pipe-vs-use-of-closed-network-connection class=anchor aria-hidden=true>#</a><a href=#broken-pipe-vs-use-of-closed-network-connection class=anchor aria-hidden=true>#</a></h3><p><strong>场景一（broken pipe）</strong></p><p>Client 第一次写时，server 会回 FIN 或 RST，client 刚感知到对端连接销毁，但上层应用还没有调用 <code>conn.Close()</code> 销毁本端 fd（见下文 <code>mutexClosed</code> 标记）。第二次写会走到 <code>syscall.Write(...)</code>，返回 <code>EPIPE</code>，上层 <code>err.Error()</code> 即：</p><pre><code class=language-text>errors[EPIPE] = &quot;broken pipe&quot;
+</code></pre><p><strong>场景二（use of closed network connection）</strong></p><p>本端执行 <code>conn.Close()</code> 会标记并销毁 fd（<code>mutexClosed</code>）。之后再 <code>conn.Write(...)</code> 时，可直接检测到该标记，返回 <code>use of closed network connection</code>，<strong>根本不会进入</strong>下层 <code>syscall.Write(...)</code>。</p><p><strong>一句话区分</strong></p><table><thead><tr><th>错误</th><th>本质</th></tr></thead><tbody><tr><td><code>use of closed network connection</code></td><td>应用层显式 <code>conn.Close()</code>，fd 已标记关闭，写操作在 Go 层被拦住</td></tr><tr><td><code>broken pipe</code></td><td>协议栈发现连接已不可写，<code>syscall.Write</code> 返回 <code>EPIPE</code></td></tr></tbody></table><p>另外，Go 对 SIGPIPE 做了特殊处理，尽量避免服务端因「写 closed tcpconn」而挂掉。<code>use of closed network connection</code> 本身也是在连接关闭时拦住写操作，从而避免走到 SIGPIPE；更大的好处是：<strong>无需进入内核</strong>。</p><h3 id=官方文档go-如何约定-sigpipe>官方文档：Go 如何约定 SIGPIPE <a href=#%e5%ae%98%e6%96%b9%e6%96%87%e6%a1%a3go-%e5%a6%82%e4%bd%95%e7%ba%a6%e5%ae%9a-sigpipe class=anchor aria-hidden=true>#</a><a href=#官方文档go-如何约定-sigpipe class=anchor aria-hidden=true>#</a></h3><p>源码注释见 <code>os/signal</code> 包文档（<code>signal/doc.go</code>）：</p><pre><code class=language-go>SIGPIPE
+
+When a Go program writes to a broken pipe, the kernel will raise a
+SIGPIPE signal.
+
+If the program has not called Notify to receive SIGPIPE signals, then
+the behavior depends on the file descriptor number. A write to a
+broken pipe on file descriptors 1 or 2 (standard output or standard
+error) will cause the program to exit with a SIGPIPE signal. A write
+to a broken pipe on some other file descriptor will take no action on
+the SIGPIPE signal, and the write will fail with an EPIPE error.
+
+If the program has called Notify to receive SIGPIPE signals, the file
+descriptor number does not matter. The SIGPIPE signal will be
+delivered to the Notify channel, and the write will fail with an EPIPE
+error.
+
+This means that, by default, command line programs will behave like
+typical Unix command line programs, while other programs will not
+crash with SIGPIPE when writing to a closed network connection.
+</code></pre><p>要点：</p><ul><li><strong>未</strong> <code>signal.Notify</code> 收 SIGPIPE 时：写 <strong>stdout/stderr（fd 1/2）</strong> 的 broken pipe 会让进程以 SIGPIPE 退出；写<strong>其他 fd</strong>（如网络连接）只返回 <code>EPIPE</code>，不杀进程。</li><li><strong>已</strong> <code>Notify</code> 收 SIGPIPE 时：信号进 channel，写操作仍以 <code>EPIPE</code> 失败，与 fd 编号无关。</li><li>因此默认下：命令行程序行为像传统 Unix 工具；网络服务写 closed connection <strong>不会</strong>因 SIGPIPE 崩掉。</li></ul><p>下面按调用链结合源码回答三个问题：</p><ol><li>Go 如何处理 <code>EPIPE</code> + SIGPIPE？</li><li>Go 如何处理 <code>tcpconn.Write()</code>？</li><li>Go 如何处理 <code>conn.Close()</code>？</li></ol><p>源码摘录按实际执行路径组织，建议对照源码跳转阅读。</p><h2 id=how-go-handle-sigpipe>How Go handle SIGPIPE？ <a href=#how-go-handle-sigpipe class=anchor aria-hidden=true>#</a><a href=#how-go-handle-sigpipe class=anchor aria-hidden=true>#</a></h2><h3 id=epipecheck仅对-stdoutstderr-升格为-sigpipe>epipecheck：仅对 stdout/stderr 升格为 SIGPIPE <a href=#epipecheck%e4%bb%85%e5%af%b9-stdoutstderr-%e5%8d%87%e6%a0%bc%e4%b8%ba-sigpipe class=anchor aria-hidden=true>#</a><a href=#epipecheck仅对-stdoutstderr-升格为-sigpipe class=anchor aria-hidden=true>#</a></h3><p><code>os/file_unix.go</code>：</p><pre><code class=language-go>// epipecheck raises SIGPIPE if we get an EPIPE error on standard
+// output or standard error. See the SIGPIPE docs in os/signal, and
+// issue 11845.
+func epipecheck(file *File, e error) {
+    // 如果 write pipe 时操作系统返回 EPIPE，libc 往往会给进程发 SIGPIPE。
+    // Go 按场景做了区分：
+    // - 命令行程序写 stdout/stderr 出现 EPIPE → 可挂掉进程（贴近 Unix 习惯）；
+    // - 网络服务写 closed tcpconn 返回 EPIPE → 返回 error &quot;broken pipe&quot;，
+    //   而不是把 SIGPIPE 直接交给默认行为打死进程。
+    if e == syscall.EPIPE &amp;&amp; file.stdoutOrErr {
+       sigpipe()
+    }
+}
+</code></pre><h3 id=sigpipenotify-则投递否则-die>sigpipe：Notify 则投递，否则 die <a href=#sigpipenotify-%e5%88%99%e6%8a%95%e9%80%92%e5%90%a6%e5%88%99-die class=anchor aria-hidden=true>#</a><a href=#sigpipenotify-则投递否则-die class=anchor aria-hidden=true>#</a></h3><p><code>os/file_posix.go</code>：</p><pre><code class=language-go>func sigpipe() // implemented in package runtime
+</code></pre><p><code>runtime/signal_unix.go</code>：</p><pre><code class=language-go>// sigpipe 先尝试将 SIGPIPE 发给 signal.Notify(ch, ...) 指定的 chan；
+// 若未接收该信号，则直接挂掉进程。
+func sigpipe() {
+    if sigsend(_SIGPIPE) {
+       return
+    }
+    dieFromSignal(_SIGPIPE)
+}
+
+// sigsend delivers a signal from sighandler to the internal signal delivery queue.
+// It reports whether the signal was sent. If not, the caller typically crashes the program.
+// It runs from the signal handler, so it's limited in what it can do.
+func sigsend(s uint32) bool {
+    // 如果信号被屏蔽，或者信号没有通过 Notify 接收，返回发送失败
+	if !sig.inuse || s &gt;= uint32(32*len(sig.wanted)) {
+		return false
+	}
+
+	// Add signal to outgoing queue.
+	...
+
+	// Notify receiver that queue has new bit.
+Send:
+	...
+	return true
+}
+</code></pre><h2 id=how-go-handle-tcpconnwrite>How Go handle tcpconn.Write()？ <a href=#how-go-handle-tcpconnwrite class=anchor aria-hidden=true>#</a><a href=#how-go-handle-tcpconnwrite class=anchor aria-hidden=true>#</a></h2><h3 id=上层-write写完再-epipecheck>上层 Write：写完再 epipecheck <a href=#%e4%b8%8a%e5%b1%82-write%e5%86%99%e5%ae%8c%e5%86%8d-epipecheck class=anchor aria-hidden=true>#</a><a href=#上层-write写完再-epipecheck class=anchor aria-hidden=true>#</a></h3><p><code>os/file.go</code>：</p><pre><code class=language-go>// Write writes len(b) bytes to the File.
+// It returns the number of bytes written and an error, if any.
+// Write returns a non-nil error when n != len(b).
+func (f *File) Write(b []byte) (n int, err error) {
+	if err := f.checkValid(&quot;write&quot;); err != nil {
+		return 0, err
+	}
+    // 执行数据写操作
+	n, e := f.write(b)
+	if n &lt; 0 {
+		n = 0
+	}
+	if n != len(b) {
+		err = io.ErrShortWrite
+	}
+	// 检查系统调用是否返回 syscall.EPIPE（见上文 epipecheck）：
+    // - f 是 stdout/stderr → 可能挂掉进程；
+    // - 否则 → 返回 error &quot;broken pipe&quot;。
+	epipecheck(f, e)
+
+	if e != nil {
+		err = f.wrapErr(&quot;write&quot;, e)
+	}
+
+	return n, err
+}
+</code></pre><h3 id=下沉到-pollfd>下沉到 poll.FD <a href=#%e4%b8%8b%e6%b2%89%e5%88%b0-pollfd class=anchor aria-hidden=true>#</a><a href=#下沉到-pollfd class=anchor aria-hidden=true>#</a></h3><p><code>os/file_unix.go</code>：</p><pre><code class=language-go>// write writes len(b) bytes to the File.
+// It returns the number of bytes written and an error, if any.
+func (f *File) write(b []byte) (n int, err error) {
+	n, err = f.pfd.Write(b)
+	runtime.KeepAlive(f)
+	return n, err
+}
+</code></pre><p><code>internal/poll/fd_unix.go</code>：</p><pre><code class=language-go>// Write implements io.Writer.
+func (fd *FD) Write(p []byte) (int, error) {
+    // 写前抢 fd 写锁，保证当前 p []byte 尽量连续写出
+    //（syscall.Write 不一定一次写完，需考虑发送缓冲）。
+	if err := fd.writeLock(); err != nil {
+		return 0, err
+	}
+	defer fd.writeUnlock()
+	if err := fd.pd.prepareWrite(fd.isFile); err != nil {
+		return 0, err
+	}
+	var nn int
+	for {
+		max := len(p)
+		if fd.IsStream &amp;&amp; max-nn &gt; maxRW {
+			max = nn + maxRW
+		}
+        // fd 有效则进入内核写；连接/流已关闭时，内核返回 EPIPE，
+        // 上层表现为 error &quot;broken pipe&quot;。
+		n, err := syscall.Write(fd.Sysfd, p[nn:max])
+		if n &gt; 0 {
+			nn += n
+		}
+		if nn == len(p) {
+			return nn, err
+		}
+		if err == syscall.EAGAIN &amp;&amp; fd.pd.pollable() {
+			if err = fd.pd.waitWrite(fd.isFile); err == nil {
+				continue
+			}
+		}
+		if err != nil {
+			return nn, err
+		}
+		if n == 0 {
+			return nn, io.ErrUnexpectedEOF
+		}
+	}
+}
+</code></pre><h3 id=写锁与-mutexclosedclose-后写直接失败>写锁与 mutexClosed：Close 后写直接失败 <a href=#%e5%86%99%e9%94%81%e4%b8%8e-mutexclosedclose-%e5%90%8e%e5%86%99%e7%9b%b4%e6%8e%a5%e5%a4%b1%e8%b4%a5 class=anchor aria-hidden=true>#</a><a href=#写锁与-mutexclosedclose-后写直接失败 class=anchor aria-hidden=true>#</a></h3><p><code>internal/poll/fd_mutex.go</code>：</p><pre><code class=language-go>// writeLock adds a reference to fd and locks fd for writing.
+// It returns an error when fd cannot be used for writing.
+func (fd *FD) writeLock() error {
+    // 加锁失败只有一种情况：fd 已被关闭
+	if !fd.fdmu.rwlock(false) {
+		return errClosing(fd.isFile)
+	}
+	return nil
+}
+
+// lock adds a reference to mu and locks mu.
+// It reports whether mu is available for reading or writing.
+func (mu *fdMutex) rwlock(read bool) bool {
+	var mutexBit, mutexWait, mutexMask uint64
+	var mutexSema *uint32
+	if read {						// 读锁相关
+		...
+	} else {						// 写锁相关
+		mutexBit = mutexWLock
+		mutexWait = mutexWWait
+		mutexMask = mutexWMask
+		mutexSema = &amp;mu.wsema
+	}
+	for {							// 自旋方式加锁
+		old := atomic.LoadUint64(&amp;mu.state)
+		if old&amp;mutexClosed != 0 {	// fd 已经关闭
+			return false
+		}
+		var new uint64
+		if old&amp;mutexBit == 0 {		// 锁空闲，尝试获取
+			// Lock is free, acquire it.
+			new = (old | mutexBit) + mutexRef
+			...
+		} else {					// 被他人持有，等待
+			// Wait for lock.
+			new = old + mutexWait
+			...
+		}
+        // CAS 获取锁
+		if atomic.CompareAndSwapUint64(&amp;mu.state, old, new) {
+			if old&amp;mutexBit == 0 {
+				return true
+			}
+			runtime_Semacquire(mutexSema)
+			// The signaller has subtracted mutexWait.
+		}
+	}
+}
+</code></pre><p>错误文案定义在 <code>internal/poll/fd.go</code>：</p><pre><code class=language-go>// ErrNetClosing is returned when a network descriptor is used after
+// it has been closed. Keep this string consistent because of issue
+// #4373: since historically programs have not been able to detect
+// this error, they look for the string.
+var ErrNetClosing = errors.New(&quot;use of closed network connection&quot;)
+
+// ErrFileClosing is returned when a file descriptor is used after it
+// has been closed.
+var ErrFileClosing = errors.New(&quot;use of closed file&quot;)
+
+// Return the appropriate closing error based on isFile.
+func errClosing(isFile bool) error {
+	if isFile {
+		return ErrFileClosing
+	}
+	return ErrNetClosing
+}
+</code></pre><h3 id=系统调用与-broken-pipe-字符串>系统调用与 &ldquo;broken pipe&rdquo; 字符串 <a href=#%e7%b3%bb%e7%bb%9f%e8%b0%83%e7%94%a8%e4%b8%8e-broken-pipe-%e5%ad%97%e7%ac%a6%e4%b8%b2 class=anchor aria-hidden=true>#</a><a href=#系统调用与-broken-pipe-字符串 class=anchor aria-hidden=true>#</a></h3><p><code>syscall/syscall_unix.go</code>：</p><pre><code class=language-go>func Write(fd int, p []byte) (n int, err error) {
+	if race.Enabled {
+		race.ReleaseMerge(unsafe.Pointer(&amp;ioSync))
+	}
+	n, err = write(fd, p)
+	if race.Enabled &amp;&amp; n &gt; 0 {
+		race.ReadRange(unsafe.Pointer(&amp;p[0]), n)
+	}
+	if msanenabled &amp;&amp; n &gt; 0 {
+		msanRead(unsafe.Pointer(&amp;p[0]), n)
+	}
+	return
+}
+</code></pre><p><code>syscall/zsyscall_linux_amd64.go</code>（生成代码）：</p><pre><code class=language-go>// THIS FILE IS GENERATED BY THE COMMAND AT THE TOP; DO NOT EDIT
+
+func write(fd int, p []byte) (n int, err error) {
+	var _p0 unsafe.Pointer
+	if len(p) &gt; 0 {
+		_p0 = unsafe.Pointer(&amp;p[0])
+	} else {
+		_p0 = unsafe.Pointer(&amp;_zero)
+	}
+    // 系统调用返回 Errno，如 EPIPE = 0x20
+	r0, _, e1 := Syscall(SYS_WRITE, uintptr(fd), uintptr(_p0), uintptr(len(p)))
+	n = int(r0)
+	if e1 != 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+</code></pre><p>Errno 文案：</p><pre><code class=language-go>func Syscall(trap, a1, a2, a3 uintptr) (r1, r2 uintptr, err Errno)
+
+// Errno 最终打印的描述在 errors 表中
+var errors = [...]string{
+    ...
+    32 : &quot;broken pipe&quot;,		// Write Closed Pipe
+    ...
+}
+
+func (e Errno) Error() string {
+	if 0 &lt;= int(e) &amp;&amp; int(e) &lt; len(errors) {
+		s := errors[e]
+		if s != &quot;&quot; {
+			return s
+		}
+	}
+	return &quot;errno &quot; + itoa(int(e))
+}
+</code></pre><h2 id=how-go-handle-connclose>How Go handle conn.Close()？ <a href=#how-go-handle-connclose class=anchor aria-hidden=true>#</a><a href=#how-go-handle-connclose class=anchor aria-hidden=true>#</a></h2><h3 id=close标记-closed--唤醒阻塞-io>Close：标记 closed + 唤醒阻塞 IO <a href=#close%e6%a0%87%e8%ae%b0-closed--%e5%94%a4%e9%86%92%e9%98%bb%e5%a1%9e-io class=anchor aria-hidden=true>#</a><a href=#close标记-closed--唤醒阻塞-io class=anchor aria-hidden=true>#</a></h3><p><code>internal/poll/fd_unix.go</code>：</p><pre><code class=language-go>// Close closes the FD. The underlying file descriptor is closed by the
+// destroy method when there are no remaining references.
+func (fd *FD) Close() error {
+	if !fd.fdmu.increfAndClose() {
+		return errClosing(fd.isFile)
+	}
+
+	// Unblock any I/O.  Once it all unblocks and returns,
+	// so that it cannot be referring to fd.sysfd anymore,
+	// the final decref will close fd.sysfd. This should happen
+	// fairly quickly, since all the I/O is non-blocking, and any
+	// attempts to block in the pollDesc will return errClosing(fd.isFile).
+	fd.pd.evict()
+
+	// The call to decref will call destroy if there are no other
+	// references.
+	err := fd.decref()
+
+	...
+
+	return err
+}
+
+// Shutdown wraps the shutdown network call.
+func (fd *FD) Shutdown(how int) error {
+	if err := fd.incref(); err != nil {
+		return err
+	}
+	defer fd.decref()
+	return syscall.Shutdown(fd.Sysfd, how)
+}
+</code></pre><h3 id=increfandclose打上-mutexclosed>increfAndClose：打上 mutexClosed <a href=#increfandclose%e6%89%93%e4%b8%8a-mutexclosed class=anchor aria-hidden=true>#</a><a href=#increfandclose打上-mutexclosed class=anchor aria-hidden=true>#</a></h3><p><code>internal/poll/fd_mutex.go</code>：</p><pre><code class=language-go>// increfAndClose sets the state of mu to closed.
+// It returns false if the file was already closed.
+func (mu *fdMutex) increfAndClose() bool {
+	for {
+		old := atomic.LoadUint64(&amp;mu.state)
+        if old&amp;mutexClosed != 0 {						// 重复 close 同一 fd
+			return false
+		}
+		// Mark as closed and acquire a reference.
+		new := (old | mutexClosed) + mutexRef			// 标记 mutexClosed
+		...
+		// Remove all read and write waiters.
+		new &amp;^= mutexRMask | mutexWMask
+		if atomic.CompareAndSwapUint64(&amp;mu.state, old, new) {
+			// Wake all read and write waiters,
+			// they will observe closed flag after wakeup.
+           	...
+			return true
+		}
+	}
+}
+
+// decref removes a reference from fd.
+// It also closes fd when the state of fd is set to closed and there
+// is no remaining reference.
+func (fd *FD) decref() error {
+	if fd.fdmu.decref() {
+		return fd.destroy()
+	}
+	return nil
+}
+</code></pre><h2 id=总结>总结 <a href=#%e6%80%bb%e7%bb%93 class=anchor aria-hidden=true>#</a><a href=#总结 class=anchor aria-hidden=true>#</a></h2><ol><li><strong><code>use of closed network connection</code></strong>：本端已 <code>Close</code>，<code>fdMutex</code> 打了 <code>mutexClosed</code>，写锁阶段直接失败，不进内核。</li><li><strong><code>broken pipe</code></strong>：本端 fd 仍可用，内核写发现 pipe/连接已断，返回 <code>EPIPE</code>，映射为 <code>"broken pipe"</code>。</li><li><strong>SIGPIPE</strong>：Go 默认只在 <strong>stdout/stderr</strong> 写 EPIPE 时走 <code>sigpipe()</code>（未 Notify 则可能退出）；<strong>网络 fd</strong> 写 EPIPE 一般只返回 error，服务进程不会被默认 SIGPIPE 行为打挂。</li><li>这套分层（应用层 closed 标记 → 系统调用 EPIPE → 按 fd 类型决定是否升格 SIGPIPE）让 CLI 保持 Unix 习惯，又让网络服务更稳——是典型的工程化取舍。</li></ol><div class=edit-page><a href=https://github.com/hitzhangjie/myspace/blob/master/content/blog/languages/golang/2019-04-18-go-network-sigpipe.md><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2"><path d="M17 3a2.828 2.828.0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+Edit this page on GitHub</a></div><div class="docs-navigation d-flex justify-content-between"><a href=/blog/2019-05-23-%E5%88%AB%E7%94%A8float%E4%BD%9C%E4%B8%BAmap%E7%9A%84key/><div class="card my-1"><div class="card-body py-2">&larr; Map实现：别用float作为map的key</div></div></a><a class=ms-auto href=/blog/2019-04-15-kernel-daemonize/><div class="card my-1"><div class="card-body py-2">Daemonize：两次 fork 与脱离控制终端 &rarr;</div></div></a></div></main><div class="docs-toc d-none d-xl-block col-xl-3"><nav class=docs-toc-inner aria-label="Secondary navigation"><div class=page-links><h3>On this page</h3><nav id=TableOfContents><ul><li><ul><li><a href=#背景>背景</a></li><li><a href=#问题场景>问题场景</a><ul><li><a href=#broken-pipe-vs-use-of-closed-network-connection>broken pipe vs use of closed network connection</a></li><li><a href=#官方文档go-如何约定-sigpipe>官方文档：Go 如何约定 SIGPIPE</a></li></ul></li><li><a href=#how-go-handle-sigpipe>How Go handle SIGPIPE？</a><ul><li><a href=#epipecheck仅对-stdoutstderr-升格为-sigpipe>epipecheck：仅对 stdout/stderr 升格为 SIGPIPE</a></li><li><a href=#sigpipenotify-则投递否则-die>sigpipe：Notify 则投递，否则 die</a></li></ul></li><li><a href=#how-go-handle-tcpconnwrite>How Go handle tcpconn.Write()？</a><ul><li><a href=#上层-write写完再-epipecheck>上层 Write：写完再 epipecheck</a></li><li><a href=#下沉到-pollfd>下沉到 poll.FD</a></li><li><a href=#写锁与-mutexclosedclose-后写直接失败>写锁与 mutexClosed：Close 后写直接失败</a></li><li><a href=#系统调用与-broken-pipe-字符串>系统调用与 &ldquo;broken pipe&rdquo; 字符串</a></li></ul></li><li><a href=#how-go-handle-connclose>How Go handle conn.Close()？</a><ul><li><a href=#close标记-closed--唤醒阻塞-io>Close：标记 closed + 唤醒阻塞 IO</a></li><li><a href=#increfandclose打上-mutexclosed>increfAndClose：打上 mutexClosed</a></li></ul></li><li><a href=#总结>总结</a></li></ul></li></ul></nav></div></nav></div></div></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.b49b5c2c44fdca07ee730ad1196420771d2a94176c7d367b414fb2e23f6a0ac3fbae11c2a6263392f17450f222ec2b518586e8ea96e23c361eb3ee8a255e145c.js integrity="sha512-tJtcLET9ygfucwrRGWQgdx0qlBdsfTZ7QU+y4j9qCsP7rhHCpiYzkvF0UPIi7CtRhYbo6pbiPDYes+6KJV4UXA==" crossorigin=anonymous defer></script><script src=/js/highlight.min.1a731f820940167b6fd11a8540a1ae7c4627f4009b13e229c411e9d890612a3f6b618133d96477c2cf238d6faaa28d745cd5141e443aa34f62785510dc873430.js integrity="sha512-GnMfgglAFntv0RqFQKGufEYn9ACbE+IpxBHp2JBhKj9rYYEz2WR3ws8jjW+qoo10XNUUHkQ6o09ieFUQ3Ic0MA==" crossorigin=anonymous defer></script><script src=/main.min.42911fbd6555de9cc7c05bcc9664f01a9f04a5b387d22dc3259d824c77de771983fc74b84b7ed8d6c83ed1351d28aff8b81fb445377ef1ff96d7236722e5671e.js integrity="sha512-QpEfvWVV3pzHwFvMlmTwGp8EpbOH0i3DJZ2CTHfedxmD/HS4S37Y1sg+0TUdKK/4uB+0RTd+8f+W1yNnIuVnHg==" crossorigin=anonymous defer></script><script src=/index.min.7880ef727695a0f357e448428838d6956c0f4bbe5bd9511349a06359e2734b56d50fe4f4581c8ff643b15fc7f817c816b21020db8bbcd7dbf28c47cea1212159.js integrity="sha512-eIDvcnaVoPNX5EhCiDjWlWwPS75b2VETSaBjWeJzS1bVD+T0WByP9kOxX8f4F8gWshAg24u819vyjEfOoSEhWQ==" crossorigin=anonymous defer></script></body></html>

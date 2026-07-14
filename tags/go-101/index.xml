@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Go-101 on</title><link>/tags/go-101/</link><description>Recent content in Go-101 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 18 Apr 2018 12:00:00 +0800</lastBuildDate><atom:link href="/tags/go-101/index.xml" rel="self" type="application/rss+xml"/><item><title>Go 101 学习笔记汇总</title><link>/blog/2018-04-18-go-101-notes/</link><pubDate>Wed, 18 Apr 2018 12:00:00 +0800</pubDate><guid>/blog/2018-04-18-go-101-notes/</guid><description>&lt;h2 id="写在前面"&gt;写在前面 &lt;a href="#%e5%86%99%e5%9c%a8%e5%89%8d%e9%9d%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;这部分内容，是我早年学习 Golang 时的进阶材料与批注式笔记的汇总。2026年对这些散落的知识进行一些总结归档 :)&lt;/p&gt;
+&lt;p&gt;一开始接触的是各类初级入门介绍。后来了解到社区贡献的 &lt;a href="https://go101.org/"&gt;Go 101&lt;/a&gt; 项目：内容涵盖 Go fundamentals、generics、optimizations、details &amp;amp; tips、quizzes、bugs、Q&amp;amp;A、apps &amp;amp; libs、blogs 等，从基础到深入覆盖都很扎实，对我帮助很大。当时做了大量笔记，而且多是在网页上通过 Diigo 做的批注。尽管后来 go101 的页面结构有变化，这些笔记仍然带来了很好的记忆锚点——虽然现在看起来略显零散。&lt;/p&gt;
+&lt;p&gt;我强烈建议 Go 初学者把 go101 作为精进理解的备选材料。可以说，我对 Go 的认识早已不是多年前那个初学者所能企及的了。如今再回看这些知识，对今天的我帮助已经不多，但可能对读者仍有价值。因此不再罗列当年那一长串章节笔记，而把这里提及的要点汇总成一篇文章。&lt;/p&gt;
+&lt;p&gt;说明：笔记形成于 Go 1.10 前后，部分细节（如泛型尚未正式落地、defer 性能、某些编译器优化）与现行版本可能有出入；文中只保留仍有助于理解语言语义与实践习惯的要点。更完整、更新的内容请以 &lt;a href="https://go101.org/"&gt;go101.org&lt;/a&gt; 与官方文档为准。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-go-是什么语言画像"&gt;1. Go 是什么：语言画像 &lt;a href="#1-go-%e6%98%af%e4%bb%80%e4%b9%88%e8%af%ad%e8%a8%80%e7%94%bb%e5%83%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Go 是编译型、静态类型语言，源自 Google。它把若干“够用的现代特性”压进一套刻意克制的语法里：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;并发一等公民&lt;/strong&gt;：goroutine、channel、select，CSP 风格——“用通信共享内存，而不是用共享内存通信”&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;内置容器&lt;/strong&gt;：slice、map&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;接口驱动多态&lt;/strong&gt; + value boxing，并由此支撑反射&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;指针&lt;/strong&gt;（受限制，更安全）、&lt;strong&gt;闭包&lt;/strong&gt;、&lt;strong&gt;方法&lt;/strong&gt;、&lt;strong&gt;defer&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;类型嵌套 / 组合&lt;/strong&gt;（匿名嵌入）替代经典继承&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;类型安全、内存安全、GC&lt;/strong&gt;、类型推断&lt;/li&gt;
+&lt;li&gt;语法简洁，标准库与社区生态活跃&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;当时的笔记里还写过“尚不支持自定义泛型，是否采用需权衡”——这一点在 Go 1.18 之后已经改写，但 go101 仍适合用来补语言细节，而不是当作版本变更史。&lt;/p&gt;
+&lt;p&gt;工具链上：&lt;code&gt;go run&lt;/code&gt; 适合简单片段；复杂工程用 &lt;code&gt;go build&lt;/code&gt; / &lt;code&gt;go install&lt;/code&gt;。&lt;code&gt;go vet&lt;/code&gt; 能报出 run/build 常忽略的可疑用法。&lt;/p&gt;</description></item></channel></rss>

@@ -1488,7 +1488,69 @@ os.Exit(m.Run())
 func Hello() {
 }
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;这里的实例代码，做了适当的简化，方便大家查看。为了更好地跟踪go test过程，我们可以以调试模式运行go test，如&lt;code&gt;GOTMPDIR=$(pwd)/xxx dlv exec $(which go) -- test -c&lt;/code&gt;：&lt;/p&gt;</description></item><item><title>Map实现：别用float作为map的key</title><link>/blog/2019-05-23-%E5%88%AB%E7%94%A8float%E4%BD%9C%E4%B8%BAmap%E7%9A%84key/</link><pubDate>Thu, 23 May 2019 00:16:36 +0800</pubDate><guid>/blog/2019-05-23-%E5%88%AB%E7%94%A8float%E4%BD%9C%E4%B8%BAmap%E7%9A%84key/</guid><description>&lt;p&gt;遇到个好玩的问题，使用float类型作为go map的key，示例代码如下：
+&lt;p&gt;这里的实例代码，做了适当的简化，方便大家查看。为了更好地跟踪go test过程，我们可以以调试模式运行go test，如&lt;code&gt;GOTMPDIR=$(pwd)/xxx dlv exec $(which go) -- test -c&lt;/code&gt;：&lt;/p&gt;</description></item><item><title>Golang垃圾回收 屏障技术</title><link>/blog/2019-10-22-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/</link><pubDate>Tue, 22 Oct 2019 14:32:38 +0800</pubDate><guid>/blog/2019-10-22-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/</guid><description>&lt;blockquote&gt;
+&lt;p&gt;这篇文章也是2019年10月份整理的了，最初是参考的知乎上的理解，暂时放在这里留作记录。本文中如果有解释不详细的，您可以参考2026年我新整理的几篇关于Go内存管理和垃圾回收的文章，内容更加详实一些。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id="golang垃圾回收-屏障技术"&gt;Golang垃圾回收 屏障技术 &lt;a href="#golang%e5%9e%83%e5%9c%be%e5%9b%9e%e6%94%b6-%e5%b1%8f%e9%9a%9c%e6%8a%80%e6%9c%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;垃圾回收(Garbage Collection，简称GC)是编程语言中提供的自动的内存管理机制，自动释放不需要的对象，让出存储器资源，无需程序员手动执行。&lt;/p&gt;
+&lt;p&gt;Golang中的垃圾回收主要应用三色标记法，GC过程和其他用户goroutine可并发运行，但需要一定时间的STW(stop the world)，STW的过程中，CPU不执行用户代码，全部用于垃圾回收，这个过程的影响很大，Golang进行了多次的迭代优化来解决这个问题。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;1.3以前的版本使用标记-清扫的方式，整个过程都需要STW。&lt;/li&gt;
+&lt;li&gt;1.3版本分离了标记和清扫的操作，标记过程STW，清扫过程并发执行。&lt;/li&gt;
+&lt;li&gt;1.5版本在标记过程中使用三色标记法。回收过程主要有四个阶段，其中，标记和清扫都并发执行的，但标记阶段的前后需要STW一定时间来做GC的准备工作和栈的re-scan。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;img src="assets/2019-10-22-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_GoGC%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/v2-ed600e255367b30af1c489131357eadc_hd.jpg" alt="img"&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Sweep Termination: 收集根对象，清扫上一轮未清扫完的span，启用写屏障和辅助GC，辅助GC是将一定量的标记和清扫工作交给用户goroutine来执行，写屏障在后面会详细说明。&lt;/li&gt;
+&lt;li&gt;Mark: 扫描所有根对象和根对象可以到达的对象，并标记它们&lt;/li&gt;
+&lt;li&gt;Mark Termination: 完成标记工作，重新扫描部分根对象(要求STW)，关闭写屏障和辅助GC&lt;/li&gt;
+&lt;li&gt;Sweep: 按标记结果清扫对象&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;1.8版本引入了混合写屏障机制（hybrid write barrier），避免了对栈re-scan的过程，极大的减少了STW的时间。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="标记-清扫算法"&gt;标记-清扫算法 &lt;a href="#%e6%a0%87%e8%ae%b0-%e6%b8%85%e6%89%ab%e7%ae%97%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;标记-清扫算法是一种追踪式的垃圾回收算法，并不会在对象死亡后立即将其清除掉，而是在一定条件下触发，统一校验系统中的存活对象，进行回收工作。在Golang中，有以下几种情况可触发：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;gcTriggerAlways: 强制触发GC&lt;/li&gt;
+&lt;li&gt;gcTriggerHeap: 当前分配的内存达到一定阈值时触发，这个阈值在每次GC过后都会根据堆内存的增长情况和CPU占用率来调整&lt;/li&gt;
+&lt;li&gt;gcTriggerTime: 当一定时间没有执行过GC就触发GC（2分钟）&lt;/li&gt;
+&lt;li&gt;gcTriggerCycle: runtime.GC()调用&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;标记-清扫分为两个部分，标记和清扫，标记过程会遍历所有对象，查找出死亡对象。我们可以使用指针的可达性可确认对象的存活，也就是说，如果存在一条从根出发的指针链最终可指向某个对象，就认为这个对象是存活的。这样，未能证明存活的对象就可以标记为死亡了。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;根：是一个有限的指针集合，程序可不经过其他对象直接访问这些指针，堆中的对象被加载时，需要先加载根中的指针。在Go中，一般为goroutine自己的栈空间和全局栈空间。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;标记结束后，再次进行遍历，清除掉确认死亡的对象。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2019-10-22-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_GoGC%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/v2-18defbd05ce6696c1355dc7de069de1d_b.jpg" alt="img"&gt;&lt;/p&gt;
+&lt;h3 id="三色标记法"&gt;三色标记法 &lt;a href="#%e4%b8%89%e8%89%b2%e6%a0%87%e8%ae%b0%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;将标记-清扫法使用三色抽象的方式来描述，可以方便我们理解回收器的正确性。&lt;/p&gt;
+&lt;p&gt;回收器通过将对象图划分为三种状态来指示其扫描过程。黑色对象为该对象及其后代已处理且该对象确认存活的，灰色对象为已经扫描到但未处理完成或者还需要再次处理的，白色对象为尚未扫描到或已经死亡的。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2019-10-22-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_GoGC%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/v2-5fe8ea45e2518ca19cfeb31558160fb1_b.jpg" alt="img"&gt;&lt;/p&gt;
+&lt;p&gt;如图所示，回收器从根出发，扫描到可达对象后标记其为灰色，放入灰色队列，在扫描灰色对象引用的对象，将他们标记为灰色，自身标记为黑色。扫描全部结束后，剩余未被扫描到的对象留在白色队列中，表示已死亡。&lt;/p&gt;
+&lt;p&gt;标记过程需的要STW，因为对象引用关系如果在标记阶段做了修改，会影响标记结果的正确性。例如下图，灰色对象B中包含指向白色对象C的指针e，对象C尚未被扫描，此时，如有其他程序，将e指针从B对象中删除，并将指向对象C的新指针f插入到黑色对象A中，由于对象A早已完成扫描，对象C就会一直保持白色状态直到被回收。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2019-10-22-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_GoGC%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/v2-be47f647bc1521f1d6c2d7a886560abc_hd.jpg" alt="img"&gt;&lt;/p&gt;
+&lt;p&gt;可以看出，一个白色对象被黑色对象引用，是注定无法通过这个黑色对象来保证自身存活的，与此同时，如果所有能到达它的灰色对象与它之间的可达关系全部遭到破坏，那么这个白色对象必然会被视为垃圾清除掉。 故当上述两个条件同时满足时，就会出现对象丢失的问题。&lt;/p&gt;
+&lt;p&gt;如果这个白色对象下游还引用了其他对象，并且这条路径是指向下游对象的唯一路径，那么他们也是必死无疑的。&lt;/p&gt;
+&lt;p&gt;为了防止这种现象的发生，最简单的方式就是STW，直接禁止掉其他用户程序对对象引用关系的干扰，但是STW的过程有明显的资源浪费，对所有的用户程序都有很大影响，如何能在保证对象不丢失的情况下合理的尽可能的提高GC效率，减少STW时间呢？&lt;/p&gt;
+&lt;p&gt;在Golang中使用并发的垃圾回收，也就是多个赋值器与回收器并发执行，与此同时，应用屏障技术来保证回收器的正确性。其原理主要就是破坏上述两个条件之一。&lt;/p&gt;
+&lt;h3 id="屏障技术"&gt;屏障技术 &lt;a href="#%e5%b1%8f%e9%9a%9c%e6%8a%80%e6%9c%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;当回收器满足下面两种情况之一时，即可保证不会出现对象丢失问题。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;弱三色不变式：所有被黑色对象引用的白色对象都处于灰色保护状态（直接或间接从灰色对象可达）。&lt;/li&gt;
+&lt;li&gt;强三色不变式：不存在黑色对象到白色对象的指针。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;强三色不变式很好理解，强制性的不允许黑色对象引用白色对象即可。而弱三色不变式中，黑色对象可以引用白色对象，但是这个白色对象仍然存在其他灰色对象对它的引用，或者可达它的链路上游存在灰色对象。&lt;/p&gt;
+&lt;p&gt;三色抽象除了可以用于描述对象的状态的，还可用来描述赋值器的状态，如果一个赋值器已经被回收器扫描完成，则认为它是黑色的赋值器，如果尚未扫描过或者还需要重新扫描，则认为它是灰色的赋值器。&lt;/p&gt;
+&lt;p&gt;在强三色不变式中，黑色赋值器只存在到黑色对象或灰色对象的指针，因为此时所有黑色对象到白色对象的引用都是被禁止的。 在弱三色不变式中，黑色赋值器允许存在到白色对象的指针，但这个白色对象是被保护的。&lt;/p&gt;
+&lt;p&gt;上述这些可以通过屏障技术来保证。&lt;/p&gt;
+&lt;h3 id="插入屏障"&gt;插入屏障 &lt;a href="#%e6%8f%92%e5%85%a5%e5%b1%8f%e9%9a%9c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;插入屏障拦截将白色指针插入黑色对象的操作，标记其对应对象为灰色状态，这样就不存在黑色对象引用白色对象的情况了，满足强三色不变式，如上图例中，在插入指针f时将C对象标记为灰色。Go1.5版本使用的Dijkstra写屏障就是这个原理，伪代码如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;writePointer(slot, ptr):
+shade(ptr)
+*slot = ptr
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;在Golang中，对栈上指针的写入添加写屏障的成本很高，所以Go选择仅对堆上的指针插入增加写屏障，这样就会出现在扫描结束后，栈上仍存在引用白色对象的情况，这时的栈是灰色的，不满足三色不变式，所以需要对栈进行重新扫描使其变黑，完成剩余对象的标记，这个过程需要STW。这期间会将所有goroutine挂起，当有大量应用程序时，时间可能会达到10～100ms。&lt;/p&gt;</description></item><item><title>Map实现：别用float作为map的key</title><link>/blog/2019-05-23-%E5%88%AB%E7%94%A8float%E4%BD%9C%E4%B8%BAmap%E7%9A%84key/</link><pubDate>Thu, 23 May 2019 00:16:36 +0800</pubDate><guid>/blog/2019-05-23-%E5%88%AB%E7%94%A8float%E4%BD%9C%E4%B8%BAmap%E7%9A%84key/</guid><description>&lt;p&gt;遇到个好玩的问题，使用float类型作为go map的key，示例代码如下：
 &lt;img src="assets/gomap/1558586114_21.png" alt="use-float64-as-map-key"&gt;&lt;/p&gt;
 &lt;p&gt;其实就是浮点数精度的问题，随手翻了下go map的源码，备忘下。这里要涉及到几个问题：&lt;/p&gt;
 &lt;ul&gt;

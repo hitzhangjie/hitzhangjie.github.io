@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Cheney on</title><link>/tags/cheney/</link><description>Recent content in Cheney on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 24 Feb 2019 12:00:00 +0800</lastBuildDate><atom:link href="/tags/cheney/index.xml" rel="self" type="application/rss+xml"/><item><title>Practical Go: Real world advice for writing maintainable Go programs</title><link>/blog/2019-02-24-go-best-practices/</link><pubDate>Sun, 24 Feb 2019 12:00:00 +0800</pubDate><guid>/blog/2019-02-24-go-best-practices/</guid><description>&lt;h1 id="practical-go-real-world-advice-for-writing-maintainable-go-programs"&gt;Practical Go: Real world advice for writing maintainable Go programs &lt;a href="#practical-go-real-world-advice-for-writing-maintainable-go-programs" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Dave Cheney&lt;a href="mailto:dave@cheney.net"&gt;dave@cheney.net&lt;/a&gt;Version Fba376-Dirty,2019-02-24&lt;/p&gt;
+&lt;h2 id="0-introduction"&gt;&lt;a href="https://dave.cheney.net/practical-go/presentations/qcon-china.html#_introduction"&gt;0 Introduction&lt;/a&gt; &lt;a href="#0-introduction" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Hello,&lt;/p&gt;
+&lt;p&gt;My goal over the next two sessions is to give you my advice for best practices writing Go code.&lt;/p&gt;
+&lt;p&gt;This is a workshop style presentation, I’m going to dispense with the usual slide deck and we’ll work directly from the document which you can take away with you today.&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;TIP&lt;/th&gt;
+&lt;th&gt;You can find the latest version of this presentation at&lt;a href="https://dave.cheney.net/practical-go/presentations/qcon-china.html"&gt;https://dave.cheney.net/practical-go/presentations/qcon-china.html&lt;/a&gt;&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="1-guiding-principles"&gt;&lt;a href="https://dave.cheney.net/practical-go/presentations/qcon-china.html#_guiding_principles"&gt;1. Guiding principles&lt;/a&gt; &lt;a href="#1-guiding-principles" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;If I’m going to talk about best practices in any programming language I need some way to define what I mean by &lt;em&gt;best&lt;/em&gt;. If you came to my keynote yesterday you would have seen this quote from the Go team lead, Russ Cox:&lt;/p&gt;</description></item></channel></rss>

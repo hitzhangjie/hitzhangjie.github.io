@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Defer on</title><link>/tags/defer/</link><description>Recent content in Defer on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 22 Nov 2018 13:54:50 +0800</lastBuildDate><atom:link href="/tags/defer/index.xml" rel="self" type="application/rss+xml"/><item><title>defer类似写法：go defer vs cpp智能指针 vs java try-catch-finally</title><link>/blog/2018-11-22-defer%E7%B1%BB%E4%BC%BC%E6%9C%BA%E5%88%B6go-java-cpp%E5%AF%B9%E6%AF%94/</link><pubDate>Thu, 22 Nov 2018 13:54:50 +0800</pubDate><guid>/blog/2018-11-22-defer%E7%B1%BB%E4%BC%BC%E6%9C%BA%E5%88%B6go-java-cpp%E5%AF%B9%E6%AF%94/</guid><description>&lt;h1 id="go-defer-vs-cpp智能指针-vs-java-try-catch-finally"&gt;go defer vs cpp智能指针 vs java try-catch-finally &lt;a href="#go-defer-vs-cpp%e6%99%ba%e8%83%bd%e6%8c%87%e9%92%88-vs-java-try-catch-finally" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="资源泄露让人头疼"&gt;资源泄露让人头疼 &lt;a href="#%e8%b5%84%e6%ba%90%e6%b3%84%e9%9c%b2%e8%ae%a9%e4%ba%ba%e5%a4%b4%e7%96%bc" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;程序中申请的某些资源需要显示地释放，特别是系统资源，如打开的文件描述符、tcp &amp;amp; udp套接字、动态申请的堆内存等等。即便是说很多遍避免资源泄露的各种方式，开发人员仍然不能很好地避免资源泄露问题。避免资源泄露并不是一个技巧性很强的问题，但是当大家写起代码来被各种业务逻辑冲昏了头的时候，bug就容易趁机而入。&lt;/p&gt;
+&lt;h2 id="避免资源泄露问题"&gt;避免资源泄露问题 &lt;a href="#%e9%81%bf%e5%85%8d%e8%b5%84%e6%ba%90%e6%b3%84%e9%9c%b2%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;语言层面如果能够提供某种能力，在资源申请成功、使用之后及时地进行资源释放，那就再好不过了。在深入对比C、C++、Java、Go中如何实现自动释放资源之前，我们先考虑下这个过程中存在那些难点：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;资源申请成功、正常使用之后，如何判断资源已经使用完毕？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;以打开的文件描述符为例，fd是int类型变量，文件打开之后在进程的整个生命周期内都是有效的，其实文件访问结束之后就可以认为这个fd可以关闭、释放了；再以动态申请的堆内存为例，堆内存空间也是在进程生命周期内有效的，堆内存是通过指针进行访问的，如果没有任何指针指向这段堆内存区域，可以认为分配的堆内存可以释放掉了；再以申请的lock为例，lock成功之后可以访问临界区了，从临界区退出的那一刻开始，可以认为lock可以释放掉了。&lt;/p&gt;
+&lt;p&gt;不同类型的资源，判断是否使用完毕的方式不一样，但有一点可以确认，开发人员清楚资源应该何时释放。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;开发人员清楚应该何时释放资源，但是语言级别如何提供某种机制避免开发人员疏漏？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;C并没有提供语言层面的机制来避免资源泄露问题，但是利用gcc提供的C扩展属性也可以做到类似的效果；&lt;/p&gt;
+&lt;p&gt;C++提供了智能指针，以malloc动态分配堆内存为例，分配成功返回堆内存指针，用该指针来初始化一个智能指针，并绑定对应的回调方法，当智能指针作用域结束被销毁时，其上绑定的回调方法也会被调用。假如我们将释放堆内存的方法&lt;code&gt;free(ptr)&lt;/code&gt;注册为智能指针上的回调方法，就可以在分配内存所在的作用域销毁时自动释放堆内存了。&lt;/p&gt;
+&lt;p&gt;Java提供了try-catch-finally，在try中申请、使用资源，catch中捕获可能的异常并处理，在finally中进行资源释放。以打开文件为例，在try中打开文件、文件处理结束之后，finally中调用file.close()方法。考虑一种极端情况，我们的文件处理逻辑比较复杂，中间涉及的代码比较多，在编写了各种逻辑处理、异常处理之后，开发人员是否容易遗忘在finally中关闭文件呢？这种可能性还是比较大的。开发人员的习惯一般是遵循就近原则，定义变量的时候都是在使用之前，如果try block结尾处没有明显的文件相关的操作，开发人员可能不会联想到要关闭文件。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;考虑到开发人员遵循就近原则的习惯，能否在资源申请成功后立即注册一个资源释放的回调方法，在资源使用结束的时候回调这个回调方法？这个方式是比较容易实现的，听起来也比较优雅。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Go defer提供了这样的能力，在资源申请成功之后立即注册一个资源释放的方法，选择函数退出阶段作为申请使用结束的时间点，然后回调注册的释放资源的方法最终完成资源的释放。既能够满足程序员“就近使用”的良好作风，也减少了因为遗忘泄露资源的可能，而且代码的可维护性也更好。&lt;/p&gt;
+&lt;p&gt;Go defer在某些情况下也可能会带来一定的性能损耗。比如通过lock在保护临界区，在临界区退出之后就可以释放掉lock了，但是呢，defer只有在函数退出阶段才会触发资源的释放操作。这可能会导致锁粒度过大，降低并发处理能力。这一点，开发人员要做好权衡，确定自己选择defer是没有问题的。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="不同语言模拟defer"&gt;不同语言模拟defer &lt;a href="#%e4%b8%8d%e5%90%8c%e8%af%ad%e8%a8%80%e6%a8%a1%e6%8b%9fdefer" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="模拟defer-in-c"&gt;模拟defer in C &lt;a href="#%e6%a8%a1%e6%8b%9fdefer-in-c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;C本身没有提供defer或者类似defer机制，但是借助gcc扩展也可以实现类似能力。利用gcc提供的扩展属性&lt;code&gt;__cleanup__&lt;/code&gt;来修饰变量，当变量离开作用域时可以自动调用注册的回调函数。&lt;/p&gt;
+&lt;p&gt;下面是 &lt;a href="http://echorand.me/site/notes/articles/c_cleanup/cleanup_attribute_c.html"&gt;gcc扩展属性``的描述&lt;/a&gt;，感兴趣的可以了解下。其实gcc提供的这种扩展属性比go defer控制力度更细，因为它可以控制的粒度可以细到“&lt;strong&gt;作用域级别&lt;/strong&gt;”，而go defer只能将有效范围细到“&lt;strong&gt;函数级别&lt;/strong&gt;”。&lt;/p&gt;
+&lt;h4 id="示例一"&gt;示例一 &lt;a href="#%e7%a4%ba%e4%be%8b%e4%b8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;&lt;code&gt;cleanup_attribute_demo.c&lt;/code&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;# include &amp;lt;stdio.h&amp;gt;
+/* Demo code showing the usage of the cleanup variable
+attribute. See:http://gcc.gnu.org/onlinedocs/gcc/Variable-Attributes.html
+*/
+/* cleanup function
+the argument is a int * to accept the address
+to the final value
+*/
+void clean_up(int *final_value)
+{
+printf(&amp;quot;Cleaning up\n&amp;quot;);
+printf(&amp;quot;Final value: %d\n&amp;quot;,*final_value);
+}
+int main(int argc, char **argv)
+{
+/* declare cleanup attribute along with initiliazation
+Without the cleanup attribute, this is equivalent
+to:
+int avar = 1;
+*/
+int avar __attribute__ ((__cleanup__(clean_up))) = 1;
+avar = 5;
+return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;编译运行：&lt;/p&gt;</description></item></channel></rss>

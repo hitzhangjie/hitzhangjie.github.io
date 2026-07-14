@@ -6078,7 +6078,69 @@ rpc BuyApple(BuyAppleReq) returns(BuyAppleRsp); // CMD_BuyApple
 rpc SellApple(SellAppleReq) returns(SellAppleRsp); // CMD_SellApple
 }
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;使用goneat命令行工具来创建一个新的go-neat服务：&lt;/p&gt;</description></item><item><title>如何实现一个更安全的删除命令rm</title><link>/blog/2019-10-18-shell_%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AA%E6%9B%B4%E5%AE%89%E5%85%A8%E7%9A%84%E5%88%A0%E9%99%A4%E5%91%BD%E4%BB%A4rm/</link><pubDate>Fri, 18 Oct 2019 15:00:01 +0800</pubDate><guid>/blog/2019-10-18-shell_%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AA%E6%9B%B4%E5%AE%89%E5%85%A8%E7%9A%84%E5%88%A0%E9%99%A4%E5%91%BD%E4%BB%A4rm/</guid><description>&lt;style&gt;
+&lt;p&gt;使用goneat命令行工具来创建一个新的go-neat服务：&lt;/p&gt;</description></item><item><title>Golang垃圾回收 屏障技术</title><link>/blog/2019-10-22-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/</link><pubDate>Tue, 22 Oct 2019 14:32:38 +0800</pubDate><guid>/blog/2019-10-22-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/</guid><description>&lt;blockquote&gt;
+&lt;p&gt;这篇文章也是2019年10月份整理的了，最初是参考的知乎上的理解，暂时放在这里留作记录。本文中如果有解释不详细的，您可以参考2026年我新整理的几篇关于Go内存管理和垃圾回收的文章，内容更加详实一些。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id="golang垃圾回收-屏障技术"&gt;Golang垃圾回收 屏障技术 &lt;a href="#golang%e5%9e%83%e5%9c%be%e5%9b%9e%e6%94%b6-%e5%b1%8f%e9%9a%9c%e6%8a%80%e6%9c%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;垃圾回收(Garbage Collection，简称GC)是编程语言中提供的自动的内存管理机制，自动释放不需要的对象，让出存储器资源，无需程序员手动执行。&lt;/p&gt;
+&lt;p&gt;Golang中的垃圾回收主要应用三色标记法，GC过程和其他用户goroutine可并发运行，但需要一定时间的STW(stop the world)，STW的过程中，CPU不执行用户代码，全部用于垃圾回收，这个过程的影响很大，Golang进行了多次的迭代优化来解决这个问题。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;1.3以前的版本使用标记-清扫的方式，整个过程都需要STW。&lt;/li&gt;
+&lt;li&gt;1.3版本分离了标记和清扫的操作，标记过程STW，清扫过程并发执行。&lt;/li&gt;
+&lt;li&gt;1.5版本在标记过程中使用三色标记法。回收过程主要有四个阶段，其中，标记和清扫都并发执行的，但标记阶段的前后需要STW一定时间来做GC的准备工作和栈的re-scan。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;img src="assets/2019-10-22-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_GoGC%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/v2-ed600e255367b30af1c489131357eadc_hd.jpg" alt="img"&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Sweep Termination: 收集根对象，清扫上一轮未清扫完的span，启用写屏障和辅助GC，辅助GC是将一定量的标记和清扫工作交给用户goroutine来执行，写屏障在后面会详细说明。&lt;/li&gt;
+&lt;li&gt;Mark: 扫描所有根对象和根对象可以到达的对象，并标记它们&lt;/li&gt;
+&lt;li&gt;Mark Termination: 完成标记工作，重新扫描部分根对象(要求STW)，关闭写屏障和辅助GC&lt;/li&gt;
+&lt;li&gt;Sweep: 按标记结果清扫对象&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ul&gt;
+&lt;li&gt;1.8版本引入了混合写屏障机制（hybrid write barrier），避免了对栈re-scan的过程，极大的减少了STW的时间。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="标记-清扫算法"&gt;标记-清扫算法 &lt;a href="#%e6%a0%87%e8%ae%b0-%e6%b8%85%e6%89%ab%e7%ae%97%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;标记-清扫算法是一种追踪式的垃圾回收算法，并不会在对象死亡后立即将其清除掉，而是在一定条件下触发，统一校验系统中的存活对象，进行回收工作。在Golang中，有以下几种情况可触发：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;gcTriggerAlways: 强制触发GC&lt;/li&gt;
+&lt;li&gt;gcTriggerHeap: 当前分配的内存达到一定阈值时触发，这个阈值在每次GC过后都会根据堆内存的增长情况和CPU占用率来调整&lt;/li&gt;
+&lt;li&gt;gcTriggerTime: 当一定时间没有执行过GC就触发GC（2分钟）&lt;/li&gt;
+&lt;li&gt;gcTriggerCycle: runtime.GC()调用&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;标记-清扫分为两个部分，标记和清扫，标记过程会遍历所有对象，查找出死亡对象。我们可以使用指针的可达性可确认对象的存活，也就是说，如果存在一条从根出发的指针链最终可指向某个对象，就认为这个对象是存活的。这样，未能证明存活的对象就可以标记为死亡了。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;根：是一个有限的指针集合，程序可不经过其他对象直接访问这些指针，堆中的对象被加载时，需要先加载根中的指针。在Go中，一般为goroutine自己的栈空间和全局栈空间。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;标记结束后，再次进行遍历，清除掉确认死亡的对象。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2019-10-22-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_GoGC%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/v2-18defbd05ce6696c1355dc7de069de1d_b.jpg" alt="img"&gt;&lt;/p&gt;
+&lt;h3 id="三色标记法"&gt;三色标记法 &lt;a href="#%e4%b8%89%e8%89%b2%e6%a0%87%e8%ae%b0%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;将标记-清扫法使用三色抽象的方式来描述，可以方便我们理解回收器的正确性。&lt;/p&gt;
+&lt;p&gt;回收器通过将对象图划分为三种状态来指示其扫描过程。黑色对象为该对象及其后代已处理且该对象确认存活的，灰色对象为已经扫描到但未处理完成或者还需要再次处理的，白色对象为尚未扫描到或已经死亡的。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2019-10-22-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_GoGC%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/v2-5fe8ea45e2518ca19cfeb31558160fb1_b.jpg" alt="img"&gt;&lt;/p&gt;
+&lt;p&gt;如图所示，回收器从根出发，扫描到可达对象后标记其为灰色，放入灰色队列，在扫描灰色对象引用的对象，将他们标记为灰色，自身标记为黑色。扫描全部结束后，剩余未被扫描到的对象留在白色队列中，表示已死亡。&lt;/p&gt;
+&lt;p&gt;标记过程需的要STW，因为对象引用关系如果在标记阶段做了修改，会影响标记结果的正确性。例如下图，灰色对象B中包含指向白色对象C的指针e，对象C尚未被扫描，此时，如有其他程序，将e指针从B对象中删除，并将指向对象C的新指针f插入到黑色对象A中，由于对象A早已完成扫描，对象C就会一直保持白色状态直到被回收。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2019-10-22-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_GoGC%E6%B7%B7%E5%90%88%E5%86%99%E5%B1%8F%E9%9A%9C/v2-be47f647bc1521f1d6c2d7a886560abc_hd.jpg" alt="img"&gt;&lt;/p&gt;
+&lt;p&gt;可以看出，一个白色对象被黑色对象引用，是注定无法通过这个黑色对象来保证自身存活的，与此同时，如果所有能到达它的灰色对象与它之间的可达关系全部遭到破坏，那么这个白色对象必然会被视为垃圾清除掉。 故当上述两个条件同时满足时，就会出现对象丢失的问题。&lt;/p&gt;
+&lt;p&gt;如果这个白色对象下游还引用了其他对象，并且这条路径是指向下游对象的唯一路径，那么他们也是必死无疑的。&lt;/p&gt;
+&lt;p&gt;为了防止这种现象的发生，最简单的方式就是STW，直接禁止掉其他用户程序对对象引用关系的干扰，但是STW的过程有明显的资源浪费，对所有的用户程序都有很大影响，如何能在保证对象不丢失的情况下合理的尽可能的提高GC效率，减少STW时间呢？&lt;/p&gt;
+&lt;p&gt;在Golang中使用并发的垃圾回收，也就是多个赋值器与回收器并发执行，与此同时，应用屏障技术来保证回收器的正确性。其原理主要就是破坏上述两个条件之一。&lt;/p&gt;
+&lt;h3 id="屏障技术"&gt;屏障技术 &lt;a href="#%e5%b1%8f%e9%9a%9c%e6%8a%80%e6%9c%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;当回收器满足下面两种情况之一时，即可保证不会出现对象丢失问题。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;弱三色不变式：所有被黑色对象引用的白色对象都处于灰色保护状态（直接或间接从灰色对象可达）。&lt;/li&gt;
+&lt;li&gt;强三色不变式：不存在黑色对象到白色对象的指针。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;强三色不变式很好理解，强制性的不允许黑色对象引用白色对象即可。而弱三色不变式中，黑色对象可以引用白色对象，但是这个白色对象仍然存在其他灰色对象对它的引用，或者可达它的链路上游存在灰色对象。&lt;/p&gt;
+&lt;p&gt;三色抽象除了可以用于描述对象的状态的，还可用来描述赋值器的状态，如果一个赋值器已经被回收器扫描完成，则认为它是黑色的赋值器，如果尚未扫描过或者还需要重新扫描，则认为它是灰色的赋值器。&lt;/p&gt;
+&lt;p&gt;在强三色不变式中，黑色赋值器只存在到黑色对象或灰色对象的指针，因为此时所有黑色对象到白色对象的引用都是被禁止的。 在弱三色不变式中，黑色赋值器允许存在到白色对象的指针，但这个白色对象是被保护的。&lt;/p&gt;
+&lt;p&gt;上述这些可以通过屏障技术来保证。&lt;/p&gt;
+&lt;h3 id="插入屏障"&gt;插入屏障 &lt;a href="#%e6%8f%92%e5%85%a5%e5%b1%8f%e9%9a%9c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;插入屏障拦截将白色指针插入黑色对象的操作，标记其对应对象为灰色状态，这样就不存在黑色对象引用白色对象的情况了，满足强三色不变式，如上图例中，在插入指针f时将C对象标记为灰色。Go1.5版本使用的Dijkstra写屏障就是这个原理，伪代码如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;writePointer(slot, ptr):
+shade(ptr)
+*slot = ptr
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;在Golang中，对栈上指针的写入添加写屏障的成本很高，所以Go选择仅对堆上的指针插入增加写屏障，这样就会出现在扫描结束后，栈上仍存在引用白色对象的情况，这时的栈是灰色的，不满足三色不变式，所以需要对栈进行重新扫描使其变黑，完成剩余对象的标记，这个过程需要STW。这期间会将所有goroutine挂起，当有大量应用程序时，时间可能会达到10～100ms。&lt;/p&gt;</description></item><item><title>如何实现一个更安全的删除命令rm</title><link>/blog/2019-10-18-shell_%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AA%E6%9B%B4%E5%AE%89%E5%85%A8%E7%9A%84%E5%88%A0%E9%99%A4%E5%91%BD%E4%BB%A4rm/</link><pubDate>Fri, 18 Oct 2019 15:00:01 +0800</pubDate><guid>/blog/2019-10-18-shell_%E5%A6%82%E4%BD%95%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AA%E6%9B%B4%E5%AE%89%E5%85%A8%E7%9A%84%E5%88%A0%E9%99%A4%E5%91%BD%E4%BB%A4rm/</guid><description>&lt;style&gt;
 img {
 width: 680px;
 padding-bottom: 1rem;
@@ -6301,7 +6363,28 @@ KiB Mem : 16171652 total, 3413496 free, 450324 used, 12307832 buff/cache
 KiB Swap: 0 total, 0 free, 0 used. 15009260 avail Mem
 PID USER PR NI VIRT RES SHR S %CPU %MEM TIME+ COMMAND
 2675 root 20 0 25968 140 0 S 0.0 0.0 0:00.00 main
-&lt;/code&gt;&lt;/pre&gt;</description></item><item><title>macOS实现高效todolist</title><link>/blog/2019-02-23-alfred_macos%E5%AE%9E%E7%8E%B0%E9%AB%98%E6%95%88todolist/</link><pubDate>Sat, 23 Feb 2019 00:13:00 +0800</pubDate><guid>/blog/2019-02-23-alfred_macos%E5%AE%9E%E7%8E%B0%E9%AB%98%E6%95%88todolist/</guid><description>&lt;style&gt;
+&lt;/code&gt;&lt;/pre&gt;</description></item><item><title>Practical Go: Real world advice for writing maintainable Go programs</title><link>/blog/2019-02-24-go-best-practices/</link><pubDate>Sun, 24 Feb 2019 12:00:00 +0800</pubDate><guid>/blog/2019-02-24-go-best-practices/</guid><description>&lt;h1 id="practical-go-real-world-advice-for-writing-maintainable-go-programs"&gt;Practical Go: Real world advice for writing maintainable Go programs &lt;a href="#practical-go-real-world-advice-for-writing-maintainable-go-programs" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Dave Cheney&lt;a href="mailto:dave@cheney.net"&gt;dave@cheney.net&lt;/a&gt;Version Fba376-Dirty,2019-02-24&lt;/p&gt;
+&lt;h2 id="0-introduction"&gt;&lt;a href="https://dave.cheney.net/practical-go/presentations/qcon-china.html#_introduction"&gt;0 Introduction&lt;/a&gt; &lt;a href="#0-introduction" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Hello,&lt;/p&gt;
+&lt;p&gt;My goal over the next two sessions is to give you my advice for best practices writing Go code.&lt;/p&gt;
+&lt;p&gt;This is a workshop style presentation, I’m going to dispense with the usual slide deck and we’ll work directly from the document which you can take away with you today.&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;TIP&lt;/th&gt;
+&lt;th&gt;You can find the latest version of this presentation at&lt;a href="https://dave.cheney.net/practical-go/presentations/qcon-china.html"&gt;https://dave.cheney.net/practical-go/presentations/qcon-china.html&lt;/a&gt;&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="1-guiding-principles"&gt;&lt;a href="https://dave.cheney.net/practical-go/presentations/qcon-china.html#_guiding_principles"&gt;1. Guiding principles&lt;/a&gt; &lt;a href="#1-guiding-principles" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;If I’m going to talk about best practices in any programming language I need some way to define what I mean by &lt;em&gt;best&lt;/em&gt;. If you came to my keynote yesterday you would have seen this quote from the Go team lead, Russ Cox:&lt;/p&gt;</description></item><item><title>macOS实现高效todolist</title><link>/blog/2019-02-23-alfred_macos%E5%AE%9E%E7%8E%B0%E9%AB%98%E6%95%88todolist/</link><pubDate>Sat, 23 Feb 2019 00:13:00 +0800</pubDate><guid>/blog/2019-02-23-alfred_macos%E5%AE%9E%E7%8E%B0%E9%AB%98%E6%95%88todolist/</guid><description>&lt;style&gt;
 img {
 width: 680px;
 padding-bottom: 1rem;
@@ -6762,7 +6845,102 @@ return 0;
 &lt;/ul&gt;
 &lt;p&gt;ps: REUSEADDR还可以快速复用TIME_WAIT状态的地址(ipport)，比如服务器重启后重新listen同一个地址，但是单独这个选项不允许多个active listeners复用这个地址。&lt;/p&gt;
 &lt;p&gt;原文出自：&lt;a href="https://stackoverflow.com/a/14388707/3817040"&gt;reuseport &amp;amp; reuseaddr, how they differ?&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;Welcome to the wonderful world of portability&amp;hellip; or rather the lack of it. Before we start analyzing these two options in detail and take a deeper look how different operating systems handle them, it should be noted that the BSD socket implementation is the mother of all socket implementations. Basically all other systems copied the BSD socket implementation at some point in time (or at least its interfaces) and then started evolving it on their own. Of course the BSD socket implementation was evolved as well at the same time and thus systems that copied it later got features that were lacking in systems that copied it earlier. Understanding the BSD socket implementation is the key to understanding all other socket implementations, so you should read about it even if you don&amp;rsquo;t care to ever write code for a BSD system.&lt;/p&gt;</description></item><item><title>ELK Stack 集中式日志管理</title><link>/blog/2018-10-12-%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7_elk/</link><pubDate>Fri, 12 Oct 2018 12:00:00 +0800</pubDate><guid>/blog/2018-10-12-%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7_elk/</guid><description>&lt;h1 id="what-is-elk-stack-"&gt;What is ELK Stack ? &lt;a href="#what-is-elk-stack-" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Welcome to the wonderful world of portability&amp;hellip; or rather the lack of it. Before we start analyzing these two options in detail and take a deeper look how different operating systems handle them, it should be noted that the BSD socket implementation is the mother of all socket implementations. Basically all other systems copied the BSD socket implementation at some point in time (or at least its interfaces) and then started evolving it on their own. Of course the BSD socket implementation was evolved as well at the same time and thus systems that copied it later got features that were lacking in systems that copied it earlier. Understanding the BSD socket implementation is the key to understanding all other socket implementations, so you should read about it even if you don&amp;rsquo;t care to ever write code for a BSD system.&lt;/p&gt;</description></item><item><title>defer类似写法：go defer vs cpp智能指针 vs java try-catch-finally</title><link>/blog/2018-11-22-defer%E7%B1%BB%E4%BC%BC%E6%9C%BA%E5%88%B6go-java-cpp%E5%AF%B9%E6%AF%94/</link><pubDate>Thu, 22 Nov 2018 13:54:50 +0800</pubDate><guid>/blog/2018-11-22-defer%E7%B1%BB%E4%BC%BC%E6%9C%BA%E5%88%B6go-java-cpp%E5%AF%B9%E6%AF%94/</guid><description>&lt;h1 id="go-defer-vs-cpp智能指针-vs-java-try-catch-finally"&gt;go defer vs cpp智能指针 vs java try-catch-finally &lt;a href="#go-defer-vs-cpp%e6%99%ba%e8%83%bd%e6%8c%87%e9%92%88-vs-java-try-catch-finally" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="资源泄露让人头疼"&gt;资源泄露让人头疼 &lt;a href="#%e8%b5%84%e6%ba%90%e6%b3%84%e9%9c%b2%e8%ae%a9%e4%ba%ba%e5%a4%b4%e7%96%bc" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;程序中申请的某些资源需要显示地释放，特别是系统资源，如打开的文件描述符、tcp &amp;amp; udp套接字、动态申请的堆内存等等。即便是说很多遍避免资源泄露的各种方式，开发人员仍然不能很好地避免资源泄露问题。避免资源泄露并不是一个技巧性很强的问题，但是当大家写起代码来被各种业务逻辑冲昏了头的时候，bug就容易趁机而入。&lt;/p&gt;
+&lt;h2 id="避免资源泄露问题"&gt;避免资源泄露问题 &lt;a href="#%e9%81%bf%e5%85%8d%e8%b5%84%e6%ba%90%e6%b3%84%e9%9c%b2%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;语言层面如果能够提供某种能力，在资源申请成功、使用之后及时地进行资源释放，那就再好不过了。在深入对比C、C++、Java、Go中如何实现自动释放资源之前，我们先考虑下这个过程中存在那些难点：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;资源申请成功、正常使用之后，如何判断资源已经使用完毕？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;以打开的文件描述符为例，fd是int类型变量，文件打开之后在进程的整个生命周期内都是有效的，其实文件访问结束之后就可以认为这个fd可以关闭、释放了；再以动态申请的堆内存为例，堆内存空间也是在进程生命周期内有效的，堆内存是通过指针进行访问的，如果没有任何指针指向这段堆内存区域，可以认为分配的堆内存可以释放掉了；再以申请的lock为例，lock成功之后可以访问临界区了，从临界区退出的那一刻开始，可以认为lock可以释放掉了。&lt;/p&gt;
+&lt;p&gt;不同类型的资源，判断是否使用完毕的方式不一样，但有一点可以确认，开发人员清楚资源应该何时释放。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;开发人员清楚应该何时释放资源，但是语言级别如何提供某种机制避免开发人员疏漏？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;C并没有提供语言层面的机制来避免资源泄露问题，但是利用gcc提供的C扩展属性也可以做到类似的效果；&lt;/p&gt;
+&lt;p&gt;C++提供了智能指针，以malloc动态分配堆内存为例，分配成功返回堆内存指针，用该指针来初始化一个智能指针，并绑定对应的回调方法，当智能指针作用域结束被销毁时，其上绑定的回调方法也会被调用。假如我们将释放堆内存的方法&lt;code&gt;free(ptr)&lt;/code&gt;注册为智能指针上的回调方法，就可以在分配内存所在的作用域销毁时自动释放堆内存了。&lt;/p&gt;
+&lt;p&gt;Java提供了try-catch-finally，在try中申请、使用资源，catch中捕获可能的异常并处理，在finally中进行资源释放。以打开文件为例，在try中打开文件、文件处理结束之后，finally中调用file.close()方法。考虑一种极端情况，我们的文件处理逻辑比较复杂，中间涉及的代码比较多，在编写了各种逻辑处理、异常处理之后，开发人员是否容易遗忘在finally中关闭文件呢？这种可能性还是比较大的。开发人员的习惯一般是遵循就近原则，定义变量的时候都是在使用之前，如果try block结尾处没有明显的文件相关的操作，开发人员可能不会联想到要关闭文件。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;考虑到开发人员遵循就近原则的习惯，能否在资源申请成功后立即注册一个资源释放的回调方法，在资源使用结束的时候回调这个回调方法？这个方式是比较容易实现的，听起来也比较优雅。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Go defer提供了这样的能力，在资源申请成功之后立即注册一个资源释放的方法，选择函数退出阶段作为申请使用结束的时间点，然后回调注册的释放资源的方法最终完成资源的释放。既能够满足程序员“就近使用”的良好作风，也减少了因为遗忘泄露资源的可能，而且代码的可维护性也更好。&lt;/p&gt;
+&lt;p&gt;Go defer在某些情况下也可能会带来一定的性能损耗。比如通过lock在保护临界区，在临界区退出之后就可以释放掉lock了，但是呢，defer只有在函数退出阶段才会触发资源的释放操作。这可能会导致锁粒度过大，降低并发处理能力。这一点，开发人员要做好权衡，确定自己选择defer是没有问题的。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="不同语言模拟defer"&gt;不同语言模拟defer &lt;a href="#%e4%b8%8d%e5%90%8c%e8%af%ad%e8%a8%80%e6%a8%a1%e6%8b%9fdefer" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="模拟defer-in-c"&gt;模拟defer in C &lt;a href="#%e6%a8%a1%e6%8b%9fdefer-in-c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;C本身没有提供defer或者类似defer机制，但是借助gcc扩展也可以实现类似能力。利用gcc提供的扩展属性&lt;code&gt;__cleanup__&lt;/code&gt;来修饰变量，当变量离开作用域时可以自动调用注册的回调函数。&lt;/p&gt;
+&lt;p&gt;下面是 &lt;a href="http://echorand.me/site/notes/articles/c_cleanup/cleanup_attribute_c.html"&gt;gcc扩展属性``的描述&lt;/a&gt;，感兴趣的可以了解下。其实gcc提供的这种扩展属性比go defer控制力度更细，因为它可以控制的粒度可以细到“&lt;strong&gt;作用域级别&lt;/strong&gt;”，而go defer只能将有效范围细到“&lt;strong&gt;函数级别&lt;/strong&gt;”。&lt;/p&gt;
+&lt;h4 id="示例一"&gt;示例一 &lt;a href="#%e7%a4%ba%e4%be%8b%e4%b8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;&lt;code&gt;cleanup_attribute_demo.c&lt;/code&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;# include &amp;lt;stdio.h&amp;gt;
+/* Demo code showing the usage of the cleanup variable
+attribute. See:http://gcc.gnu.org/onlinedocs/gcc/Variable-Attributes.html
+*/
+/* cleanup function
+the argument is a int * to accept the address
+to the final value
+*/
+void clean_up(int *final_value)
+{
+printf(&amp;quot;Cleaning up\n&amp;quot;);
+printf(&amp;quot;Final value: %d\n&amp;quot;,*final_value);
+}
+int main(int argc, char **argv)
+{
+/* declare cleanup attribute along with initiliazation
+Without the cleanup attribute, this is equivalent
+to:
+int avar = 1;
+*/
+int avar __attribute__ ((__cleanup__(clean_up))) = 1;
+avar = 5;
+return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;编译运行：&lt;/p&gt;</description></item><item><title>异常处理捕获：go panic/recover vs cpp/java try-catch</title><link>/blog/2018-11-22-%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86%E6%8D%95%E8%8E%B7go-java-cpp%E5%AF%B9%E6%AF%94/</link><pubDate>Thu, 22 Nov 2018 13:54:50 +0800</pubDate><guid>/blog/2018-11-22-%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86%E6%8D%95%E8%8E%B7go-java-cpp%E5%AF%B9%E6%AF%94/</guid><description>&lt;h1 id="go-panicrecover-vs-cppjava-try-catch"&gt;go panic/recover vs cpp/java try-catch &lt;a href="#go-panicrecover-vs-cppjava-try-catch" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;错误处理是必须要面对的一个问题，错误又包括编译时、运行时错误，编译时错误可以在编译器处理阶段发现，运行时错误就要依赖语言提供的错误处理机制来捕获，像C++、Java都提供了try-catch的能力，Go里面没有try-catch，但是提供了panic &amp;amp; recover的机制来模拟异常处理。&lt;/p&gt;
+&lt;p&gt;那么这几种方式的差别是什么呢？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;控制流执行方式不同
+&lt;code&gt;try { codeblock } catch (ex e1){ handle e1 } catch (ex e2){handle e2}&lt;/code&gt;，只有当codeblock抛出异常且被catch时对应的错误处理代码才会执行，但是panic、recover不同，&lt;code&gt;defer func() { e := recover ...}()&lt;/code&gt;注册的函数在函数退出阶段一定会执行；&lt;/li&gt;
+&lt;li&gt;异常的传播方式不同
+&lt;code&gt;try-catch&lt;/code&gt;错误处理代码是在catch之后的block进行，如果没有被catch到则会继续向上层抛出异常等上层捕获处理……如果最终没有被catch并处理，则进程挂掉。panic的抛出有别于异常向上抛出的过程，某个goroutine中产生的panic只可以在当前goroutine结束前recover，如果当前goroutine没有recover处理该panic，则进程立即挂掉。&lt;/li&gt;
+&lt;li&gt;异常的处理方式不同
+&lt;code&gt;try-catch&lt;/code&gt;捕获了异常、处理之后依然继续走后续流程，就好像什么都没有发生过一样，但是panic会立即unwind the calling stack并层层返回并直到被recover捕获后，上层调用函数才可以重新恢复向下执行。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这里的分点描述可能有点牵强，主要是表达清楚这个意思。&lt;/p&gt;</description></item><item><title>泛型写法对比：go反射 vs java范型 vs cpp模板</title><link>/blog/2018-11-22-%E6%B3%9B%E5%9E%8B%E7%BC%96%E7%A8%8B%E5%86%99%E6%B3%95go-java-cpp%E5%AF%B9%E6%AF%94/</link><pubDate>Thu, 22 Nov 2018 13:54:50 +0800</pubDate><guid>/blog/2018-11-22-%E6%B3%9B%E5%9E%8B%E7%BC%96%E7%A8%8B%E5%86%99%E6%B3%95go-java-cpp%E5%AF%B9%E6%AF%94/</guid><description>&lt;h1 id="go反射-vs-java范型-vs-cpp模板"&gt;go反射 vs java范型 vs cpp模板 &lt;a href="#go%e5%8f%8d%e5%b0%84-vs-java%e8%8c%83%e5%9e%8b-vs-cpp%e6%a8%a1%e6%9d%bf" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;strong&gt;Go语言并不支持范型编程&lt;/strong&gt;（某些内置函数是支持范型的，但是用户自定义函数不支持范型），但是可以借助reflect来一定程度上弥补这部分能力的缺失，因为要靠运行时计算所以有运行时开销，性能比不上真正的范型实现。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;这篇文章写的比较早，2018年时go还不支持范型编程，2022年3月发布的go1.18才引入了范型编程。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Java支持真正的“范型”&lt;/strong&gt;，泛型编程的好处是，编译时对类型安全性进行检查，并且模板参数可以是任意类型不用做类型转换，既安全又方便。由于是在编译时进行类型检查，并且Java编译器会对类、方法、变量级别的模板参数进行类型擦除（Type Erasure，简单理解就是将模板参数替换成Object类型或者第一个Bound的类型），无运行时开销，比Go借助反射模拟范型性能好，也不用像C++一样拷贝代码引起编译速度下降或者代码尺寸膨胀。点击查看：&lt;a href="https://www.baeldung.com/java-type-erasure"&gt;Java-Type-Erasure&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;C++通过“模板”来支持“范型”编程，之所以加引号，是因为C++不是真正的支持范型编程，模板特例化时编译器其实是生成了一个新类的代码&lt;/strong&gt;。C++模板是通过Macro来进行处理的，相当于复制、粘贴了类模板的代码，并替换了模板参数类型。简言之，就是一个高级的Macro处理系统。但是因为拷贝了代码，代码膨胀导致了编译速度下降、文件尺寸增加。&lt;/p&gt;
+&lt;p&gt;网上有很多相关的讨论，这里举个示例简单总结一下。&lt;/p&gt;
+&lt;h2 id="c-类模板"&gt;C++ 类模板 &lt;a href="#c-%e7%b1%bb%e6%a8%a1%e6%9d%bf" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-c++"&gt;#include &amp;lt;iostream&amp;gt;
+using namespace std;
+template &amp;lt;typename T&amp;gt;
+class Calc{
+T t1;
+T t2;
+public:
+T Add(T t1, T t2) {
+return t1 + t2;
+}
+};
+int main() {
+Calc&amp;lt;int&amp;gt; calc_int;
+auto sum_int = calc_int.Add(1, 2);
+cout &amp;lt;&amp;lt; &amp;quot;1 + 2 = &amp;quot; &amp;lt;&amp;lt; sum_int &amp;lt;&amp;lt; endl;
+Calc&amp;lt;float&amp;gt; calc_flt;
+auto sum_flt = calc_flt.Add(1.1, 2.2);
+cout &amp;lt;&amp;lt; &amp;quot;1.1 + 2.2 = &amp;quot; &amp;lt;&amp;lt; sum_flt &amp;lt;&amp;lt; endl;
+return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这里其实是创建了两个不同的类，&lt;code&gt;objdump -dS&lt;/code&gt;可以很清晰地看到至少创建了两个不同的方法&lt;code&gt;Add(T, T)&lt;/code&gt;，可能会有人认为这是&lt;code&gt;函数重载中的name mangling&lt;/code&gt;，其实不是，确实是生成了两个不同的类型，这个可以通过DWARF相关信息看出来，首先&lt;code&gt;g++ -s main.cpp&lt;/code&gt;得到汇编后文件main.s，然后查看该文件内容并搜索Calc，下面两个分别表示&lt;code&gt;Calc&amp;lt;float&amp;gt;模板实例&lt;/code&gt;以及&lt;code&gt;Calc&amp;lt;int&amp;gt;模板实例&lt;/code&gt;，二者确实属于两个不同的类型，一个是用Ltypes95来标识，一个是用Ltypes47来标识。&lt;/p&gt;</description></item><item><title>ELK Stack 集中式日志管理</title><link>/blog/2018-10-12-%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7_elk/</link><pubDate>Fri, 12 Oct 2018 12:00:00 +0800</pubDate><guid>/blog/2018-10-12-%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7_elk/</guid><description>&lt;h1 id="what-is-elk-stack-"&gt;What is ELK Stack ? &lt;a href="#what-is-elk-stack-" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;ELK Stack，包括了ElasticSearch(E)、LogStash(L)、Kibana(K)。这三个产品都是由Elastic开发、维护的，其中：&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;ElasticSearch是一个基于Lucence搜索引擎构建的NoSQL数据库；&lt;/li&gt;
@@ -6863,7 +7041,48 @@ padding-bottom: 1rem;
 double bpe = -(log(error) / denom);
 int hashes = (int)ceil(0.693147180559945 * bpe); // ln(2)
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;假如希望存储entries个元素的话，在满足上述误差率的情况下，布隆过滤器需要分配内存空间为&lt;code&gt;int bits = (int)(bpe * entries)&lt;/code&gt;。&lt;/p&gt;</description></item><item><title>工程素养：godoc文档</title><link>/blog/2018-06-29-godoc%E6%96%87%E6%A1%A3/</link><pubDate>Fri, 29 Jun 2018 22:39:03 +0800</pubDate><guid>/blog/2018-06-29-godoc%E6%96%87%E6%A1%A3/</guid><description>&lt;h1 id="godoc文档"&gt;godoc文档 &lt;a href="#godoc%e6%96%87%e6%a1%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;假如希望存储entries个元素的话，在满足上述误差率的情况下，布隆过滤器需要分配内存空间为&lt;code&gt;int bits = (int)(bpe * entries)&lt;/code&gt;。&lt;/p&gt;</description></item><item><title>Go 基础速览：Go核心特性 &amp; 与C/C++关键差异</title><link>/blog/2018-09-02-go-basic-tutorial-review/</link><pubDate>Sun, 02 Sep 2018 12:00:00 +0800</pubDate><guid>/blog/2018-09-02-go-basic-tutorial-review/</guid><description>&lt;blockquote&gt;
+&lt;p&gt;说明：早年刚接触 Go 时，曾对照 &lt;a href="https://www.tutorialspoint.com/go/index.htm"&gt;Tutorialspoint Go Tutorial&lt;/a&gt; 整理过一批学习笔记。原材料偏照搬、且已过时不全。本文不再逐页复制，而是按该站最新整理的内容进行更系统性总结：每节用尽量短的文字概括要点，并附 &lt;strong&gt;与 C/C++ 的对比&lt;/strong&gt;，方便有 C/C++ 背景时快速捡起细节。&lt;/p&gt;
+&lt;p&gt;整理基准时间可视为 &lt;strong&gt;2018-09-02&lt;/strong&gt; 前后的学习阶段，但实际包含了后续年份版本的内容，算是为了纪念当时的学习历程；文中个别处会标注后续语言演进（如 Generics）。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h1 id="一入门与语言基础"&gt;一、入门与语言基础 &lt;a href="#%e4%b8%80%e5%85%a5%e9%97%a8%e4%b8%8e%e8%af%ad%e8%a8%80%e5%9f%ba%e7%a1%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="go---overview"&gt;Go - Overview &lt;a href="#go---overview" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;要点&lt;/strong&gt;：Go 由 Google 在 2007 年由 Robert Griesemer、Rob Pike、Ken Thompson 设计，2009 年公开。静态强类型、自带 GC、原生并发、包管理依赖、传统编译链接生成静态二进制。刻意省略：类型继承、方法/运算符重载、包循环依赖、指针运算、断言；早期材料还写“无泛型”，&lt;strong&gt;Go 1.18 起已有 Generics&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;vs C/C++&lt;/strong&gt;：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;维度&lt;/th&gt;
+&lt;th&gt;Go&lt;/th&gt;
+&lt;th&gt;C/C++&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;内存&lt;/td&gt;
+&lt;td&gt;GC 自动回收&lt;/td&gt;
+&lt;td&gt;手动 / RAII / smart pointer&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;并发&lt;/td&gt;
+&lt;td&gt;语言级 goroutine + channel&lt;/td&gt;
+&lt;td&gt;库级 pthread / std::thread&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;类型系统&lt;/td&gt;
+&lt;td&gt;接口 + 组合；无类继承&lt;/td&gt;
+&lt;td&gt;C 无 OOP；C++ 多重继承等&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;产物&lt;/td&gt;
+&lt;td&gt;默认静态链接、部署简单&lt;/td&gt;
+&lt;td&gt;动态库/ABI 问题更常见&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="go---environment-setup"&gt;Go - Environment Setup &lt;a href="#go---environment-setup" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;要点&lt;/strong&gt;：安装 Go 工具链，配置 &lt;code&gt;GOROOT&lt;/code&gt;（安装根）、&lt;code&gt;GOPATH&lt;/code&gt;（工作区，旧工作流）或 module 模式（&lt;code&gt;go.mod&lt;/code&gt;，现代默认）。&lt;code&gt;go run&lt;/code&gt; / &lt;code&gt;go build&lt;/code&gt; / &lt;code&gt;go install&lt;/code&gt; 覆盖编译运行；&lt;code&gt;go fmt&lt;/code&gt; 统一格式。&lt;/p&gt;</description></item><item><title>工程素养：godoc文档</title><link>/blog/2018-06-29-godoc%E6%96%87%E6%A1%A3/</link><pubDate>Fri, 29 Jun 2018 22:39:03 +0800</pubDate><guid>/blog/2018-06-29-godoc%E6%96%87%E6%A1%A3/</guid><description>&lt;h1 id="godoc文档"&gt;godoc文档 &lt;a href="#godoc%e6%96%87%e6%a1%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;h2 id="标准库文档"&gt;标准库文档 &lt;a href="#%e6%a0%87%e5%87%86%e5%ba%93%e6%96%87%e6%a1%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;当要查看go标准库文档时，可借助godoc命令进行查询，如&lt;code&gt;godoc container/list&lt;/code&gt;，也可以在本地开启一个web服务来查询，如&lt;code&gt;godoc -http=:6060&lt;/code&gt;。&lt;/p&gt;
 &lt;h2 id="非标注库文档"&gt;非标注库文档 &lt;a href="#%e9%9d%9e%e6%a0%87%e6%b3%a8%e5%ba%93%e6%96%87%e6%a1%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
@@ -6959,7 +7178,25 @@ Outnamed bool // 是否是可导出的？
 &lt;p&gt;2）如果chan的recv goroutine queue是空的，并且value buffer不满，这种情况下，send goroutine queue一定是空的，因为value buffer不满发送goroutine可以发送完成不可能会阻塞。该发送goroutine将要发送的数据push到value buffer中然后继续执行。这种情况下，chan send操作是non-blocking操作。&lt;/p&gt;
 &lt;p&gt;3）如果chan的recv goroutine queue是空的，并且value buffer是满的，发送goroutine将被push到send goroutine queue中进入阻塞状态。等到有其他goroutine尝试从chan接收数据的时候才能将其唤醒恢复执行。这种情况下，chan send操作是blocking操作。&lt;/p&gt;
 &lt;h2 id="13-chan操作规则3"&gt;1.3 chan操作规则3 &lt;a href="#13-chan%e6%93%8d%e4%bd%9c%e8%a7%84%e5%88%993" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;当一个goroutine尝试close一个non-nil &amp;amp; non-closed chan的时候，close操作将依次执行如下操作。&lt;/p&gt;</description></item><item><title>chrome分屏阅读插件：pagesplit</title><link>/blog/2018-03-02-chrome_%E5%88%86%E5%B1%8F%E9%98%85%E8%AF%BB%E6%8F%92%E4%BB%B6pagesplit/</link><pubDate>Fri, 02 Mar 2018 22:21:32 +0800</pubDate><guid>/blog/2018-03-02-chrome_%E5%88%86%E5%B1%8F%E9%98%85%E8%AF%BB%E6%8F%92%E4%BB%B6pagesplit/</guid><description>&lt;style&gt;
+&lt;p&gt;当一个goroutine尝试close一个non-nil &amp;amp; non-closed chan的时候，close操作将依次执行如下操作。&lt;/p&gt;</description></item><item><title>Go 101 学习笔记汇总</title><link>/blog/2018-04-18-go-101-notes/</link><pubDate>Wed, 18 Apr 2018 12:00:00 +0800</pubDate><guid>/blog/2018-04-18-go-101-notes/</guid><description>&lt;h2 id="写在前面"&gt;写在前面 &lt;a href="#%e5%86%99%e5%9c%a8%e5%89%8d%e9%9d%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;这部分内容，是我早年学习 Golang 时的进阶材料与批注式笔记的汇总。2026年对这些散落的知识进行一些总结归档 :)&lt;/p&gt;
+&lt;p&gt;一开始接触的是各类初级入门介绍。后来了解到社区贡献的 &lt;a href="https://go101.org/"&gt;Go 101&lt;/a&gt; 项目：内容涵盖 Go fundamentals、generics、optimizations、details &amp;amp; tips、quizzes、bugs、Q&amp;amp;A、apps &amp;amp; libs、blogs 等，从基础到深入覆盖都很扎实，对我帮助很大。当时做了大量笔记，而且多是在网页上通过 Diigo 做的批注。尽管后来 go101 的页面结构有变化，这些笔记仍然带来了很好的记忆锚点——虽然现在看起来略显零散。&lt;/p&gt;
+&lt;p&gt;我强烈建议 Go 初学者把 go101 作为精进理解的备选材料。可以说，我对 Go 的认识早已不是多年前那个初学者所能企及的了。如今再回看这些知识，对今天的我帮助已经不多，但可能对读者仍有价值。因此不再罗列当年那一长串章节笔记，而把这里提及的要点汇总成一篇文章。&lt;/p&gt;
+&lt;p&gt;说明：笔记形成于 Go 1.10 前后，部分细节（如泛型尚未正式落地、defer 性能、某些编译器优化）与现行版本可能有出入；文中只保留仍有助于理解语言语义与实践习惯的要点。更完整、更新的内容请以 &lt;a href="https://go101.org/"&gt;go101.org&lt;/a&gt; 与官方文档为准。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-go-是什么语言画像"&gt;1. Go 是什么：语言画像 &lt;a href="#1-go-%e6%98%af%e4%bb%80%e4%b9%88%e8%af%ad%e8%a8%80%e7%94%bb%e5%83%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Go 是编译型、静态类型语言，源自 Google。它把若干“够用的现代特性”压进一套刻意克制的语法里：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;并发一等公民&lt;/strong&gt;：goroutine、channel、select，CSP 风格——“用通信共享内存，而不是用共享内存通信”&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;内置容器&lt;/strong&gt;：slice、map&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;接口驱动多态&lt;/strong&gt; + value boxing，并由此支撑反射&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;指针&lt;/strong&gt;（受限制，更安全）、&lt;strong&gt;闭包&lt;/strong&gt;、&lt;strong&gt;方法&lt;/strong&gt;、&lt;strong&gt;defer&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;类型嵌套 / 组合&lt;/strong&gt;（匿名嵌入）替代经典继承&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;类型安全、内存安全、GC&lt;/strong&gt;、类型推断&lt;/li&gt;
+&lt;li&gt;语法简洁，标准库与社区生态活跃&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;当时的笔记里还写过“尚不支持自定义泛型，是否采用需权衡”——这一点在 Go 1.18 之后已经改写，但 go101 仍适合用来补语言细节，而不是当作版本变更史。&lt;/p&gt;
+&lt;p&gt;工具链上：&lt;code&gt;go run&lt;/code&gt; 适合简单片段；复杂工程用 &lt;code&gt;go build&lt;/code&gt; / &lt;code&gt;go install&lt;/code&gt;。&lt;code&gt;go vet&lt;/code&gt; 能报出 run/build 常忽略的可疑用法。&lt;/p&gt;</description></item><item><title>chrome分屏阅读插件：pagesplit</title><link>/blog/2018-03-02-chrome_%E5%88%86%E5%B1%8F%E9%98%85%E8%AF%BB%E6%8F%92%E4%BB%B6pagesplit/</link><pubDate>Fri, 02 Mar 2018 22:21:32 +0800</pubDate><guid>/blog/2018-03-02-chrome_%E5%88%86%E5%B1%8F%E9%98%85%E8%AF%BB%E6%8F%92%E4%BB%B6pagesplit/</guid><description>&lt;style&gt;
 img {
 width: 680px;
 padding-bottom: 1rem;

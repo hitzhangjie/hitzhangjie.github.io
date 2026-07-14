@@ -13,4 +13,15 @@
 &lt;p&gt;有追求的开发人员，在panic的使用上应该始终遵循go设计理念，同时在程序的健壮性上也会采用些防御性编程的手段。&lt;/p&gt;
 &lt;h2 id="panic-vs-exception"&gt;panic vs exception &lt;a href="#panic-vs-exception" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;我们很多开发人员都接触过多门语言，比如Java、C++，等等，这类语言都有异常处理机制，遇到一些意外事件时可以抛出一个异常，异常通常由try-catch block捕获并处理。&lt;/p&gt;
-&lt;p&gt;初学者阶段，很多同学会努力去学习异常处理的正确编码方式，甚至是异常处理的实现原理，对性能的影响，等等，但是由于实际缺乏实际的大规模工程供锻炼实践，也很少有人会去思考一些问题，比如：&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;初学者阶段，很多同学会努力去学习异常处理的正确编码方式，甚至是异常处理的实现原理，对性能的影响，等等，但是由于实际缺乏实际的大规模工程供锻炼实践，也很少有人会去思考一些问题，比如：&lt;/p&gt;</description></item><item><title>异常处理捕获：go panic/recover vs cpp/java try-catch</title><link>/blog/2018-11-22-%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86%E6%8D%95%E8%8E%B7go-java-cpp%E5%AF%B9%E6%AF%94/</link><pubDate>Thu, 22 Nov 2018 13:54:50 +0800</pubDate><guid>/blog/2018-11-22-%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86%E6%8D%95%E8%8E%B7go-java-cpp%E5%AF%B9%E6%AF%94/</guid><description>&lt;h1 id="go-panicrecover-vs-cppjava-try-catch"&gt;go panic/recover vs cpp/java try-catch &lt;a href="#go-panicrecover-vs-cppjava-try-catch" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;错误处理是必须要面对的一个问题，错误又包括编译时、运行时错误，编译时错误可以在编译器处理阶段发现，运行时错误就要依赖语言提供的错误处理机制来捕获，像C++、Java都提供了try-catch的能力，Go里面没有try-catch，但是提供了panic &amp;amp; recover的机制来模拟异常处理。&lt;/p&gt;
+&lt;p&gt;那么这几种方式的差别是什么呢？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;控制流执行方式不同
+&lt;code&gt;try { codeblock } catch (ex e1){ handle e1 } catch (ex e2){handle e2}&lt;/code&gt;，只有当codeblock抛出异常且被catch时对应的错误处理代码才会执行，但是panic、recover不同，&lt;code&gt;defer func() { e := recover ...}()&lt;/code&gt;注册的函数在函数退出阶段一定会执行；&lt;/li&gt;
+&lt;li&gt;异常的传播方式不同
+&lt;code&gt;try-catch&lt;/code&gt;错误处理代码是在catch之后的block进行，如果没有被catch到则会继续向上层抛出异常等上层捕获处理……如果最终没有被catch并处理，则进程挂掉。panic的抛出有别于异常向上抛出的过程，某个goroutine中产生的panic只可以在当前goroutine结束前recover，如果当前goroutine没有recover处理该panic，则进程立即挂掉。&lt;/li&gt;
+&lt;li&gt;异常的处理方式不同
+&lt;code&gt;try-catch&lt;/code&gt;捕获了异常、处理之后依然继续走后续流程，就好像什么都没有发生过一样，但是panic会立即unwind the calling stack并层层返回并直到被recover捕获后，上层调用函数才可以重新恢复向下执行。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这里的分点描述可能有点牵强，主要是表达清楚这个意思。&lt;/p&gt;</description></item></channel></rss>

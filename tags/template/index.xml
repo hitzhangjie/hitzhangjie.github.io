@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Template on</title><link>/tags/template/</link><description>Recent content in Template on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 22 Nov 2018 13:54:50 +0800</lastBuildDate><atom:link href="/tags/template/index.xml" rel="self" type="application/rss+xml"/><item><title>泛型写法对比：go反射 vs java范型 vs cpp模板</title><link>/blog/2018-11-22-%E6%B3%9B%E5%9E%8B%E7%BC%96%E7%A8%8B%E5%86%99%E6%B3%95go-java-cpp%E5%AF%B9%E6%AF%94/</link><pubDate>Thu, 22 Nov 2018 13:54:50 +0800</pubDate><guid>/blog/2018-11-22-%E6%B3%9B%E5%9E%8B%E7%BC%96%E7%A8%8B%E5%86%99%E6%B3%95go-java-cpp%E5%AF%B9%E6%AF%94/</guid><description>&lt;h1 id="go反射-vs-java范型-vs-cpp模板"&gt;go反射 vs java范型 vs cpp模板 &lt;a href="#go%e5%8f%8d%e5%b0%84-vs-java%e8%8c%83%e5%9e%8b-vs-cpp%e6%a8%a1%e6%9d%bf" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;strong&gt;Go语言并不支持范型编程&lt;/strong&gt;（某些内置函数是支持范型的，但是用户自定义函数不支持范型），但是可以借助reflect来一定程度上弥补这部分能力的缺失，因为要靠运行时计算所以有运行时开销，性能比不上真正的范型实现。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;这篇文章写的比较早，2018年时go还不支持范型编程，2022年3月发布的go1.18才引入了范型编程。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Java支持真正的“范型”&lt;/strong&gt;，泛型编程的好处是，编译时对类型安全性进行检查，并且模板参数可以是任意类型不用做类型转换，既安全又方便。由于是在编译时进行类型检查，并且Java编译器会对类、方法、变量级别的模板参数进行类型擦除（Type Erasure，简单理解就是将模板参数替换成Object类型或者第一个Bound的类型），无运行时开销，比Go借助反射模拟范型性能好，也不用像C++一样拷贝代码引起编译速度下降或者代码尺寸膨胀。点击查看：&lt;a href="https://www.baeldung.com/java-type-erasure"&gt;Java-Type-Erasure&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;C++通过“模板”来支持“范型”编程，之所以加引号，是因为C++不是真正的支持范型编程，模板特例化时编译器其实是生成了一个新类的代码&lt;/strong&gt;。C++模板是通过Macro来进行处理的，相当于复制、粘贴了类模板的代码，并替换了模板参数类型。简言之，就是一个高级的Macro处理系统。但是因为拷贝了代码，代码膨胀导致了编译速度下降、文件尺寸增加。&lt;/p&gt;
+&lt;p&gt;网上有很多相关的讨论，这里举个示例简单总结一下。&lt;/p&gt;
+&lt;h2 id="c-类模板"&gt;C++ 类模板 &lt;a href="#c-%e7%b1%bb%e6%a8%a1%e6%9d%bf" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-c++"&gt;#include &amp;lt;iostream&amp;gt;
+using namespace std;
+template &amp;lt;typename T&amp;gt;
+class Calc{
+T t1;
+T t2;
+public:
+T Add(T t1, T t2) {
+return t1 + t2;
+}
+};
+int main() {
+Calc&amp;lt;int&amp;gt; calc_int;
+auto sum_int = calc_int.Add(1, 2);
+cout &amp;lt;&amp;lt; &amp;quot;1 + 2 = &amp;quot; &amp;lt;&amp;lt; sum_int &amp;lt;&amp;lt; endl;
+Calc&amp;lt;float&amp;gt; calc_flt;
+auto sum_flt = calc_flt.Add(1.1, 2.2);
+cout &amp;lt;&amp;lt; &amp;quot;1.1 + 2.2 = &amp;quot; &amp;lt;&amp;lt; sum_flt &amp;lt;&amp;lt; endl;
+return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这里其实是创建了两个不同的类，&lt;code&gt;objdump -dS&lt;/code&gt;可以很清晰地看到至少创建了两个不同的方法&lt;code&gt;Add(T, T)&lt;/code&gt;，可能会有人认为这是&lt;code&gt;函数重载中的name mangling&lt;/code&gt;，其实不是，确实是生成了两个不同的类型，这个可以通过DWARF相关信息看出来，首先&lt;code&gt;g++ -s main.cpp&lt;/code&gt;得到汇编后文件main.s，然后查看该文件内容并搜索Calc，下面两个分别表示&lt;code&gt;Calc&amp;lt;float&amp;gt;模板实例&lt;/code&gt;以及&lt;code&gt;Calc&amp;lt;int&amp;gt;模板实例&lt;/code&gt;，二者确实属于两个不同的类型，一个是用Ltypes95来标识，一个是用Ltypes47来标识。&lt;/p&gt;</description></item></channel></rss>

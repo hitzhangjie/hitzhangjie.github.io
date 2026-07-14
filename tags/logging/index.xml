@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Logging on</title><link>/tags/logging/</link><description>Recent content in Logging on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 12 Oct 2018 12:00:00 +0800</lastBuildDate><atom:link href="/tags/logging/index.xml" rel="self" type="application/rss+xml"/><item><title>ELK Stack 集中式日志管理</title><link>/blog/2018-10-12-%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7_elk/</link><pubDate>Fri, 12 Oct 2018 12:00:00 +0800</pubDate><guid>/blog/2018-10-12-%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7_elk/</guid><description>&lt;h1 id="what-is-elk-stack-"&gt;What is ELK Stack ? &lt;a href="#what-is-elk-stack-" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;ELK Stack，包括了ElasticSearch(E)、LogStash(L)、Kibana(K)。这三个产品都是由Elastic开发、维护的，其中：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;ElasticSearch是一个基于Lucence搜索引擎构建的NoSQL数据库；&lt;/li&gt;
+&lt;li&gt;LogStash是一个日志流水工具，它从不同的日志数据源读取日志信息、解析、转换，并导出到不同的数据接收组件，如ElasticSearch；&lt;/li&gt;
+&lt;li&gt;Kibana是一个在ElasticSearch之上的数据可视化工具，Kibana通过查询ElasticSearch获取数据并完成可视化。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;ELK Stack经常被用作集中式的日志管理工具，也可以被用于其他业务场景，这里就只从集中式日志管理来谈下。其中LogStash负责收集、解析日志，并转换成合适的形式之后导出到ElasticSearch，后者负责对日志数据进行存储并构建对应的索引。Kibana可以借助ES的强大搜索能力完成各种搜索操作，并通过数据可视化将隐藏在大量数据背后的信息以更加直观的形式展示给用户。&lt;/p&gt;
+&lt;h1 id="why-is-elk-so-popular-"&gt;Why is ELK So Popular ? &lt;a href="#why-is-elk-so-popular-" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Google Trends调查了开发者对ELK的关注度，可见大家对ELK是非常认可，这是因为ELK确实很大程度上解决了分布式服务环境下日志管理方面的问题。&lt;/p&gt;
+&lt;p&gt;&lt;img src="https://logz.io/wp-content/uploads/2018/08/image1-1024x650-1024x650.png" alt="ELK-Is-Popular"&gt;&lt;/p&gt;
+&lt;p&gt;在腾讯工作期间，公司内其实有一个同一日志系统ULS（Unified Logging System），但是其设计局限性很明显，从其协议字段就可以看出来（比如int类型的大命令字、小命令字），而且丢log情况特别严重，经常导致服务日志不完整，难以定位问题，难以对现网问题给出可信的判断。最终导致我们放弃了ULS的使用，转而自己搭建ELK进行日志管理。&lt;/p&gt;
+&lt;p&gt;之前在日志管理这个领域，Splunk’s企业级日志管理系统一直是领头羊，但是经过这么多年，它的功能没有跟上客户对它的预期，怎么对得起它昂贵的价格呢？小公司是很难接受的，因此Splunk’s日志管理系统的客户数量越来越少，现在ELK一个月的下载量就能超过Splunk’s日志管理系统的所有客户的数量，是不是很惊人！与Splunk’s日志管理系统相比，可能ELK功能没有它丰富，但是考虑到大家平时对日志管理方面的需求而言，已经绰绰有余了！ELK足够简单、健壮、廉价，因此非常值得选择。&lt;/p&gt;
+&lt;p&gt;而且从IT行业背景来看，开源理念已经深入人心，因此相对于那些闭源软件，大家更倾向于选择开源的软件产品，因为这意味着你可以阅读、修改它的代码，做到知根知底，甚至可以定制化开发。其实很多大公司，如Netflix、Facebook、Microsoft、LinkedIn、Cisco等等也是用ELK来对服务日志进行监控。&lt;/p&gt;
+&lt;h1 id="why-is-log-analysis-so-important-"&gt;Why Is Log Analysis So Important ? &lt;a href="#why-is-log-analysis-so-important-" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;现在越来越多的IT基础设施都开始了云化之路，如Amazon Web Services、Microsoft Azure、Google Cloud、AliYun等等，伴随着云的诞生和普及，日志管理平台就变得越来越迫切和重要了！&lt;/p&gt;
+&lt;p&gt;在基于云的基础设施中，精确地进行性能隔离是很难做的，特别是当系统性能负载高的时候。虚拟机的性能受母机的系统负载变化、环境问题、活跃用户数等影响可能会出现很不规律的波动，集群中单一节点出现失败是很司空见惯的事情。&lt;/p&gt;
+&lt;p&gt;日志管理系统可以监视这些云设施出现的问题，也能监控操作系统日志、应用程序日志等等，如监控Nginx、IIS等服务日志以便进行更好的技术优化和Web流量分析。借助于日志管理系统，运维工程师、系统管理员、站点可靠性工程师、开发人员都可以充分利用这些日志信息来作出更合理的决策。随着大数据时代的到来，企业也竞相开启云化之路，对于分布式环境下的日志管理，其重要性更加不言自明！&lt;/p&gt;
+&lt;h1 id="how-to-use-elk-stack-for-log-analysis-"&gt;How to Use ELK Stack for Log Analysis ? &lt;a href="#how-to-use-elk-stack-for-log-analysis-" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;ELK Stack主要是用于进行集中式日志管理，实现、维护生产级别的ELK Stack还需要一些其他的工作、组件支持，有关安装、部署ELK的信息将在后续章节进行描述。&lt;/p&gt;
+&lt;h1 id="elk-stack-architecture-"&gt;ELK Stack Architecture ? &lt;a href="#elk-stack-architecture-" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;ELK Stack中包含的组件其实不止ES、LogStash、Kibana，如还有Beats，beats主要负责日志收集，并将收集到的日志在LogStash中进行汇总、处理。在设计、实现这些组件的时候，考虑到了如何减少配置并让它们相互之间更好地进行协作的问题，因此实际部署的时候也比较简单。&lt;/p&gt;
+&lt;p&gt;如何搭建、部署你的专属ELK Stack其实还是要考虑使用场景的，对于一个小规模的开发环境而言，可以采用如下经典架构：&lt;/p&gt;
+&lt;p&gt;&lt;img src="https://logz.io/wp-content/uploads/2018/08/image21-1024x328.png" alt="ELK-Stack-Architecture"&gt;&lt;/p&gt;
+&lt;p&gt;然而，生产环境下拥有超大数据量规模的、复杂的流水线作业而言，日志管理系统架构中可能还需要引入一些额外的组件，如需要考虑伸缩性（Kafka、RabbitMQ、Redis），或者需要考虑安全（Nginx），如下图所示。&lt;/p&gt;
+&lt;p&gt;&lt;img src="https://logz.io/wp-content/uploads/2018/08/image6-1024x422.png" alt="ELK-Stack-Architecture-More"&gt;&lt;/p&gt;
+&lt;h1 id="how-to-install-elk-stack-"&gt;How to Install ELK Stack ? &lt;a href="#how-to-install-elk-stack-" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;ELK Stack的安装方式有多种，特别是考虑到在不同的操作系统、环境下进行安装。ELK可以安装在本地，也可以在云上部署，如使用Docker或者类似Ansible、Puppet、Chef之类的配置管理系统。ELK Stack也可以通过一个安装包的压缩包解压后安装。&lt;/p&gt;</description></item></channel></rss>

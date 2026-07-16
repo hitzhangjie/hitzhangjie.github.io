@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Cache Coherence on</title><link>/tags/cache-coherence/</link><description>Recent content in Cache Coherence on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 16 Jul 2026 20:00:00 +0800</lastBuildDate><atom:link href="/tags/cache-coherence/index.xml" rel="self" type="application/rss+xml"/><item><title>Intel LOCK 指令前缀：硬件原子性的基石</title><link>/blog/2026-07-16-intel-lock-instruction-prefix/</link><pubDate>Thu, 16 Jul 2026 20:00:00 +0800</pubDate><guid>/blog/2026-07-16-intel-lock-instruction-prefix/</guid><description>&lt;p&gt;多核时代，一个最基础的问题：两个 CPU 同时写同一个内存地址，谁能赢？答案依赖&lt;strong&gt;原子操作&lt;/strong&gt;。在 Intel x86 上，原子操作的硬件根基就是一条不起眼的前缀——&lt;code&gt;LOCK&lt;/code&gt;（&lt;code&gt;0xF0&lt;/code&gt;）。&lt;/p&gt;
+&lt;p&gt;这篇文章聚焦 LOCK 前缀本身：它做了什么、怎么做的、代价有多大，以及上层语言（Java、Go、C）的原子/屏障语义是如何最终&amp;quot;落地&amp;quot;到这条前缀上的。&lt;/p&gt;
+&lt;h2 id="背景为什么需要-lock"&gt;背景：为什么需要 LOCK？ &lt;a href="#%e8%83%8c%e6%99%af%e4%b8%ba%e4%bb%80%e4%b9%88%e9%9c%80%e8%a6%81-lock" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;看一个最简单的例子——两个线程同时执行 &lt;code&gt;counter++&lt;/code&gt;：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;线程 A: 读取 counter (100) → 加 1 → 写回 (101)
+线程 B: 读取 counter (100) → 加 1 → 写回 (101)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;如果没有原子性保证，两次自增最终可能得到 101 而不是 102。这是因为 &lt;code&gt;counter++&lt;/code&gt; 在指令层面是三条指令：读、改、写。如果这三步中间被另一个核插入，就产生了丢失更新。&lt;/p&gt;
+&lt;p&gt;LOCK 前缀解决的就是这个问题——&lt;strong&gt;它让读-改-写三个步骤&amp;quot;打包&amp;quot;成一个不可分割的整体&lt;/strong&gt;。&lt;/p&gt;
+&lt;h2 id="lock-前缀是什么"&gt;LOCK 前缀是什么？ &lt;a href="#lock-%e5%89%8d%e7%bc%80%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;LOCK 是 x86 指令的前缀字节（&lt;code&gt;0xF0&lt;/code&gt;），可以修饰特定的内存操作指令。被 LOCK 修饰的指令在执行期间：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;独占内存操作数所在的内存区域&lt;/strong&gt;（总线锁或缓存锁）&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;该指令的读-改-写成为一个原子事务&lt;/strong&gt;——期间任何其他总线主设备（其他 CPU 核、DMA 控制器等）都不能访问该内存区域&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;充当全内存屏障&lt;/strong&gt;——指令完成后，store buffer 被 drain，之前的 store 全局可见，之后的 load/store 不会被重排到 LOCK 指令之前&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;&lt;strong&gt;关键约束&lt;/strong&gt;：LOCK 只能修饰读-改-写指令（&lt;code&gt;ADD&lt;/code&gt;、&lt;code&gt;XCHG&lt;/code&gt;、&lt;code&gt;CMPXCHG&lt;/code&gt;、&lt;code&gt;INC&lt;/code&gt;、&lt;code&gt;DEC&lt;/code&gt;、&lt;code&gt;XADD&lt;/code&gt; 等），不能修饰 &lt;code&gt;MOV&lt;/code&gt;。尝试在 &lt;code&gt;MOV&lt;/code&gt; 前加 LOCK 会触发 &lt;code&gt;#UD&lt;/code&gt;（未定义指令异常）。&lt;code&gt;MOV&lt;/code&gt; 到内存只是写，没有&amp;quot;改&amp;quot;这一步，不存在中间状态需要保护。&lt;/p&gt;</description></item><item><title>Store Buffer、内存屏障与缓存一致性</title><link>/blog/2026-07-16-store-buffer-and-memory-barrier/</link><pubDate>Thu, 16 Jul 2026 18:41:37 +0800</pubDate><guid>/blog/2026-07-16-store-buffer-and-memory-barrier/</guid><description>&lt;p&gt;写一个变量，其他线程（或 CPU 核心）什么时候能看到？这个看似简单的问题，答案跨越了编译器优化、CPU 微架构、缓存一致性协议等多个层次。这篇文章尝试把这条链路串起来——从你写下一行 &lt;code&gt;*p = 1&lt;/code&gt; 开始，到另一个核读到新值为止，中间到底发生了什么。&lt;/p&gt;
+&lt;h2 id="c-volatile只管编译器不管硬件"&gt;C volatile：只管编译器，不管硬件 &lt;a href="#c-volatile%e5%8f%aa%e7%ae%a1%e7%bc%96%e8%af%91%e5%99%a8%e4%b8%8d%e7%ae%a1%e7%a1%ac%e4%bb%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;先从一个最常见的误区开始——C/C++ 中的 &lt;code&gt;volatile&lt;/code&gt; 能保证线程可见性吗？&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;不能。&lt;/strong&gt; &lt;code&gt;volatile&lt;/code&gt; 只做一件事：告诉编译器，不要把这个变量优化到寄存器里，每次读写都要生成真正的 load/store 指令。但它对 CPU 的 cache hierarchy 和 store buffer 完全透明。&lt;/p&gt;
+&lt;p&gt;一条 &lt;code&gt;*p = 1&lt;/code&gt; 对应的 &lt;code&gt;MOV&lt;/code&gt; 指令执行后，数据去了哪里？不是直接到内存，而是：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;CPU 流水线 → Store Buffer → L1 Cache → (通过缓存一致性协议扩散到其他核)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;C &lt;code&gt;volatile&lt;/code&gt; 只保证了第一步——编译器确实生成了 &lt;code&gt;MOV&lt;/code&gt; 指令。但这条指令执行后，值只是被写入了 store buffer。Store buffer 什么时候 drain 到 cache？不确定。在 drain 之前，这份数据没有被缓存一致性协议跟踪，其他核根本不知道这个写操作的存在。&lt;/p&gt;
+&lt;p&gt;这也是为什么 Linux 内核文档明确说 &amp;ldquo;volatile considered harmful&amp;rdquo;——内核中用 &lt;code&gt;volatile&lt;/code&gt; 做同步几乎永远是错的，必须搭配显式的 &lt;code&gt;smp_mb()&lt;/code&gt; / &lt;code&gt;smp_wmb()&lt;/code&gt; 才有意义。&lt;code&gt;volatile&lt;/code&gt; 在内核中的真正用途是 MMIO（设备寄存器访问），而不是线程同步。&lt;/p&gt;</description></item></channel></rss>

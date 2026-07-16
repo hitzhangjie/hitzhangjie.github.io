@@ -1,4 +1,38 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Write-Barrier on</title><link>/tags/write-barrier/</link><description>Recent content in Write-Barrier on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 17 Jun 2026 07:28:00 +0800</lastBuildDate><atom:link href="/tags/write-barrier/index.xml" rel="self" type="application/rss+xml"/><item><title>内存管理 - Go GC 写屏障演进</title><link>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%86%99%E5%B1%8F%E9%9A%9C%E6%BC%94%E8%BF%9B/</link><pubDate>Wed, 17 Jun 2026 07:28:00 +0800</pubDate><guid>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%86%99%E5%B1%8F%E9%9A%9C%E6%BC%94%E8%BF%9B/</guid><description>&lt;style&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Write Barrier on</title><link>/tags/write-barrier/</link><description>Recent content in Write Barrier on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 16 Jul 2026 20:20:00 +0800</lastBuildDate><atom:link href="/tags/write-barrier/index.xml" rel="self" type="application/rss+xml"/><item><title>Release-Acquire 语义：从锁的直觉到内存屏障的泛化</title><link>/blog/2026-07-16-release-acquire-semantics/</link><pubDate>Thu, 16 Jul 2026 20:20:00 +0800</pubDate><guid>/blog/2026-07-16-release-acquire-semantics/</guid><description>&lt;p&gt;理解写屏障（store-write barrier / smp_wmb）和读屏障（store-read barrier / smp_rmb）之后，再看 Java、Go、C++ 的并发编程资料，经常会碰到另一套术语：&lt;strong&gt;release&lt;/strong&gt; 和 &lt;strong&gt;acquire&lt;/strong&gt;。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Java &lt;code&gt;volatile&lt;/code&gt; 变量的写被描述为&amp;quot;具有 release 语义&amp;quot;&lt;/li&gt;
+&lt;li&gt;Java &lt;code&gt;volatile&lt;/code&gt; 变量的读被描述为&amp;quot;具有 acquire 语义&amp;quot;&lt;/li&gt;
+&lt;li&gt;C++ &lt;code&gt;std::atomic&lt;/code&gt; 的 &lt;code&gt;memory_order_release&lt;/code&gt;、&lt;code&gt;memory_order_acquire&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Rust 的 &lt;code&gt;Ordering::Release&lt;/code&gt;、&lt;code&gt;Ordering::Acquire&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;甚至直接说&amp;quot;volatile 的语义是 &lt;strong&gt;release-acquire&lt;/strong&gt;&amp;quot;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;如果你对内存屏障有基础认知，初次看到这些词会感到困惑——为什么叫 release？为什么叫 acquire？它们跟读写屏障是什么关系？&lt;/p&gt;
+&lt;p&gt;本文就从&lt;strong&gt;互斥锁&lt;/strong&gt;的直觉出发，把这些命名彻底讲清楚。&lt;/p&gt;
+&lt;h2 id="锁视角release-和-acquire-的原型"&gt;锁视角：release 和 acquire 的原型 &lt;a href="#%e9%94%81%e8%a7%86%e8%a7%92release-%e5%92%8c-acquire-%e7%9a%84%e5%8e%9f%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;先忘掉内存屏障，回到最熟悉的并发原语——互斥锁（mutex）：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-cpp"&gt;// Thread A // Thread B
+lock.acquire() ...
+data.x = 42 ...
+data.y = 99 ...
+lock.release() lock.acquire()
+read(data.x) // 保证看到 42
+read(data.y) // 保证看到 99
+lock.release()
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;两个关键操作的含义&lt;/strong&gt;：&lt;/p&gt;</description></item><item><title>写屏障与读屏障：Store Buffer 与 Invalidate Queue 的双重挑战</title><link>/blog/2026-07-16-write-barrier-and-read-barrier/</link><pubDate>Thu, 16 Jul 2026 20:10:00 +0800</pubDate><guid>/blog/2026-07-16-write-barrier-and-read-barrier/</guid><description>&lt;p&gt;多核 CPU 中，一个核心的写操作什么时候能被另一个核心看到？&lt;a href="2026-07-16-store-buffer-and-memory-barrier.md"&gt;上一篇文章&lt;/a&gt; 梳理了 Store Buffer 在这条链路中的作用。但光有 Store Buffer 还不够——另一个同样关键的硬件机制 &lt;strong&gt;Invalidate Queue&lt;/strong&gt; 在文章中没有展开。本文把这两个缓冲放在一起，重点讲清楚&lt;strong&gt;写屏障&lt;/strong&gt;和&lt;strong&gt;读屏障&lt;/strong&gt;分别解决什么问题，以及为什么经典的&amp;quot;生产者-消费者&amp;quot;场景必须两者配合。&lt;/p&gt;
+&lt;h2 id="store-buffer-回顾为什么写操作延迟可见"&gt;Store Buffer 回顾：为什么写操作&amp;quot;延迟可见&amp;quot;？ &lt;a href="#store-buffer-%e5%9b%9e%e9%a1%be%e4%b8%ba%e4%bb%80%e4%b9%88%e5%86%99%e6%93%8d%e4%bd%9c%e5%bb%b6%e8%bf%9f%e5%8f%af%e8%a7%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;先快速回顾 Store Buffer。当一个 CPU 核心执行 &lt;code&gt;x = 1&lt;/code&gt; 时，如果 &lt;code&gt;x&lt;/code&gt; 对应的缓存行还不在本核心的 Exclusive/Modified 状态，CPU 不会阻塞等待——它把写操作丢进 Store Buffer，然后继续执行后续指令。Store Buffer 在后台异步申请缓存行权限，拿到后再把数据刷入 Cache。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;CPU Core 0 CPU Core 1
+┌─────────────┐ ┌─────────────┐
+│ store x=1 │ │ │
+│ ↓ │ │ │
+│ ┌─────────┐ │ ──invalidate──→ │ ┌─────────┐ │
+│ │Store Buf│ │ │ │ Cache │ │
+│ │ x = 1 │ │ │ │ x = 0 │ │
+│ └─────────┘ │ │ └─────────┘ │
+└─────────────┘ └─────────────┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;核心问题&lt;/strong&gt;：本核心能通过 store forwarding 看到自己 Store Buffer 中的新值，但&lt;strong&gt;其他核心看不到&lt;/strong&gt;，直到数据被刷入 Cache 并进入缓存一致性协议的管辖范围。&lt;/p&gt;</description></item><item><title>内存管理 - Go GC 写屏障演进</title><link>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%86%99%E5%B1%8F%E9%9A%9C%E6%BC%94%E8%BF%9B/</link><pubDate>Wed, 17 Jun 2026 07:28:00 +0800</pubDate><guid>/blog/2026-06-17-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_gogc%E5%86%99%E5%B1%8F%E9%9A%9C%E6%BC%94%E8%BF%9B/</guid><description>&lt;style&gt;
 .iframe-container {
 position: relative;
 height: 100vh;

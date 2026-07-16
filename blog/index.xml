@@ -1,4 +1,92 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blog on</title><link>/blog/</link><description>Recent content in Blog on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:49:55 +0000</lastBuildDate><atom:link href="/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>系统测试：Benchmark+性能测试+可用性测试+安全性测试+BVT测试</title><link>/blog/2020-07-01-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/</link><pubDate>Mon, 13 Jul 2026 20:30:01 +0800</pubDate><guid>/blog/2020-07-01-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/</guid><description>&lt;style type="text/css" rel="stylesheet"&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blog on</title><link>/blog/</link><description>Recent content in Blog on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:49:55 +0000</lastBuildDate><atom:link href="/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>Release-Acquire 语义：从锁的直觉到内存屏障的泛化</title><link>/blog/2026-07-16-release-acquire-semantics/</link><pubDate>Thu, 16 Jul 2026 20:20:00 +0800</pubDate><guid>/blog/2026-07-16-release-acquire-semantics/</guid><description>&lt;p&gt;理解写屏障（store-write barrier / smp_wmb）和读屏障（store-read barrier / smp_rmb）之后，再看 Java、Go、C++ 的并发编程资料，经常会碰到另一套术语：&lt;strong&gt;release&lt;/strong&gt; 和 &lt;strong&gt;acquire&lt;/strong&gt;。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Java &lt;code&gt;volatile&lt;/code&gt; 变量的写被描述为&amp;quot;具有 release 语义&amp;quot;&lt;/li&gt;
+&lt;li&gt;Java &lt;code&gt;volatile&lt;/code&gt; 变量的读被描述为&amp;quot;具有 acquire 语义&amp;quot;&lt;/li&gt;
+&lt;li&gt;C++ &lt;code&gt;std::atomic&lt;/code&gt; 的 &lt;code&gt;memory_order_release&lt;/code&gt;、&lt;code&gt;memory_order_acquire&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Rust 的 &lt;code&gt;Ordering::Release&lt;/code&gt;、&lt;code&gt;Ordering::Acquire&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;甚至直接说&amp;quot;volatile 的语义是 &lt;strong&gt;release-acquire&lt;/strong&gt;&amp;quot;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;如果你对内存屏障有基础认知，初次看到这些词会感到困惑——为什么叫 release？为什么叫 acquire？它们跟读写屏障是什么关系？&lt;/p&gt;
+&lt;p&gt;本文就从&lt;strong&gt;互斥锁&lt;/strong&gt;的直觉出发，把这些命名彻底讲清楚。&lt;/p&gt;
+&lt;h2 id="锁视角release-和-acquire-的原型"&gt;锁视角：release 和 acquire 的原型 &lt;a href="#%e9%94%81%e8%a7%86%e8%a7%92release-%e5%92%8c-acquire-%e7%9a%84%e5%8e%9f%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;先忘掉内存屏障，回到最熟悉的并发原语——互斥锁（mutex）：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-cpp"&gt;// Thread A // Thread B
+lock.acquire() ...
+data.x = 42 ...
+data.y = 99 ...
+lock.release() lock.acquire()
+read(data.x) // 保证看到 42
+read(data.y) // 保证看到 99
+lock.release()
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;两个关键操作的含义&lt;/strong&gt;：&lt;/p&gt;</description></item><item><title>写屏障与读屏障：Store Buffer 与 Invalidate Queue 的双重挑战</title><link>/blog/2026-07-16-write-barrier-and-read-barrier/</link><pubDate>Thu, 16 Jul 2026 20:10:00 +0800</pubDate><guid>/blog/2026-07-16-write-barrier-and-read-barrier/</guid><description>&lt;p&gt;多核 CPU 中，一个核心的写操作什么时候能被另一个核心看到？&lt;a href="2026-07-16-store-buffer-and-memory-barrier.md"&gt;上一篇文章&lt;/a&gt; 梳理了 Store Buffer 在这条链路中的作用。但光有 Store Buffer 还不够——另一个同样关键的硬件机制 &lt;strong&gt;Invalidate Queue&lt;/strong&gt; 在文章中没有展开。本文把这两个缓冲放在一起，重点讲清楚&lt;strong&gt;写屏障&lt;/strong&gt;和&lt;strong&gt;读屏障&lt;/strong&gt;分别解决什么问题，以及为什么经典的&amp;quot;生产者-消费者&amp;quot;场景必须两者配合。&lt;/p&gt;
+&lt;h2 id="store-buffer-回顾为什么写操作延迟可见"&gt;Store Buffer 回顾：为什么写操作&amp;quot;延迟可见&amp;quot;？ &lt;a href="#store-buffer-%e5%9b%9e%e9%a1%be%e4%b8%ba%e4%bb%80%e4%b9%88%e5%86%99%e6%93%8d%e4%bd%9c%e5%bb%b6%e8%bf%9f%e5%8f%af%e8%a7%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;先快速回顾 Store Buffer。当一个 CPU 核心执行 &lt;code&gt;x = 1&lt;/code&gt; 时，如果 &lt;code&gt;x&lt;/code&gt; 对应的缓存行还不在本核心的 Exclusive/Modified 状态，CPU 不会阻塞等待——它把写操作丢进 Store Buffer，然后继续执行后续指令。Store Buffer 在后台异步申请缓存行权限，拿到后再把数据刷入 Cache。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;CPU Core 0 CPU Core 1
+┌─────────────┐ ┌─────────────┐
+│ store x=1 │ │ │
+│ ↓ │ │ │
+│ ┌─────────┐ │ ──invalidate──→ │ ┌─────────┐ │
+│ │Store Buf│ │ │ │ Cache │ │
+│ │ x = 1 │ │ │ │ x = 0 │ │
+│ └─────────┘ │ │ └─────────┘ │
+└─────────────┘ └─────────────┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;核心问题&lt;/strong&gt;：本核心能通过 store forwarding 看到自己 Store Buffer 中的新值，但&lt;strong&gt;其他核心看不到&lt;/strong&gt;，直到数据被刷入 Cache 并进入缓存一致性协议的管辖范围。&lt;/p&gt;</description></item><item><title>Intel LOCK 指令前缀：硬件原子性的基石</title><link>/blog/2026-07-16-intel-lock-instruction-prefix/</link><pubDate>Thu, 16 Jul 2026 20:00:00 +0800</pubDate><guid>/blog/2026-07-16-intel-lock-instruction-prefix/</guid><description>&lt;p&gt;多核时代，一个最基础的问题：两个 CPU 同时写同一个内存地址，谁能赢？答案依赖&lt;strong&gt;原子操作&lt;/strong&gt;。在 Intel x86 上，原子操作的硬件根基就是一条不起眼的前缀——&lt;code&gt;LOCK&lt;/code&gt;（&lt;code&gt;0xF0&lt;/code&gt;）。&lt;/p&gt;
+&lt;p&gt;这篇文章聚焦 LOCK 前缀本身：它做了什么、怎么做的、代价有多大，以及上层语言（Java、Go、C）的原子/屏障语义是如何最终&amp;quot;落地&amp;quot;到这条前缀上的。&lt;/p&gt;
+&lt;h2 id="背景为什么需要-lock"&gt;背景：为什么需要 LOCK？ &lt;a href="#%e8%83%8c%e6%99%af%e4%b8%ba%e4%bb%80%e4%b9%88%e9%9c%80%e8%a6%81-lock" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;看一个最简单的例子——两个线程同时执行 &lt;code&gt;counter++&lt;/code&gt;：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;线程 A: 读取 counter (100) → 加 1 → 写回 (101)
+线程 B: 读取 counter (100) → 加 1 → 写回 (101)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;如果没有原子性保证，两次自增最终可能得到 101 而不是 102。这是因为 &lt;code&gt;counter++&lt;/code&gt; 在指令层面是三条指令：读、改、写。如果这三步中间被另一个核插入，就产生了丢失更新。&lt;/p&gt;
+&lt;p&gt;LOCK 前缀解决的就是这个问题——&lt;strong&gt;它让读-改-写三个步骤&amp;quot;打包&amp;quot;成一个不可分割的整体&lt;/strong&gt;。&lt;/p&gt;
+&lt;h2 id="lock-前缀是什么"&gt;LOCK 前缀是什么？ &lt;a href="#lock-%e5%89%8d%e7%bc%80%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;LOCK 是 x86 指令的前缀字节（&lt;code&gt;0xF0&lt;/code&gt;），可以修饰特定的内存操作指令。被 LOCK 修饰的指令在执行期间：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;独占内存操作数所在的内存区域&lt;/strong&gt;（总线锁或缓存锁）&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;该指令的读-改-写成为一个原子事务&lt;/strong&gt;——期间任何其他总线主设备（其他 CPU 核、DMA 控制器等）都不能访问该内存区域&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;充当全内存屏障&lt;/strong&gt;——指令完成后，store buffer 被 drain，之前的 store 全局可见，之后的 load/store 不会被重排到 LOCK 指令之前&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;&lt;strong&gt;关键约束&lt;/strong&gt;：LOCK 只能修饰读-改-写指令（&lt;code&gt;ADD&lt;/code&gt;、&lt;code&gt;XCHG&lt;/code&gt;、&lt;code&gt;CMPXCHG&lt;/code&gt;、&lt;code&gt;INC&lt;/code&gt;、&lt;code&gt;DEC&lt;/code&gt;、&lt;code&gt;XADD&lt;/code&gt; 等），不能修饰 &lt;code&gt;MOV&lt;/code&gt;。尝试在 &lt;code&gt;MOV&lt;/code&gt; 前加 LOCK 会触发 &lt;code&gt;#UD&lt;/code&gt;（未定义指令异常）。&lt;code&gt;MOV&lt;/code&gt; 到内存只是写，没有&amp;quot;改&amp;quot;这一步，不存在中间状态需要保护。&lt;/p&gt;</description></item><item><title>指令重排序：编译器与 CPU 的"合法作弊"艺术</title><link>/blog/2026-07-16-instruction-reordering/</link><pubDate>Thu, 16 Jul 2026 19:00:00 +0800</pubDate><guid>/blog/2026-07-16-instruction-reordering/</guid><description>&lt;p&gt;现代 CPU 和编译器为了让程序跑得更快，会在背后做一件事：&lt;strong&gt;调整指令的执行顺序&lt;/strong&gt;。只要最终结果看起来和&amp;quot;按代码顺序执行&amp;quot;一样，中间怎么排是它们说了算。&lt;/p&gt;
+&lt;p&gt;这听起来像作弊，但实际上是经过严格数学验证的合法优化。这篇文章就来拆解：谁在做重排序、为什么要做、依据什么规则来做、以及不同的 CPU 架构到底在哪些地方&amp;quot;放了水&amp;quot;。&lt;/p&gt;
+&lt;h2 id="两层重排序编译器--cpu"&gt;两层重排序：编译器 + CPU &lt;a href="#%e4%b8%a4%e5%b1%82%e9%87%8d%e6%8e%92%e5%ba%8f%e7%bc%96%e8%af%91%e5%99%a8--cpu" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;指令重排序发生在两个层面：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;源代码
+↓
+编译器优化重排（静态，编译期）
+↓
+CPU 乱序执行重排（动态，运行期）
+↓
+最终执行顺序
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;编译器重排序&lt;/strong&gt;：编译器在做优化（如寄存器分配、公共子表达式消除、指令调度）时，可能会调整生成的机器指令顺序。只要不改变单线程下的程序语义，怎么排都行。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;CPU 重排序&lt;/strong&gt;：现代处理器几乎都是乱序执行（Out-of-Order Execution）的。取指、译码后的指令进入保留站（Reservation Station），操作数就绪的就发射执行，不管它在代码里的先后位置。此外，store buffer 的存在也让写操作对其他核的可见时机变得不确定。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;关于 store buffer 机制以及它如何影响跨核可见性，已在&lt;a href="/blog/2026-07-16-store-buffer-and-memory-barrier/"&gt;《Store Buffer、内存屏障与缓存一致性》&lt;/a&gt;中详细讨论，本文更聚焦于&amp;quot;重排序的规则&amp;quot;本身。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="铁律as-if-serial-语义"&gt;铁律：As-If Serial 语义 &lt;a href="#%e9%93%81%e5%be%8bas-if-serial-%e8%af%ad%e4%b9%89" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;无论编译器还是 CPU，重排序都遵循一个基本原则：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;在单线程（或单个执行上下文）内，重排序后的执行结果必须与原程序顺序执行的结果完全一致。&lt;/strong&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;这就是 &lt;strong&gt;as-if serial&lt;/strong&gt; 语义，也叫程序顺序语义（Program Order Semantics）。它是所有重排序优化的底线——编译器或 CPU 可以随意调整顺序，但只要你站在这个线程内部观察，一切必须&amp;quot;看起来&amp;quot;是按代码顺序发生的。&lt;/p&gt;
+&lt;p&gt;这个铁律意味着：&lt;strong&gt;重排序不能破坏数据依赖关系&lt;/strong&gt;。&lt;/p&gt;
+&lt;h2 id="数据依赖哪些不能重排"&gt;数据依赖：哪些不能重排 &lt;a href="#%e6%95%b0%e6%8d%ae%e4%be%9d%e8%b5%96%e5%93%aa%e4%ba%9b%e4%b8%8d%e8%83%bd%e9%87%8d%e6%8e%92" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;指令之间的依赖关系分为三类：&lt;/p&gt;
+&lt;h3 id="真依赖rawread-after-write"&gt;真依赖：RAW（Read After Write） &lt;a href="#%e7%9c%9f%e4%be%9d%e8%b5%96rawread-after-write" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;① x = 42 // 写
+② y = x + 1 // 读 x 的值
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;指令 ② 必须等指令 ① 完成才能得到正确结果。&lt;strong&gt;RAW 依赖不可重排&lt;/strong&gt;——一旦写操作的值还没产生就去读，读到的就是垃圾。这是硬件级别的硬约束，CPU 的乱序引擎会自动识别并等待。&lt;/p&gt;</description></item><item><title>Store Buffer、内存屏障与缓存一致性</title><link>/blog/2026-07-16-store-buffer-and-memory-barrier/</link><pubDate>Thu, 16 Jul 2026 18:41:37 +0800</pubDate><guid>/blog/2026-07-16-store-buffer-and-memory-barrier/</guid><description>&lt;p&gt;写一个变量，其他线程（或 CPU 核心）什么时候能看到？这个看似简单的问题，答案跨越了编译器优化、CPU 微架构、缓存一致性协议等多个层次。这篇文章尝试把这条链路串起来——从你写下一行 &lt;code&gt;*p = 1&lt;/code&gt; 开始，到另一个核读到新值为止，中间到底发生了什么。&lt;/p&gt;
+&lt;h2 id="c-volatile只管编译器不管硬件"&gt;C volatile：只管编译器，不管硬件 &lt;a href="#c-volatile%e5%8f%aa%e7%ae%a1%e7%bc%96%e8%af%91%e5%99%a8%e4%b8%8d%e7%ae%a1%e7%a1%ac%e4%bb%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;先从一个最常见的误区开始——C/C++ 中的 &lt;code&gt;volatile&lt;/code&gt; 能保证线程可见性吗？&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;不能。&lt;/strong&gt; &lt;code&gt;volatile&lt;/code&gt; 只做一件事：告诉编译器，不要把这个变量优化到寄存器里，每次读写都要生成真正的 load/store 指令。但它对 CPU 的 cache hierarchy 和 store buffer 完全透明。&lt;/p&gt;
+&lt;p&gt;一条 &lt;code&gt;*p = 1&lt;/code&gt; 对应的 &lt;code&gt;MOV&lt;/code&gt; 指令执行后，数据去了哪里？不是直接到内存，而是：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;CPU 流水线 → Store Buffer → L1 Cache → (通过缓存一致性协议扩散到其他核)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;C &lt;code&gt;volatile&lt;/code&gt; 只保证了第一步——编译器确实生成了 &lt;code&gt;MOV&lt;/code&gt; 指令。但这条指令执行后，值只是被写入了 store buffer。Store buffer 什么时候 drain 到 cache？不确定。在 drain 之前，这份数据没有被缓存一致性协议跟踪，其他核根本不知道这个写操作的存在。&lt;/p&gt;
+&lt;p&gt;这也是为什么 Linux 内核文档明确说 &amp;ldquo;volatile considered harmful&amp;rdquo;——内核中用 &lt;code&gt;volatile&lt;/code&gt; 做同步几乎永远是错的，必须搭配显式的 &lt;code&gt;smp_mb()&lt;/code&gt; / &lt;code&gt;smp_wmb()&lt;/code&gt; 才有意义。&lt;code&gt;volatile&lt;/code&gt; 在内核中的真正用途是 MMIO（设备寄存器访问），而不是线程同步。&lt;/p&gt;</description></item><item><title>系统测试：Benchmark+性能测试+可用性测试+安全性测试+BVT测试</title><link>/blog/2020-07-01-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/</link><pubDate>Mon, 13 Jul 2026 20:30:01 +0800</pubDate><guid>/blog/2020-07-01-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/</guid><description>&lt;style type="text/css" rel="stylesheet"&gt;
 /* Three image containers (use 25% for four, and 50% for two, etc) */
 .column {
 float: left;
@@ -6355,7 +6443,13 @@ KiB Mem : 16171652 total, 3413496 free, 450324 used, 12307832 buff/cache
 KiB Swap: 0 total, 0 free, 0 used. 15009260 avail Mem
 PID USER PR NI VIRT RES SHR S %CPU %MEM TIME+ COMMAND
 2675 root 20 0 25968 140 0 S 0.0 0.0 0:00.00 main
-&lt;/code&gt;&lt;/pre&gt;</description></item><item><title>go gpm scheduler case 2</title><link>/blog/2019-03-18-go-gpm-scheduler-case-2/</link><pubDate>Mon, 18 Mar 2019 12:00:00 +0800</pubDate><guid>/blog/2019-03-18-go-gpm-scheduler-case-2/</guid><description>&lt;p&gt;在双核四线程机器上测试，如下代码，程序不会正常执行结束，这也是探索go runtime scheduler的一个好例子：&lt;/p&gt;
+&lt;/code&gt;&lt;/pre&gt;</description></item><item><title>Bash Job Control：前后台进程管理</title><link>/blog/2019-03-21-admin-jobs-control/</link><pubDate>Thu, 21 Mar 2019 14:32:38 +0800</pubDate><guid>/blog/2019-03-21-admin-jobs-control/</guid><description>&lt;h1 id="how-to-use-bashs-job-control-to-manage-foreground-and-background-processes"&gt;How To Use Bash&amp;rsquo;s Job Control to Manage Foreground and Background Processes &lt;a href="#how-to-use-bashs-job-control-to-manage-foreground-and-background-processes" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Posted October 5, 2015 198.6kviews&lt;/p&gt;
+&lt;p&gt;&lt;a href="https://www.digitalocean.com/community/tags/linux-basics?type=tutorials"&gt;LINUX BASICS&lt;/a&gt; &lt;a href="https://www.digitalocean.com/community/tags/linux-commands?type=tutorials"&gt;LINUX COMMANDS&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Author: Justin Ellingwood&lt;/p&gt;
+&lt;h3 id="introduction"&gt;Introduction &lt;a href="#introduction" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;In this guide, we&amp;rsquo;ll talk about how &lt;code&gt;bash&lt;/code&gt;, the Linux system, and your terminal come together to offer process and job control. In a &lt;a href="https://www.digitalocean.com/community/tutorials/how-to-use-ps-kill-and-nice-to-manage-processes-in-linux"&gt;previous guide&lt;/a&gt;, we discussed how the &lt;code&gt;ps&lt;/code&gt;, &lt;code&gt;kill&lt;/code&gt;, and &lt;code&gt;nice&lt;/code&gt; commands can be used to control processes on your system.&lt;/p&gt;
+&lt;p&gt;This article will focus on managing foreground and background processes and will demonstrate how to leverage your shell&amp;rsquo;s job control functions to gain more flexibility in how you run commands.&lt;/p&gt;</description></item><item><title>go gpm scheduler case 2</title><link>/blog/2019-03-18-go-gpm-scheduler-case-2/</link><pubDate>Mon, 18 Mar 2019 12:00:00 +0800</pubDate><guid>/blog/2019-03-18-go-gpm-scheduler-case-2/</guid><description>&lt;p&gt;在双核四线程机器上测试，如下代码，程序不会正常执行结束，这也是探索go runtime scheduler的一个好例子：&lt;/p&gt;
 &lt;pre&gt;&lt;code class="language-go"&gt;package main
 import &amp;quot;fmt&amp;quot;
 import &amp;quot;time&amp;quot;
@@ -6378,7 +6472,53 @@ fmt.Println(&amp;quot;x =&amp;quot;, x)
 &lt;p&gt;这里runtime.GOMAXPROCS(0)返回值为4，dlv调试可以看到也确实创建了4个协程main.main.func1，其中两个正在调度，thread 676143, thread 676142，而另外两个协程则没有分配调度它的线程，即还没有开始调度。也好理解，因为每个func1协程都是在死循环里面执行密集计算，没有让度cpu的时机。&lt;/p&gt;
 &lt;p&gt;&lt;img src="assets/go-gpm-scheduler-case-2/image-20190318142345866.png" alt="image-20190318142345866"&gt;&lt;/p&gt;
 &lt;p&gt;另外main.main这个是main goroutine，它跑在独立的线程thread 676049中。但是因为我们设置的runtime.GOMAXPROCS(0)为默认值4，表示新创建的goroutine可以和main goroutine共享相同的cpu资源P，也就是允许其他goroutine和main goroutine抢占P运行。那func1对应的goroutine占着cpu资源不放，main goroutine也就获得不了可继续调度的机会了。所以上述代码永远不会结束！&lt;/p&gt;
-&lt;p&gt;如果把threads := GOMAXPROCS(0) - 1，设置为物理核数数减1，那么新创建的协程就不会占满所有的P，main goroutine就可以在空闲的P上获得被调度的机会。程序就可以正常执行结束。&lt;/p&gt;</description></item><item><title>*Go Data Structures: Interfaces*</title><link>/blog/2019-03-03-go-interface/</link><pubDate>Sun, 03 Mar 2019 12:00:00 +0800</pubDate><guid>/blog/2019-03-03-go-interface/</guid><description>&lt;h1 id="go-data-structures-interfaces"&gt;&lt;em&gt;Go Data Structures: Interfaces&lt;/em&gt; &lt;a href="#go-data-structures-interfaces" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;如果把threads := GOMAXPROCS(0) - 1，设置为物理核数数减1，那么新创建的协程就不会占满所有的P，main goroutine就可以在空闲的P上获得被调度的机会。程序就可以正常执行结束。&lt;/p&gt;</description></item><item><title>laws of go reflection</title><link>/blog/2019-03-03-laws-of-go-reflection/</link><pubDate>Sun, 03 Mar 2019 20:51:07 +0800</pubDate><guid>/blog/2019-03-03-laws-of-go-reflection/</guid><description>&lt;h3 id="the-laws-of-reflection"&gt;&lt;a href="https://blog.golang.org/laws-of-reflection"&gt;The Laws of Reflection&lt;/a&gt; &lt;a href="#the-laws-of-reflection" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;By Rob Pike 6 September 2011&lt;/p&gt;
+&lt;h4 id="introduction"&gt;Introduction &lt;a href="#introduction" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;Reflection in computing is the ability of a program to examine its own structure, particularly through types; it&amp;rsquo;s a form of meta programming. It&amp;rsquo;s also a great source of confusion.&lt;/p&gt;
+&lt;p&gt;In this article we attempt to clarify things by explaining how reflection works in Go. Each language&amp;rsquo;s reflection model is different (and many languages don&amp;rsquo;t support it at all), but this article is about Go, so for the rest of this article the word &amp;ldquo;reflection&amp;rdquo; should be taken to mean &amp;ldquo;reflection in Go&amp;rdquo;.&lt;/p&gt;</description></item><item><title>go反射：any与reflect.Value+Type之间的转换</title><link>/blog/2019-03-03-go-reflect-diagram/</link><pubDate>Sun, 03 Mar 2019 19:44:43 +0800</pubDate><guid>/blog/2019-03-03-go-reflect-diagram/</guid><description>&lt;h1 id="1-go反射转换关系"&gt;1 go反射转换关系 &lt;a href="#1-go%e5%8f%8d%e5%b0%84%e8%bd%ac%e6%8d%a2%e5%85%b3%e7%b3%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;下面是go reflect相关的Variable、reflect.Type、reflect.Value之间的转换关系，三者之间是可以互相转换的。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/go-reflect-diagram/go-reflect.png" alt="go-reflect"&gt;&lt;/p&gt;
+&lt;h1 id="2-go反射api使用"&gt;2 go反射api使用 &lt;a href="#2-go%e5%8f%8d%e5%b0%84api%e4%bd%bf%e7%94%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;我们结合上述转换图来进行详细说明go reflect api的使用。&lt;/p&gt;
+&lt;h2 id="21-variable--reflecttype"&gt;2.1 Variable &amp;amp; reflect.Type &lt;a href="#21-variable--reflecttype" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="211-variable---reflecttype"&gt;2.1.1 Variable -&amp;gt; reflect.Type &lt;a href="#211-variable---reflecttype" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;rt := reflect.TypeOf(v)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="212-reflecttype---variable"&gt;2.1.2 reflect.Type -&amp;gt; Variable &lt;a href="#212-reflecttype---variable" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;从reflect.Type到Variable，即通过反射类型直接构造一个变量出来也是可以的，但是中间转换过程涉及到从reflect.Type到reflect.Value，然后再从reflect.Value解引用得到Variable，因此，上图转换图中采用了虚线的形式。&lt;/p&gt;
+&lt;p&gt;reflect.New(rt reflect.Type)会创建一个指定类型的变量，并初始化未对应的0值。如下面创建了一个值为0的int变量v0。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;v : = 0
+rt := reflect.TypeOf(v)
+v0 := reflect.New(rt)
+fmt.Println(*(v0.Interface().(*int)))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;reflect.NewAt(rt reflect.Type, ptr unsafe.Pointer)则是用ptr指向的值创建一个变量。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;v := 0
+rt := reflect.TypeOf(v)
+vv := reflect.NewAt(rt, unsafe.Pointer(&amp;amp;v))
+fmt.Println(*(vv.Interface().(*int)))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;reflect.New()\NewAt()返回的都是指向变量的指针，通过这个值可以修改新创建的变量内容。还需要注意的是，reflect.NewAt(rt, ptr)创建的变量，其实与ptr指向的变量是相同的。通过NewAt返回的指针可以对原来变量值进行修改。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;*reflect.NewAt(rt, unsafe.Pointer(&amp;amp;v)).Interface().(*int) = 12345
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;难道不能像CC++中那样直接(int *)(ptr) = 12345吗，还需要先通过反射得到一个变量。go里面unsafe.Pointer是一个类似CC++中void*类型的指针，也是可以通过*(*int)(unsafe.Pointer(ptr))这样的运算来完成赋值的，问题是我们这里描述的反射的情景，我们是要在运行时动态地完成类型判断、赋值，写代码的时候可能还不知道ptr是*int类型的。&lt;/p&gt;</description></item><item><title>Learning to Use Go Reflection — Part 2</title><link>/blog/2019-03-03-learn-to-use-go-reflection-p2/</link><pubDate>Sun, 03 Mar 2019 15:33:55 +0800</pubDate><guid>/blog/2019-03-03-learn-to-use-go-reflection-p2/</guid><description>&lt;h1 id="learning-to-use-go-reflectionpart-2"&gt;Learning to Use Go Reflection — Part 2 &lt;a href="#learning-to-use-go-reflectionpart-2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;a href="https://medium.com/@jon_43067?source=post_header_lockup"&gt;&lt;img src="assets/learn-to-use-go-reflection-p2/go-reflect-author.jpeg" alt="Go to the profile of Jon Bodner"&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;[Jon Bodner Jan 4, 2018&lt;/p&gt;
+&lt;p&gt;In &lt;a href="https://medium.com/capital-one-developers/learning-to-use-go-reflection-822a0aed74b7"&gt;my last blog post,&lt;/a&gt; we looked at Go’s reflection package and went through some quick demonstrations of the features it enables. What wasn’t clear is when these features would be useful. Everything we did with reflection could have been implemented without it — and it would have been more efficient and less verbose. But we also know that the Go team doesn’t like to include features for their own sake. So, what are the things that reflection enables?&lt;/p&gt;</description></item><item><title>Learning to Use Go Reflection</title><link>/blog/2019-03-03-learn-to-use-go-reflection-p1/</link><pubDate>Sun, 03 Mar 2019 15:10:41 +0800</pubDate><guid>/blog/2019-03-03-learn-to-use-go-reflection-p1/</guid><description>&lt;h1 id="learning-to-use-go-reflection"&gt;Learning to Use Go Reflection &lt;a href="#learning-to-use-go-reflection" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;a href="https://medium.com/@jon_43067?source=post_header_lockup"&gt;&lt;img src="assets/learn-to-use-go-reflection-p1/go-reflect-author.jpeg" alt="Go to the profile of Jon Bodner"&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href="https://medium.com/@jon_43067"&gt;Jon Bodner&lt;/a&gt; Dec 13, 2017&lt;/p&gt;
+&lt;h3 id="whats-reflection"&gt;&lt;strong&gt;What’s Reflection?&lt;/strong&gt; &lt;a href="#whats-reflection" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Most of the time, variables, types, and functions in Go are pretty straightforward. When you need a type, you define a type:&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type Foo struct {
+A int
+B string
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;When you need a variable, you define a variable:&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;var x Foo
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And when you need a function, you define a function:&lt;/p&gt;</description></item><item><title>*Go Data Structures: Interfaces*</title><link>/blog/2019-03-03-go-interface/</link><pubDate>Sun, 03 Mar 2019 12:00:00 +0800</pubDate><guid>/blog/2019-03-03-go-interface/</guid><description>&lt;h1 id="go-data-structures-interfaces"&gt;&lt;em&gt;Go Data Structures: Interfaces&lt;/em&gt; &lt;a href="#go-data-structures-interfaces" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;&lt;a href="https://swtch.com/~rsc/"&gt;&lt;em&gt;Russ Cox&lt;/em&gt;&lt;/a&gt; Posted on Tuesday, December 1, 2009.&lt;/p&gt;
 &lt;p&gt;的lliGo&amp;rsquo;s interfaces—static, checked at compile time, dynamic when asked for—are, for me, the most exciting part of Go from a language design point of view. If I could export one feature of Go into other languages, it would be interfaces.&lt;/p&gt;
 &lt;p&gt;This post is my take on the implementation of interface values in the “gc” compilers: 6g, 8g, and 5g. Over at Airs, Ian Lance Taylor has written&lt;a href="http://www.airs.com/blog/archives/277"&gt;two&lt;/a&gt; &lt;a href="http://www.airs.com/blog/archives/276"&gt;posts&lt;/a&gt; about the implementation of interface values in &lt;code&gt;gccgo&lt;/code&gt;. The implementations are more alike than different: the biggest difference is that this post has pictures.&lt;/p&gt;</description></item><item><title>go gpm scheduler case</title><link>/blog/2019-03-03-go-gpm-scheduler-case/</link><pubDate>Sun, 03 Mar 2019 12:00:00 +0800</pubDate><guid>/blog/2019-03-03-go-gpm-scheduler-case/</guid><description>&lt;p&gt;“&lt;strong&gt;纸上得来终觉浅，绝知此事要躬行&lt;/strong&gt;”，相信很多人都听说过go runtime scheduler - G.P.M work-stealing scheduler，而且讲的头头是道，但是究竟理解多少呢，在实际工作中遇到相关问题又能否分析、定位准确，就又是另一回事了，“纸上谈兵”者自古有之，今天也一样。搞技术的，最好还是能够知根知底，别含糊。&lt;/p&gt;
@@ -6827,7 +6967,787 @@ pwq_cache = kmem_cache_create(&amp;quot;eventpoll_pwq&amp;quot;, sizeof(struct e
 return 0;
 }
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;epoll用kmem_cache_create（slab分配器）分配内存用来存放struct epitem和struct eppoll_entry。&lt;/p&gt;</description></item><item><title>tcp write closed tcpconn</title><link>/blog/2018-12-20-%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B_write-closed-tcpconn/</link><pubDate>Thu, 20 Dec 2018 23:11:29 +0800</pubDate><guid>/blog/2018-12-20-%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B_write-closed-tcpconn/</guid><description>&lt;h1 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;epoll用kmem_cache_create（slab分配器）分配内存用来存放struct epitem和struct eppoll_entry。&lt;/p&gt;</description></item><item><title>24 Non Blocking Algorithm</title><link>/blog/24-non-blocking-algorithm/</link><pubDate>Tue, 01 Jan 2019 21:45:25 +0800</pubDate><guid>/blog/24-non-blocking-algorithm/</guid><description>&lt;p&gt;并行上下文中的无锁算法，可以让多个线程在访问共享资源的时候，或者同步协作、通信的时候，不需要阻塞线程。为了更好的理解阻塞并行算法、非阻塞并行算法之间的区别，下面依次对其进行解释。&lt;/p&gt;
+&lt;h1 id="blocking-concurrency-algorithms"&gt;Blocking Concurrency Algorithms &lt;a href="#blocking-concurrency-algorithms" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;一个阻塞算法，指的是这样的算法，算法中可能执行如下2种类型的动作：&lt;/p&gt;
+&lt;p&gt;A：某个线程请求执行一个动作；
+B：为了保证程序的正确、安全执行，需要阻塞一些其他线程，直到A中的动作顺利完成。&lt;/p&gt;
+&lt;p&gt;有很多算法和并发数据结构，都是阻塞的。例如，juc包中的BlockingQueue接口的不同实现都是阻塞型的数据结构。如果一个线程正往BlockingQueue中插入一个数据，这个队列没有剩余空间的话，插入动作就会被阻塞，直到这个队列有剩余空间容纳新元素。&lt;/p&gt;
+&lt;p&gt;如下这幅图，展示了一个阻塞算法对共享数据结构的保护行为i：&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/24-Non-Blocking-Algorithm/blocking-algorithm.png" alt="blocking-algorithm.png"&gt;&lt;/p&gt;
+&lt;h1 id="non-blocking-concurrency-algorithms"&gt;Non-blocking Concurrency Algorithms &lt;a href="#non-blocking-concurrency-algorithms" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;一个非阻塞并行算法，指的是这样的算法，算法中可能执行如下动作：&lt;/p&gt;
+&lt;p&gt;A：一个线程请求执行某个动作；
+B：通知A中请求执行动作的线程，当前请求的操作无法完成。&lt;/p&gt;
+&lt;p&gt;java中也包含了一些非阻塞的数据结构，例如AtomicBoolean、AtomicInteger、AtomicLong和AtomicReference等，这些都是非阻塞数据结构的例子。&lt;/p&gt;
+&lt;p&gt;下图展示了非阻塞算法对共享数据结构的保护行为：&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/24-Non-Blocking-Algorithm/nonblocking-algorithm.png" alt="nonblocking-algorithm.png"&gt;&lt;/p&gt;
+&lt;h1 id="non-blocking-vs-blocking-algorithms"&gt;Non-blocking vs Blocking Algorithms &lt;a href="#non-blocking-vs-blocking-algorithms" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;非阻塞算法与阻塞算法之间的主要区别，在于前面描述的算法行为中的第2条。就是说，它们的区别在于，当某个线程发起的请求不能被执行时算法的行为将如何。阻塞算法将会阻塞其他相关线程，非阻塞算法只是拒绝操作，发送一个操作失败通知。&lt;/p&gt;
+&lt;h1 id="non-blocking-concurrent-data-structures"&gt;Non-blocking Concurrent Data Structures &lt;a href="#non-blocking-concurrent-data-structures" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在一个多线程系统中，线程之间的通信通常是由线程间共享的数据结构来协调的，这些共享的数据结构从简单的普通变量类型，到复杂的像queue、map、stack的数据结构，都有。为了能够使多个线程能够正确地访问数据结构，这些数据结构必须通过合适的并发算法、并发数据结构来加以访问控制、保护。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果一个保护并发数据结构的算法是阻塞的，该算法就是阻塞算法，数据结构就是阻塞的并发数据结构；&lt;/li&gt;
+&lt;li&gt;如果一个保护并发数据结构的算法是非阻塞的，该算法就是非阻塞算法，数据结构就是非阻塞的并发数据结构。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;每一种并发数据结构，都有特定的适用的线程通信场景。使用哪一种并发数据结构，可以根据线程间通信的需要进行选择。后面部分，我将介绍非阻塞并发数据结构，并解释它们适用的场景。通过对非阻塞数据结构工作原理的解释，可以帮助你对非阻塞数据结构的设计、实现有一个比较好的理解。&lt;/p&gt;
+&lt;h1 id="volatile-variables"&gt;Volatile Variables &lt;a href="#volatile-variables" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;volatile变量可以保证共享变量修改时的线程可见性、阻止指令重排序问题。volatile变量是非阻塞的“数据结构”，volatile变量的写操作是一个原子操作，是不能被中断的，但是volatile变量的read-update-write操作序列不是原子的。因此，多线程操作场景下volatile变量的read-update-write操作序列会导致出现竞态条件。&lt;/p&gt;
+&lt;p&gt;Java中的volatile变量，每次使用的时候都是从内存中重新读取的，当向一个volatile变量赋值的时候，这个变量的值会立即被写会内存（利用cpu的lock），这个能够确保修改后的变量值，能够立即对运行在其他cpu或者核心上的线程可见，cpu lock指令使得其他cpu的cache失效，并重新从内存中读取数据，这样运行在其他cpu上的线程就会获得内存中的新值，而不是cache中的旧值。这样volatile保证了对变量修改时，对其他线程的可见性。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;对于C、C++程序而言，gcc开-O2优化时volatile可以阻止编译器对volatile变量的优化，保证每次读取时都直接读取内存中的值，而非CPU cache中的值，这样也就保证了volatile变量的线程可见性。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;volatile myVar = 0;
+...
+int temp = myVar;
+temp++;
+myVar = temp;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;First the value of the volatile variable myVar is read from main memory into a temp variable. Then the temp variable is incremented by 1. Then the value of the temp variable is assigned to the volatile myVar variable which means it will be written back to main memory.&lt;/p&gt;</description></item><item><title>23 Anatomy of Synchronizer</title><link>/blog/23-anatomy-of-sychronizer/</link><pubDate>Tue, 01 Jan 2019 20:22:51 +0800</pubDate><guid>/blog/23-anatomy-of-sychronizer/</guid><description>&lt;h1 id="synchronizer介绍"&gt;Synchronizer介绍 &lt;a href="#synchronizer%e4%bb%8b%e7%bb%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;synchronized、锁、信号量等，都属于Synchronizer（同步器），Synchronizer在并发场景中用来对临界资源进行保护，通常包括如下几个部分：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;State&lt;/li&gt;
+&lt;li&gt;Access Condition&lt;/li&gt;
+&lt;li&gt;State Changes&lt;/li&gt;
+&lt;li&gt;Notification Strategy&lt;/li&gt;
+&lt;li&gt;Test and Set Method&lt;/li&gt;
+&lt;li&gt;Set Method&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;synchronized、锁、信号量，虽然字面上差异很大，但是其实现很相似，对这些相似之处进行归纳总结，有助于我们实现自己的同步器，有助于更好地设计、实现并发程序。&lt;/p&gt;
+&lt;h1 id="state"&gt;State &lt;a href="#state" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Synchronizer的State（状态）会由Access Condition（访问条件）读取，并借此判断被Synchronizer保护的临界资源是否允许线程访问。&lt;/p&gt;
+&lt;p&gt;Synchronizer的状态可能保存在：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;保存在&lt;strong&gt;Lock&lt;/strong&gt;中，以一个boolean值来区分Lock是否被已被锁定；&lt;/li&gt;
+&lt;li&gt;保存在&lt;strong&gt;Bounded Semaphore&lt;/strong&gt;中，状态保存一个int类型的计数器counter和int类型的计数上限bound中，来记录当前take的次数以及最大可take的次数；&lt;/li&gt;
+&lt;li&gt;保存在&lt;strong&gt;Blocking Queue&lt;/strong&gt;中，状态保存在队列中的元素中，队列容量上限也要考虑在内。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;下面是分别用Lock、BoundedSemaphore来记录state的示例：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;public class Lock{
+//state is kept here
+private boolean isLocked = false;
+public synchronized void lock() throws InterruptedException{
+while(isLocked){
+wait();
+}
+isLocked = true;
+}
+}
+public class BoundedSemaphore {
+//state is kept here
+private int signals = 0;
+private int bound = 0;
+public BoundedSemaphore(int upperBound){
+this.bound = upperBound;
+}
+public synchronized void take() throws InterruptedException{
+while(this.signals == bound)
+wait();
+this.signal++;
+this.notify();
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id="access-condition"&gt;Access Condition &lt;a href="#access-condition" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Access Condition（访问条件）决定了一个线程是否允许执行test-and-set-state相关的操作。&lt;/p&gt;</description></item><item><title>22 Compare and Swap</title><link>/blog/22-compare-and-swap/</link><pubDate>Tue, 01 Jan 2019 19:18:25 +0800</pubDate><guid>/blog/22-compare-and-swap/</guid><description>&lt;h1 id="cas介绍"&gt;CAS介绍 &lt;a href="#cas%e4%bb%8b%e7%bb%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;strong&gt;Compare and Swap（比较并交换）&lt;/strong&gt;，简称CAS，指的是将一个对象现在的值与一个期望值v进行比较，如果对象现在的值与期望值相等则表示这个对象从上次被读取之后还没有被其他线程修改，这种情况下可以用另一个新值来更新该对象。这个操作依赖CPU硬件的CAS操作支持，可以保证是原子的，是安全的，但是却无法避免ABA问题。&lt;/p&gt;
+&lt;h1 id="cas-aba"&gt;CAS ABA &lt;a href="#cas-aba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;什么是ABA问题呢？&lt;/p&gt;
+&lt;p&gt;一个线程将对象值从A修改为B，然后再从B修改为A，修改操作都是CAS的，但是经过上述两次修改之后，对象的值又变成了A，与最开始的值是一样的，如果想判断到底有没有线程修改过该对象的值，只依赖处理器提供的指令是无法完成的，这就是CAS操作中的ABA问题。&lt;/p&gt;
+&lt;p&gt;Java中通过为值添加“&lt;strong&gt;Stamp&lt;/strong&gt;”解决了计算机处理器中CAS指令的ABA问题，可以了解下AtomicStampedReference的相关实现细节，这里的Stamp可以理解为“版本”。&lt;/p&gt;
+&lt;p&gt;可以参考这里的教程来了解下Java中如何解决CAS ABA问题，&lt;a href="http://tutorials.jenkov.com/java-util-concurrent/atomicstampedreference.html"&gt;AtomicStampReference解决CAS ABA问题&lt;/a&gt;。&lt;/p&gt;
+&lt;h1 id="cas解决什么问题"&gt;CAS解决什么问题 &lt;a href="#cas%e8%a7%a3%e5%86%b3%e4%bb%80%e4%b9%88%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;一个常见的使用场景就是并发程序、并发算法中的“&lt;strong&gt;Check then Act&lt;/strong&gt;”模式，即&lt;strong&gt;先检查对象状态、然后依赖对象状态执行某种动作&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;设计了如下程序，实现一个基本的CAS操作，即当锁locked=false的时候，我们执行lock方法的时候，希望将其设置为true，当为locked=true的时候，lock希望将其设计为false。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;class MyLock {
+private boolean locked = false;
+// 返回锁定是否成功
+public boolean lock() {
+if(!locked) {
+locked = true;
+return true;
+}
+return false;
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;毫无疑问，上述代码在多线程环境中会出大乱子的，问题太多了，因为没有对其进行合适的同步，在Check以及Act的时候，我们没有将其封装为一个原子操作，导致在Check之后，执行Act之前，线程有可能出现Missed Condition的问题，即状态丢失问题。原因就是没有将Check和Act封装为一个原子操作。这个很好修改，修改后代码如下所示：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;class MyLock {
+private boolean locked = false;
+// 返回锁定是否成功
+public synchronized boolean lock() {
+if(!locked) {
+locked = true;
+return true;
+}
+return false;
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;现在lock()方法首先检查是否已被锁定，没有则锁定并返回true，反之返回false。&lt;/p&gt;</description></item><item><title>21 ThreadPool</title><link>/blog/21-threadpool/</link><pubDate>Tue, 01 Jan 2019 00:30:00 +0800</pubDate><guid>/blog/21-threadpool/</guid><description>&lt;p&gt;Java是天然的多线程程序，哈哈，即便我们没有显示地创建多个线程，JVM GC等等也会额外地创建其他线程。Java中提供了丰富的线程控制能力使得我们开发多线程程序更加容易，我们经常会编写多线程程序来处理并发事务。&lt;/p&gt;
+&lt;p&gt;由于线程的创建、切换、销毁都会带来一定的系统开销，程序中不能无限制地创建线程，必须对线程总量进行限制，考虑到线程创建、启动的开销，一般也会预先创建好一定数量的线程备用……基于这样的考虑，程序中一般会使用线程池。&lt;/p&gt;
+&lt;p&gt;每一个任务（Thread的子类，或者实现了Runnable接口的类），如果我们都直接调用其start方法的话，jvm实际上是为其创建了一个线程，Linux里面每一个java线程都是对应着内核的一个KLT线程，然后再由内核调度线程。当线程多了之后，开销还是比较大的。我们希望能对此加以改进，减少程序执行过程中，创建线程、启动线程的开销。&lt;/p&gt;
+&lt;p&gt;我们可以将一个任务，交给线程池中的一个空闲线程来执行，这样我们就避免了重新创建线程、启动线程的开销。那么怎么做呢？这里需要首先提一下线程的start()方法和run()方法。我们已经知道启动一个新线程要用start()方法，调用run()方法只是在callingThread上执行了某个线程实例的run方法，之前我们对此特别予以了说明，希望大家千万不要调用run方法，而是调用start方法。现在呢？我们反其道而行之，我们要直接调用run方法了。&lt;/p&gt;
+&lt;p&gt;我们创建一个线程池，线程池中包含了2个重要的东西：
+1）一个是BlockingQueue，用它来存储待处理的任务；
+2）另一是线程列表List，里面记录了线程池中包含的线程。&lt;/p&gt;
+&lt;p&gt;线程池中的每一个线程在启动之后，就会自己从BlockingQueue这个任务队列里面通过dequeue方法取出任务，任务就是一个Runnable实现类或者Thread的子类，记为t，然后线程中的线程调用t.run()，注意我们这里调用的是run而不是start，因为我们希望这个任务直接在当前线程上执行，而不是让jvm创建新的虚拟机线程，看到直接调用run方法的作用了吧。&lt;/p&gt;
+&lt;p&gt;当前线程执行完了任务t之后，可以继续在队列上取任务并处理；如果线程在dequeue的时候，如果队列为空，那么当前线程就会阻塞，直到其他线程将任务放入了阻塞队列中，并将阻塞的线程唤醒。&lt;/p&gt;
+&lt;p&gt;好了，说的已经够清楚了，下面看实现。&lt;/p&gt;
+&lt;p&gt;下面的线程池实现中，使用了BlockingQueue，注意这里的BlockingQueue不是juc包中的，是作者自己实现的，前面的一节中，我们已经描述过了，看线程池源代码：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;public class ThreadPool {
+// 任务队列，BlockingQueue实现
+private BlockingQueue taskQueue = null;
+// 当前线程池中包括的线程
+private List&amp;lt;PoolThread&amp;gt; threads = new ArrayList&amp;lt;PoolThread&amp;gt;();
+// 是否停止当前线程池
+private boolean isStopped = false;
+/**
+* 线程池构造函数
+* @param noOfThreads 线程池中待创建的线程数量
+* @param maxNoOfTasks 线程池中可以容纳的最大任务数量
+*/
+public ThreadPool(int noOfThreads, int maxNoOfTasks){
+// 创建任务队列，容量为……
+taskQueue = new BlockingQueue(maxNoOfTasks);
+// 创建……个线程
+for(int i=0; i&amp;lt;noOfThreads; i++){
+threads.add(new PoolThread(taskQueue));
+}
+// 依次启动创建的线程
+for(PoolThread thread : threads){
+thread.start();
+}
+}
+// 执行任务task，实际上是将其丢到任务队列里面
+public synchronized void execute(Runnable task) throws Exception{
+if(this.isStopped)
+throw new IllegalStateException(&amp;quot;ThreadPool is stopped&amp;quot;);
+// 入队操作，请查看BlockingQueue中的enqueue方法实现，便于理解
+this.taskQueue.enqueue(task);
+}
+// 停止线程池，将停止池中的所有线程
+public synchronized void stop(){
+this.isStopped = true;
+for(PoolThread thread : threads){
+thread.stop();
+}
+}
+}
+// 线程池中的线程
+public class PoolThread extends Thread {
+// 持有一个指向任务队列的引用，共享变量，BlockingQueue内部含不同措施
+private BlockingQueue taskQueue = null;
+private boolean isStopped = false;
+public PoolThread(BlockingQueue queue){
+taskQueue = queue;
+}
+public void run(){
+while(!isStopped()){
+try{
+// 从任务队列dequeue一个任务，可能会阻塞；
+// 阻塞后要么从ThreadPool.execute中被唤醒(实际上是BlockingQueue唤醒）；
+// 要么从this.doStop中被中断，也起到唤醒的作用吧！
+Runnable runnable = (Runnable) taskQueue.dequeue();
+// 直接调用任务的run方法，在当前线程上完成任务
+runnable.run();
+} catch(Exception e){
+//log or otherwise report exception,
+//but keep pool thread alive.
+}
+}
+}
+public synchronized void doStop(){
+isStopped = true;
+// PoolThread有可能会阻塞在任务队列dequeue操作上，中断线程，相当于唤醒的作用
+this.interrupt();
+}
+public synchronized boolean isStopped(){
+return isStopped;
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;关于该线程池的使用方式，代码中已经注释的非常清楚了，这里就不再细述其具体应用了。&lt;/p&gt;</description></item><item><title>20 Blocking Queue</title><link>/blog/20-blocking-queue/</link><pubDate>Mon, 31 Dec 2018 21:52:17 +0800</pubDate><guid>/blog/20-blocking-queue/</guid><description>&lt;p&gt;阻塞队列，具有这样的操作特性：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果队列当前为空，线程试图在队列上执行dequeue操作，该线程会阻塞；&lt;/li&gt;
+&lt;li&gt;如果队列当前已满，线程试图在队列上执行enqueue操作，该线程也会阻塞。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;在java 5中的juc包中引入了BlockingQueue的实现，虽然没必要自己实现，但是了解一下其实现的原理和细节，还是有必要的。&lt;/p&gt;
+&lt;p&gt;线程操作BlockingQueue的示意图如下所示：&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/20-Blocking-Queue/Blocking-Queue.png" alt="Blocking-Queue.png"&gt;&lt;/p&gt;
+&lt;p&gt;下面来看下BlockingQueue的实现代码，比较简单：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;public class BlockingQueue {
+private List queue = new LinkedList(); // 阻塞队列底层存储
+private int limit = 10; // 设定阻塞队列容量
+public BlockingQueue(int limit){
+this.limit = limit;
+}
+public synchronized void enqueue(Object item) throws InterruptedException {
+// 队列满时执行入队操作，线程需要等待
+while(this.queue.size() == this.limit) {
+wait();
+}
+// 入队后队列不再为空，需要唤醒因为出队操作处于等待状态的线程
+if(this.queue.size() == 0) {
+this.queue.add(item);
+notifyAll();
+return;
+}
+this.queue.add(item);
+}
+public synchronized Object dequeue() throws InterruptedException{
+// 队列为空时执行出队操作，线程需要等待
+while(this.queue.size() == 0){
+wait();
+}
+// 出队后队列有空位，需要唤醒因为入队操作处于等待状态的线程
+if(this.queue.size() == this.limit){
+Object obj = this.queue.remove(0);
+notifyAll();
+return obj;
+}
+return this.queue.remove(0);
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;注意一下，只有queue.size()==limit或者0的时候，才会执行notifyAll操作，因为只有这两种情况下才会出现阻塞的情况。之前作者在写这个示例的时候，其代码有问题，我对其进行了修改，上面展示的代码是我修改之后的代码。&lt;/p&gt;</description></item><item><title>19 Semaphore</title><link>/blog/19-semaphore/</link><pubDate>Mon, 31 Dec 2018 21:30:25 +0800</pubDate><guid>/blog/19-semaphore/</guid><description>&lt;p&gt;Semaphores（信号量）是一种用于线程之间进行同步的结构：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;可用来在线程之间传递信号（因为其通过状态变量记录通知，可以避免通知丢失问题）；&lt;/li&gt;
+&lt;li&gt;也可以像锁一样，被用来保护临界区。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;java 5中，juc包中引入了信号量实现，我们没必要自己实现信号量，但如果了解信号量背后的实现细节，对我们理解、应用非常有帮助。&lt;/p&gt;
+&lt;h1 id="simple-semaphore"&gt;Simple Semaphore &lt;a href="#simple-semaphore" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;下面是一个简单的信号量的实现（其中的take、put可以理解为取苹果、放苹果，signal表示是否有苹果剩余）：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;public class Semaphore {
+// 记录通知的发送，避免通知丢失问题（在完善的锁实现中，也考虑了避免通知丢失问题）
+private boolean signal = false;
+public synchronized void put () {
+this.signal = true;
+this.notify();
+}
+public synchronized void take() throws InterruptedException{
+while(!this.signal)
+wait();
+this.signal = false;
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这里的put()方法发送了一个信号，这个信号是存储在Semaphore对象里面的，这里的take方法等待这个信号，当收到这个信号的时候，就把信号标记signal清空，然后退出take()方法。使用信号量可以避免信号丢失问题。顾名思义，&lt;strong&gt;信号量，就是信号的数量&lt;/strong&gt;……&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;信号量，可以记录接收到的信号的数量&lt;/strong&gt;，这是其最基本的要求，其内部通过状态变量可以记录，当然了，根据具体实现的不同，有**“简单信号量”、“计数信号量”、“带计数上限的信号量”**等。&lt;/p&gt;
+&lt;p&gt;对于“&lt;em&gt;信号通知丢失&lt;/em&gt;”问题，如果用锁来实现的话，需要专门考虑，而信号量由于其基本要求便是“记录信号的数量”，因此可以保证不会发生信号丢失。&lt;/p&gt;
+&lt;h1 id="using-semaphores-for-signaling"&gt;Using Semaphores for Signaling &lt;a href="#using-semaphores-for-signaling" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;以下是两个线程使用我们上面定义的信号量进行信号发送的示例。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;Semaphore semaphore = new Semaphore();
+SendingThread sender = new SendingThread(semaphore);
+ReceivingThread receiver = new ReceivingThread(semaphore); receiver.start();
+sender.start();
+public class SendingThread {
+Semaphore semaphore = null;
+public SendingThread(Semaphore semaphore){
+this.semaphore = semaphore;
+}
+public void run(){
+while(true){
+//do something, then signal
+this.semaphore.put();
+}
+}
+}
+public class RecevingThread {
+Semaphore semaphore = null;
+public ReceivingThread(Semaphore semaphore){
+this.semaphore = semaphore;
+}
+public void run(){
+while(true){
+this.semaphore.take();
+//receive signal, then do something...
+}
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id="counting-semaphore"&gt;Counting Semaphore &lt;a href="#counting-semaphore" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;本节介绍计数信号量，前面的简单信号量，不能记录接收到的信号的数量，put方法中通过设置signal的值发送信号通知。我们这里对简单信号量进行一下修改，使其能够记录接收信号的数量。以下是修改后的版本，我们将boolean signal修改成了int signal，并针对对signal的操作进行了修改。&lt;/p&gt;</description></item><item><title>18 Reentrant Lockout</title><link>/blog/18-reentrant-lockout/</link><pubDate>Mon, 31 Dec 2018 01:33:56 +0800</pubDate><guid>/blog/18-reentrant-lockout/</guid><description>&lt;p&gt;Reentrant Lockout，重入锁失败。指的是某些锁不是可重入的，当一个线程已经持有了该对象上的锁之后，又试图进行再次的加锁操作，此时由于这些锁不是可重入的，就会lockout的问题，&lt;strong&gt;lockout可以翻译为，被关在门外，被锁在门外&lt;/strong&gt;……总之就是申请加锁失败的意思，线程还会因此阻塞。&lt;/p&gt;
+&lt;p&gt;为了避免这个问题，可以采用如下两种方案：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;采用可重入的锁；&lt;/li&gt;
+&lt;li&gt;对于不可重入的锁，不要试图重入这个锁；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;下面是一个简单的描述，感兴趣的话，可以看一下，如果对锁的可重入问题已经理解的比较清楚了，可以跳过。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Reentrance lockout&lt;/strong&gt; is a situation similar to &lt;a href="http://tutorials.jenkov.com/java-concurrency/deadlock.html"&gt;deadlock&lt;/a&gt; and &lt;a href="http://tutorials.jenkov.com/java-concurrency/nested-monitor-lockout.html"&gt;nested monitor lockout&lt;/a&gt;. Reentrance lockout is also covered in part in the texts on &lt;a href="http://tutorials.jenkov.com/java-concurrency/locks.html"&gt;Locks&lt;/a&gt; and &lt;a href="http://tutorials.jenkov.com/java-concurrency/read-write-locks.html"&gt;Read / Write Locks&lt;/a&gt;.
+Reentrance lockout may occur if a thread reenters a &lt;a href="http://tutorials.jenkov.com/java-concurrency/locks.html"&gt;Lock&lt;/a&gt;, &lt;a href="http://tutorials.jenkov.com/java-concurrency/read-write-locks.html"&gt;ReadWriteLock&lt;/a&gt; or some other synchronizer that is not reentrant. Reentrant means that a thread that already holds a lock can retake it. Java&amp;rsquo;s synchronized blocks are reentrant. Therefore the following code will work without problems:&lt;/p&gt;</description></item><item><title>17 ReadWrite Locks in Java</title><link>/blog/17-readwrite-locks-in-java/</link><pubDate>Mon, 31 Dec 2018 01:24:49 +0800</pubDate><guid>/blog/17-readwrite-locks-in-java/</guid><description>&lt;p&gt;读写锁，是比前面提到的java中的锁更加复杂的锁。它主要致力于解决这样的问题场景，假如一个程序里面有多个读线程，几个写线程，为了提高程序整体性能，我们希望多个线程可以同时读取共享变量的值，因此假如有一个线程正在读，另一个线程又发出了读请求，那么我们允许它读；然而在写的时候，只允许一个线程可以写，其他线程的读请求、写请求都会被阻塞。读写锁，在读线程比写线程数量多时，比较有优势。juc保重已经有了对应的实现，即ReentrantReadWriteLock。但是了解其背后的实现思想，还是非常重要的，接着往下学习吧。&lt;/p&gt;
+&lt;h1 id="读写锁-操作性质"&gt;读写锁-操作性质 &lt;a href="#%e8%af%bb%e5%86%99%e9%94%81-%e6%93%8d%e4%bd%9c%e6%80%a7%e8%b4%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;首先，总结一下可以获取共享资源的读权限、写权限的条件。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style="text-align: center"&gt;操作请求&lt;/th&gt;
+&lt;th style="text-align: left"&gt;什么情况下允许该操作请求&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style="text-align: center"&gt;Read Access&lt;/td&gt;
+&lt;td style="text-align: left"&gt;If no threads are writing, and no threads have requested write access.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: center"&gt;Write Access&lt;/td&gt;
+&lt;td style="text-align: left"&gt;If no threads are reading or writing.&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;ul&gt;
+&lt;li&gt;如果一个线程请求Read一个资源时，当没有其他线程正在进行写操作，又没有其他线程发出了写操作请求，这种情况下，就会允许当前线程的读操作请求；&lt;/li&gt;
+&lt;li&gt;如果一个线程请求Write一个资源，当没有其他线程正在读、写这个资源时，写操作就会被允许。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;有时候我们要考虑&lt;strong&gt;提高写请求的优先级&lt;/strong&gt;：&lt;/p&gt;
+&lt;p&gt;如果我们不提高写请求的优先级的话，假如有很多个线程读，只有少量的线程写，这种情况下，极有可能会发生读请求线程都被调度了，但是写请求线程迟迟得不到响应，写请求线程就会被starvation，饿死了。所以我们有必要将写请求线程的优先级提高。因此，如果有两个线程分别请求读锁、写锁，都刚发出请求，还没有持有该锁，则优先给申请写锁的线程放行，避免其被饿死。&lt;/p&gt;
+&lt;h1 id="读写锁-简单实现"&gt;读写锁-简单实现 &lt;a href="#%e8%af%bb%e5%86%99%e9%94%81-%e7%ae%80%e5%8d%95%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;通过上面的总结，我们了解了读写锁的一般性质，根据这些一般性质，我们可以实现一个简单的读写锁。下面是一个读写锁的示例。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;public class ReadWriteLock { // 正在执行读操作的线程数量
+private int readers = 0; // 正在执行写操作的线程数量
+private int writers = 0; // 发出写请求的线程数量
+private int writeRequests = 0;
+// 获取读锁
+public synchronized void lockRead() throws InterruptedException {
+// 没有线程正在写，或者与当前线程同期发出写请求的情况下，才会授予读锁
+while (writers &amp;gt; 0 || writeRequests &amp;gt; 0) {
+wait();
+}
+readers++;
+}
+// 释放读锁
+public synchronized void unlockRead() {
+readers--;
+notifyAll();
+}
+// 获取写锁
+public synchronized void lockWrite() throws InterruptedException {
+// 写请求的线程数量++
+writeRequests++; // 没有线程正在读，没有线程正在写的情况下，才会授予写锁
+while (readers &amp;gt; 0 || writers &amp;gt; 0) {
+wait();
+}
+// 获取了写锁之后，写请求方变成了真正的writer
+writeRequests--;
+writers++;
+}
+// 释放写锁
+public synchronized void unlockWrite() throws InterruptedException {
+writers--;
+notifyAll();
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id="读写锁-支持可重入"&gt;读写锁-支持可重入 &lt;a href="#%e8%af%bb%e5%86%99%e9%94%81-%e6%94%af%e6%8c%81%e5%8f%af%e9%87%8d%e5%85%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;可重入的读写锁，上面我们给出的读写锁示例，不是可重入的。一个锁要真正地发挥作用，能被大规模、放心地使用，必须保证锁的可重入性。因此，我们需要实现一个可重入的读写锁。&lt;/p&gt;</description></item><item><title>16 Locks in Java</title><link>/blog/16-locks-in-java/</link><pubDate>Mon, 31 Dec 2018 00:38:40 +0800</pubDate><guid>/blog/16-locks-in-java/</guid><description>&lt;p&gt;A lock is a thread synchronization mechanism like synchronized blocks except locks can be more sophisticated than Java&amp;rsquo;s synchronized blocks. Locks (and other more advanced synchronization mechanisms) are created using synchronized blocks, so it is not like we can get totally rid of the synchronized keyword.&lt;/p&gt;
+&lt;p&gt;From Java 5 the package java.util.concurrent.locks contains several lock implementations, so you may not have to implement your own locks. But you will still need to know how to use them, and it can still be useful to know the theory behind their implementation. For more details, see my tutorial on the&lt;a href="http://tutorials.jenkov.com/java-util-concurrent/lock.html"&gt;java.util.concurrent.locks.Lock&lt;/a&gt; interface.&lt;/p&gt;</description></item><item><title>15 Slipped Conditions</title><link>/blog/15-slipped-condition/</link><pubDate>Mon, 31 Dec 2018 00:09:43 +0800</pubDate><guid>/blog/15-slipped-condition/</guid><description>&lt;h1 id="slipped-conditions"&gt;Slipped Conditions &lt;a href="#slipped-conditions" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="介绍"&gt;介绍 &lt;a href="#%e4%bb%8b%e7%bb%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Slipped Condition（状态丢失），指的是线程“&lt;strong&gt;从检测到特定状态开始、到依据此状态执行特定动作之前&lt;/strong&gt;”这个状态已经被其他线程所修改，进而会导致线程执行了错误的处理。&lt;/p&gt;
+&lt;h2 id="原因"&gt;原因 &lt;a href="#%e5%8e%9f%e5%9b%a0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;状态丢失的根本原因，是因为没有保证对状态的测试和更新是原子的，为了避免状态丢失，我们可以将对变量的testing和updating放到同一个synchronized代码块中。&lt;/p&gt;
+&lt;h2 id="示例"&gt;示例 &lt;a href="#%e7%a4%ba%e4%be%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;还是以锁的实现为例，来说明下Slipped Condition这个问题。&lt;/p&gt;
+&lt;p&gt;先看下这里的Lock实现：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;public class Lock {
+private boolean isLocked = true;
+public void lock() {
+synchronized(this) {
+while (isLocked) {
+try {
+this.wait();
+} catch (InterruptedException e) { //do nothing, keep waiting
+}
+}
+}
+// slipped condition
+synchronized(this) {
+isLocked = true;
+}
+}
+public synchronized void unlock() {
+isLocked = false;
+this.notify();
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;假定有两个线程t1，t2，一开始Lock对象中的isLocked is false，两个线程同时调用lock()方法，由于此时isLocked为false，t1，t2将先后执行完成第一个同步块中的代码。假定两个线程执行完了第一个同步块之后，都准备进入第二个同步块。状态丢失问题就来了。&lt;/p&gt;</description></item><item><title>14 Nested Monitor Lockout</title><link>/blog/14-nested-monitor-lockout/</link><pubDate>Sun, 30 Dec 2018 23:53:13 +0800</pubDate><guid>/blog/14-nested-monitor-lockout/</guid><description>&lt;p&gt;大家对DeadLock的原因应该都比较清楚了，造成DeadLock的常见原因就是多个线程没有按照相同顺序加锁，如线程1、2按照相反顺序加锁，如线程1先lock A、B、C、D，而线程2则lock D、C、B、A。我们也讲到了一些避免死锁的手段，其中就包括了Lock Ordering（按照相同的顺序加锁）。&lt;/p&gt;
+&lt;p&gt;现在考虑下，如果保证加锁顺序相同的前提下，多线程编程是否一定能够避免死锁呢？这就是本文要讨论的内容“&lt;strong&gt;Nested Monitor Lockout&lt;/strong&gt;”，即嵌套monitor锁定。当出现嵌套monitor锁定时，程序也会表现出DeadLock类似的行为，线程无法获得锁、挂起。&lt;/p&gt;
+&lt;h1 id="认识nested-monitor-lockout"&gt;认识“Nested Monitor Lockout” &lt;a href="#%e8%ae%a4%e8%af%86nested-monitor-lockout" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;结合下面这个Lock实现，我们来认识下Nested Monitor Lockout这个问题是什么（Lockout，表示加锁失败）。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;//lock implementation with nested monitor lockout problem
+public class Lock{
+protected MonitorObject monitorObject = new MonitorObject();
+protected boolean isLocked = false;
+public void lock() throws InterruptedException{
+synchronized(this){
+while(isLocked){
+synchronized(this.monitorObject){
+this.monitorObject.wait();
+}
+}
+isLocked = true;
+}
+}
+public void unlock(){
+synchronized(this){
+this.isLocked = false;
+synchronized(this.monitorObject){
+this.monitorObject.notify();
+}
+}
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;先看下lock()的实现，它首先synchronized on this，然后再synchronized on this.monitorObject，如果isLocked是false，那么就没有问题，成功加锁。如果isLocked是true，线程将会通过调用this.monitorObject.wait()来挂起。&lt;/p&gt;</description></item><item><title>13 Starvation &amp; Fairness</title><link>/blog/13-starvation--fairness/</link><pubDate>Sun, 30 Dec 2018 07:10:25 +0800</pubDate><guid>/blog/13-starvation--fairness/</guid><description>&lt;p&gt;&lt;strong&gt;讲了线程饿死的原因，以及公平的实现。&lt;/strong&gt;&lt;/p&gt;
+&lt;h1 id="starvation--fairness"&gt;Starvation &amp;amp; Fairness &lt;a href="#starvation--fairness" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Starvation&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;If a thread is not granted CPU time because other threads grab it all, it is called &amp;ldquo;starvation&amp;rdquo;. The thread is &amp;ldquo;starved to death&amp;rdquo; because other threads are allowed the CPU time instead of it.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Fairness&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;The solution to starvation is called &amp;ldquo;fairness&amp;rdquo; - that all threads are fairly granted a chance to execute.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id="causes-of-starvation-in-java"&gt;Causes of Starvation in Java &lt;a href="#causes-of-starvation-in-java" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;The following &lt;strong&gt;three common causes&lt;/strong&gt; can lead to starvation of threads in Java:&lt;/p&gt;</description></item><item><title>12 DeadLock</title><link>/blog/12-deadlock/</link><pubDate>Thu, 27 Dec 2018 17:14:32 +0800</pubDate><guid>/blog/12-deadlock/</guid><description>&lt;p&gt;本文先总结了常见的几种导致deadlock的使用场景，然后进一步描述了阻止死锁的方法。&lt;/p&gt;
+&lt;h1 id="deadlock-cases"&gt;DeadLock Cases &lt;a href="#deadlock-cases" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;这里描述了死锁的案例：
+1）两个线程申请同样的锁，但是&lt;strong&gt;加锁顺序相反&lt;/strong&gt;，引发死锁；
+2）多个线程申请的锁不同，但是他们&lt;strong&gt;加锁的顺序构成了环形依赖&lt;/strong&gt;，引发死锁；
+3）数据库事务中出现死锁；&lt;/p&gt;
+&lt;h2 id="thread-deadlock"&gt;Thread Deadlock &lt;a href="#thread-deadlock" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;A deadlock is when two or more threads are blocked waiting to obtain locks that some of the other threads in the deadlock are holding. &lt;strong&gt;Deadlock can occur when multiple threads need the same locks, at the same time, but obtain them in different order.&lt;/strong&gt;
+For instance, if thread 1 locks A, and tries to lock B, and thread 2 has already locked B, and tries to lock A, a deadlock arises. Thread 1 can never get B, and thread 2 can never get A. In addition, neither of them will ever know. They will remain blocked on each their object, A and B, forever. This situation is a deadlock.
+The situation is illustrated below:&lt;/p&gt;</description></item><item><title>11 线程Signal</title><link>/blog/11-%E7%BA%BF%E7%A8%8Bsignal/</link><pubDate>Thu, 27 Dec 2018 17:08:47 +0800</pubDate><guid>/blog/11-%E7%BA%BF%E7%A8%8Bsignal/</guid><description>&lt;p&gt;描述了线程与线程之间的通信方式，这里主要讲的是通过信号的方式，wait、notify、notifyAll，以及与之相关的极端情况。值得阅读。&lt;/p&gt;
+&lt;p&gt;The purpose of thread signaling is to enable threads to send signals to each other. Additionally, thread signaling enables threads to wait for signals from other threads. For instance, a thread B might wait for a signal from thread A indicating that data is ready to be processed.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;1. Signaling via Shared Objects&lt;/strong&gt;
+A simple way for threads to send signals to each other is by setting the signal values in some shared object variable. Thread A may set the boolean member variable hasDataToProcess to true from inside a synchronized block, and thread B may read the hasDataToProcess member variable, also inside a synchronized block. Here is a simple example of an object that can hold such a signal, and provide methods to set and check it:&lt;/p&gt;</description></item><item><title>10 线程本地存储</title><link>/blog/10-%E7%BA%BF%E7%A8%8B%E6%9C%AC%E5%9C%B0%E5%AD%98%E5%82%A8/</link><pubDate>Thu, 27 Dec 2018 16:44:06 +0800</pubDate><guid>/blog/10-%E7%BA%BF%E7%A8%8B%E6%9C%AC%E5%9C%B0%E5%AD%98%E5%82%A8/</guid><description>&lt;p&gt;在java中，保证线程安全的措施有3种类型：
+&lt;strong&gt;1）阻塞同步&lt;/strong&gt;，也称为互斥同步，即利用操作系统提供的互斥量来实现对临界资源的排它性访问。因为重量级锁会使得线程阻塞，因此属于同步策略。
+&lt;strong&gt;2）非阻塞同步&lt;/strong&gt;，利用硬件支持，例如CAS指令，compare and swap，先尝试对数据进行修改，如果修改成功了就成功了，修改时发现冲突了，则进行冲突处理。cas指令存在ABA问题，java为解决这个问题，对数据提供了版本的概念，AtomicInteger.incrementAndGet就是典型的非阻塞同步实现。它首先不停地尝试将变量值+1，如果失败了就不停地尝试，直到成功为止，线程不会阻塞。属于乐观的同步策略。
+&lt;strong&gt;3）不需要同步。&lt;strong&gt;这里不需要同步，指的是不需要施加同步措施，例如&lt;/strong&gt;final变量&lt;/strong&gt;，以及本节描述的&lt;strong&gt;ThreadLocal变量&lt;/strong&gt;，都是不需要添加同步措施的。ThreadLocal变量中包含了一个ThreadLocalMap成员，每个线程的线程id，往这个TheadLocal变量存储数据时，线程id作为ThreadLocalMap中的key，每个线程只能访问到与自己相关的数据，不能访问到其他线程存储的数据。&lt;/p&gt;
+&lt;p&gt;如果对ThreadLocal不熟悉可以看一下下文，ThreadLocalStorage有时会被简称为TLS，此TLS非彼TLS（Transport Layer Security），可结合语境区分。&lt;/p&gt;
+&lt;p&gt;The &lt;strong&gt;ThreadLocal class&lt;/strong&gt; in Java enables you to create variables that can only be read and written by the same thread. Thus, even if two threads are executing the same code, and the code has a reference to aThreadLocal variable, then the two threads cannot see each other&amp;rsquo;s ThreadLocal variables.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;1. Creating a ThreadLocal&lt;/strong&gt;
+Here is a code example that shows how to create a ThreadLocal variable:&lt;/p&gt;</description></item><item><title>9 垃圾回收</title><link>/blog/9-%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</link><pubDate>Thu, 27 Dec 2018 16:35:00 +0800</pubDate><guid>/blog/9-%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</guid><description>&lt;p&gt;在java里面不用显示的释放对象（如c++需要显示地delete释放堆内存对象），在java里面对象失去引用关系后，会自动被gc回收。这里就涉及到java的自动内存回收机制。&lt;/p&gt;
+&lt;p&gt;首先在java里面，定义了几种引用类型：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;强引用，这种引用类型在程序代码中是普遍存在的，例如Object obj = new Object()，只要obj没有被设置成null，那么obj指向的对象是永远不会被gc进行回收的；&lt;/li&gt;
+&lt;li&gt;软引用，SoftReference，这种引用关系用于描述有用但是非必须的引用关系，当jvm中进行了minor gc，发现剩余内存不够用，然后就会进行full gc，full gc后发现还不够用的时候，才会抛出OutOfMemoryError。而这里的软引用引用的对象，可以在gc抛出OutOfMemoryError之前，被列入待回收对象范围，然后进行回收。&lt;/li&gt;
+&lt;li&gt;弱引用，WeakReference，这种引用关系描述的是非必须的引用关系，当jvm进行gc的时候，一定会回收弱引用所引用的对象内存空间。&lt;/li&gt;
+&lt;li&gt;虚引用，PantomReference，这种引用没什么特别用处，但是当对象被回收的时候可以获得一个通知。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;然后需要考虑，jvm如何发现失去引用关系的对象，一种是基于对象的引用计数法的，这在操作系统里面也广泛使用，但是在java里面，引用计数法不能解决环形依赖的问题，比如：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;class B {
+A a;
+public void setA(A a) { this.a = a; }
+}
+class A {
+B b;
+public void setB(B b) { this.b = b; }
+}
+B b = new B();
+A a = new A();
+b.setA(a);
+a.setB(B);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这样a和b相互依赖，假如现在a、b的作用域已经到头了，然后变量a、b被销毁了，但是在a所引用的对象里面还引用着对象b引用的对象，在b引用的对象里面还继续引用着a引用的对象，即虽然栈变量a、b不存在了，但是由于堆上的两个对象存在&lt;strong&gt;环形依赖&lt;/strong&gt;问题。&lt;/p&gt;
+&lt;p&gt;这两个对象，如果是按照引用计数法来判断的话，都存在引用关系，是活的对象，无法进行回收；&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;jvm里面的垃圾回收，必须要解决判断对象是否存活的问题，采用的是基于GC Roots链的可达性分析算法，即通过可以作为GC Roots的对象进行可达性分析，无法到达的对象就被视为待回收对象，除非在第一次标记之后，第二次标记之前，通过finalize方法成功拯救了自己，即重新建立this与外部某个变量的引用关系。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;可以作为&lt;strong&gt;GC Roots的对象&lt;/strong&gt;包括：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;虚拟机栈（栈帧中的本地变量表）中变量引用的对象；&lt;/li&gt;
+&lt;li&gt;方法区中类静态属性引用的对象；&lt;/li&gt;
+&lt;li&gt;方法区中常量引用的对象；&lt;/li&gt;
+&lt;li&gt;本地方法栈中JNI（即一般所说的native方法）引用的对象；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;通过GC Roots对象，及其成员变量所引用的对象，……，我们可以得到一条链，叫做GC Roots链，在这条链上的对象，表示对象可达，是活的，如果是强引用则不会被回收，软引用要视情况而定，弱引用一定会被回收。&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>8 Volatile</title><link>/blog/8-volatile/</link><pubDate>Thu, 27 Dec 2018 16:26:01 +0800</pubDate><guid>/blog/8-volatile/</guid><description>&lt;p&gt;Java 中的 &lt;code&gt;volatile&lt;/code&gt; 关键字用于标记一个变量&amp;quot;存储在主内存中&amp;quot;。更准确地说，对 &lt;code&gt;volatile&lt;/code&gt; 变量的每次读都将从主内存中读取，而不是从 CPU 缓存中读取；每次对 &lt;code&gt;volatile&lt;/code&gt; 变量的写都将立即写回主内存。&lt;/p&gt;
+&lt;p&gt;从 Java 5 开始，&lt;code&gt;volatile&lt;/code&gt; 关键字除了保证变量的可见性之外，还提供了 happens-before 语义，能够限制指令重排序，这使得它的作用不止于&amp;quot;从主存读写&amp;quot;那么简单。&lt;/p&gt;
+&lt;h1 id="变量可见性问题"&gt;变量可见性问题 &lt;a href="#%e5%8f%98%e9%87%8f%e5%8f%af%e8%a7%81%e6%80%a7%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在多线程应用中，线程出于性能考虑，可能会将非 &lt;code&gt;volatile&lt;/code&gt; 变量从主内存拷贝到 CPU 寄存器中进行操作。在多 CPU 系统中，每个线程可能在不同的 CPU 上运行，各自持有变量在 CPU 缓存中的不同拷贝。这就产生了可见性问题。&lt;/p&gt;
+&lt;p&gt;下图展示了这一情形：多个线程持有来自主内存的变量拷贝（位于 CPU 缓存中），但对变量的修改何时写回主内存是不确定的。&lt;/p&gt;
+&lt;p&gt;&lt;img src="https://jenkov.com/images/java-concurrency/java-volatile-1.png" alt="java-volatile-1.png"&gt;&lt;/p&gt;
+&lt;p&gt;考虑一个包含非 &lt;code&gt;volatile&lt;/code&gt; 计数器的共享对象：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;public class SharedObject {
+public int counter = 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;假设 Thread 1 和 Thread 2 都读取了 &lt;code&gt;counter&lt;/code&gt; 的值，然后 Thread 1 对 &lt;code&gt;counter&lt;/code&gt; 执行了 +1 操作，但修改后的值仍停留在 Thread 1 所在 CPU 的缓存中。此时 Thread 2 读取到的 &lt;code&gt;counter&lt;/code&gt; 值仍然是旧值 0。&lt;/p&gt;</description></item><item><title>7 JMM内存模型</title><link>/blog/7-jmm%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B/</link><pubDate>Thu, 27 Dec 2018 16:25:59 +0800</pubDate><guid>/blog/7-jmm%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B/</guid><description>&lt;p&gt;java内存模型指明了java虚拟机如何与计算机内存ram进行协同工作，java虚拟机是整个计算机系统的模型，所以java虚拟机这个模型包含了一个内存模型，也就是java内存模型。&lt;/p&gt;
+&lt;p&gt;如果你要设计一个可以正确运行的可靠的并发程序，了解java内存模型是非常重要的。java内存模型指明了，不同的线程如何看到、什么时候看到被其他线程修改后的共享变量的新值，以及如何在必要的时候对共享变量的访问进行同步。&lt;/p&gt;
+&lt;h1 id="the-internal-java-memory-model"&gt;The Internal Java Memory Model &lt;a href="#the-internal-java-memory-model" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;java内存模型将jvm中使用的内存空间分成了两部分，线程共享的堆区、线程私有的栈区。&lt;/p&gt;
+&lt;h2 id="jmm内存分区简图"&gt;JMM内存分区简图 &lt;a href="#jmm%e5%86%85%e5%ad%98%e5%88%86%e5%8c%ba%e7%ae%80%e5%9b%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;下图展示了java内存模型对内存的分区情况：&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/7-JMM%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B/JMM-1.png" alt="JMM-1.png"&gt;&lt;/p&gt;
+&lt;h2 id="jmm内存分区详图"&gt;JMM内存分区详图 &lt;a href="#jmm%e5%86%85%e5%ad%98%e5%88%86%e5%8c%ba%e8%af%a6%e5%9b%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;这里描述的内存分区不是特别完整，更加详细的分区情况如下图所示：&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/7-JMM%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B/JMM-2.png" alt="JMM-2.png"&gt;&lt;/p&gt;
+&lt;p&gt;注意深入理解jvm一书中，对内存分区的描述实际上并不准确，这里我重新对java内存模型对内存的分区进行一下描述。&lt;/p&gt;
+&lt;h2 id="线程共享的内存区"&gt;线程共享的内存区 &lt;a href="#%e7%ba%bf%e7%a8%8b%e5%85%b1%e4%ba%ab%e7%9a%84%e5%86%85%e5%ad%98%e5%8c%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="堆区"&gt;堆区 &lt;a href="#%e5%a0%86%e5%8c%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;堆区为了更好的进行垃圾回收，将其分为两部分，新生代、老年代。新生代、老年代的垃圾回收，是分别进行的，新生代的垃圾回收发生的比较频繁，我们称之为minior gc，老年代的垃圾回收发生的不应该那么频繁，其代价也比较高，我们称之为full gc，或者major gc。&lt;/p&gt;
+&lt;p&gt;为了更好的进行minor gc，需要对新生代进一步进行细分，可以细分为1个eden区、2个survivor区，这3个区的大小比例为8:1:1，每次对象的创建都是在eden区中进行创建。当eden区空间不足以分配一个对象的时候，就会触发minor gc，即首先将当前存放对象的eden区、survivor区中的对象进行GC Roots链可达性分析，存活下来的对象将被复制（复制算法）到另一个survivor区中进行存储，其他对象占用的内存空间会释放（复制算法，eden+1个survivor被一次释放，这是对Mark-Sweep标记清除算法的改进）。&lt;/p&gt;
+&lt;p&gt;关于垃圾回收算法，后面再进行详细描述，这里不再说了。&lt;/p&gt;
+&lt;h3 id="非堆区"&gt;非堆区 &lt;a href="#%e9%9d%9e%e5%a0%86%e5%8c%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;非堆区内存可以细分为code cache、永久代。永久代中又包括了interned字符串、方法区。
+线程私有的部分包括：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;虚拟机栈，在hotspot虚拟机中，将虚拟机栈和本地方法栈合二为一了。&lt;/li&gt;
+&lt;li&gt;本地方法栈&lt;/li&gt;
+&lt;li&gt;程序计数器，每个线程都有自己的程序计数器，指示线程要执行的下一条指令地址。实际上每个线程上下文中，都记录了自己寄存器状态信息。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="jmm内存分区详解"&gt;JMM内存分区详解 &lt;a href="#jmm%e5%86%85%e5%ad%98%e5%88%86%e5%8c%ba%e8%af%a6%e8%a7%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;jvm中运行的每一个线程都有自己的线程栈，称为虚拟机栈。这个虚拟机栈中记录了线程的当前执行点所经历的方法调用调用信息，我们称这里的调用信息为调用栈。当线程执行代码的时候，调用栈会发生某些改变。&lt;/p&gt;
+&lt;p&gt;线程栈中也包含了每个被执行的方法的局部变量信息。一个线程只可以访问自己的线程栈空间。线程中创建的局部变量对其他线程是不可见的。即使两个线程执行相同的代码，线程创建的局部变量也是在自己的私有的栈空间中创建的。因此，每一个线程都有自己的局部变量版本。&lt;/p&gt;
+&lt;p&gt;所有的基本类型的局部变量，都是完全存储在线程栈中的，因此对其他因此肯定是不可见的。一个线程可能传递一个基本类型变量的值拷贝，传递给另一个线程，但是不能共享。&lt;/p&gt;
+&lt;p&gt;堆区中包含了java程序中创建的所有的对象，不管是哪个线程创建的对象，都是在堆区中进行存储。这包括了基本数据类型的wrapper版本，即对应的对象版本，例如int对应的Integer。&lt;/p&gt;
+&lt;p&gt;下图说明了线程栈中的调用栈和局部变量的情况，还有堆区中对象的存储：&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/7-JMM%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B/JMM-3.png" alt="JMM-3.png"&gt;&lt;/p&gt;
+&lt;p&gt;下面对数据在堆、栈上的存储，针对不同情况进行一下说明：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;一个局部变量，如果是基本数据类型，它一定是在线程栈上存储的；&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;一个局部变量，可能是一个引用类型的变量，它指向了一个对象，这个对象是在堆上存储的，但是这个引用变量，因为是局部变量，所以也是在线程栈上存储的；&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;一个对象，包含了方法信息，如果在方法中包含了局部变量，这些局部变量的创建是在线程执行对应的方法的时候，在栈上创建的；&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;同一个类的不同对象，每个对象都拥有数据成员的专属副本，而对于方法，所有的对象共用同一副本，怎么做到的呢？这要考虑jvm中对象在内存中的定位方式，hotspot使用的是通过&lt;strong&gt;直接指针&lt;/strong&gt;进行定位，每个引用变量直接记录了对象在堆区中的内存位置，可以直接定位到对象，对象中又包含了一个指针，指向类对象Class在方法区中的位置，从而可以通过这个指针直接定位到在类中定义的成员方法，通过这种方式，所有对象共用同一方法副本。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;一个对象的成员变量，不管该成员变量是什么类型，都是与对象一起都是存储在堆区中的。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;静态类变量，指的是对象中被static修饰的成员变量，这些成员变量也是存储在堆区中的，但是是与类定义放置在一块的，也就是说是存储在永久代中的。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;堆区中的对象，如果可以被多个线程访问，这个对象中的成员变量是在堆区中进行存储，前面已经提到过了，但是当多个线程访问这个对象的成员变量时，会在自己的线程中创建该成员变量的专属拷贝。其具体实现是通过java内存模型中指定的几个基本操作来完成的：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;read操作，从内存中读取指定的对象的成员变量临时存储，比如临时存储到cpu寄存器中或者cache中；&lt;/li&gt;
+&lt;li&gt;load操作，将临时存储的成员变量的值加载到当前线程的线程栈中的对应成员变量中，完成成员变量值拷贝过程；&lt;/li&gt;
+&lt;li&gt;use操作，在使用对象的成员变量的值的时候，使用的是线程栈中的上述拷贝，而不是内存中对象的成员变量本身。当执行赋值操作，例如obj.member = 1;的时候，需要将1写回堆区中的对象，也需要通过几个基本操作来完成的：&lt;/li&gt;
+&lt;li&gt;assign操作，将1写入线程栈中的成员变量的拷贝中；&lt;/li&gt;
+&lt;li&gt;store操作，将线程栈中的成员变量的值临时存储，例如写回寄存器或者cache；&lt;/li&gt;
+&lt;li&gt;write操作，将临时存储的值写回堆区中对应的对象中，完成一个完整的赋值操作；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id="hardware-memory-architecture"&gt;Hardware Memory Architecture &lt;a href="#hardware-memory-architecture" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;现代的内存硬件架构，与java内存模型是有区别的，为了更好地理解java内存模型如何与内存硬件架构协同工作，有必要对内存硬件架构进行适当的了解。下面我们将描述当今比较常用的内存硬件架构，以及java内存模型如何与之协同工作。&lt;/p&gt;
+&lt;h2 id="内存硬件架构"&gt;内存硬件架构 &lt;a href="#%e5%86%85%e5%ad%98%e7%a1%ac%e4%bb%b6%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;下图描述了一个简化版的内存硬件架构：&lt;/p&gt;</description></item><item><title>6 线程安全 Part-2</title><link>/blog/6-%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8-part-2/</link><pubDate>Thu, 27 Dec 2018 13:27:17 +0800</pubDate><guid>/blog/6-%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8-part-2/</guid><description>&lt;p&gt;当多个线程访问相同的资源时，并且其中某个线程进行了资源的写操作时，才会出现竞态条件。如果多个线程都只是读取的话，那么就不会涉及到数据竞态这种情况。&lt;/p&gt;
+&lt;p&gt;我们假定在多个线程之间共享的对象，是不会被任何线程更新的，并且这个共享对象也是immune（不可变的，如const），那么这种情况下，线程肯定是安全的。下图是一个示例：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;public class ImmutableValue{
+private int value = 0;
+public ImmutableValue(int value){
+this.value = value;
+}
+public int getValue(){
+return this.value;
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;注意该免疫对象成员是private类型的，只能通过getter方法来读取，没有setter方法来设置。针对变量的初始化操作是在构造函数出实现的。这种情况下不管是几个线程来访问该对象，肯定都是线程安全的。&lt;/p&gt;
+&lt;p&gt;如果对一个该对象执行一个add操作的话，为了保证其immune的特性，可以稍作修改，如下图所示，每次add之后返回的都是一个新的immune对象，不影响原来对象的值，也就没有改变原来对象的状态，不可变性仍然保持。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;public class ImmutableValue{
+private int value = 0;
+public ImmutableValue(int value){
+this.value = value;
+}
+public int getValue(){
+return this.value;
+}
+public ImmutableValue add(int newValue){
+return new ImmutableValue(this.value + newValue);
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;The Reference is not Thread Safe!&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;需要记住的是，一个对象可能是immutable的，是线程安全的，但是指向它的引用，可能不是线程安全的。看下面这个例子：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;public class Calculator{
+private ImmutableValue currentValue = null;
+public ImmutableValue getValue(){
+return currentValue;
+}
+public void setValue(ImmutableValue newValue){
+this.currentValue = newValue;
+}
+public void add(int newValue){
+this.currentValue = this.currentValue.add(newValue);
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;上面这个例子中，我们假定ImmutableValue这个类对应的对象是线程安全的，按照之前的定义，确实是线程安全的，但是Calculator这个类在通过setValue方法、add方法对其进行操作时，却不是线程安全的。比如一个多个线程引用同一个Calculator对象，分别调用setValue和addValue则可能导致与预期不一致的状态。&lt;/p&gt;</description></item><item><title>5 线程安全 Part-1</title><link>/blog/5-%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8-part-1/</link><pubDate>Thu, 27 Dec 2018 11:57:53 +0800</pubDate><guid>/blog/5-%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8-part-1/</guid><description>&lt;p&gt;&lt;strong&gt;介绍&lt;/strong&gt;
+能够安全地同时被多个线程调用的代码，是线程安全的。如果一段代码好是线程安全的，那么它就不含竞态条件。在多个线程更新共享资源的时候才会出现竞态条件。因此了解“线程执行过程中哪些资源会被共享”是非常重要的。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Java内存模型&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;说到java中的线程安全，不得不提java中的内存模型（简称JMM），java虚拟机中，内存区域可以分成如下几个：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;线程共享的区域：方法区、堆区；&lt;/li&gt;
+&lt;li&gt;线程私有的区域：虚拟机栈、本地方法栈（hotspot中将本地方法栈与虚拟机栈合二为一）、程序计数器；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;在线程私有区域上的内存，与其他线程由于不会发生共享问题，因此不会出现线程安全问题，重点关注的就是线程共享的区域，即方法区和堆区。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Local Variables&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;局部变量由于是存放在线程自己的虚拟机栈中，因此不存在与其他线程的共享问题，这就意味着所有的局部的基本类型变量，都是线程安全的。下面是一个线程安全的示例。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;public void someMethod(){
+// 变量在线程自己的栈上分配，肯定是线程安全的
+long threadSafeInt = 0;
+threadSafeInt++;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Local Object References&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;局部的对象引用，这种引用变量类型，也是分配在线程栈上的，它是不涉及到与其他线程的共享问题，但是这个变量所引用的对象，并不是存储在线程自己的栈空间中的，而是存放在线程共享的堆区中的。&lt;/p&gt;
+&lt;p&gt;如果在某个方法中，我们new了一个对象，并且指向这个对象的引用，没有在此方法内逃逸出去，那么其他线程是不可能通过任何方法来访问这个对象的，因此虽然这个对象是在堆中，但是也是线程安全的。&lt;/p&gt;
+&lt;p&gt;注意这里提到了“&lt;strong&gt;逃逸&lt;/strong&gt;”，其实在构造函数中如果发生了&lt;strong&gt;this指针逃逸&lt;/strong&gt;，那将是一件非常糟糕的事情，因为对象还没有初始化完成，就有可能被外部使用，造成不可预期的后果。在jvm里面也常常利用逃逸分析技术，来判断是否存在潜在的线程安全问题。这里就不多讲了，详细信息可以自己google一下。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;public void someMethod(){
+LocalObject localObject = new LocalObject();
+localObject.callMethod();
+// 假定callMethod还未成功执行完成，method2就已经开始执行
+method2(localObject);
+}
+public void method2(LocalObject localObject){
+localObject.setValue(&amp;quot;value&amp;quot;);
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Object Members&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;对象的成员，与对象一起，都是存放在堆区中的。因此，如果两个线程调用了同一个对象上的相同方法，而如果这个方法又会更新对象成员的话，那么这个方法就不是线程安全的。下面展示了一个示例，不是线程安全的：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;public class NotThreadSafe{
+StringBuilder builder = new StringBuilder();
+public add(String text){
+this.builder.append(text);
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;如果两个线程同时在相同的NotThreadSafe对象上调用add方法，就会产生竞态条件，请看以下示例示例：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;NotThreadSafe sharedInstance = new NotThreadSafe();
+new Thread(new MyRunnable(sharedInstance)).start();
+new Thread(new MyRunnable(sharedInstance)).start();
+public class MyRunnable implements Runnable{
+NotThreadSafe instance = null;
+public MyRunnable(NotThreadSafe instance){
+this.instance = instance;
+}
+public void run(){
+// 竞态条件
+this.instance.add(&amp;quot;some text&amp;quot;);
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;上面展示了在相同的对象NotThreadSafe对象上调用add方法产生了竞态条件，在不同的对象上调用的话，是不会产生竞态条件的，下面的代码在上面代码的基础上进行了修改，是线程安全的：&lt;/p&gt;</description></item><item><title>4 竞态条件 &amp; 临界区</title><link>/blog/4-%E7%AB%9E%E6%80%81%E6%9D%A1%E4%BB%B6--%E4%B8%B4%E7%95%8C%E5%8C%BA/</link><pubDate>Thu, 27 Dec 2018 11:38:11 +0800</pubDate><guid>/blog/4-%E7%AB%9E%E6%80%81%E6%9D%A1%E4%BB%B6--%E4%B8%B4%E7%95%8C%E5%8C%BA/</guid><description>&lt;p&gt;在一个应用程序里面运行多个线程，多线程本身并不会引发问题。当多个线程竞争访问相同的资源时，才会引发问题。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;竞态条件&lt;/strong&gt;：如果&lt;strong&gt;两个或者多个线程访问共享的资源（读写）&lt;/strong&gt;，如果&lt;strong&gt;最终结果的正确性&lt;/strong&gt;与&lt;strong&gt;线程访问共享资源的顺序&lt;/strong&gt;紧密相关的话，那么我们就说产生了竞态条件。
+&lt;strong&gt;临界区&lt;/strong&gt;：如果一段代码块中包含了产生竞态条件的代码，那么这段代码块就是一个临界区，需要通过同步控制进行保护。&lt;/p&gt;
+&lt;p&gt;为了避免产生竞态条件，引起程序错误，我们通常需要通过同步或者互斥，对临界区资源进行保护。&lt;/p&gt;</description></item><item><title>3 并发 &amp; 并行</title><link>/blog/3-%E5%B9%B6%E5%8F%91--%E5%B9%B6%E8%A1%8C/</link><pubDate>Thu, 27 Dec 2018 11:38:10 +0800</pubDate><guid>/blog/3-%E5%B9%B6%E5%8F%91--%E5%B9%B6%E8%A1%8C/</guid><description>&lt;p&gt;&lt;strong&gt;1）概念区别&lt;/strong&gt;
+并发，指的是同一时间段内多个任务同时执行，注意这里强调的是同一时间段，而不是同一时刻；
+并行，指的是同一时刻，多个任务同时执行；
+在单核的单cpu上是不会出现并行的，只会出现并发。在多核cpu或者多cpu环境下，才会出现并行的情况，当然也会出现并发的情况。&lt;/p&gt;
+&lt;p&gt;并发，所指的范围，覆盖了并行的范围。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;2）Java中创建线程&lt;/strong&gt;
+创建线程可以通过创建一个Thread的子类，也可以实现Runnable接口，来创建线程，例如：
+通过一个创建Thread的子类来创建线程：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;class MyThread extends Thread {
+@Override
+public void run() {
+// do something
+}
+}
+new MyThread().start();
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;也可以通过实现Runnable接口来创建线程：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;class MyThread implements Runnable {
+public void run() {
+// do something
+}
+}
+new Thread(new MyThread()).start();
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;3）调用start方法与run方法的区别&lt;/strong&gt;
+方式1：Thread t = new MyThread(); t.start(); 这么调用MyThread中定义的run方法，会在t调用start启动后执行，也就是说run方法是运行在线程t中的；
+方式2：Thread t = new MyThread(); t.run(); 这么调用MyThread中定义的run方法，run方法是在哪里被执行的呢？&lt;/p&gt;
+&lt;p&gt;假如当前线程执行了上述代码，那么线程的创建、启动是当前线程负责的，但是线程中run方法的调用是jvm负责的，jvm如何处理的呢？&lt;/p&gt;
+&lt;p&gt;下面是start、start0、run方法的定义，start0是一个native方法，run方法的调用肯定就是在这个start0里面被jvm调用的，具体是如何执行的呢，只好看native方法实现了！！！&lt;/p&gt;
+&lt;p&gt;其实t.start()是启动新线程，新线程中执行run()方法，而如果是t.run()的话，是将t中定义的run()方法在当前线程中执行。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;public synchronized void start() {
+if (threadStatus != 0)
+throw new IllegalThreadStateException();
+group.add(this);
+if (stopBeforeStart) {
+stop0(throwableFromStop);
+}
+}
+private native void start0();
+public void run() {
+if (target != null) {
+target.run();
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;4）java线程的状态&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>2 并发模型</title><link>/blog/2-%E5%B9%B6%E5%8F%91%E6%A8%A1%E5%9E%8B/</link><pubDate>Thu, 27 Dec 2018 11:23:35 +0800</pubDate><guid>/blog/2-%E5%B9%B6%E5%8F%91%E6%A8%A1%E5%9E%8B/</guid><description>&lt;p&gt;并发系统，可以用不同的并发模型来实现。一个并发模型，指明了系统中的线程如何进行协作来完成任务。不同的并发模型，划分任务的方式也是不同的，线程与线程之间的通信方式也是不同的。本教程将详细介绍截止2015年，业界比较流行的线程模型。&lt;/p&gt;
+&lt;p&gt;本文中介绍的不同的线程模型，与分布式系统中使用的不同架构类型，是有相似之处的。&lt;/p&gt;
+&lt;p&gt;在多线程模型中，不同的线程之间可以进行通信；在分布式系统中，运行在不同的主机上的进程之间可以进行通信。在本质上，线程跟进程好似非常相似的。这也是为什么，不同的线程模型，会与分布式系统中的不同的架构具有相似之处。&lt;/p&gt;
+&lt;p&gt;当然了，分布式系统还存在一些其他的挑战，例如网络失败，远程主机或者进程down掉了等等，但是在一个并发系统中，如果这个并发系统运行在一个比较大型的服务器上，也会遇到潜在的cpu失败，网络失败，磁盘失败等等问题，这些问题发生的可能性虽然比较低，但是理论上是存在的。
+因为并发模型与分布式系统架构是相似的，因此它们可以相互借鉴。例如，在并发系统中，多个workers(threads)之间分配work的模型，与分布式系统中的负载均衡，是很相似的。除了这个，在作业日志、作业fail-over、作业幂等性设计等方面也由很多相似之处。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;幂等性：指的是应用程序多次调用服务，最终得到的结果与成功调用一次的结果是一样的。这里描述作业的幂等性设计，表示的是作业不会被重复进行处理。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;下面开始介绍并发系统中常见的并发模型。&lt;/p&gt;
+&lt;h1 id="模型1parallel-workers"&gt;模型1：Parallel Workers &lt;a href="#%e6%a8%a1%e5%9e%8b1parallel-workers" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="介绍"&gt;介绍 &lt;a href="#%e4%bb%8b%e7%bb%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Parallel Workers（并行workers，与流水线workers相对）。第一个并发模型是“并行workers模型”。到达的作业，被分配给不同的workers进行处理。下图是对此并发模型的一个说明。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2-%E5%B9%B6%E5%8F%91%E6%A8%A1%E5%9E%8B/1.png" alt="1.png"&gt;&lt;/p&gt;
+&lt;p&gt;在“并行workers”并发模型中，作业派遣器，将到达的任务任务分配给不同的workers进行处理，每一个worker完成一个完整的作业。这些workers是并行工作的，对应着在不同的执行线程，可能这些不同的线程会运行在不同的cpu核心上，或者不同的cpu上，也可能是在同一个cpu的同一个核心上。&lt;/p&gt;
+&lt;p&gt;举个例子，将并行workers并发模型用于汽车制造厂中，就是每一辆汽车装配工作是一个作业，记为job，很多辆汽车被分配给不同的worker进行装配，每一个worker将完成从头至尾的所有的装配工作。当然，workers在装配的时候需要按照装配说明书来，这个说明书是大家共享的（后面将提到状态共享）。&lt;/p&gt;
+&lt;p&gt;这个模型是当前最常用的编程并发模型，java里面的JUC包中的工具，很多都是建立在这种模型之上的。在JavaEE应用服务器中，你也能够看到这种并行workers并发模型的影子。&lt;/p&gt;
+&lt;h2 id="优点"&gt;优点 &lt;a href="#%e4%bc%98%e7%82%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;并行workers模式的优点是，易于理解，为了增强并发系统的并行处理能力，简单地增加worker的数量就可以了。&lt;/p&gt;
+&lt;h2 id="缺点"&gt;缺点 &lt;a href="#%e7%bc%ba%e7%82%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;这种模型表面上看上去非常简单，但是这只是个假象，它有不少缺点，下面将介绍其最最明显的几个缺点。&lt;/p&gt;
+&lt;h3 id="shared-state-can-get-complex"&gt;Shared State Can Get Complex &lt;a href="#shared-state-can-get-complex" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;并行workers模型中，workers之间可能需要共享某些数据，这些数据可能是存储在内存中，也可能是存储在一个数据库中。下图显示了数据共享增加了该并发模型的复杂程度。该模型实际上并不像表面看上去那么容易实现。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2-%E5%B9%B6%E5%8F%91%E6%A8%A1%E5%9E%8B/2.png" alt="2.png"&gt;&lt;/p&gt;
+&lt;p&gt;这里的共享的状态，某些情况下可能是像作业队列一样的用于在不同的线程之间进行通信的某种数据结构，也有是类似于共享数据、数据缓存、数据库连接池之类的东西，等等吧，总之就是在多个线程之间可以共享的对象。&lt;/p&gt;
+&lt;p&gt;一旦在并行workers并发模型中，牵扯到了共享对象，那么问题就会变得复杂。必须保证某个线程对数据的修改，对于其他线程来说是可见的（就是说修改后的数据应该写回主存中，还不是只是将修改反应到执行线程的cpu中的寄存器中，或者cache中）。此外需要在线程之间避免出现竞态条件、死锁，以及其他的数据共享引发的并发问题。
+当有多个线程要去竞争访问一个共享数据时，这些线程之间互相等待，它们之间的并行执行的特征就会出现部分丢失的情况，因为它们中的某些被阻塞了。许多并发数据结构都是阻塞型的，就是说在某个时刻，只允许一个或者几个线程对这部分数据结构进行访问，这就会导致数据竞争的出现。如果数据竞争比较严重，就可能会导致代码的串行化执行，这样才能保证对数据的共享访问。当然也失去了某些并行执行的特点，效率会下降。&lt;/p&gt;
+&lt;p&gt;现代的一些非阻塞并发算法，可以减少数据竞争，并增强性能，但是非阻塞算法是比较难以设计、实现。&lt;/p&gt;
+&lt;p&gt;Persistent data structure，可持久化的数据结构，是另一种替代方案。可持久化的数据结构，指的是，在对数据结构进行修改时，会自动保留数据结构修改之前的状态。因此如果多个线程正在访问相同的数据结构，其中的某个线程尝试修改它，这个修改数据的线程会获得一个指向新数据结构的指针，但是之前的版本是被保留下来了。所有其他的线程仍然访问的是旧版本的数据结构，这个数据结构的值仍然是以前的，因此称为持久化的数据结构。Scala编程中，提供了几个可持久化的数据结构。&lt;/p&gt;
+&lt;p&gt;尽管可持久化的数据结构看上去是一个解决并发修改问题的不错的解决方案，但是实际上它并不是真的“不错”。
+例如，一个可持久化的链表，我们向其头部添加新元素，添加之后返回新添加的元素的指针，这个指针由于是指向头节点的，所以可以认为是指向链表的。当一个线程对其进行了添加操作之后，其他线程的指针变量指向的却是当前头节点下一个节点开始的链表，它们是看不到现在的新添加的头节点的。即一个线程的修改对其他线程不可见。我们希望其可见。&lt;/p&gt;
+&lt;h3 id="stateless-workers"&gt;Stateless Workers &lt;a href="#stateless-workers" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;共享数据，可以被并发系统中的其他线程修改，因此workers必须在是使用某个共享数据之前，重新读取这个共享数据的值，以确保线程使用的数据是最新的，不管数据是在内存中共享，还是在数据中共享，这都是应该做的。一个worker自身不能记录数据的状态（使用之前需要重新读取数据），因此称这里的worder是无状态的worker。带来的问题就是使用之前要读取，效率比较低，尤其是数据在外部数据库中进行存储的情况。&lt;/p&gt;
+&lt;h3 id="job-ordering-is-nondeterministic"&gt;Job Ordering is Nondeterministic &lt;a href="#job-ordering-is-nondeterministic" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;另一个缺点是作业执行的顺序、完成的顺序与作业提交的顺序是不一致的。没有办法保证哪一个作业限制性，哪一个作业后执行。例如作业B比A提交的早，但是作业B可能被A处理的晚。由于无法预测那个作业先完成，哪个作业后完成，假定在多个作业存在明确的happen-before关系的情景下，就不能根据作业提交顺序来假定作业完成顺序。必须提供额外的措施来保证作业的先后关系，也就是在多个worker之间进行同步。&lt;/p&gt;
+&lt;h1 id="模型2assembly-line"&gt;模型2：Assembly Line &lt;a href="#%e6%a8%a1%e5%9e%8b2assembly-line" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="介绍-1"&gt;介绍 &lt;a href="#%e4%bb%8b%e7%bb%8d-1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Assembly Line（流水线模型，相对于并行workers模型）&lt;/p&gt;
+&lt;p&gt;第二个并发模型就是流水线模型，这是我的惯用叫法，主要是为了与前面的并行workers模型进行更加鲜明的对比。其他开发人员可能会使用其他术语，例如被动式系统（reactive systems）或者事件驱动的系统（event driven systems），可能与平台有关系。下面是一张图简要的描述了流水线workers并发模型。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2-%E5%B9%B6%E5%8F%91%E6%A8%A1%E5%9E%8B/3.png" alt="3.png"&gt;&lt;/p&gt;
+&lt;p&gt;这里的workers被组织成类似于企业内的流水线的方式，每一个worker都负责一个完整任务中的某一个部分，当这个部分被完成之后，这个worker将当前剩下的任务继续传递给下一个worker进行处理。每一个worker都是运行在自己的线程空间中，并且，与其他worker线程之间不存在状态的共享。这种模型也常常被称作是不共享的并发模型。&lt;/p&gt;
+&lt;p&gt;使用了流水线并发模型的系统，通常被设计成使用非阻塞IO的。非阻塞IO，就是说当一个worker启动IO操作的时候，IO操作因为涉及到IO设备与CPU速度不匹配的问题，如果不释放CPU，就会造成对计算资源的浪费。CPU此时做下一个线程的计算任务。当正在进行IO的线程执行完了IO操作之后，那么就可以将当前线程正在处理的对象传递给下一个worker进行处理。通过使用非阻塞IO，IO操作决定了两个workers线程在线程调度时，线程之间的边界。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2-%E5%B9%B6%E5%8F%91%E6%A8%A1%E5%9E%8B/4.png" alt="4.png"&gt;&lt;/p&gt;
+&lt;p&gt;现实情况下，作业可能不在同一个单一的数据流中进行处理，有可能是多个数据流。一个作业是从几个并行的workers继续向流向下面的workers。现实情况下，可能有多个流水线，或者多个虚拟的流水线，对同一个类型的作业进行处理。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2-%E5%B9%B6%E5%8F%91%E6%A8%A1%E5%9E%8B/5.png" alt="5.png"&gt;&lt;/p&gt;
+&lt;p&gt;作业在并发处理过程中，可能被传递给不止一个worker。例如，一个作业可能会被传递给一个executor，同时还传递给一个logger进行处理。下面这张图展示了3个流水线，最上面的流水线、最下面的流水线最终汇聚到中间的一条流水线中，在最上面的、最下面的流水线中，我们也看到了第二个worker将作业同时传递给了不同的worker。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/2-%E5%B9%B6%E5%8F%91%E6%A8%A1%E5%9E%8B/6.png" alt="6.png"&gt;&lt;/p&gt;</description></item><item><title>0 介绍</title><link>/blog/0-%E4%BB%8B%E7%BB%8D/</link><pubDate>Thu, 27 Dec 2018 10:46:12 +0800</pubDate><guid>/blog/0-%E4%BB%8B%E7%BB%8D/</guid><description>&lt;p&gt;该部分，对java并发程序设计进行了深入的介绍，并且对常用的锁、可重入锁、信号量、线程池等的实现细节，都一一进行了详细的介绍。&lt;/p&gt;
+&lt;p&gt;但是需要注意，&lt;strong&gt;该部分锁的实现是基于synchronized来实现的，这只是为了便于大家理解锁的设计思路&lt;/strong&gt;，应该注意的并发问题等等。&lt;/p&gt;
+&lt;p&gt;jdk实际在实现的时候，在jvm里面，&lt;strong&gt;synchronized底层是通过处理器lock来实现的&lt;/strong&gt;，jdk中的各种锁的实现是在此基础上进行的。&lt;/p&gt;
+&lt;p&gt;这部分，参考了&lt;a href="http://tutorials.jenkov.com/java-concurrency/index.html"&gt;Jakob Jenkov的Java并发编程教程&lt;/a&gt;，也融合了个人的一些思考，总结分享一下。&lt;/p&gt;</description></item><item><title>1 JUC并发包介绍</title><link>/blog/1-juc%E5%B9%B6%E5%8F%91%E5%8C%85%E4%BB%8B%E7%BB%8D/</link><pubDate>Thu, 27 Dec 2018 10:46:12 +0800</pubDate><guid>/blog/1-juc%E5%B9%B6%E5%8F%91%E5%8C%85%E4%BB%8B%E7%BB%8D/</guid><description>&lt;p&gt;juc包指的是java.util.concurrent这个包，在jdk中引入juc包之前，我们也可以实现多线程程序，通过&lt;code&gt;extends Thread&lt;/code&gt;，或者&lt;code&gt;实现Runnable接口&lt;/code&gt;，都可以，那么为什么还要引入一个juc包呢？&lt;/p&gt;
+&lt;p&gt;在未引入juc包之前，如果是有很多的任务需要处理，但是我们希望有固定数量的线程来对任务进行处理，或者说线程的数量是可以根据任务的数量进行调节的，然后用空闲线程对任务进行处理，处理完成之后，等待继续处理其他任务。好，这里我们隐式地提出了线程池、任务池的概念。&lt;/p&gt;
+&lt;p&gt;在JUC包引入之前，我们必须自己实现线程池、任务池，以及从线程池中取出空闲线程对任务池中的任务进行处理等等，包括线程的执行、取消、中断、挂起等等各种操作，可能我们自己实现的话，需要考虑的问题还是比较多的，也是比较复杂的。&lt;/p&gt;
+&lt;p&gt;juc包，最初一个大学教授开发出来赠送给sun公司的，从jdk 1.5开始就引入了JUC包，现在jdk已经发展到了8（这是几年前的笔记了，现在jdk已经升了好几个版本了），由于对锁的优化，JUC包比之前有了更好的性能。学习JUC包的使用，以及了解其实现思想、实现细节，是一个Java工程师必备的。因为不管是开发什么类型的程序，基本是离不开“并发处理”的，不管开发web程序，还是开发桌面程序、手机程序等。
+Clever people always read source！看教程，读源码！&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;多线程的好处？&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;多线程，线程在执行IO操作的时候，会释放处理器计算资源，让其他线程获取处理器资源进行其他计算；&lt;/li&gt;
+&lt;li&gt;线程，在上下文切换的时候，需要存储、还原的信息，比进程切换的时候要少，这样代价就会更小。这些信息包括线程私有的栈空间、PC，以及当前寄存器信息；但是跟单线程比的话，多线程切换的代价肯定要大，有必要考虑一下是否需要用多线程来实现；&lt;/li&gt;
+&lt;li&gt;对于多任务的场景，多线程设计更加贴近场景，多线程程序能够比单线程处理提供更好的性能，缩短响应时间；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;多线程的坏处？&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;多线程，需要考虑的线程之间的同步，设计、实现比单线程要复杂很多。针对这种个问题，也提出了不同的并发模型。请参看第二节。&lt;/li&gt;
+&lt;/ul&gt;</description></item><item><title>tcp write closed tcpconn</title><link>/blog/2018-12-20-%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B_write-closed-tcpconn/</link><pubDate>Thu, 20 Dec 2018 23:11:29 +0800</pubDate><guid>/blog/2018-12-20-%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B_write-closed-tcpconn/</guid><description>&lt;h1 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;&lt;strong&gt;tcp client: write to a half-closed tcp connection!&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;这里探讨一下这个问题，Write to a closed tcp connection的问题。在深入讨论这些问题之前，首先要了解tcp state diagram，为此文末特地附上了经典的tcp状态转换图。&lt;/p&gt;
 &lt;p&gt;我们的场景是这样的，tcp server已经启动，然后tcp client主动建立连接请求，连接成功建立后，tcp client并不立即发送数据而是等待一段时间之后才会发送数据（这种在client端的tcp连接池中非常常见），tcp server端为了防止连接被滥用，会每隔30s钟检查一下tcp连接是否空闲，如果两次检查都发现tcp连接空闲则主动将连接关闭。&lt;/p&gt;
@@ -12057,4 +12977,130 @@ body = body.replace(/&amp;lt;/g, '&amp;amp;lt;'); // 转换&amp;lt;
 output.emit('newContent', md.render(body));
 });
 }
-&lt;/code&gt;&lt;/pre&gt;</description></item></channel></rss>
+&lt;/code&gt;&lt;/pre&gt;</description></item><item><title/><link>/blog/_processor-design-learning-guide/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/blog/_processor-design-learning-guide/</guid><description>&lt;h1 id="处理器设计学习指南"&gt;处理器设计学习指南 &lt;a href="#%e5%a4%84%e7%90%86%e5%99%a8%e8%ae%be%e8%ae%a1%e5%ad%a6%e4%b9%a0%e6%8c%87%e5%8d%97" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;个人学习参考文档，目标是&amp;quot;吃透处理器设计，至少核心理念理解到位&amp;quot;。
+本文档基于对 &lt;a href="https://docs.boom-core.org/en/latest/"&gt;BOOM (Berkeley Out-of-Order Machine)&lt;/a&gt; 文档的评估，
+梳理了学习现代处理器设计所需的核心概念、推荐资源和学习路径。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="0-为什么选-boom-作为入门"&gt;0. 为什么选 BOOM 作为入门 &lt;a href="#0-%e4%b8%ba%e4%bb%80%e4%b9%88%e9%80%89-boom-%e4%bd%9c%e4%b8%ba%e5%85%a5%e9%97%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;特点&lt;/th&gt;
+&lt;th&gt;说明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;开源可综合&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;可以读 Chisel 源码理解硬件实现&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;RISC-V ISA&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;指令简单，每条指令拆 1 个 uop，无微码&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;7 级流水线&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;结构清晰，x86 动辄 20+ 级难以入门&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;完整 OoO&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;包含 ROB、寄存器重命名、Issue Queue、LSU 等核心结构&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;文档友好&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;每个子系统有专门章节，篇幅适中&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;&lt;strong&gt;核心策略&lt;/strong&gt;：先用 BOOM 建立 OoO 流水线的完整心智模型（1-2 天），再对照 Intel 手册和教材补充 x86 特定内容。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-核心概念全景图"&gt;1. 核心概念全景图 &lt;a href="#1-%e6%a0%b8%e5%bf%83%e6%a6%82%e5%bf%b5%e5%85%a8%e6%99%af%e5%9b%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code&gt;处理器设计核心概念
+├── 1. 流水线基础 (Pipelining)
+│ ├── 5 级经典流水线 (F/D/E/M/W)
+│ ├── 数据冒险 / 控制冒险 / 结构冒险
+│ ├── 转发 (Forwarding / Bypassing)
+│ └── 流水线互锁 (Pipeline Interlock)
+│
+├── 2. 乱序执行 (Out-of-Order Execution) ★核心中的核心
+│ ├── 寄存器重命名 (Register Renaming)
+│ │ ├── Rename Map Table (逻辑寄存器 → 物理寄存器)
+│ │ ├── Free List (空闲物理寄存器列表)
+│ │ └── Busy Table (目标寄存器是否就绪)
+│ ├── Reorder Buffer (ROB)
+│ │ ├── 按程序顺序提交 (In-Order Commit)
+│ │ ├── 精确异常 (Precise Exception)
+│ │ └── 推测状态 vs 架构状态
+│ ├── Issue Queue / Reservation Station
+│ │ ├── 等待操作数就绪
+│ │ ├── 唤醒逻辑 (Wake-up)
+│ │ └── 选择逻辑 (Select / Schedule)
+│ ├── 物理寄存器文件 (Physical Register File)
+│ └── Bypass Network (转发网络)
+│
+├── 3. 分支预测 (Branch Prediction)
+│ ├── BTB (Branch Target Buffer) — 记录目标地址
+│ ├── 方向预测器 — Bimodal / Gshare / TAGE / Perceptron
+│ ├── RAS (Return Address Stack) — 函数返回预测
+│ ├── 推测执行与误预测恢复
+│ │ ├── Rename Map Table 快照 (BOOM 方式)
+│ │ └── Checkpoint / Walk-back (Intel 方式)
+│ └── 分支的&amp;quot;代价&amp;quot;：Pipeline Flush + 浪费的工作
+│
+├── 4. 内存子系统 ★你当前文章的方向
+│ ├── Load Queue (LDQ) / Store Queue (STQ)
+│ │ ├── Store Buffer 就是 STQ
+│ │ ├── 存储转发 (Store-to-Load Forwarding)
+│ │ └── 内存排序失败 (Memory Ordering Failure) 与重放
+│ ├── 内存一致性模型
+│ │ ├── SC (Sequential Consistency) — 理想的不可实现
+│ │ ├── x86 TSO (Total Store Order) — 你要掌握的
+│ │ ├── RISC-V RVWMO (Weak Memory Order) — BOOM 使用的
+│ │ └── ARM / Power (Relaxed) — 更宽松的
+│ ├── 内存屏障指令
+│ │ ├── x86: MFENCE / LFENCE / SFENCE
+│ │ ├── RISC-V: FENCE / FENCE.I
+│ │ └── 屏障的微架构开销 (排空 Store Buffer 等)
+│ └── 非临时存储 (Non-Temporal Stores) 与 Write-Combining
+│
+├── 5. 缓存与一致性 ★与你 LOCK 文章直接相关
+│ ├── 缓存层级 (L1i / L1d / L2 / L3 / LLC)
+│ ├── 缓存映射方式
+│ │ ├── 直接映射 (Direct-Mapped)
+│ │ ├── 组关联 (Set-Associative)
+│ │ └── 全关联 (Fully-Associative)
+│ ├── MESI / MOESI 缓存一致性协议
+│ │ ├── M(odified) E(xclusive) S(hared) I(nvalid)
+│ │ ├── O(wned) — MOESI 新增
+│ │ ├── 状态转换图
+│ │ └── 一致性消息 (RFO / Invalidate / Write-back)
+│ ├── 总线锁 vs 缓存锁 (LOCK 前缀的演进)
+│ ├── False Sharing 问题
+│ └── 跨 Socket 一致性 (QPI / UPI)
+│
+├── 6. 虚拟内存
+│ ├── 页表 (Page Table) — 多级页表遍历
+│ ├── TLB (Translation Lookaside Buffer)
+│ │ ├── L1 ITLB / DTLB
+│ │ ├── L2 STLB (Shared TLB)
+│ │ └── TLB Miss → Page Walk → 更新 TLB
+│ ├── ASID / PCID (地址空间 / 进程上下文标识)
+│ └── 大页 (Huge Pages) 对 TLB 的影响
+│
+├── 7. 高级主题
+│ ├── SMT / Hyper-Threading (同时多线程)
+│ ├── SIMD / 向量执行 (SSE / AVX / NEON / RVV)
+│ ├── 微码 (Microcode) — x86 专属
+│ ├── 融合 (Fusion)
+│ │ ├── 指令融合 (Macro-Fusion)
+│ │ ├── 微操作融合 (Micro-Fusion)
+│ │ └── 内存消歧 (Memory Disambiguation)
+│ ├── 预取器 (Prefetcher) — Stride / IP-based / Spatial
+│ └── 功耗管理 (DVFS / P-states / C-states)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr&gt;
+&lt;h2 id="2-学习资源分级"&gt;2. 学习资源分级 &lt;a href="#2-%e5%ad%a6%e4%b9%a0%e8%b5%84%e6%ba%90%e5%88%86%e7%ba%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="21-第一站boom-文档建立-ooo-心智模型"&gt;2.1 第一站：BOOM 文档（建立 OoO 心智模型） &lt;a href="#21-%e7%ac%ac%e4%b8%80%e7%ab%99boom-%e6%96%87%e6%a1%a3%e5%bb%ba%e7%ab%8b-ooo-%e5%bf%83%e6%99%ba%e6%a8%a1%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;精读顺序及重点：&lt;/p&gt;</description></item></channel></rss>

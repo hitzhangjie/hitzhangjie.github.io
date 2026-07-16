@@ -1,0 +1,293 @@
+<!doctype html><html lang=en-US><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-regular.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-500.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-700.woff2 type=font/woff2 crossorigin><script>window.__LAYOUT_WIDTH_DEFAULT__="standard"</script><script>(()=>{(function(){var t,n={compact:1,standard:1,wide:1,fullscreen:1},s="layout-width-v",o="3",e=null,i=null;try{e=localStorage.getItem("layout-width"),i=localStorage.getItem(s)}catch{}if(i!==o){e==="standard"?e="compact":e==="compact"?e="standard":e==="normal"?e="compact":e==="reading"&&(e="wide");try{e&&localStorage.setItem("layout-width",e),localStorage.setItem(s,o)}catch{}}t=window.__LAYOUT_WIDTH_DEFAULT__||"standard",n[t]||(t="standard"),e&&!n[e]&&(e=null),document.documentElement.setAttribute("data-layout-width",e||t)})()})()</script><link rel=stylesheet href=/main.9aa5684d2b002d9bd48d08e085ef1aaf384539b58400fb28dffa9efe2301549338a87e27640af00ff481a349461fbc931571455f65e33d95717f55c714f3dd41.css integrity="sha512-mqVoTSsALZvUjQjghe8arzhFObWEAPso3/qe/iMBVJM4qH4nZArwD/SBo0lGH7yTFXFFX2XjPZVxf1XHFPPdQQ==" crossorigin=anonymous><noscript><style>img.lazyload{display:none}</style></noscript><meta name=robots content="index, follow"><meta name=googlebot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><meta name=bingbot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><title>- MySpace</title><meta name=description content='处理器设计学习指南 # 个人学习参考文档，目标是"吃透处理器设计，至少核心理念理解到位"。 本文档基于对 BOOM (Berkeley Out-of-Order Machine) 文档的评估， 梳理了学习现代处理器设计所需的核心概念、推荐资源和学习路径。
+0. 为什么选 BOOM 作为入门 # 特点 说明 开源可综合 可以读 Chisel 源码理解硬件实现 RISC-V ISA 指令简单，每条指令拆 1 个 uop，无微码 7 级流水线 结构清晰，x86 动辄 20+ 级难以入门 完整 OoO 包含 ROB、寄存器重命名、Issue Queue、LSU 等核心结构 文档友好 每个子系统有专门章节，篇幅适中 核心策略：先用 BOOM 建立 OoO 流水线的完整心智模型（1-2 天），再对照 Intel 手册和教材补充 x86 特定内容。
+1. 核心概念全景图 # 处理器设计核心概念 ├── 1. 流水线基础 (Pipelining) │ ├── 5 级经典流水线 (F/D/E/M/W) │ ├── 数据冒险 / 控制冒险 / 结构冒险 │ ├── 转发 (Forwarding / Bypassing) │ └── 流水线互锁 (Pipeline Interlock) │ ├── 2. 乱序执行 (Out-of-Order Execution) ★核心中的核心 │ ├── 寄存器重命名 (Register Renaming) │ │ ├── Rename Map Table (逻辑寄存器 → 物理寄存器) │ │ ├── Free List (空闲物理寄存器列表) │ │ └── Busy Table (目标寄存器是否就绪) │ ├── Reorder Buffer (ROB) │ │ ├── 按程序顺序提交 (In-Order Commit) │ │ ├── 精确异常 (Precise Exception) │ │ └── 推测状态 vs 架构状态 │ ├── Issue Queue / Reservation Station │ │ ├── 等待操作数就绪 │ │ ├── 唤醒逻辑 (Wake-up) │ │ └── 选择逻辑 (Select / Schedule) │ ├── 物理寄存器文件 (Physical Register File) │ └── Bypass Network (转发网络) │ ├── 3. 分支预测 (Branch Prediction) │ ├── BTB (Branch Target Buffer) — 记录目标地址 │ ├── 方向预测器 — Bimodal / Gshare / TAGE / Perceptron │ ├── RAS (Return Address Stack) — 函数返回预测 │ ├── 推测执行与误预测恢复 │ │ ├── Rename Map Table 快照 (BOOM 方式) │ │ └── Checkpoint / Walk-back (Intel 方式) │ └── 分支的"代价"：Pipeline Flush + 浪费的工作 │ ├── 4. 内存子系统 ★你当前文章的方向 │ ├── Load Queue (LDQ) / Store Queue (STQ) │ │ ├── Store Buffer 就是 STQ │ │ ├── 存储转发 (Store-to-Load Forwarding) │ │ └── 内存排序失败 (Memory Ordering Failure) 与重放 │ ├── 内存一致性模型 │ │ ├── SC (Sequential Consistency) — 理想的不可实现 │ │ ├── x86 TSO (Total Store Order) — 你要掌握的 │ │ ├── RISC-V RVWMO (Weak Memory Order) — BOOM 使用的 │ │ └── ARM / Power (Relaxed) — 更宽松的 │ ├── 内存屏障指令 │ │ ├── x86: MFENCE / LFENCE / SFENCE │ │ ├── RISC-V: FENCE / FENCE.I │ │ └── 屏障的微架构开销 (排空 Store Buffer 等) │ └── 非临时存储 (Non-Temporal Stores) 与 Write-Combining │ ├── 5. 缓存与一致性 ★与你 LOCK 文章直接相关 │ ├── 缓存层级 (L1i / L1d / L2 / L3 / LLC) │ ├── 缓存映射方式 │ │ ├── 直接映射 (Direct-Mapped) │ │ ├── 组关联 (Set-Associative) │ │ └── 全关联 (Fully-Associative) │ ├── MESI / MOESI 缓存一致性协议 │ │ ├── M(odified) E(xclusive) S(hared) I(nvalid) │ │ ├── O(wned) — MOESI 新增 │ │ ├── 状态转换图 │ │ └── 一致性消息 (RFO / Invalidate / Write-back) │ ├── 总线锁 vs 缓存锁 (LOCK 前缀的演进) │ ├── False Sharing 问题 │ └── 跨 Socket 一致性 (QPI / UPI) │ ├── 6. 虚拟内存 │ ├── 页表 (Page Table) — 多级页表遍历 │ ├── TLB (Translation Lookaside Buffer) │ │ ├── L1 ITLB / DTLB │ │ ├── L2 STLB (Shared TLB) │ │ └── TLB Miss → Page Walk → 更新 TLB │ ├── ASID / PCID (地址空间 / 进程上下文标识) │ └── 大页 (Huge Pages) 对 TLB 的影响 │ ├── 7. 高级主题 │ ├── SMT / Hyper-Threading (同时多线程) │ ├── SIMD / 向量执行 (SSE / AVX / NEON / RVV) │ ├── 微码 (Microcode) — x86 专属 │ ├── 融合 (Fusion) │ │ ├── 指令融合 (Macro-Fusion) │ │ ├── 微操作融合 (Micro-Fusion) │ │ └── 内存消歧 (Memory Disambiguation) │ ├── 预取器 (Prefetcher) — Stride / IP-based / Spatial │ └── 功耗管理 (DVFS / P-states / C-states) 2. 学习资源分级 # 2.1 第一站：BOOM 文档（建立 OoO 心智模型） # 精读顺序及重点：
+'><link rel=canonical href=/blog/_processor-design-learning-guide/><meta property="og:locale" content="en_US"><meta property="og:type" content="article"><meta property="og:title" content><meta property="og:description" content='处理器设计学习指南 #
+
+个人学习参考文档，目标是"吃透处理器设计，至少核心理念理解到位"。
+本文档基于对 BOOM (Berkeley Out-of-Order Machine) 文档的评估，
+梳理了学习现代处理器设计所需的核心概念、推荐资源和学习路径。
+
+0. 为什么选 BOOM 作为入门 #
+
+	
+			
+					特点
+					说明
+			
+	
+	
+			
+					开源可综合
+					可以读 Chisel 源码理解硬件实现
+			
+			
+					RISC-V ISA
+					指令简单，每条指令拆 1 个 uop，无微码
+			
+			
+					7 级流水线
+					结构清晰，x86 动辄 20+ 级难以入门
+			
+			
+					完整 OoO
+					包含 ROB、寄存器重命名、Issue Queue、LSU 等核心结构
+			
+			
+					文档友好
+					每个子系统有专门章节，篇幅适中
+			
+	
+
+核心策略：先用 BOOM 建立 OoO 流水线的完整心智模型（1-2 天），再对照 Intel 手册和教材补充 x86 特定内容。
+
+1. 核心概念全景图 #
+处理器设计核心概念
+
+├── 1. 流水线基础 (Pipelining)
+│   ├── 5 级经典流水线 (F/D/E/M/W)
+│   ├── 数据冒险 / 控制冒险 / 结构冒险
+│   ├── 转发 (Forwarding / Bypassing)
+│   └── 流水线互锁 (Pipeline Interlock)
+│
+├── 2. 乱序执行 (Out-of-Order Execution) ★核心中的核心
+│   ├── 寄存器重命名 (Register Renaming)
+│   │   ├── Rename Map Table (逻辑寄存器 → 物理寄存器)
+│   │   ├── Free List (空闲物理寄存器列表)
+│   │   └── Busy Table (目标寄存器是否就绪)
+│   ├── Reorder Buffer (ROB)
+│   │   ├── 按程序顺序提交 (In-Order Commit)
+│   │   ├── 精确异常 (Precise Exception)
+│   │   └── 推测状态 vs 架构状态
+│   ├── Issue Queue / Reservation Station
+│   │   ├── 等待操作数就绪
+│   │   ├── 唤醒逻辑 (Wake-up)
+│   │   └── 选择逻辑 (Select / Schedule)
+│   ├── 物理寄存器文件 (Physical Register File)
+│   └── Bypass Network (转发网络)
+│
+├── 3. 分支预测 (Branch Prediction)
+│   ├── BTB (Branch Target Buffer) — 记录目标地址
+│   ├── 方向预测器 — Bimodal / Gshare / TAGE / Perceptron
+│   ├── RAS (Return Address Stack) — 函数返回预测
+│   ├── 推测执行与误预测恢复
+│   │   ├── Rename Map Table 快照 (BOOM 方式)
+│   │   └── Checkpoint / Walk-back (Intel 方式)
+│   └── 分支的"代价"：Pipeline Flush + 浪费的工作
+│
+├── 4. 内存子系统 ★你当前文章的方向
+│   ├── Load Queue (LDQ) / Store Queue (STQ)
+│   │   ├── Store Buffer 就是 STQ
+│   │   ├── 存储转发 (Store-to-Load Forwarding)
+│   │   └── 内存排序失败 (Memory Ordering Failure) 与重放
+│   ├── 内存一致性模型
+│   │   ├── SC (Sequential Consistency) — 理想的不可实现
+│   │   ├── x86 TSO (Total Store Order) — 你要掌握的
+│   │   ├── RISC-V RVWMO (Weak Memory Order) — BOOM 使用的
+│   │   └── ARM / Power (Relaxed) — 更宽松的
+│   ├── 内存屏障指令
+│   │   ├── x86: MFENCE / LFENCE / SFENCE
+│   │   ├── RISC-V: FENCE / FENCE.I
+│   │   └── 屏障的微架构开销 (排空 Store Buffer 等)
+│   └── 非临时存储 (Non-Temporal Stores) 与 Write-Combining
+│
+├── 5. 缓存与一致性 ★与你 LOCK 文章直接相关
+│   ├── 缓存层级 (L1i / L1d / L2 / L3 / LLC)
+│   ├── 缓存映射方式
+│   │   ├── 直接映射 (Direct-Mapped)
+│   │   ├── 组关联 (Set-Associative)
+│   │   └── 全关联 (Fully-Associative)
+│   ├── MESI / MOESI 缓存一致性协议
+│   │   ├── M(odified) E(xclusive) S(hared) I(nvalid)
+│   │   ├── O(wned) — MOESI 新增
+│   │   ├── 状态转换图
+│   │   └── 一致性消息 (RFO / Invalidate / Write-back)
+│   ├── 总线锁 vs 缓存锁 (LOCK 前缀的演进)
+│   ├── False Sharing 问题
+│   └── 跨 Socket 一致性 (QPI / UPI)
+│
+├── 6. 虚拟内存
+│   ├── 页表 (Page Table) — 多级页表遍历
+│   ├── TLB (Translation Lookaside Buffer)
+│   │   ├── L1 ITLB / DTLB
+│   │   ├── L2 STLB (Shared TLB)
+│   │   └── TLB Miss → Page Walk → 更新 TLB
+│   ├── ASID / PCID (地址空间 / 进程上下文标识)
+│   └── 大页 (Huge Pages) 对 TLB 的影响
+│
+├── 7. 高级主题
+│   ├── SMT / Hyper-Threading (同时多线程)
+│   ├── SIMD / 向量执行 (SSE / AVX / NEON / RVV)
+│   ├── 微码 (Microcode) — x86 专属
+│   ├── 融合 (Fusion)
+│   │   ├── 指令融合 (Macro-Fusion)
+│   │   ├── 微操作融合 (Micro-Fusion)
+│   │   └── 内存消歧 (Memory Disambiguation)
+│   ├── 预取器 (Prefetcher) — Stride / IP-based / Spatial
+│   └── 功耗管理 (DVFS / P-states / C-states)
+
+
+2. 学习资源分级 #
+2.1 第一站：BOOM 文档（建立 OoO 心智模型） #
+精读顺序及重点：'><meta property="og:url" content="/blog/_processor-design-learning-guide/"><meta property="og:site_name" content="MySpace"><meta property="og:image" content="/doks.png"><meta property="og:image:alt" content="MySpace"><meta name=twitter:card content="summary_large_image"><meta name=twitter:site content="@hitzhangjie"><meta name=twitter:creator content="@hitzhangjie"><meta name=twitter:title content><meta name=twitter:description content><meta name=twitter:image content="/doks.png"><meta name=twitter:image:alt content><script type=application/ld+json>{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/1","name":"","url":"/","sameAs":["https://twitter.com/hitzhangjie","https://www.linkedin.com/in/hitzhangjie/","https://github.com/hitzhangjie"],"image":{"@type":"ImageObject","@id":"/#/schema/image/1","url":"/\u003cnil\u003e","width":null,"height":null,"caption":""}},{"@type":"WebSite","@id":"/#/schema/website/1","url":"/","name":"MySpace","description":"MySpace is a hitzhangjie\u0027s personal space, for blogs, books, journey, thinkings.","publisher":{"@id":"/#/schema/person/1"}},{"@type":"WebPage","@id":"/blog/_processor-design-learning-guide/","url":"/blog/_processor-design-learning-guide/","name":"","description":"","isPartOf":{"@id":"/#/schema/website/1"},"about":{"@id":"/#/schema/person/1"},"datePublished":"0001-01-01T00:00:00CET","dateModified":"0001-01-01T00:00:00CET","breadcrumb":{"@id":"/blog/_processor-design-learning-guide/#/schema/breadcrumb/1"},"primaryImageOfPage":{"@id":"/blog/_processor-design-learning-guide/#/schema/image/2"},"inLanguage":"","potentialAction":[{"@type":"ReadAction","target":["/blog/_processor-design-learning-guide/"]}]},{"@type":"BreadcrumbList","@id":"/blog/_processor-design-learning-guide/#/schema/breadcrumb/1","name":"Breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"item":{"@type":"WebPage","@id":"/","url":"/","name":"Home"}},{"@type":"ListItem","position":2,"item":{"@id":"/blog_processor-design-learning-guide/"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Article","@id":"/#/schema/article/1","headline":"","description":"","isPartOf":{"@id":"/blog/_processor-design-learning-guide/"},"mainEntityOfPage":{"@id":"/blog/_processor-design-learning-guide/"},"datePublished":"0001-01-01T00:00:00CET","dateModified":"0001-01-01T00:00:00CET","author":{"@id":"/#/schema/person/2"},"publisher":{"@id":"/#/schema/person/1"},"image":{"@id":"/blog/_processor-design-learning-guide/#/schema/image/2"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/2","name":null,"sameAs":[]}]},{"@context":"https://schema.org","@graph":[{"@type":"ImageObject","@id":"/blog/_processor-design-learning-guide/#/schema/image/2","url":"/doks.png","contentUrl":"/doks.png","caption":""}]}]}</script><meta name=theme-color content="#fff"><link rel=icon href=/favicon.ico sizes=any><link rel=icon type=image/svg+xml href=/favicon.svg><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest crossorigin=use-credentials href=/site.webmanifest><script type=text/javascript src='https://platform-api.sharethis.com/js/sharethis.js#property=607868a58d7101001829a8df&product=sop' async></script><style>[alt~=sharing]{border:0;box-shadow:none}div#st-1{text-align:unset}div#st-1 .st-btn{height:24px;padding:0 4px}div#st-1 .st-btn>img{top:4.2px}div#st-2 .st-btn{height:24px;padding:0 4px}div#st-2 .st-btn>img{top:4.2px}</style><script async src="https://www.googletagmanager.com/gtag/js?id=UA-168027530-1"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","UA-168027530-1")</script></head><body class="blog single d-flex flex-column min-vh-100"><div class=sticky-top><div class=header-bar></div><header class="navbar navbar-expand-lg navbar-light doks-navbar"><nav class="container-xxl flex-wrap flex-lg-nowrap" aria-label="Main navigation"><a class="navbar-brand order-0" href=/ aria-label=MySpace>MySpace
+</a><button class="btn btn-menu order-2 d-block d-lg-none" type=button data-bs-toggle=offcanvas data-bs-target=#offcanvasDoks aria-controls=offcanvasDoks aria-label="Open main menu">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div class="offcanvas offcanvas-end border-0 py-lg-1" tabindex=-1 id=offcanvasDoks data-bs-backdrop=true aria-labelledby=offcanvasDoksLabel><div class="header-bar d-lg-none"></div><div class="offcanvas-header d-lg-none"><h2 class="h5 offcanvas-title ps-2" id=offcanvasDoksLabel><a class=text-dark href=/>MySpace</a></h2><button type=button class="btn-close text-reset me-2" data-bs-dismiss=offcanvas aria-label="Close main menu"></button></div><div class="offcanvas-body p-4 p-lg-0"><ul class="nav flex-column flex-lg-row align-items-lg-center mt-2 mt-lg-0 ms-lg-2 me-lg-auto"><li class=nav-item><a class="nav-link ps-0 py-1 active" href=/blog/>Blog</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/books/>Books</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/landscape>Landscape</a></li></ul><hr class="text-black-50 my-4 d-lg-none"><form class="doks-search position-relative flex-grow-1 ms-lg-auto me-lg-2"><input id=search class="form-control is-search" type=search placeholder="Search docs..." aria-label="Search docs..." autocomplete=off><div id=suggestions class="shadow bg-white rounded d-none"></div></form><hr class="text-black-50 my-4 d-lg-none"><ul class="nav flex-column flex-lg-row"><li class=nav-item><a class="nav-link social-link" href=https://twitter.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg><small class="ms-2 d-lg-none">Twitter</small></a></li><li class=nav-item><a class="nav-link social-link" href=https://github.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37.0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44.0 0020 4.77 5.07 5.07.0 0019.91 1S18.73.65 16 2.48a13.38 13.38.0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07.0 005 4.77 5.44 5.44.0 003.5 8.55c0 5.42 3.3 6.61 6.44 7A3.37 3.37.0 009 18.13V22"/></svg><small class="ms-2 d-lg-none">GitHub</small></a></li><li class="nav-item layout-width-dropdown"><a class="nav-link layout-width-dropdown-btn" href=# data-bs-toggle=dropdown aria-expanded=false aria-label=切换布局宽度 title=切换布局宽度><span class=lw-icon-standard><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-compact><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-wide><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span><span class=lw-icon-fullscreen><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg></span></a><ul class="dropdown-menu dropdown-menu-end"><li><button class="dropdown-item layout-width-option" data-layout-value=compact>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span>紧凑布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=standard>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>标准布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=wide>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span>宽松布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=fullscreen>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>全屏布局</button></li></ul></li></ul></div></div></nav></header></div><div class="wrap container-xxl" role=document><div class=content><div class="row flex-xl-nowrap" data-layout-width=standard><div class="col-lg-4 col-xl-3 docs-sidebar"><nav class=docs-links aria-label="Main navigation"></nav></div><main class="docs-content col-lg-12 col-xl-10"><h1></h1><p><small>Posted 0001-01-01 00:00 +0800 by <a class="stretched-link position-relative" href>ZhangJie</a>&nbsp;&dash;&nbsp;<strong>8&nbsp;min read</strong></small><p><div style=display:flex><div>分享:&nbsp;&nbsp;</div><div><div class=sharethis-inline-share-buttons></div></div></div><hr><p class=lead></p><h1 id=处理器设计学习指南>处理器设计学习指南 <a href=#%e5%a4%84%e7%90%86%e5%99%a8%e8%ae%be%e8%ae%a1%e5%ad%a6%e4%b9%a0%e6%8c%87%e5%8d%97 class=anchor aria-hidden=true>#</a></h1><blockquote><p>个人学习参考文档，目标是"吃透处理器设计，至少核心理念理解到位"。
+本文档基于对 <a href=https://docs.boom-core.org/en/latest/>BOOM (Berkeley Out-of-Order Machine)</a> 文档的评估，
+梳理了学习现代处理器设计所需的核心概念、推荐资源和学习路径。</p></blockquote><h2 id=0-为什么选-boom-作为入门>0. 为什么选 BOOM 作为入门 <a href=#0-%e4%b8%ba%e4%bb%80%e4%b9%88%e9%80%89-boom-%e4%bd%9c%e4%b8%ba%e5%85%a5%e9%97%a8 class=anchor aria-hidden=true>#</a><a href=#0-为什么选-boom-作为入门 class=anchor aria-hidden=true>#</a></h2><table><thead><tr><th>特点</th><th>说明</th></tr></thead><tbody><tr><td><strong>开源可综合</strong></td><td>可以读 Chisel 源码理解硬件实现</td></tr><tr><td><strong>RISC-V ISA</strong></td><td>指令简单，每条指令拆 1 个 uop，无微码</td></tr><tr><td><strong>7 级流水线</strong></td><td>结构清晰，x86 动辄 20+ 级难以入门</td></tr><tr><td><strong>完整 OoO</strong></td><td>包含 ROB、寄存器重命名、Issue Queue、LSU 等核心结构</td></tr><tr><td><strong>文档友好</strong></td><td>每个子系统有专门章节，篇幅适中</td></tr></tbody></table><p><strong>核心策略</strong>：先用 BOOM 建立 OoO 流水线的完整心智模型（1-2 天），再对照 Intel 手册和教材补充 x86 特定内容。</p><hr><h2 id=1-核心概念全景图>1. 核心概念全景图 <a href=#1-%e6%a0%b8%e5%bf%83%e6%a6%82%e5%bf%b5%e5%85%a8%e6%99%af%e5%9b%be class=anchor aria-hidden=true>#</a><a href=#1-核心概念全景图 class=anchor aria-hidden=true>#</a></h2><pre><code>处理器设计核心概念
+
+├── 1. 流水线基础 (Pipelining)
+│   ├── 5 级经典流水线 (F/D/E/M/W)
+│   ├── 数据冒险 / 控制冒险 / 结构冒险
+│   ├── 转发 (Forwarding / Bypassing)
+│   └── 流水线互锁 (Pipeline Interlock)
+│
+├── 2. 乱序执行 (Out-of-Order Execution) ★核心中的核心
+│   ├── 寄存器重命名 (Register Renaming)
+│   │   ├── Rename Map Table (逻辑寄存器 → 物理寄存器)
+│   │   ├── Free List (空闲物理寄存器列表)
+│   │   └── Busy Table (目标寄存器是否就绪)
+│   ├── Reorder Buffer (ROB)
+│   │   ├── 按程序顺序提交 (In-Order Commit)
+│   │   ├── 精确异常 (Precise Exception)
+│   │   └── 推测状态 vs 架构状态
+│   ├── Issue Queue / Reservation Station
+│   │   ├── 等待操作数就绪
+│   │   ├── 唤醒逻辑 (Wake-up)
+│   │   └── 选择逻辑 (Select / Schedule)
+│   ├── 物理寄存器文件 (Physical Register File)
+│   └── Bypass Network (转发网络)
+│
+├── 3. 分支预测 (Branch Prediction)
+│   ├── BTB (Branch Target Buffer) — 记录目标地址
+│   ├── 方向预测器 — Bimodal / Gshare / TAGE / Perceptron
+│   ├── RAS (Return Address Stack) — 函数返回预测
+│   ├── 推测执行与误预测恢复
+│   │   ├── Rename Map Table 快照 (BOOM 方式)
+│   │   └── Checkpoint / Walk-back (Intel 方式)
+│   └── 分支的&quot;代价&quot;：Pipeline Flush + 浪费的工作
+│
+├── 4. 内存子系统 ★你当前文章的方向
+│   ├── Load Queue (LDQ) / Store Queue (STQ)
+│   │   ├── Store Buffer 就是 STQ
+│   │   ├── 存储转发 (Store-to-Load Forwarding)
+│   │   └── 内存排序失败 (Memory Ordering Failure) 与重放
+│   ├── 内存一致性模型
+│   │   ├── SC (Sequential Consistency) — 理想的不可实现
+│   │   ├── x86 TSO (Total Store Order) — 你要掌握的
+│   │   ├── RISC-V RVWMO (Weak Memory Order) — BOOM 使用的
+│   │   └── ARM / Power (Relaxed) — 更宽松的
+│   ├── 内存屏障指令
+│   │   ├── x86: MFENCE / LFENCE / SFENCE
+│   │   ├── RISC-V: FENCE / FENCE.I
+│   │   └── 屏障的微架构开销 (排空 Store Buffer 等)
+│   └── 非临时存储 (Non-Temporal Stores) 与 Write-Combining
+│
+├── 5. 缓存与一致性 ★与你 LOCK 文章直接相关
+│   ├── 缓存层级 (L1i / L1d / L2 / L3 / LLC)
+│   ├── 缓存映射方式
+│   │   ├── 直接映射 (Direct-Mapped)
+│   │   ├── 组关联 (Set-Associative)
+│   │   └── 全关联 (Fully-Associative)
+│   ├── MESI / MOESI 缓存一致性协议
+│   │   ├── M(odified) E(xclusive) S(hared) I(nvalid)
+│   │   ├── O(wned) — MOESI 新增
+│   │   ├── 状态转换图
+│   │   └── 一致性消息 (RFO / Invalidate / Write-back)
+│   ├── 总线锁 vs 缓存锁 (LOCK 前缀的演进)
+│   ├── False Sharing 问题
+│   └── 跨 Socket 一致性 (QPI / UPI)
+│
+├── 6. 虚拟内存
+│   ├── 页表 (Page Table) — 多级页表遍历
+│   ├── TLB (Translation Lookaside Buffer)
+│   │   ├── L1 ITLB / DTLB
+│   │   ├── L2 STLB (Shared TLB)
+│   │   └── TLB Miss → Page Walk → 更新 TLB
+│   ├── ASID / PCID (地址空间 / 进程上下文标识)
+│   └── 大页 (Huge Pages) 对 TLB 的影响
+│
+├── 7. 高级主题
+│   ├── SMT / Hyper-Threading (同时多线程)
+│   ├── SIMD / 向量执行 (SSE / AVX / NEON / RVV)
+│   ├── 微码 (Microcode) — x86 专属
+│   ├── 融合 (Fusion)
+│   │   ├── 指令融合 (Macro-Fusion)
+│   │   ├── 微操作融合 (Micro-Fusion)
+│   │   └── 内存消歧 (Memory Disambiguation)
+│   ├── 预取器 (Prefetcher) — Stride / IP-based / Spatial
+│   └── 功耗管理 (DVFS / P-states / C-states)
+</code></pre><hr><h2 id=2-学习资源分级>2. 学习资源分级 <a href=#2-%e5%ad%a6%e4%b9%a0%e8%b5%84%e6%ba%90%e5%88%86%e7%ba%a7 class=anchor aria-hidden=true>#</a><a href=#2-学习资源分级 class=anchor aria-hidden=true>#</a></h2><h3 id=21-第一站boom-文档建立-ooo-心智模型>2.1 第一站：BOOM 文档（建立 OoO 心智模型） <a href=#21-%e7%ac%ac%e4%b8%80%e7%ab%99boom-%e6%96%87%e6%a1%a3%e5%bb%ba%e7%ab%8b-ooo-%e5%bf%83%e6%99%ba%e6%a8%a1%e5%9e%8b class=anchor aria-hidden=true>#</a><a href=#21-第一站boom-文档建立-ooo-心智模型 class=anchor aria-hidden=true>#</a></h3><p>精读顺序及重点：</p><table><thead><tr><th style=text-align:center>顺序</th><th>文档</th><th>精读重点</th></tr></thead><tbody><tr><td style=text-align:center>1</td><td><a href=https://docs.boom-core.org/en/latest/sections/intro-overview/boom-pipeline.html>The BOOM Pipeline</a></td><td>7 级流水线概览、各阶段职责</td></tr><tr><td style=text-align:center>2</td><td><a href=https://docs.boom-core.org/en/latest/sections/rename-stage.html>The Rename Stage</a></td><td>★ Rename Map Table、Busy Table、Free List 如何协作消除 WAW/WAR 假依赖</td></tr><tr><td style=text-align:center>3</td><td><a href=https://docs.boom-core.org/en/latest/sections/rob.html>The ROB and Dispatch Stage</a></td><td>★ ROB 如何实现 In-Order Commit、精确异常、Map Table 快照</td></tr><tr><td style=text-align:center>4</td><td><a href=https://docs.boom-core.org/en/latest/sections/issue-units.html>The Issue Unit</a></td><td>★ Issue Queue 的等待-唤醒-选择机制，理解指令从哪里开始"乱序"</td></tr><tr><td style=text-align:center>5</td><td><a href=https://docs.boom-core.org/en/latest/sections/register-files.html>Register Files and Bypass Network</a></td><td>物理寄存器 vs 架构寄存器、转发网络如何消除 RAW</td></tr><tr><td style=text-align:center>6</td><td><a href=https://docs.boom-core.org/en/latest/sections/load-store-unit.html>The Load/Store Unit (LSU)</a></td><td>★★ LDQ/STQ 结构、存储转发、内存排序失败与恢复</td></tr><tr><td style=text-align:center>7</td><td><a href=https://docs.boom-core.org/en/latest/sections/execute-pipeline.html>The Execute Pipeline</a></td><td>功能单元类型、分支单元、浮点流水线</td></tr><tr><td style=text-align:center>8</td><td><a href=https://docs.boom-core.org/en/latest/sections/branch-prediction.html>Branch Prediction</a></td><td>NLP (快速) + BPD (精确) 两级预测器</td></tr></tbody></table><blockquote><p><strong>BOOM 文档站版本建议</strong>：用 <code>en/stable</code> 而非 <code>en/latest</code>，路径可能不同。如遇 404，从<a href=https://docs.boom-core.org/en/stable/>首页</a>进入。</p></blockquote><h3 id=22-第二站权威教材深入原理与设计权衡>2.2 第二站：权威教材（深入原理与设计权衡） <a href=#22-%e7%ac%ac%e4%ba%8c%e7%ab%99%e6%9d%83%e5%a8%81%e6%95%99%e6%9d%90%e6%b7%b1%e5%85%a5%e5%8e%9f%e7%90%86%e4%b8%8e%e8%ae%be%e8%ae%a1%e6%9d%83%e8%a1%a1 class=anchor aria-hidden=true>#</a><a href=#22-第二站权威教材深入原理与设计权衡 class=anchor aria-hidden=true>#</a></h3><h4 id=必读>必读 <a href=#%e5%bf%85%e8%af%bb class=anchor aria-hidden=true>#</a><a href=#必读 class=anchor aria-hidden=true>#</a></h4><table><thead><tr><th>资源</th><th>关键章节</th><th>对应概念</th></tr></thead><tbody><tr><td><strong>《Computer Architecture: A Quantitative Approach》</strong><br>Hennessy & Patterson, 第 6 版</td><td>第 3 章 ILP (指令级并行)<br>第 5 章 Memory Hierarchy</td><td>流水线、OoO、分支预测、缓存</td></tr><tr><td><strong>《A Primer on Memory Consistency and Cache Coherence》</strong><br>Sorin, Hill, Wood</td><td>第 2 章 (SC → TSO)<br>第 6 章 (Coherence Protocols)<br>第 5 章 (RVWMO)</td><td>★ 内存模型、MESI 协议</td></tr><tr><td><strong>Intel SDM (Software Developer Manual)</strong></td><td>Vol 3, Chapter 8: Multiple-Processor Management<br>Vol 3, Chapter 11: Memory Cache Control</td><td>★ LOCK 硬件实现、MTRR/PAT</td></tr></tbody></table><h4 id=进阶参考>进阶参考 <a href=#%e8%bf%9b%e9%98%b6%e5%8f%82%e8%80%83 class=anchor aria-hidden=true>#</a><a href=#进阶参考 class=anchor aria-hidden=true>#</a></h4><table><thead><tr><th>资源</th><th>说明</th></tr></thead><tbody><tr><td><strong>Onur Mutlu (ETH Zurich)</strong><br>Digital Design & Computer Architecture</td><td>YouTube 课程，含大量真实处理器案例分析</td></tr><tr><td><strong>《Modern Processor Design》</strong><br>Shen & Lipasti</td><td>更偏微架构实现细节</td></tr><tr><td><strong>Agner Fog&rsquo;s microarchitecture.pdf</strong></td><td>Intel/AMD 各代微架构的反向工程分析</td></tr><tr><td><strong>WikiChip</strong> (en.wikichip.org)</td><td>各处理器微架构的详细 die shot 分析</td></tr></tbody></table><h3 id=23-boom-覆盖度检查表>2.3 BOOM 覆盖度检查表 <a href=#23-boom-%e8%a6%86%e7%9b%96%e5%ba%a6%e6%a3%80%e6%9f%a5%e8%a1%a8 class=anchor aria-hidden=true>#</a><a href=#23-boom-覆盖度检查表 class=anchor aria-hidden=true>#</a></h3><table><thead><tr><th>概念</th><th style=text-align:center>BOOM 覆盖</th><th>需要从教材补充的</th></tr></thead><tbody><tr><td>5 级流水线基础</td><td style=text-align:center>✅</td><td>pipeline hazard 详细分类</td></tr><tr><td>寄存器重命名</td><td style=text-align:center>✅✅</td><td>不同重命名策略（SRAM vs CAM）</td></tr><tr><td>ROB + In-Order Commit</td><td style=text-align:center>✅✅</td><td>不同 ROB 实现（data-in-ROB vs PRF）</td></tr><tr><td>Issue Queue / 唤醒</td><td style=text-align:center>✅✅</td><td>Reservation Station vs PRF 两种设计哲学</td></tr><tr><td>Bypass Network</td><td style=text-align:center>✅</td><td>实际时序约束与 bypass 层级</td></tr><tr><td>分支预测</td><td style=text-align:center>✅ NLP+BPD</td><td>TAGE / Perceptron / 现代 Intel 预测器</td></tr><tr><td>精确异常</td><td style=text-align:center>✅ ROB 方式</td><td>History File / Future File 等其他策略</td></tr><tr><td>Load Queue / Store Queue</td><td style=text-align:center>✅✅</td><td>—</td></tr><tr><td>存储转发</td><td style=text-align:center>✅✅</td><td>—</td></tr><tr><td>内存排序失败与恢复</td><td style=text-align:center>✅✅</td><td>—</td></tr><tr><td>x86 TSO 内存模型</td><td style=text-align:center>❌</td><td>★ 需从教材 + Intel 手册补充</td></tr><tr><td>RISC-V RVWMO</td><td style=text-align:center>✅</td><td>—</td></tr><tr><td>MESI / MOESI 协议</td><td style=text-align:center>❌</td><td>★ 需从 Primer 教材补充</td></tr><tr><td>LOCK 前缀硬件实现</td><td style=text-align:center>❌</td><td>★ 需从 Intel 手册 Vol 3 Ch.8/11 补充</td></tr><tr><td>总线锁 vs 缓存锁</td><td style=text-align:center>❌</td><td>★ 同上</td></tr><tr><td>缓存层级与映射</td><td style=text-align:center>❌</td><td>H&amp;P Ch.5</td></tr><tr><td>TLB / 虚拟内存</td><td style=text-align:center>❌</td><td>H&amp;P Ch.5</td></tr><tr><td>SMT / Hyper-Threading</td><td style=text-align:center>❌</td><td>H&amp;P 或 Intel 手册</td></tr><tr><td>微码 (Microcode)</td><td style=text-align:center>❌</td><td>Agner Fog 或 Intel 优化手册</td></tr><tr><td>指令融合 (Macro/Micro-Fusion)</td><td style=text-align:center>❌</td><td>Intel 优化手册</td></tr><tr><td>预取器 (Prefetcher)</td><td style=text-align:center>❌</td><td>H&amp;P 或学术论文</td></tr></tbody></table><hr><h2 id=3-关键概念详解>3. 关键概念详解 <a href=#3-%e5%85%b3%e9%94%ae%e6%a6%82%e5%bf%b5%e8%af%a6%e8%a7%a3 class=anchor aria-hidden=true>#</a><a href=#3-关键概念详解 class=anchor aria-hidden=true>#</a></h2><h3 id=31-寄存器重命名ooo-的基石>3.1 寄存器重命名：OoO 的基石 <a href=#31-%e5%af%84%e5%ad%98%e5%99%a8%e9%87%8d%e5%91%bd%e5%90%8dooo-%e7%9a%84%e5%9f%ba%e7%9f%b3 class=anchor aria-hidden=true>#</a><a href=#31-寄存器重命名ooo-的基石 class=anchor aria-hidden=true>#</a></h3><p><strong>解决的问题</strong>：消除 WAW (Write-After-Write) 和 WAR (Write-After-Read) 假依赖。</p><pre><code>逻辑寄存器 (x1, x2, ...  ← RISC-V 32 个)
+     │
+     │  Rename Map Table: x1 → p5, x2 → p7, ...
+     ▼
+物理寄存器 (p0, p1, ...  ← BOOM 有 100+ 个)
+</code></pre><p><strong>关键数据结构</strong>：</p><ul><li><strong>Rename Map Table</strong>：每条指令 decode 时，逻辑目标寄存器映射到空闲物理寄存器；逻辑源寄存器查找对应的物理寄存器</li><li><strong>Free List</strong>：跟踪哪些物理寄存器是空闲的</li><li><strong>Busy Table</strong>：跟踪物理寄存器的"写端口"是否忙（指令写回后变空闲）</li></ul><p><strong>误预测时的恢复</strong>：BOOM 在每条分支 rename 时拍 Rename Map Table 快照，误预测时恢复快照。</p><h3 id=32-rob-与-in-order-commit-的意义>3.2 ROB 与 In-Order Commit 的意义 <a href=#32-rob-%e4%b8%8e-in-order-commit-%e7%9a%84%e6%84%8f%e4%b9%89 class=anchor aria-hidden=true>#</a><a href=#32-rob-与-in-order-commit-的意义 class=anchor aria-hidden=true>#</a></h3><p><strong>为什么 stores 不能在 execute 时就写入内存？</strong></p><p>因为 stores 是推测执行的——如果 store 在一条误预测的分支下，写内存是不可逆的副作用。所以：</p><ol><li>Execute 阶段：store 只计算地址，放入 STQ (Store Queue)</li><li>Commit 阶段：store 到达 ROB 头部（确认不是推测路径），才真正写入内存</li></ol><p><strong>STQ (Store Buffer) → L1 写入的过程是不可逆的，只能在 commit 时执行。</strong></p><p>这也解释了为什么 Store Buffer 中可能有未提交的 store——它们还在等 ROB commit。</p><h3 id=33-loadstore-unit-与内存排序失败>3.3 Load/Store Unit 与内存排序失败 <a href=#33-loadstore-unit-%e4%b8%8e%e5%86%85%e5%ad%98%e6%8e%92%e5%ba%8f%e5%a4%b1%e8%b4%a5 class=anchor aria-hidden=true>#</a><a href=#33-loadstore-unit-与内存排序失败 class=anchor aria-hidden=true>#</a></h3><p>BOOM LSU 的核心逻辑：</p><pre><code>LDQ (Load Queue)          STQ (Store Queue)
+分配于 Decode 阶段         分配于 Decode 阶段
+执行时发射 load            仅在 Commit 时发射 store
+</code></pre><p><strong>Load 的处理流程</strong>：</p><pre><code>1. Load 到达 LSU → 乐观发射到内存
+2. 同时比较：load 地址 vs STQ 中所有 older store 的地址
+3. 匹配？
+   → YES: 如果 store 数据已就绪 → 转发给 load（Store-to-Load Forwarding）
+          如果 store 数据未就绪 → load 休眠，稍后重试
+   → NO:  load 从内存读数据（可能读到脏数据！）
+</code></pre><p><strong>内存排序失败的场景</strong>（load 在 older store 之前执行了）：</p><pre><code>store A=1 (STQ 中，未 commit)
+load  A   (在 store 前发射，从内存读到旧值 0)
+store commit 后检查 LDQ → 发现 load A 已经读了脏数据
+→ 冲刷流水线，从 load 处重新执行！
+</code></pre><blockquote><p>这就是内存屏障在微架构层面的开销来源：sfence 排空 STQ，mfence 等所有 load 完成。</p></blockquote><h3 id=34-内存一致性模型>3.4 内存一致性模型 <a href=#34-%e5%86%85%e5%ad%98%e4%b8%80%e8%87%b4%e6%80%a7%e6%a8%a1%e5%9e%8b class=anchor aria-hidden=true>#</a><a href=#34-内存一致性模型 class=anchor aria-hidden=true>#</a></h3><table><thead><tr><th>模型</th><th>示例架构</th><th>允许重排</th><th>要点</th></tr></thead><tbody><tr><td><strong>SC</strong> (Sequential Consistency)</td><td>理想模型</td><td>不允许任何重排</td><td>编程最容易但性能最差，现代处理器几乎不用</td></tr><tr><td><strong>TSO</strong> (Total Store Order)</td><td><strong>x86</strong></td><td>允许 Store→Load 重排</td><td>Store Buffer 导致：写操作先入 buffer，后面的读可能先执行</td></tr><tr><td><strong>RVWMO</strong> (Weak Memory Order)</td><td>RISC-V</td><td>大量重排</td><td>需要 FENCE 指令显式约束；BOOM 使用此模型</td></tr><tr><td><strong>Relaxed</strong></td><td>ARM, Power</td><td>更多重排</td><td>Store→Store, Load→Load, Store→Load, Load→Store 全可重排</td></tr></tbody></table><blockquote><p><strong>x86 TSO 的关键特性</strong>：只有 Store→Load 可以重排。这是因为 Store Buffer 的存在。你的三篇文章的核心话题（Store Buffer、内存屏障、LOCK 前缀）都在 TSO 模型的框架下。</p></blockquote><h3 id=35-为什么-lock-前缀是全屏障>3.5 为什么 LOCK 前缀是"全屏障" <a href=#35-%e4%b8%ba%e4%bb%80%e4%b9%88-lock-%e5%89%8d%e7%bc%80%e6%98%af%e5%85%a8%e5%b1%8f%e9%9a%9c class=anchor aria-hidden=true>#</a><a href=#35-为什么-lock-前缀是全屏障 class=anchor aria-hidden=true>#</a></h3><pre><code>LOCK CMPXCHG [addr], reg
+
+硬件做的事情：
+1. 排空 Store Buffer（所有 pending store 先 commit）
+2. 加载缓存行到 L1，置为 M 状态 (RFO — Read For Ownership)
+3. 锁定缓存行（LOCK# 信号，阻止其他 agent 读/写）
+4. 在 M 状态缓存行上执行原子 RMW (Read-Modify-Write)
+5. 解锁
+
+开销排序：缓存锁 &lt;&lt; 总线锁，但都比普通 load/store 贵得多
+</code></pre><blockquote><p><strong>BOOM 不涉及 LOCK 前缀</strong>（RISC-V 用 LR/SC 或 AMO 指令）。这部分需要 Intel SDM Vol 3 Ch.8/11 + Agner Fog 的微架构手册来弥补。</p></blockquote><h3 id=36-mesi-协议核心状态>3.6 MESI 协议核心状态 <a href=#36-mesi-%e5%8d%8f%e8%ae%ae%e6%a0%b8%e5%bf%83%e7%8a%b6%e6%80%81 class=anchor aria-hidden=true>#</a><a href=#36-mesi-协议核心状态 class=anchor aria-hidden=true>#</a></h3><pre><code>      M (Modified)
+     /  \
+    /    \
+   E      S (Shared)
+    \    /
+     \  /
+      I (Invalid)
+</code></pre><table><thead><tr><th>转换</th><th>触发事件</th><th>总线消息</th></tr></thead><tbody><tr><td>I→E (或 S)</td><td>读 miss</td><td>BusRd (读请求)</td></tr><tr><td>I→E</td><td>写 miss</td><td>BusRdX / RFO (独占读)</td></tr><tr><td>E→M</td><td>本核写命中 E 状态</td><td>无外部消息</td></tr><tr><td>M→S</td><td>其他核读 M 状态行</td><td>写回 (Write-back) + 变 S</td></tr><tr><td>S→I</td><td>其他核写本缓存行</td><td>BusUpgr (升级) 导致 Invalidate</td></tr><tr><td>M→I</td><td>其他核写本缓存行</td><td>写回 (Write-back) + 变 I</td></tr></tbody></table><blockquote><p>LOCK 前缀的"缓存锁"模式：锁定缓存行本质上就是保持该缓存行在 M 状态，阻止其他核通过一致性协议访问它，直至原子操作完成。</p></blockquote><hr><h2 id=4-与其他主题的关联>4. 与其他主题的关联 <a href=#4-%e4%b8%8e%e5%85%b6%e4%bb%96%e4%b8%bb%e9%a2%98%e7%9a%84%e5%85%b3%e8%81%94 class=anchor aria-hidden=true>#</a><a href=#4-与其他主题的关联 class=anchor aria-hidden=true>#</a></h2><p>学习处理器设计是为了深入理解底层，而底层本质上是为上层软件服务的。以下是学习过程中自然产生的跨层联系：</p><table><thead><tr><th>软件层概念</th><th>对应的硬件机制</th></tr></thead><tbody><tr><td>Java <code>volatile</code> 写</td><td>Store 后 + StoreLoad 屏障 (mfence/lock)</td></tr><tr><td>Java <code>volatile</code> 读</td><td>Load 后 + LoadLoad + LoadStore 屏障</td></tr><tr><td>Go <code>sync/atomic</code></td><td>直接编译为 LOCK 前缀指令 (amd64)</td></tr><tr><td>C <code>stdatomic</code></td><td><code>memory_order_seq_cst</code> → mfence 或等效</td></tr><tr><td><code>pthread_mutex_lock</code></td><td>CMPXCHG + LOCK 前缀 → 缓存锁</td></tr><tr><td>RCU (Read-Copy-Update)</td><td>利用 Store Buffer + 宽限期 (grace period)</td></tr><tr><td><code>memcpy</code> 大块</td><td>非临时存储 (NT stores) 绕过缓存，用 WC buffer</td></tr><tr><td>无锁队列 (SPSC Queue)</td><td>依赖 TSO 模型只重排 Store→Load 的特性</td></tr><tr><td><code>false sharing</code> 性能下降</td><td>MESI 中两个变量在同一缓存行的 Invalid bounce</td></tr></tbody></table><hr><h2 id=5-推荐学习顺序>5. 推荐学习顺序 <a href=#5-%e6%8e%a8%e8%8d%90%e5%ad%a6%e4%b9%a0%e9%a1%ba%e5%ba%8f class=anchor aria-hidden=true>#</a><a href=#5-推荐学习顺序 class=anchor aria-hidden=true>#</a></h2><pre><code>第 1 周：流水线 + 乱序执行基础
+├── BOOM Pipeline Overview    (1 天)
+├── BOOM Rename Stage         (1 天)  ← 重命名是整个 OoO 的核心
+├── BOOM ROB + Dispatch       (1 天)
+├── BOOM Issue Unit           (1 天)
+├── H&amp;P Ch.3 (ILP)           (持续)
+└── 目标：理解一条指令从 Fetch→Commit 的完整生命周期
+
+第 2 周：内存子系统（重点）
+├── BOOM LSU                  (1 天)  ← 直接对应你的三篇文章
+├── Primer Ch.2 (SC→TSO)     (2 天)  ← 理解 x86 内存模型
+├── Primer Ch.5 (RVWMO)     (1 天)  ← 对比理解
+├── Intel SDM Vol 3 Ch.8     (查阅)
+├── Intel SDM Vol 3 Ch.11    (查阅)
+└── 目标：理解 Store Buffer 为什么存在，TSO 为什么是 x86 的选择
+
+第 3 周：缓存一致性 + LOCK 实现
+├── Primer Ch.6 (Coherence)  (2 天)
+├── Intel SDM Vol 3 Ch.8     (查阅 LOCK 部分)
+├── Agner Fog microarch.pdf  (查阅 LOCK 开销)
+└── 目标：理解 LOCK 从总线锁到缓存锁的演进，及其全屏障语义
+
+第 4 周：分支预测 + 高级主题
+├── BOOM Branch Prediction   (1 天)
+├── H&amp;P Ch.3 (分支预测部分)  (2 天)
+├── Prefetching / SMT / Fusion（论文 + Intel 手册）
+└── 目标：理解分支预测如何影响 IPC，以及现代处理器的&quot;黑科技&quot;
+</code></pre><hr><h2 id=6-相关链接>6. 相关链接 <a href=#6-%e7%9b%b8%e5%85%b3%e9%93%be%e6%8e%a5 class=anchor aria-hidden=true>#</a><a href=#6-相关链接 class=anchor aria-hidden=true>#</a></h2><table><thead><tr><th>资源</th><th>URL</th></tr></thead><tbody><tr><td>BOOM 文档</td><td>https://docs.boom-core.org/en/stable/</td></tr><tr><td>BOOM 源码 (LSU)</td><td>https://github.com/riscv-boom/riscv-boom/tree/master/src/main/scala/lsu</td></tr><tr><td>Intel SDM (Vol 3)</td><td>https://www.intel.com/sdm</td></tr><tr><td>Agner Fog 微架构手册</td><td>https://www.agner.org/optimize/microarchitecture.pdf</td></tr><tr><td>WikiChip 处理器分析</td><td>https://en.wikichip.org/</td></tr><tr><td>Onur Mutlu 课程 (YouTube)</td><td>https://www.youtube.com/@OnurMutluLectures</td></tr></tbody></table><hr><blockquote><p><strong>最后更新</strong>: 2026-07-16
+<strong>相关文章</strong>：<code>2026-07-16-instruction-reordering.md</code> | <code>2026-07-16-store-buffer-and-memory-barrier.md</code> | <code>2026-07-16-intel-lock-instruction-prefix.md</code></p></blockquote><div class=edit-page><a href=https://github.com/hitzhangjie/myspace/blob/master/content/blog/linux/processor/_processor-design-learning-guide.md><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2"><path d="M17 3a2.828 2.828.0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+Edit this page on GitHub</a></div><div class="docs-navigation d-flex justify-content-between"><a href=/blog/2013-07-01-linux%E7%B3%BB%E7%BB%9F%E4%BD%BF%E7%94%A8%E6%9D%82%E8%B0%88-%E7%BB%8F%E9%AA%8C%E6%8A%80%E5%B7%A7/><div class="card my-1"><div class="card-body py-2">&larr; Linux系统使用杂谈 - 经验技巧</div></div></a></div></main><div class="docs-toc d-none d-xl-block col-xl-3"><nav class=docs-toc-inner aria-label="Secondary navigation"><div class=page-links><h3>On this page</h3><nav id=TableOfContents><ul><li><a href=#处理器设计学习指南>处理器设计学习指南</a><ul><li><a href=#0-为什么选-boom-作为入门>0. 为什么选 BOOM 作为入门</a></li><li><a href=#1-核心概念全景图>1. 核心概念全景图</a></li><li><a href=#2-学习资源分级>2. 学习资源分级</a><ul><li><a href=#21-第一站boom-文档建立-ooo-心智模型>2.1 第一站：BOOM 文档（建立 OoO 心智模型）</a></li><li><a href=#22-第二站权威教材深入原理与设计权衡>2.2 第二站：权威教材（深入原理与设计权衡）</a><ul><li><a href=#必读>必读</a></li><li><a href=#进阶参考>进阶参考</a></li></ul></li><li><a href=#23-boom-覆盖度检查表>2.3 BOOM 覆盖度检查表</a></li></ul></li><li><a href=#3-关键概念详解>3. 关键概念详解</a><ul><li><a href=#31-寄存器重命名ooo-的基石>3.1 寄存器重命名：OoO 的基石</a></li><li><a href=#32-rob-与-in-order-commit-的意义>3.2 ROB 与 In-Order Commit 的意义</a></li><li><a href=#33-loadstore-unit-与内存排序失败>3.3 Load/Store Unit 与内存排序失败</a></li><li><a href=#34-内存一致性模型>3.4 内存一致性模型</a></li><li><a href=#35-为什么-lock-前缀是全屏障>3.5 为什么 LOCK 前缀是"全屏障"</a></li><li><a href=#36-mesi-协议核心状态>3.6 MESI 协议核心状态</a></li></ul></li><li><a href=#4-与其他主题的关联>4. 与其他主题的关联</a></li><li><a href=#5-推荐学习顺序>5. 推荐学习顺序</a></li><li><a href=#6-相关链接>6. 相关链接</a></li></ul></li></ul></nav></div></nav></div></div></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.b49b5c2c44fdca07ee730ad1196420771d2a94176c7d367b414fb2e23f6a0ac3fbae11c2a6263392f17450f222ec2b518586e8ea96e23c361eb3ee8a255e145c.js integrity="sha512-tJtcLET9ygfucwrRGWQgdx0qlBdsfTZ7QU+y4j9qCsP7rhHCpiYzkvF0UPIi7CtRhYbo6pbiPDYes+6KJV4UXA==" crossorigin=anonymous defer></script><script src=/js/highlight.min.1a731f820940167b6fd11a8540a1ae7c4627f4009b13e229c411e9d890612a3f6b618133d96477c2cf238d6faaa28d745cd5141e443aa34f62785510dc873430.js integrity="sha512-GnMfgglAFntv0RqFQKGufEYn9ACbE+IpxBHp2JBhKj9rYYEz2WR3ws8jjW+qoo10XNUUHkQ6o09ieFUQ3Ic0MA==" crossorigin=anonymous defer></script><script src=/main.min.f6967e0c6d9a2c954878deaafeaab5430618a89799fff9b4cc1c0bb73f421835edf7a5b72d31fb8cb33194cfaaeefc3975d35b537acfb0cd5ab20fa6c3f2a7ea.js integrity="sha512-9pZ+DG2aLJVIeN6q/qq1QwYYqJeZ//m0zBwLtz9CGDXt96W3LTH7jLMxlM+q7vw5ddNbU3rPsM1asg+mw/Kn6g==" crossorigin=anonymous defer></script><script src=/index.min.0f29e1b3774340aeee3326dcbcf1b40398cfebf22c54d37d8c574b88c4a876c51942a98c1a877fc1d6807c10996c748a193a02a60daae60b15ec82b17798a598.js integrity="sha512-Dynhs3dDQK7uMybcvPG0A5jP6/IsVNN9jFdLiMSodsUZQqmMGod/wdaAfBCZbHSKGToCpg2q5gsV7IKxd5ilmA==" crossorigin=anonymous defer></script></body></html>

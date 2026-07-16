@@ -1,0 +1,309 @@
+<!doctype html><html lang=en-US><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-regular.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-500.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-700.woff2 type=font/woff2 crossorigin><script>window.__LAYOUT_WIDTH_DEFAULT__="standard"</script><script>(()=>{(function(){var t,n={compact:1,standard:1,wide:1,fullscreen:1},s="layout-width-v",o="3",e=null,i=null;try{e=localStorage.getItem("layout-width"),i=localStorage.getItem(s)}catch{}if(i!==o){e==="standard"?e="compact":e==="compact"?e="standard":e==="normal"?e="compact":e==="reading"&&(e="wide");try{e&&localStorage.setItem("layout-width",e),localStorage.setItem(s,o)}catch{}}t=window.__LAYOUT_WIDTH_DEFAULT__||"standard",n[t]||(t="standard"),e&&!n[e]&&(e=null),document.documentElement.setAttribute("data-layout-width",e||t)})()})()</script><link rel=stylesheet href=/main.9aa5684d2b002d9bd48d08e085ef1aaf384539b58400fb28dffa9efe2301549338a87e27640af00ff481a349461fbc931571455f65e33d95717f55c714f3dd41.css integrity="sha512-mqVoTSsALZvUjQjghe8arzhFObWEAPso3/qe/iMBVJM4qH4nZArwD/SBo0lGH7yTFXFFX2XjPZVxf1XHFPPdQQ==" crossorigin=anonymous><noscript><style>img.lazyload{display:none}</style></noscript><meta name=robots content="index, follow"><meta name=googlebot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><meta name=bingbot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><title>17 ReadWrite Locks in Java - MySpace</title><meta name=description content="读写锁，是比前面提到的java中的锁更加复杂的锁。它主要致力于解决这样的问题场景，假如一个程序里面有多个读线程，几个写线程，为了提高程序整体性能，我们希望多个线程可以同时读取共享变量的值，因此假如有一个线程正在读，另一个线程又发出了读请求，那么我们允许它读；然而在写的时候，只允许一个线程可以写，其他线程的读请求、写请求"><link rel=canonical href=/blog/17-readwrite-locks-in-java/><meta property="og:locale" content="en_US"><meta property="og:type" content="article"><meta property="og:title" content="17 ReadWrite Locks in Java"><meta property="og:description" content="读写锁，是比前面提到的java中的锁更加复杂的锁。它主要致力于解决这样的问题场景，假如一个程序里面有多个读线程，几个写线程，为了提高程序整体性能，我们希望多个线程可以同时读取共享变量的值，因此假如有一个线程正在读，另一个线程又发出了读请求，那么我们允许它读；然而在写的时候，只允许一个线程可以写，其他线程的读请求、写请求"><meta property="og:url" content="/blog/17-readwrite-locks-in-java/"><meta property="og:site_name" content="MySpace"><meta property="article:published_time" content="2018-12-31T01:24:49+08:00"><meta property="article:modified_time" content="2018-12-31T01:24:49+08:00"><meta property="og:image" content="/doks.png"><meta property="og:image:alt" content="MySpace"><meta name=twitter:card content="summary_large_image"><meta name=twitter:site content="@hitzhangjie"><meta name=twitter:creator content="@hitzhangjie"><meta name=twitter:title content="17 ReadWrite Locks in Java"><meta name=twitter:description content="读写锁，是比前面提到的java中的锁更加复杂的锁。它主要致力于解决这样的问题场景，假如一个程序里面有多个读线程，几个写线程，为了提高程序整体性能，我们希望多个线程可以同时读取共享变量的值，因此假如有一个线程正在读，另一个线程又发出了读请求，那么我们允许它读；然而在写的时候，只允许一个线程可以写，其他线程的读请求、写请求"><meta name=twitter:image content="/doks.png"><meta name=twitter:image:alt content="17 ReadWrite Locks in Java"><script type=application/ld+json>{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/1","name":"","url":"/","sameAs":["https://twitter.com/hitzhangjie","https://www.linkedin.com/in/hitzhangjie/","https://github.com/hitzhangjie"],"image":{"@type":"ImageObject","@id":"/#/schema/image/1","url":"/\u003cnil\u003e","width":null,"height":null,"caption":""}},{"@type":"WebSite","@id":"/#/schema/website/1","url":"/","name":"MySpace","description":"MySpace is a hitzhangjie\u0027s personal space, for blogs, books, journey, thinkings.","publisher":{"@id":"/#/schema/person/1"}},{"@type":"WebPage","@id":"/blog/17-readwrite-locks-in-java/","url":"/blog/17-readwrite-locks-in-java/","name":"17 ReadWrite Locks in Java","description":"读写锁，是比前面提到的java中的锁更加复杂的锁。它主要致力于解决这样的问题场景，假如一个程序里面有多个读线程，几个写线程，为了提高程序整体性能，我们希望多个线程可以同时读取共享变量的值，因此假如有一个线程正在读，另一个线程又发出了读请求，那么我们允许它读；然而在写的时候，只允许一个线程可以写，其他线程的读请求、写请求","isPartOf":{"@id":"/#/schema/website/1"},"about":{"@id":"/#/schema/person/1"},"datePublished":"2018-12-31T01:24:49CET","dateModified":"2018-12-31T01:24:49CET","breadcrumb":{"@id":"/blog/17-readwrite-locks-in-java/#/schema/breadcrumb/1"},"primaryImageOfPage":{"@id":"/blog/17-readwrite-locks-in-java/#/schema/image/2"},"inLanguage":"","potentialAction":[{"@type":"ReadAction","target":["/blog/17-readwrite-locks-in-java/"]}]},{"@type":"BreadcrumbList","@id":"/blog/17-readwrite-locks-in-java/#/schema/breadcrumb/1","name":"Breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"item":{"@type":"WebPage","@id":"/","url":"/","name":"Home"}},{"@type":"ListItem","position":2,"item":{"@id":"/blog17-readwrite-locks-in-java/"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Article","@id":"/#/schema/article/1","headline":"17 ReadWrite Locks in Java","description":"读写锁，是比前面提到的java中的锁更加复杂的锁。它主要致力于解决这样的问题场景，假如一个程序里面有多个读线程，几个写线程，为了提高程序整体性能，我们希望多个线程可以同时读取共享变量的值，因此假如有一个线程正在读，另一个线程又发出了读请求，那么我们允许它读；然而在写的时候，只允许一个线程可以写，其他线程的读请求、写请求","isPartOf":{"@id":"/blog/17-readwrite-locks-in-java/"},"mainEntityOfPage":{"@id":"/blog/17-readwrite-locks-in-java/"},"datePublished":"2018-12-31T01:24:49CET","dateModified":"2018-12-31T01:24:49CET","author":{"@id":"/#/schema/person/2"},"publisher":{"@id":"/#/schema/person/1"},"image":{"@id":"/blog/17-readwrite-locks-in-java/#/schema/image/2"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/2","name":null,"sameAs":[]}]},{"@context":"https://schema.org","@graph":[{"@type":"ImageObject","@id":"/blog/17-readwrite-locks-in-java/#/schema/image/2","url":"/doks.png","contentUrl":"/doks.png","caption":"17 ReadWrite Locks in Java"}]}]}</script><meta name=theme-color content="#fff"><link rel=icon href=/favicon.ico sizes=any><link rel=icon type=image/svg+xml href=/favicon.svg><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest crossorigin=use-credentials href=/site.webmanifest><script type=text/javascript src='https://platform-api.sharethis.com/js/sharethis.js#property=607868a58d7101001829a8df&product=sop' async></script><style>[alt~=sharing]{border:0;box-shadow:none}div#st-1{text-align:unset}div#st-1 .st-btn{height:24px;padding:0 4px}div#st-1 .st-btn>img{top:4.2px}div#st-2 .st-btn{height:24px;padding:0 4px}div#st-2 .st-btn>img{top:4.2px}</style><script async src="https://www.googletagmanager.com/gtag/js?id=UA-168027530-1"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","UA-168027530-1")</script></head><body class="blog single d-flex flex-column min-vh-100"><div class=sticky-top><div class=header-bar></div><header class="navbar navbar-expand-lg navbar-light doks-navbar"><nav class="container-xxl flex-wrap flex-lg-nowrap" aria-label="Main navigation"><a class="navbar-brand order-0" href=/ aria-label=MySpace>MySpace
+</a><button class="btn btn-menu order-2 d-block d-lg-none" type=button data-bs-toggle=offcanvas data-bs-target=#offcanvasDoks aria-controls=offcanvasDoks aria-label="Open main menu">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div class="offcanvas offcanvas-end border-0 py-lg-1" tabindex=-1 id=offcanvasDoks data-bs-backdrop=true aria-labelledby=offcanvasDoksLabel><div class="header-bar d-lg-none"></div><div class="offcanvas-header d-lg-none"><h2 class="h5 offcanvas-title ps-2" id=offcanvasDoksLabel><a class=text-dark href=/>MySpace</a></h2><button type=button class="btn-close text-reset me-2" data-bs-dismiss=offcanvas aria-label="Close main menu"></button></div><div class="offcanvas-body p-4 p-lg-0"><ul class="nav flex-column flex-lg-row align-items-lg-center mt-2 mt-lg-0 ms-lg-2 me-lg-auto"><li class=nav-item><a class="nav-link ps-0 py-1 active" href=/blog/>Blog</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/books/>Books</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/landscape>Landscape</a></li></ul><hr class="text-black-50 my-4 d-lg-none"><form class="doks-search position-relative flex-grow-1 ms-lg-auto me-lg-2"><input id=search class="form-control is-search" type=search placeholder="Search docs..." aria-label="Search docs..." autocomplete=off><div id=suggestions class="shadow bg-white rounded d-none"></div></form><hr class="text-black-50 my-4 d-lg-none"><ul class="nav flex-column flex-lg-row"><li class=nav-item><a class="nav-link social-link" href=https://twitter.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg><small class="ms-2 d-lg-none">Twitter</small></a></li><li class=nav-item><a class="nav-link social-link" href=https://github.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37.0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44.0 0020 4.77 5.07 5.07.0 0019.91 1S18.73.65 16 2.48a13.38 13.38.0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07.0 005 4.77 5.44 5.44.0 003.5 8.55c0 5.42 3.3 6.61 6.44 7A3.37 3.37.0 009 18.13V22"/></svg><small class="ms-2 d-lg-none">GitHub</small></a></li><li class="nav-item layout-width-dropdown"><a class="nav-link layout-width-dropdown-btn" href=# data-bs-toggle=dropdown aria-expanded=false aria-label=切换布局宽度 title=切换布局宽度><span class=lw-icon-standard><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-compact><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-wide><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span><span class=lw-icon-fullscreen><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg></span></a><ul class="dropdown-menu dropdown-menu-end"><li><button class="dropdown-item layout-width-option" data-layout-value=compact>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span>紧凑布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=standard>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>标准布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=wide>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span>宽松布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=fullscreen>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>全屏布局</button></li></ul></li></ul></div></div></nav></header></div><div class="wrap container-xxl" role=document><div class=content><div class="row flex-xl-nowrap" data-layout-width=standard><div class="col-lg-4 col-xl-3 docs-sidebar"><nav class=docs-links aria-label="Main navigation"><h3>Tag List</h3><ol><li><a href=/tags/java/>java</a></li><li><a href=/tags/concurrency/>concurrency</a></li><li><a href=/tags/jenkov/>jenkov</a></li></ol></nav></div><main class="docs-content col-lg-12 col-xl-10"><h1>17 ReadWrite Locks in Java</h1><p><small>Posted 2018-12-31 01:24 +0800 by <a class="stretched-link position-relative" href>ZhangJie</a>&nbsp;&dash;&nbsp;<strong>5&nbsp;min read</strong></small><p><div style=display:flex><div>分享:&nbsp;&nbsp;</div><div><div class=sharethis-inline-share-buttons></div></div></div><hr><p class=lead></p><p>读写锁，是比前面提到的java中的锁更加复杂的锁。它主要致力于解决这样的问题场景，假如一个程序里面有多个读线程，几个写线程，为了提高程序整体性能，我们希望多个线程可以同时读取共享变量的值，因此假如有一个线程正在读，另一个线程又发出了读请求，那么我们允许它读；然而在写的时候，只允许一个线程可以写，其他线程的读请求、写请求都会被阻塞。读写锁，在读线程比写线程数量多时，比较有优势。juc保重已经有了对应的实现，即ReentrantReadWriteLock。但是了解其背后的实现思想，还是非常重要的，接着往下学习吧。</p><h1 id=读写锁-操作性质>读写锁-操作性质 <a href=#%e8%af%bb%e5%86%99%e9%94%81-%e6%93%8d%e4%bd%9c%e6%80%a7%e8%b4%a8 class=anchor aria-hidden=true>#</a></h1><p>首先，总结一下可以获取共享资源的读权限、写权限的条件。</p><table><thead><tr><th style=text-align:center>操作请求</th><th style=text-align:left>什么情况下允许该操作请求</th></tr></thead><tbody><tr><td style=text-align:center>Read Access</td><td style=text-align:left>If no threads are writing, and no threads have requested write access.</td></tr><tr><td style=text-align:center>Write Access</td><td style=text-align:left>If no threads are reading or writing.</td></tr></tbody></table><ul><li>如果一个线程请求Read一个资源时，当没有其他线程正在进行写操作，又没有其他线程发出了写操作请求，这种情况下，就会允许当前线程的读操作请求；</li><li>如果一个线程请求Write一个资源，当没有其他线程正在读、写这个资源时，写操作就会被允许。</li></ul><p>有时候我们要考虑<strong>提高写请求的优先级</strong>：</p><p>如果我们不提高写请求的优先级的话，假如有很多个线程读，只有少量的线程写，这种情况下，极有可能会发生读请求线程都被调度了，但是写请求线程迟迟得不到响应，写请求线程就会被starvation，饿死了。所以我们有必要将写请求线程的优先级提高。因此，如果有两个线程分别请求读锁、写锁，都刚发出请求，还没有持有该锁，则优先给申请写锁的线程放行，避免其被饿死。</p><h1 id=读写锁-简单实现>读写锁-简单实现 <a href=#%e8%af%bb%e5%86%99%e9%94%81-%e7%ae%80%e5%8d%95%e5%ae%9e%e7%8e%b0 class=anchor aria-hidden=true>#</a></h1><p>通过上面的总结，我们了解了读写锁的一般性质，根据这些一般性质，我们可以实现一个简单的读写锁。下面是一个读写锁的示例。</p><pre><code class=language-java>public class ReadWriteLock { // 正在执行读操作的线程数量   
+    
+    private int readers = 0; // 正在执行写操作的线程数量   
+    private int writers = 0; // 发出写请求的线程数量   
+    private int writeRequests = 0;
+
+    // 获取读锁
+    public synchronized void lockRead() throws InterruptedException {
+        // 没有线程正在写，或者与当前线程同期发出写请求的情况下，才会授予读锁  
+        while (writers &gt; 0 || writeRequests &gt; 0) {
+            wait();
+        }
+        readers++;
+    }
+    
+    // 释放读锁   
+    public synchronized void unlockRead() {
+        readers--;
+        notifyAll();
+    }
+    
+    // 获取写锁   
+    public synchronized void lockWrite() throws InterruptedException { 
+        // 写请求的线程数量++ 
+        writeRequests++; // 没有线程正在读，没有线程正在写的情况下，才会授予写锁     
+        while (readers &gt; 0 || writers &gt; 0) {
+            wait();
+        }
+        // 获取了写锁之后，写请求方变成了真正的writer     
+        writeRequests--;
+        writers++;
+    }
+    
+    // 释放写锁   
+    public synchronized void unlockWrite() throws InterruptedException {
+        writers--;
+        notifyAll();
+    }
+}
+</code></pre><h1 id=读写锁-支持可重入>读写锁-支持可重入 <a href=#%e8%af%bb%e5%86%99%e9%94%81-%e6%94%af%e6%8c%81%e5%8f%af%e9%87%8d%e5%85%a5 class=anchor aria-hidden=true>#</a></h1><p>可重入的读写锁，上面我们给出的读写锁示例，不是可重入的。一个锁要真正地发挥作用，能被大规模、放心地使用，必须保证锁的可重入性。因此，我们需要实现一个可重入的读写锁。</p><p>为什么说它是不可重入的呢？我们构造了一个操作场景：</p><pre><code class=language-bash>Thread 1 gets read access. 
+Thread 2 requests write access but is blocked because there is one reader. 
+Thread 1 re-requests read access (re-enters the lock), but is blocked because there is a write request
+</code></pre><p>在该操作场景中，线程1在第一步已经成功获取了读锁，但是在第三步，重新申请读锁的时候却失败了，原因是第2步中有一个线程发出了写请求。</p><p><strong>读写锁，是一个锁，不是说它包含了读锁、写锁2个锁。读写锁既可以用于锁定读，也可以用于锁定写。为了描述方便，我们使用了申请读锁来表示锁定读，使用申请写锁来表示锁定写。</strong></p><h2 id=读写锁-读可重入>读写锁-读可重入 <a href=#%e8%af%bb%e5%86%99%e9%94%81-%e8%af%bb%e5%8f%af%e9%87%8d%e5%85%a5 class=anchor aria-hidden=true>#</a><a href=#读写锁-读可重入 class=anchor aria-hidden=true>#</a></h2><p>下面需要针对读锁的可重入，进行完善，首先我们要明确，<strong>什么时候读锁可以重入</strong>：</p><ul><li>当一个线程申请读锁的时候，如果该线程已经持有了读锁，那么授予其读锁；</li><li>当一个线程申请读锁的时候，如果该线程还没有持有读锁，此时又没有线程正在写，也没有线程发出写请求，就可以被授予读锁；</li></ul><p>为了判断一个线程是否已经获得了读锁，我们通过一个Map来记录，Map中的key就是获得了读锁的线程对象的引用，value就是该线程当前持有读锁的计数。</p><p>下面是一个修改后的示例，注意看lockRead()和unlockRead()的变化：</p><pre><code class=language-java>public class ReadWriteLock{
+	
+	private Map&lt;Thread, Integer&gt; readingThreads = new HashMap&lt;Thread, Integer&gt;(); 						  // 记录持有读锁的线程，及其读锁计数
+	private int writers        = 0;	// 持有写锁的线程数量
+	private int writeRequests  = 0;	// 发出写请求的线程数量
+	
+	// 锁定读
+	public synchronized void lockRead() throws InterruptedException{
+		Thread callingThread = Thread.currentThread();
+		while(! canGrantReadAccess(callingThread)){
+			wait();
+		}
+		// 记录线程，及其读锁计数
+		readingThreads.put(callingThread, (getAccessCount(callingThread) + 1));   
+	}
+	
+	// 释放读锁
+	public synchronized void unlockRead(){
+		Thread callingThread = Thread.currentThread();
+		int accessCount = getAccessCount(callingThread);
+		if(accessCount == 1){
+			readingThreads.remove(callingThread);
+		} else {
+			readingThreads.put(callingThread, (accessCount -1));
+		}
+		notifyAll();
+	}
+	
+	// 判断指定线程是否可以授予读锁
+	private boolean canGrantReadAccess(Thread callingThread){
+		if(writers &gt; 0) 
+			return false;	// 有正在写的线程，不可以授予读锁
+		if(isReader(callingThread)) 
+			return true;  	// 当前线程已经持有读锁，可以授予读锁
+		if(writeRequests &gt; 0)      
+			return false;   // 有线程发出了写请求，不可以授予读锁     
+		return true;        // unreachable
+	}
+	
+	// 获取指定线程的读锁计数
+	private int getReadAccessCount(Thread callingThread){
+		Integer accessCount = readingThreads.get(callingThread); 
+		if(accessCount == null) 
+			return 0;
+		return accessCount.intValue();
+	}    
+	
+	// 判断指定线程是否已经持有读锁
+	private boolean isReader(Thread callingThread){
+		return readingThreads.get(callingThread) != null;
+	}
+}
+</code></pre><h2 id=读写锁-写可重入>读写锁-写可重入 <a href=#%e8%af%bb%e5%86%99%e9%94%81-%e5%86%99%e5%8f%af%e9%87%8d%e5%85%a5 class=anchor aria-hidden=true>#</a><a href=#读写锁-写可重入 class=anchor aria-hidden=true>#</a></h2><p>下面要针对写锁的可重入，进行完善，我们再重新明确一下，<strong>什么时候写锁可以重入</strong>：</p><ul><li>只有当一个线程持有了写锁的时候，再次申请写锁的时候，才能授予写锁。</li></ul><p>下面我们对之前的代码进行了修改，请注意看lockWrite()和unlockWrite()部分的变化:</p><pre><code class=language-java>public class ReadWriteLock{      
+	private Map&lt;Thread, Integer&gt; readingThreads = new HashMap&lt;Thread, Integer&gt;();
+	private int writeAccesses    = 0;
+	private int writeRequests    = 0;  
+	private Thread writingThread = null;
+	
+	public synchronized void lockWrite() throws InterruptedException{  
+		writeRequests++;
+		Thread callingThread = Thread.currentThread();
+		while(! canGrantWriteAccess(callingThread)){
+			wait();
+		}
+		writeRequests--;     
+		writeAccesses++;
+		writingThread = callingThread;
+	}
+	
+	public synchronized void unlockWrite() throws InterruptedException{
+		writeAccesses--;
+		if(writeAccesses == 0){     
+			writingThread = null;
+		}
+		notifyAll();
+	}
+	
+	// 判断指定线程能否授予写锁   
+	private boolean canGrantWriteAccess(Thread callingThread){
+		if(hasReaders())
+			return false;       // 有reader，不能授予写锁
+		if(writingThread == null)
+			return true;   		// 没有正在写的线程，可以授予写锁
+		if(!isWriter(callingThread))
+			return false;
+		return true;            // 当前线程已持有写锁，可重入，重新授予锁
+	}
+	
+	private boolean hasReaders(){
+		return readingThreads.size() &gt; 0;
+	}
+	
+	// 判断指定线程是否是正在写的线程   
+	private boolean isWriter(Thread callingThread){
+		return writingThread == callingThread;
+	}
+}
+</code></pre><h2 id=读写锁-持有读锁申请写锁>读写锁-持有读锁申请写锁 <a href=#%e8%af%bb%e5%86%99%e9%94%81-%e6%8c%81%e6%9c%89%e8%af%bb%e9%94%81%e7%94%b3%e8%af%b7%e5%86%99%e9%94%81 class=anchor aria-hidden=true>#</a><a href=#读写锁-持有读锁申请写锁 class=anchor aria-hidden=true>#</a></h2><p>有时候如果只有一个线程持有读锁，其他线程都没有持有锁，这个时候，这个线程申请写锁，也是可以的才对。
+要满足这一点，需要修改一下申请写锁的判定条件，假如readers数量为1，且reader线程就是当前线程，那么当其申请写锁的时候，允许授予写锁。</p><p>我们对canGrantWriteAccess()方法进行了一点修改，如下所示：</p><pre><code class=language-java>public class ReadWriteLock{
+	private Map&lt;Thread, Integer&gt; readingThreads = new HashMap&lt;Thread, Integer&gt;();      
+	private int writeAccesses    = 0;
+	private int writeRequests    = 0;
+	private Thread writingThread = null;      
+	
+	// 申请写锁
+	public synchronized void lockWrite() throws InterruptedException{
+		writeRequests++;
+		Thread callingThread = Thread.currentThread();
+		while(! canGrantWriteAccess(callingThread)){
+			wait();
+		}
+		writeRequests--;
+		writeAccesses++;
+		writingThread = callingThread;
+	}
+	
+	public synchronized void unlockWrite() throws InterruptedException{
+		writeAccesses--;
+		if(writeAccesses == 0){
+			writingThread = null;
+		}
+		notifyAll();
+	}
+	
+	private boolean canGrantWriteAccess(Thread callingThread){
+		if(isOnlyReader(callingThread))
+			return true;      // 当前线程是唯一的reader，允许授予写锁
+		if(hasReaders())
+			return false;
+		if(writingThread == null)
+			return true;
+		if(!isWriter(callingThread))
+			return false;
+		return true;
+	}
+	
+	private boolean hasReaders(){
+		return readingThreads.size() &gt; 0;
+	}
+	
+	private boolean isWriter(Thread callingThread){
+		return writingThread == callingThread;
+	}
+	
+	// 判断指定线程是否是唯一的reader线程
+	private boolean isOnlyReader(Thread thread){
+		return readers == 1 &amp;&amp; readingThreads.get(callingThread) != null;
+	}
+}
+</code></pre><h2 id=读写锁-持有写锁申请读锁>读写锁-持有写锁申请读锁 <a href=#%e8%af%bb%e5%86%99%e9%94%81-%e6%8c%81%e6%9c%89%e5%86%99%e9%94%81%e7%94%b3%e8%af%b7%e8%af%bb%e9%94%81 class=anchor aria-hidden=true>#</a><a href=#读写锁-持有写锁申请读锁 class=anchor aria-hidden=true>#</a></h2><p>一个持有写锁的线程，本来就已经是排它性访问共享资源了，现在其申请读锁，也是可以的，不会出现竞态条件。
+需要做的就是，修改一下允许授予写锁的判定条件，如果当前线程是持有写锁的线程，即writer，那么可以直接授予读锁。</p><p>我们对canGrantReadAccess()进行了一点修改，请注意查看源码的变化：</p><pre><code class=language-java>public class ReadWriteLock{
+	private boolean canGrantReadAccess(Thread callingThread){
+		if(isWriter(callingThread)) 
+			return true;    // 如果当前线程是writer，允许授予读锁       
+		if(writingThread != null)   
+			return false;
+		if(isReader(callingThread)
+			return true;
+		if(writeRequests &gt; 0)
+			return false;
+		return true;
+	}
+}
+</code></pre><h2 id=读写锁-完整版>读写锁-完整版 <a href=#%e8%af%bb%e5%86%99%e9%94%81-%e5%ae%8c%e6%95%b4%e7%89%88 class=anchor aria-hidden=true>#</a><a href=#读写锁-完整版 class=anchor aria-hidden=true>#</a></h2><p>完整的可重入的读写锁实现，源码如下：</p><pre><code class=language-java>public class ReadWriteLock {
+    private Map &lt; Thread, Integer &gt; readingThreads = new HashMap &lt; Thread, Integer &gt; ();
+    private int writeAccesses = 0;
+    private int writeRequests = 0;
+    private Thread writingThread = null;
+    public synchronized void lockRead() throws InterruptedException {
+        Thread callingThread = Thread.currentThread();
+        while (!canGrantReadAccess(callingThread)) {
+            wait();
+        }
+        readingThreads.put(callingThread, (getReadAccessCount(callingThread) + 1));
+    }
+    private boolean canGrantReadAccess(Thread callingThread) {
+        if (isWriter(callingThread)) return true;
+        if (hasWriter()) return false;
+        if (isReader(callingThread)) return true;
+        if (hasWriteRequests()) return false;
+        return true;
+    }
+    public synchronized void unlockRead() {
+        Thread callingThread = Thread.currentThread();
+        if (!isReader(callingThread)) {
+            throw new IllegalMonitorStateException(&quot;Calling Thread does not&quot; + &quot; hold a read lock on this ReadWriteLock&quot;);
+        }
+        int accessCount = getReadAccessCount(callingThread);
+        if (accessCount == 1) {
+            readingThreads.remove(callingThread);
+        } else {
+            readingThreads.put(callingThread, (accessCount - 1));
+        }
+        notifyAll();
+    }
+    public synchronized void lockWrite() throws InterruptedException {
+        writeRequests++;
+        Thread callingThread = Thread.currentThread();
+        while (!canGrantWriteAccess(callingThread)) {
+            wait();
+        }
+        writeRequests--;
+        writeAccesses++;
+        writingThread = callingThread;
+    }
+    public synchronized void unlockWrite() throws InterruptedException {
+        if (!isWriter(Thread.currentThread()) {
+                throw new IllegalMonitorStateException(&quot;Calling Thread does not&quot; + &quot; hold the write lock on this ReadWriteLock&quot;);
+            }
+            writeAccesses--;
+            if (writeAccesses == 0) {
+                writingThread = null;
+            }
+            notifyAll();
+        }
+        private boolean canGrantWriteAccess(Thread callingThread) {
+            if (isOnlyReader(callingThread)) return true;
+            if (hasReaders()) return false;
+            if (writingThread == null) return true;
+            if (!isWriter(callingThread)) return false;
+            return true;
+        }
+        private int getReadAccessCount(Thread callingThread) {
+            Integer accessCount = readingThreads.get(callingThread);
+            if (accessCount == null) return 0;
+            return accessCount.intValue();
+        }
+        private boolean hasReaders() {
+            return readingThreads.size() &gt; 0;
+        }
+        private boolean isReader(Thread callingThread) {
+            return readingThreads.get(callingThread) != null;
+        }
+        private boolean isOnlyReader(Thread callingThread) {
+            return readingThreads.size() == 1 &amp;&amp; readingThreads.get(callingThread) != null;
+        }
+        private boolean hasWriter() {
+            return writingThread != null;
+        }
+        private boolean isWriter(Thread callingThread) {
+            return writingThread == callingThread;
+        }
+        private boolean hasWriteRequests() {
+            return this.writeRequests &gt; 0;
+        }
+    }
+</code></pre><h1 id=call-unlock-in-finally>Call unlock() in finally <a href=#call-unlock-in-finally class=anchor aria-hidden=true>#</a></h1><p>lock和unlock操作之间的代码就是临界区的代码了，这部分代码有可能会抛出异常，为了避免异常抛出之后，仍能够保证其他线程正常执行，当前线程应该在finally子句中执行unlock操作。如果不这么做的话，当前线程持有的锁不会被释放，其他线程无法获取到该锁，就会引起死锁。</p><pre><code class=language-java>lock.lockWrite();
+try{
+	//do critical section code, which may throw exception
+} finally {
+	lock.unlockWrite();
+}
+</code></pre><div class=edit-page><a href=https://github.com/hitzhangjie/myspace/blob/master/content/blog/languages/java/java-concurrency/17-ReadWrite-Locks-in-Java.md><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2"><path d="M17 3a2.828 2.828.0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+Edit this page on GitHub</a></div><div class="docs-navigation d-flex justify-content-between"><a href=/blog/18-reentrant-lockout/><div class="card my-1"><div class="card-body py-2">&larr; 18 Reentrant Lockout</div></div></a><a class=ms-auto href=/blog/16-locks-in-java/><div class="card my-1"><div class="card-body py-2">16 Locks in Java &rarr;</div></div></a></div></main><div class="docs-toc d-none d-xl-block col-xl-3"><nav class=docs-toc-inner aria-label="Secondary navigation"><div class=page-links><h3>On this page</h3><nav id=TableOfContents><ul><li><a href=#读写锁-操作性质>读写锁-操作性质</a></li><li><a href=#读写锁-简单实现>读写锁-简单实现</a></li><li><a href=#读写锁-支持可重入>读写锁-支持可重入</a><ul><li><a href=#读写锁-读可重入>读写锁-读可重入</a></li><li><a href=#读写锁-写可重入>读写锁-写可重入</a></li><li><a href=#读写锁-持有读锁申请写锁>读写锁-持有读锁申请写锁</a></li><li><a href=#读写锁-持有写锁申请读锁>读写锁-持有写锁申请读锁</a></li><li><a href=#读写锁-完整版>读写锁-完整版</a></li></ul></li><li><a href=#call-unlock-in-finally>Call unlock() in finally</a></li></ul></nav></div></nav></div></div></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.b49b5c2c44fdca07ee730ad1196420771d2a94176c7d367b414fb2e23f6a0ac3fbae11c2a6263392f17450f222ec2b518586e8ea96e23c361eb3ee8a255e145c.js integrity="sha512-tJtcLET9ygfucwrRGWQgdx0qlBdsfTZ7QU+y4j9qCsP7rhHCpiYzkvF0UPIi7CtRhYbo6pbiPDYes+6KJV4UXA==" crossorigin=anonymous defer></script><script src=/js/highlight.min.1a731f820940167b6fd11a8540a1ae7c4627f4009b13e229c411e9d890612a3f6b618133d96477c2cf238d6faaa28d745cd5141e443aa34f62785510dc873430.js integrity="sha512-GnMfgglAFntv0RqFQKGufEYn9ACbE+IpxBHp2JBhKj9rYYEz2WR3ws8jjW+qoo10XNUUHkQ6o09ieFUQ3Ic0MA==" crossorigin=anonymous defer></script><script src=/main.min.f6967e0c6d9a2c954878deaafeaab5430618a89799fff9b4cc1c0bb73f421835edf7a5b72d31fb8cb33194cfaaeefc3975d35b537acfb0cd5ab20fa6c3f2a7ea.js integrity="sha512-9pZ+DG2aLJVIeN6q/qq1QwYYqJeZ//m0zBwLtz9CGDXt96W3LTH7jLMxlM+q7vw5ddNbU3rPsM1asg+mw/Kn6g==" crossorigin=anonymous defer></script><script src=/index.min.0f29e1b3774340aeee3326dcbcf1b40398cfebf22c54d37d8c574b88c4a876c51942a98c1a877fc1d6807c10996c748a193a02a60daae60b15ec82b17798a598.js integrity="sha512-Dynhs3dDQK7uMybcvPG0A5jP6/IsVNN9jFdLiMSodsUZQqmMGod/wdaAfBCZbHSKGToCpg2q5gsV7IKxd5ilmA==" crossorigin=anonymous defer></script></body></html>

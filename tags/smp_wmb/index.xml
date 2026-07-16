@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Smp_wmb on</title><link>/tags/smp_wmb/</link><description>Recent content in Smp_wmb on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 16 Jul 2026 20:10:00 +0800</lastBuildDate><atom:link href="/tags/smp_wmb/index.xml" rel="self" type="application/rss+xml"/><item><title>写屏障与读屏障：Store Buffer 与 Invalidate Queue 的双重挑战</title><link>/blog/2026-07-16-write-barrier-and-read-barrier/</link><pubDate>Thu, 16 Jul 2026 20:10:00 +0800</pubDate><guid>/blog/2026-07-16-write-barrier-and-read-barrier/</guid><description>&lt;p&gt;多核 CPU 中，一个核心的写操作什么时候能被另一个核心看到？&lt;a href="2026-07-16-store-buffer-and-memory-barrier.md"&gt;上一篇文章&lt;/a&gt; 梳理了 Store Buffer 在这条链路中的作用。但光有 Store Buffer 还不够——另一个同样关键的硬件机制 &lt;strong&gt;Invalidate Queue&lt;/strong&gt; 在文章中没有展开。本文把这两个缓冲放在一起，重点讲清楚&lt;strong&gt;写屏障&lt;/strong&gt;和&lt;strong&gt;读屏障&lt;/strong&gt;分别解决什么问题，以及为什么经典的&amp;quot;生产者-消费者&amp;quot;场景必须两者配合。&lt;/p&gt;
+&lt;h2 id="store-buffer-回顾为什么写操作延迟可见"&gt;Store Buffer 回顾：为什么写操作&amp;quot;延迟可见&amp;quot;？ &lt;a href="#store-buffer-%e5%9b%9e%e9%a1%be%e4%b8%ba%e4%bb%80%e4%b9%88%e5%86%99%e6%93%8d%e4%bd%9c%e5%bb%b6%e8%bf%9f%e5%8f%af%e8%a7%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;先快速回顾 Store Buffer。当一个 CPU 核心执行 &lt;code&gt;x = 1&lt;/code&gt; 时，如果 &lt;code&gt;x&lt;/code&gt; 对应的缓存行还不在本核心的 Exclusive/Modified 状态，CPU 不会阻塞等待——它把写操作丢进 Store Buffer，然后继续执行后续指令。Store Buffer 在后台异步申请缓存行权限，拿到后再把数据刷入 Cache。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;CPU Core 0 CPU Core 1
+┌─────────────┐ ┌─────────────┐
+│ store x=1 │ │ │
+│ ↓ │ │ │
+│ ┌─────────┐ │ ──invalidate──→ │ ┌─────────┐ │
+│ │Store Buf│ │ │ │ Cache │ │
+│ │ x = 1 │ │ │ │ x = 0 │ │
+│ └─────────┘ │ │ └─────────┘ │
+└─────────────┘ └─────────────┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;核心问题&lt;/strong&gt;：本核心能通过 store forwarding 看到自己 Store Buffer 中的新值，但&lt;strong&gt;其他核心看不到&lt;/strong&gt;，直到数据被刷入 Cache 并进入缓存一致性协议的管辖范围。&lt;/p&gt;</description></item></channel></rss>

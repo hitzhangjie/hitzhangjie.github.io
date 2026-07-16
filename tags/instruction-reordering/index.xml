@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Instruction Reordering on</title><link>/tags/instruction-reordering/</link><description>Recent content in Instruction Reordering on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 16 Jul 2026 19:00:00 +0800</lastBuildDate><atom:link href="/tags/instruction-reordering/index.xml" rel="self" type="application/rss+xml"/><item><title>指令重排序：编译器与 CPU 的"合法作弊"艺术</title><link>/blog/2026-07-16-instruction-reordering/</link><pubDate>Thu, 16 Jul 2026 19:00:00 +0800</pubDate><guid>/blog/2026-07-16-instruction-reordering/</guid><description>&lt;p&gt;现代 CPU 和编译器为了让程序跑得更快，会在背后做一件事：&lt;strong&gt;调整指令的执行顺序&lt;/strong&gt;。只要最终结果看起来和&amp;quot;按代码顺序执行&amp;quot;一样，中间怎么排是它们说了算。&lt;/p&gt;
+&lt;p&gt;这听起来像作弊，但实际上是经过严格数学验证的合法优化。这篇文章就来拆解：谁在做重排序、为什么要做、依据什么规则来做、以及不同的 CPU 架构到底在哪些地方&amp;quot;放了水&amp;quot;。&lt;/p&gt;
+&lt;h2 id="两层重排序编译器--cpu"&gt;两层重排序：编译器 + CPU &lt;a href="#%e4%b8%a4%e5%b1%82%e9%87%8d%e6%8e%92%e5%ba%8f%e7%bc%96%e8%af%91%e5%99%a8--cpu" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;指令重排序发生在两个层面：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;源代码
+↓
+编译器优化重排（静态，编译期）
+↓
+CPU 乱序执行重排（动态，运行期）
+↓
+最终执行顺序
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;编译器重排序&lt;/strong&gt;：编译器在做优化（如寄存器分配、公共子表达式消除、指令调度）时，可能会调整生成的机器指令顺序。只要不改变单线程下的程序语义，怎么排都行。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;CPU 重排序&lt;/strong&gt;：现代处理器几乎都是乱序执行（Out-of-Order Execution）的。取指、译码后的指令进入保留站（Reservation Station），操作数就绪的就发射执行，不管它在代码里的先后位置。此外，store buffer 的存在也让写操作对其他核的可见时机变得不确定。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;关于 store buffer 机制以及它如何影响跨核可见性，已在&lt;a href="/blog/2026-07-16-store-buffer-and-memory-barrier/"&gt;《Store Buffer、内存屏障与缓存一致性》&lt;/a&gt;中详细讨论，本文更聚焦于&amp;quot;重排序的规则&amp;quot;本身。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="铁律as-if-serial-语义"&gt;铁律：As-If Serial 语义 &lt;a href="#%e9%93%81%e5%be%8bas-if-serial-%e8%af%ad%e4%b9%89" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;无论编译器还是 CPU，重排序都遵循一个基本原则：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;在单线程（或单个执行上下文）内，重排序后的执行结果必须与原程序顺序执行的结果完全一致。&lt;/strong&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;这就是 &lt;strong&gt;as-if serial&lt;/strong&gt; 语义，也叫程序顺序语义（Program Order Semantics）。它是所有重排序优化的底线——编译器或 CPU 可以随意调整顺序，但只要你站在这个线程内部观察，一切必须&amp;quot;看起来&amp;quot;是按代码顺序发生的。&lt;/p&gt;
+&lt;p&gt;这个铁律意味着：&lt;strong&gt;重排序不能破坏数据依赖关系&lt;/strong&gt;。&lt;/p&gt;
+&lt;h2 id="数据依赖哪些不能重排"&gt;数据依赖：哪些不能重排 &lt;a href="#%e6%95%b0%e6%8d%ae%e4%be%9d%e8%b5%96%e5%93%aa%e4%ba%9b%e4%b8%8d%e8%83%bd%e9%87%8d%e6%8e%92" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;指令之间的依赖关系分为三类：&lt;/p&gt;
+&lt;h3 id="真依赖rawread-after-write"&gt;真依赖：RAW（Read After Write） &lt;a href="#%e7%9c%9f%e4%be%9d%e8%b5%96rawread-after-write" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;① x = 42 // 写
+② y = x + 1 // 读 x 的值
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;指令 ② 必须等指令 ① 完成才能得到正确结果。&lt;strong&gt;RAW 依赖不可重排&lt;/strong&gt;——一旦写操作的值还没产生就去读，读到的就是垃圾。这是硬件级别的硬约束，CPU 的乱序引擎会自动识别并等待。&lt;/p&gt;</description></item></channel></rss>

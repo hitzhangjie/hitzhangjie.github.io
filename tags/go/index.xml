@@ -1879,7 +1879,53 @@ fmt.Println(&amp;quot;x =&amp;quot;, x)
 &lt;p&gt;这里runtime.GOMAXPROCS(0)返回值为4，dlv调试可以看到也确实创建了4个协程main.main.func1，其中两个正在调度，thread 676143, thread 676142，而另外两个协程则没有分配调度它的线程，即还没有开始调度。也好理解，因为每个func1协程都是在死循环里面执行密集计算，没有让度cpu的时机。&lt;/p&gt;
 &lt;p&gt;&lt;img src="assets/go-gpm-scheduler-case-2/image-20190318142345866.png" alt="image-20190318142345866"&gt;&lt;/p&gt;
 &lt;p&gt;另外main.main这个是main goroutine，它跑在独立的线程thread 676049中。但是因为我们设置的runtime.GOMAXPROCS(0)为默认值4，表示新创建的goroutine可以和main goroutine共享相同的cpu资源P，也就是允许其他goroutine和main goroutine抢占P运行。那func1对应的goroutine占着cpu资源不放，main goroutine也就获得不了可继续调度的机会了。所以上述代码永远不会结束！&lt;/p&gt;
-&lt;p&gt;如果把threads := GOMAXPROCS(0) - 1，设置为物理核数数减1，那么新创建的协程就不会占满所有的P，main goroutine就可以在空闲的P上获得被调度的机会。程序就可以正常执行结束。&lt;/p&gt;</description></item><item><title>*Go Data Structures: Interfaces*</title><link>/blog/2019-03-03-go-interface/</link><pubDate>Sun, 03 Mar 2019 12:00:00 +0800</pubDate><guid>/blog/2019-03-03-go-interface/</guid><description>&lt;h1 id="go-data-structures-interfaces"&gt;&lt;em&gt;Go Data Structures: Interfaces&lt;/em&gt; &lt;a href="#go-data-structures-interfaces" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;如果把threads := GOMAXPROCS(0) - 1，设置为物理核数数减1，那么新创建的协程就不会占满所有的P，main goroutine就可以在空闲的P上获得被调度的机会。程序就可以正常执行结束。&lt;/p&gt;</description></item><item><title>laws of go reflection</title><link>/blog/2019-03-03-laws-of-go-reflection/</link><pubDate>Sun, 03 Mar 2019 20:51:07 +0800</pubDate><guid>/blog/2019-03-03-laws-of-go-reflection/</guid><description>&lt;h3 id="the-laws-of-reflection"&gt;&lt;a href="https://blog.golang.org/laws-of-reflection"&gt;The Laws of Reflection&lt;/a&gt; &lt;a href="#the-laws-of-reflection" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;By Rob Pike 6 September 2011&lt;/p&gt;
+&lt;h4 id="introduction"&gt;Introduction &lt;a href="#introduction" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;Reflection in computing is the ability of a program to examine its own structure, particularly through types; it&amp;rsquo;s a form of meta programming. It&amp;rsquo;s also a great source of confusion.&lt;/p&gt;
+&lt;p&gt;In this article we attempt to clarify things by explaining how reflection works in Go. Each language&amp;rsquo;s reflection model is different (and many languages don&amp;rsquo;t support it at all), but this article is about Go, so for the rest of this article the word &amp;ldquo;reflection&amp;rdquo; should be taken to mean &amp;ldquo;reflection in Go&amp;rdquo;.&lt;/p&gt;</description></item><item><title>go反射：any与reflect.Value+Type之间的转换</title><link>/blog/2019-03-03-go-reflect-diagram/</link><pubDate>Sun, 03 Mar 2019 19:44:43 +0800</pubDate><guid>/blog/2019-03-03-go-reflect-diagram/</guid><description>&lt;h1 id="1-go反射转换关系"&gt;1 go反射转换关系 &lt;a href="#1-go%e5%8f%8d%e5%b0%84%e8%bd%ac%e6%8d%a2%e5%85%b3%e7%b3%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;下面是go reflect相关的Variable、reflect.Type、reflect.Value之间的转换关系，三者之间是可以互相转换的。&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/go-reflect-diagram/go-reflect.png" alt="go-reflect"&gt;&lt;/p&gt;
+&lt;h1 id="2-go反射api使用"&gt;2 go反射api使用 &lt;a href="#2-go%e5%8f%8d%e5%b0%84api%e4%bd%bf%e7%94%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;我们结合上述转换图来进行详细说明go reflect api的使用。&lt;/p&gt;
+&lt;h2 id="21-variable--reflecttype"&gt;2.1 Variable &amp;amp; reflect.Type &lt;a href="#21-variable--reflecttype" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="211-variable---reflecttype"&gt;2.1.1 Variable -&amp;gt; reflect.Type &lt;a href="#211-variable---reflecttype" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;rt := reflect.TypeOf(v)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="212-reflecttype---variable"&gt;2.1.2 reflect.Type -&amp;gt; Variable &lt;a href="#212-reflecttype---variable" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;从reflect.Type到Variable，即通过反射类型直接构造一个变量出来也是可以的，但是中间转换过程涉及到从reflect.Type到reflect.Value，然后再从reflect.Value解引用得到Variable，因此，上图转换图中采用了虚线的形式。&lt;/p&gt;
+&lt;p&gt;reflect.New(rt reflect.Type)会创建一个指定类型的变量，并初始化未对应的0值。如下面创建了一个值为0的int变量v0。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;v : = 0
+rt := reflect.TypeOf(v)
+v0 := reflect.New(rt)
+fmt.Println(*(v0.Interface().(*int)))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;reflect.NewAt(rt reflect.Type, ptr unsafe.Pointer)则是用ptr指向的值创建一个变量。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;v := 0
+rt := reflect.TypeOf(v)
+vv := reflect.NewAt(rt, unsafe.Pointer(&amp;amp;v))
+fmt.Println(*(vv.Interface().(*int)))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;reflect.New()\NewAt()返回的都是指向变量的指针，通过这个值可以修改新创建的变量内容。还需要注意的是，reflect.NewAt(rt, ptr)创建的变量，其实与ptr指向的变量是相同的。通过NewAt返回的指针可以对原来变量值进行修改。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;*reflect.NewAt(rt, unsafe.Pointer(&amp;amp;v)).Interface().(*int) = 12345
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;难道不能像CC++中那样直接(int *)(ptr) = 12345吗，还需要先通过反射得到一个变量。go里面unsafe.Pointer是一个类似CC++中void*类型的指针，也是可以通过*(*int)(unsafe.Pointer(ptr))这样的运算来完成赋值的，问题是我们这里描述的反射的情景，我们是要在运行时动态地完成类型判断、赋值，写代码的时候可能还不知道ptr是*int类型的。&lt;/p&gt;</description></item><item><title>Learning to Use Go Reflection — Part 2</title><link>/blog/2019-03-03-learn-to-use-go-reflection-p2/</link><pubDate>Sun, 03 Mar 2019 15:33:55 +0800</pubDate><guid>/blog/2019-03-03-learn-to-use-go-reflection-p2/</guid><description>&lt;h1 id="learning-to-use-go-reflectionpart-2"&gt;Learning to Use Go Reflection — Part 2 &lt;a href="#learning-to-use-go-reflectionpart-2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;a href="https://medium.com/@jon_43067?source=post_header_lockup"&gt;&lt;img src="assets/learn-to-use-go-reflection-p2/go-reflect-author.jpeg" alt="Go to the profile of Jon Bodner"&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;[Jon Bodner Jan 4, 2018&lt;/p&gt;
+&lt;p&gt;In &lt;a href="https://medium.com/capital-one-developers/learning-to-use-go-reflection-822a0aed74b7"&gt;my last blog post,&lt;/a&gt; we looked at Go’s reflection package and went through some quick demonstrations of the features it enables. What wasn’t clear is when these features would be useful. Everything we did with reflection could have been implemented without it — and it would have been more efficient and less verbose. But we also know that the Go team doesn’t like to include features for their own sake. So, what are the things that reflection enables?&lt;/p&gt;</description></item><item><title>Learning to Use Go Reflection</title><link>/blog/2019-03-03-learn-to-use-go-reflection-p1/</link><pubDate>Sun, 03 Mar 2019 15:10:41 +0800</pubDate><guid>/blog/2019-03-03-learn-to-use-go-reflection-p1/</guid><description>&lt;h1 id="learning-to-use-go-reflection"&gt;Learning to Use Go Reflection &lt;a href="#learning-to-use-go-reflection" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;a href="https://medium.com/@jon_43067?source=post_header_lockup"&gt;&lt;img src="assets/learn-to-use-go-reflection-p1/go-reflect-author.jpeg" alt="Go to the profile of Jon Bodner"&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href="https://medium.com/@jon_43067"&gt;Jon Bodner&lt;/a&gt; Dec 13, 2017&lt;/p&gt;
+&lt;h3 id="whats-reflection"&gt;&lt;strong&gt;What’s Reflection?&lt;/strong&gt; &lt;a href="#whats-reflection" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Most of the time, variables, types, and functions in Go are pretty straightforward. When you need a type, you define a type:&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type Foo struct {
+A int
+B string
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;When you need a variable, you define a variable:&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;var x Foo
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And when you need a function, you define a function:&lt;/p&gt;</description></item><item><title>*Go Data Structures: Interfaces*</title><link>/blog/2019-03-03-go-interface/</link><pubDate>Sun, 03 Mar 2019 12:00:00 +0800</pubDate><guid>/blog/2019-03-03-go-interface/</guid><description>&lt;h1 id="go-data-structures-interfaces"&gt;&lt;em&gt;Go Data Structures: Interfaces&lt;/em&gt; &lt;a href="#go-data-structures-interfaces" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;&lt;a href="https://swtch.com/~rsc/"&gt;&lt;em&gt;Russ Cox&lt;/em&gt;&lt;/a&gt; Posted on Tuesday, December 1, 2009.&lt;/p&gt;
 &lt;p&gt;的lliGo&amp;rsquo;s interfaces—static, checked at compile time, dynamic when asked for—are, for me, the most exciting part of Go from a language design point of view. If I could export one feature of Go into other languages, it would be interfaces.&lt;/p&gt;
 &lt;p&gt;This post is my take on the implementation of interface values in the “gc” compilers: 6g, 8g, and 5g. Over at Airs, Ian Lance Taylor has written&lt;a href="http://www.airs.com/blog/archives/277"&gt;two&lt;/a&gt; &lt;a href="http://www.airs.com/blog/archives/276"&gt;posts&lt;/a&gt; about the implementation of interface values in &lt;code&gt;gccgo&lt;/code&gt;. The implementations are more alike than different: the biggest difference is that this post has pictures.&lt;/p&gt;</description></item><item><title>go gpm scheduler case</title><link>/blog/2019-03-03-go-gpm-scheduler-case/</link><pubDate>Sun, 03 Mar 2019 12:00:00 +0800</pubDate><guid>/blog/2019-03-03-go-gpm-scheduler-case/</guid><description>&lt;p&gt;“&lt;strong&gt;纸上得来终觉浅，绝知此事要躬行&lt;/strong&gt;”，相信很多人都听说过go runtime scheduler - G.P.M work-stealing scheduler，而且讲的头头是道，但是究竟理解多少呢，在实际工作中遇到相关问题又能否分析、定位准确，就又是另一回事了，“纸上谈兵”者自古有之，今天也一样。搞技术的，最好还是能够知根知底，别含糊。&lt;/p&gt;

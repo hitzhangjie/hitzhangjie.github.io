@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Dmb on</title><link>/tags/dmb/</link><description>Recent content in Dmb on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 16 Jul 2026 22:00:00 +0800</lastBuildDate><atom:link href="/tags/dmb/index.xml" rel="self" type="application/rss+xml"/><item><title>内存屏障指令参考：从 x86 到 ARM 的完整对照</title><link>/blog/2026-07-16-barrier-instructions-reference/</link><pubDate>Thu, 16 Jul 2026 22:00:00 +0800</pubDate><guid>/blog/2026-07-16-barrier-instructions-reference/</guid><description>&lt;p&gt;前面的文章分别从 &lt;a href="2026-07-16-store-buffer-and-memory-barrier.md"&gt;Store Buffer 与 Invalidate Queue&lt;/a&gt;、&lt;a href="2026-07-16-instruction-reordering.md"&gt;指令重排序&lt;/a&gt;、&lt;a href="2026-07-16-intel-lock-instruction-prefix.md"&gt;LOCK 前缀&lt;/a&gt; 等角度讨论了内存屏障&amp;quot;为什么存在&amp;quot;和&amp;quot;解决什么问题&amp;quot;。但当你打开 Linux 内核源码、Go runtime 汇编，或者用 &lt;code&gt;objdump&lt;/code&gt; 反汇编一段并发代码时，真正映入眼帘的是一条条具体的&lt;strong&gt;汇编指令&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;这些指令就是本文的主角。下面按架构逐一梳理——每条指令长什么样、做什么事、在什么场景下用。&lt;/p&gt;
+&lt;h2 id="x86--x86-64"&gt;x86 / x86-64 &lt;a href="#x86--x86-64" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;x86 提供三条专用的屏障指令，外加一个&amp;quot;全能选手&amp;quot; LOCK 前缀。&lt;/p&gt;
+&lt;h3 id="lfence--load-fence"&gt;LFENCE — Load Fence &lt;a href="#lfence--load-fence" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;指令：LFENCE
+操作码：0F AE E8
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;语义&lt;/strong&gt;：序列化所有 load 操作。LFENCE 之后的 load 指令不会在 LFENCE 之前执行（从执行完成的角度）。注意它不约束 store。&lt;/p&gt;
+&lt;p&gt;在 Intel SDM 中的定义：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;LFENCE 之后的读指令不会在 LFENCE 完成前执行。LFENCE 不序列化写指令。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;strong&gt;什么时候用&lt;/strong&gt;：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;配合 non-temporal load&lt;/strong&gt;：&lt;code&gt;MOVNTDQA&lt;/code&gt;（non-temporal load）配合 &lt;code&gt;LFENCE&lt;/code&gt; 确保数据完全进入 cache 后再被使用。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Spectre 缓解&lt;/strong&gt;：&lt;code&gt;LFENCE&lt;/code&gt; 可以阻止后续 load 的推测执行，被用作 Spectre v1 的软件缓解（&lt;code&gt;__fence_reg&lt;/code&gt; / &lt;code&gt;lfence&lt;/code&gt; 作为 speculation barrier）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;理论上充当读屏障&lt;/strong&gt;，但实际上 x86 TSO 已经保证 Load→Load 和 Load→Store 不重排，所以&lt;strong&gt;普通场景下不需要显式 &lt;code&gt;LFENCE&lt;/code&gt; 做读屏障&lt;/strong&gt;。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id="sfence--store-fence"&gt;SFENCE — Store Fence &lt;a href="#sfence--store-fence" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;指令：SFENCE
+操作码：0F AE F8
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;语义&lt;/strong&gt;：序列化所有 store 操作。SFENCE 之前的所有 store 必须在 SFENCE 之后的 store 之前全局可见。注意它不约束 load。&lt;/p&gt;</description></item></channel></rss>

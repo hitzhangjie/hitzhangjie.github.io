@@ -1,0 +1,249 @@
+b start disk:
+dd if=....img of=/dev/sdb bs=64k
+
+2. install
+freebsd can only be installed on Main Partition, so free some disk space and
+make sure two Main Partition are left.
+
+freebsd type partition can't nested with other type fs, create partition whose
+type is 'freebsd', then under it, create fs 'freebsd-swap' and 'freebsd-ufs'.
+
+3. freebsd 
+/etc/pkg/FreeBSD.conf, replace /latest with /release/0/
+
+4. install freebsd
+5. install xorg
+6. install kde
+7. edit /etc/rc.conf, add following lines:
+dbus_enable="true"
+hald_enable="true"
+kdm4_enable="true"
+
+Microcode is a method of programmatically implementing hardware level
+instructions. This allows for CPU bugs to be fixed without replacing the on
+board chip.
+
+在sh或者csh中启用delete按键：
+
+For the Bourne Shell, add the following lines to ~/.shrc. See sh(1) and
+editrc(5).
+bind ^? ed-delete-next-char # for console
+bind ^[[3~ ed-delete-next-char # for xterm
+
+
+For the C Shell, add the following lines to ~/.cshrc. See csh(1).
+bindkey ^? delete-char # for console
+bindkey ^[[3~ delete-char # for xterm
+
+
+通过remastersys进行系统备份的时候，提示了一个错误/etc/resolv.conf这个符号链接
+没有，我手动加上了，可能将来会出错。
+
+我的/tmp分区不是被bind mount的，uck卸载的时候可能会出错我之前理解的bind mount
+有错，注意查看mount bind的妙用！！！
+
+union mount可以一次挂载多个文件
+
+UUID硬盘挂载到别人的电脑上之后，无法识别，查了下发现UUID的计算方法中使用了mac
+地址等等作为参数，暂时不确定为什么有的支持，有的不支持，跟bios有关吗？
+
+ubuntu里面没有plymouth-set-default-theme，使用update-alternatives
+--list/config default.plymouth来代替。
+
+ssh端口重定向与http代理的区别
+
+kali 1.07不支持efi启动，kali 1.08支持！
+
+=============================================================================
+2014-07-19 13:14
+=============================================================================
+
+8.如果配置的是多例模式，那么每次请求都会创建一个action对象。但是有个问题比较奇
+怪，就是在相同的页面发起action请求的时候，action的初始化方法只会执行一次，不是
+多例的吗？既然是多例的话，初始化方法应该每次都执行啊？
+
+7.ibatis的数据库配置文件需要添加到全局配置文件中，否则ibatis找不到对应的sql定
+义，提示： no statement named .... in sqlmap.
+
+id生成器，需要事先在sequence里面写好.
+
+6. 执行流程：
+welcome-file为login.html, login.html请求login!init.do，转到LoginAction中执行
+init方法，返回loginView，转向login.jsp页面,login.jsp页面包含了login.js，输入用
+户名、密码点了登录之后，会请求login!login.do，登录成功后返回到login.js，请求
+index!indexInit.do，根据用户的设置返回到desktopView或者indexView，假如返回
+indexView，则转向index.jsp页面。
+index.jsp页面，从request中取出里面的相关属性渲染到标签中。
+
+index.jsp页面里面选择修改密码，会请求index!loadUserInfo.do，这里原来的程序有
+bug，一个是没有添加success字段的值为true还是false，另一个问题是在linux系统下面
+安装的mysql，默认的配置是区分表名的大小写，但是不区分字段的大小写，而在windows
+下面则是不区分表名和字段的大小写，因为mybatis的sqlmap文件中写的表名是大写的，
+而我在linux下面开发，mysql采用的默认配置，导致访问mysql出错，如果想关闭mysql的
+大小写敏感，添加lower_case_table_names=1到/etc/my.cnf下面。
+
+
+5. html的hidden属性设置为true之后，extjs取不到制定id的元素内容，很奇怪？不应改
+！但是将class属性设置成x-hide-display之后是可以访问到的.
+
+4. EXTJS的安装
+下载extjs，解压到工程的webroot目录下面；
+建立一个html文件，在其中包含对应的ext相关的css文件，ext-base.js下的文件，以及
+ext-all-debug.js；这样我们需要的ext相关的组件就全部被包含进来了，为了方便我们
+可以让一个html文件包含这个文件，以后其他的页面如果需要使用extjs的时候，包含这
+个页面就可以了，当然了，这时，你不能使用html文件，而应使用jsp文件；
+
+Ext.onReady()表示，当浏览器加载完相应的页面后开始准备执行执行Ext定义的动作；
+console.info()输出的信息，谷歌浏览器中，按f12，打开console，可以看到输出的信息
+；
+
+3. chrome建用js缓存，方便调试
+准备工程调试的时候，可以先清空缓存，然后按F12，右下角设置，勾上disable cache；
+不调试工程，进行普通的网页浏览的时候，记得打开浏览器缓存。
+
+2. myeclispe svn插件
+eclipse下面白色的包：包就是文件夹，表示在当前的文件夹下面，没有文件（这里我们
+将其他的文件夹不当做文件看待）；
+
+安装了myeclipse之后，
+
+监听器 拦截器哪个先执行啊
+
+=============================================================================
+2013-04-24 17:00
+=============================================================================
+nachos中类继承关系：
+1. KernelType就是NetKernel的宏定义，NetKernel继承自UserprogKernel，
+User...Kernel继承自ThreadedKernel。
+
+2. 
+machine执行run方法，for循环中调用oneInstruction方法，一次执行一条指令。
+oneInstruction方法中取出具体的指令，取指令也就是内存读操作，其中涉及到了内存逻
+辑地址到物理地址的转换。
+
+地址转换的时候，根据传入的逻辑地址，逻辑地址addr除以pageSize算是页号，取模
+addr%pageSize算是页内的便宜量，如果页号在TLB中，则从TLB中取，TLB为NULL则从页表
+中取，TLB不为NULL，则从TLB中取，TLB中不为NULL但是如果其中没有对应的页号的话，
+会抛出异常，交给所谓的内核处理异常。如果从页表中取，还会涉及到页号超出实际物理
+内存最大页数量的情况。
+
+如果从页表中找不到对应页号，即对应的页不在物理内存中，也会抛出异常，这时可能会
+读磁盘，读磁盘又涉及到相应的读写操作。
+
+3. mips指令集的指令格式，操作码 三个寄存器 extras，好像是这样吧，文件里面这么
+写的，其中decode的时候，说opcode与文件中的不一致，我想文件中的opcode只是让我们
+看的，真正解析之后的opcode可能是mips交叉编译器能真正执行的opcode吧。
+
+
+4.
+
+=============================================================================
+2014-04-24 15:00
+=============================================================================
+RHEL，linux刚安装了之后，可能无法正常显示正文字符，即便你设置对了编码，这种情
+况下就要想到是中文字体的原因，中文字体没有安装，某些中文字符没有显示，幸好，
+linux桌面环境下，会提示你安装什么字体。
+
+=============================================================================
+2014-04-20 23:42
+=============================================================================
+mysql
+
+不知道什么原因引起了如下错误：
+Native table 'performance_schema'.'file_instances' has the wrong structure
+Native table 'performance_schema'.'cond_instances' has the wrong structure
+Native table 'performance_schema'.'rwlock_instances' has the wrong structure
+Native table 'performance_schema'.'mutex_instances' has the ...
+导致从执行lxr的initdb.sh一直失败，执行如下命令解决问题：
+sudo mysql_upgrade -u root -p
+
+
+=============================================================================
+2013-09-13 13:27
+=============================================================================
+
+存储器地址分段？组成原理中这一概念与操作系统中稍有不同：
+1 组成原理中，8086存储器地址分段的初衷是为了解决如何在16位字长的cpu上解决20位地
+址的问题，因此提出了分段的方法，段内地址16位，各段内有64k寻址空间。将段基址左
+移4位，然后与段内地址相加，就得到了20位的“虚拟的”地址线。
+2 操作系统中，分段是给用户使用的，主要是为了编程方便，例如代码段CS、数据段DS等
+等。
+
+段基址，是16的倍数
+DOS下分配内存时的基本单位也是最小单位是“节”（1节=16字节），可以访问的最小单位
+是字节。CS、DS、SS和ES是段寄存器，存放的内容称为“段基值”，“段基值”的单位是“节”
+，“段基址”的单位是字节，所以将 ‘段基值’ * 16 = ‘段基址’；所以段基址必定可以被
+16整除。
+
+段寄存器之间交换数据，不能直接交换，需要通过4个通用寄存器ax，bx，cx，dx中转，
+这跟cpu的设计有关
+
+assume用来明确段寄存器与段名的关系
+
+=============================================================================
+2014-02-03 08:07
+=============================================================================
+d1 在虚拟机里面，有的时候设置了共享文件夹，但是在虚拟机中却看不到共享的文件夹
+，这个时候可以，重新安装vmware tools，安装完成后，就可以在某个目录下面，如
+/media或者/mnt下面看到之前共享的文件夹了。
+
+2 fedora第三方库的安装，也就是添加新的yum源。这在redhat的衍生版centos中，也存
+在这个需要。
+
+3 yum中update和upgrade的区别，update是升级所有的软件包、发行版以及内核，同时会
+更新配置文件；upgrade不升级内核，不更新配置文件。注意这点与ubuntu中的差别，
+ubuntu中apt的update只是更新软件包的meta数据，并不完成软件更新操作，apt的
+upgrade操作，好像也不会升级内核。
+到时候注意下就是了。
+
+4 gnome2 (centos中使用的是gnome2），ubuntu 12.04,13.10中好像默认使用的也是
+gnome2吧，gnome2使用compiz进行管理，而最新的gnome3（fedora20中已经使用），则是
+采用mutter进行管理。
+
+5 eclipse中设置api提示信息，我觉得英文表述的，比翻译过来的，质量可能要好一点，
+翻译的质量有可能不太好。
+
+6 清空dns缓存：
+windows： ipconfig /displaydns;
+          ipconfig /flushdns
+linux: 1） 使用了nscd用于dns caching
+           /etc/init.d/nscd restart或者通过service命令重启服务。
+           service nscd restart或者service nscd reload
+       2）使用了dnsmasq用于dns caching
+          /etc/init.d/dnsmasq restart，或者通过service命令重启服务。
+		  service dnsmasq restart，在ubuntu中dnsmasq是内置在NetworkManager中的
+		  ，随着NetworkManager的重启而重启，所以只要重启NetworkManager就好了，
+		  但是默认情况下，dnsmasq的caching机制是被禁用的，可
+		  以在系统日志里查看到这些信息。 
+	    3）使用BIND用于dns caching
+		  /etc/init.d/named restart，或者通过rndc命令。
+		  rndc restart或者rndc exec
+os x unix：dscacheutil -flushcache
+
+7 /etc/hosts文件，是一个用于dns查询的静态文件，当本地主机对一个域名发起dns查询
+时，首先查找这个文件/etc/hosts，如果找到了对应的条目，就用其中预先设定的ip来作
+为查询域名的ip地址；如果文件中没有对应的条目的话，则向dns服务器发起查询请求。 
+
+8 从源代码安装程序的问题，有时候，从github或者svn或者cvs上下载下来的软件源代码
+中并没有包含 configure 文件或者 makefile 文件，这个时候，例如在 ubuntu 中，可
+以安装 build-essential ，将源代码解压后， cd 到源代码根目录，执行命令
+autogen.sh ，这个命令会根据 autoconf 和 automake 文件生成对应的 configure 文件
+并自动执行，然后就得到了 makefile 文件，再执行 make 命令就完成了编译连接操作。
+也就是说，如果一个源代码中没有configure、makefile文件，我们无法编译连接程序时
+，可以通过autogen.sh自动生成makefile文件，我们再执行make命令就ok了。
+
+9 ubuntu中安装oracle jdk，其实从oracle官网下载jdk的文件，解压修改PATH、
+CLASSPATH等环境变量就可以了，同时注意修改/usr/bin/java等符号链接，通过
+update-alternatives进行修改，设置好master link、slave link、优先级等，最后设置
+将/usr/bin/java指向oracle提供的jdk。为什么呢，因为比open-jdk稳定地多。google
+chrome比起合作伙伴chromium也要稳定地多，这在本科毕业设计的时候已经了解了。
+如果图省事，也可以直接添加合适的ppa源，进行jdk的安装。
+
+10 linux下/etc/profile以及/etc/bashrc，每个用户登录时，会执行一次/etc/profile
+，通过它设置某些变量信息，然后再针对具体的用户执行~/.profile万层特定用户信息的
+设置；如果用户使用bash作为shell，那么系统会为每个用户执行一次/etc/bashrc，然后
+再针对具体的用户执行~/.bashrc，完成bash的设置。
+
+11 lirc，远程控制
+              
+

@@ -59,4 +59,34 @@
 &lt;/blockquote&gt;
 &lt;h1 id="4-图形识别"&gt;4 图形识别 &lt;a href="#4-%e5%9b%be%e5%bd%a2%e8%af%86%e5%88%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;h2 id="41-不同类型的最近邻"&gt;4.1 不同类型的“最近”邻 &lt;a href="#41-%e4%b8%8d%e5%90%8c%e7%b1%bb%e5%9e%8b%e7%9a%84%e6%9c%80%e8%bf%91%e9%82%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;图像数据如何作为训练样本对分类器进行训练呢，训练分类器的过程可以参考不同的分类器算法，k近邻分类器，决策树，神经网络，贝叶斯网络，或者支持向量机等等，在训练之前都要对数据进行预处理，以便用来作为训练样本对分类器进行训练。往往这些分类器的输入都是向量形式，图像数据怎么预处理呢？简单一点，如何认为两张图像比较接近呢？这里说了一个简单思路，两个图像放缩到相同大小，然后做减法，其实图像本身也是一堆一维的数据，本身可以作为输入向量，这么理解起来就简单了。实际处理过程可能要比这里的复杂些。&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;图像数据如何作为训练样本对分类器进行训练呢，训练分类器的过程可以参考不同的分类器算法，k近邻分类器，决策树，神经网络，贝叶斯网络，或者支持向量机等等，在训练之前都要对数据进行预处理，以便用来作为训练样本对分类器进行训练。往往这些分类器的输入都是向量形式，图像数据怎么预处理呢？简单一点，如何认为两张图像比较接近呢？这里说了一个简单思路，两个图像放缩到相同大小，然后做减法，其实图像本身也是一堆一维的数据，本身可以作为输入向量，这么理解起来就简单了。实际处理过程可能要比这里的复杂些。&lt;/p&gt;</description></item><item><title>跳表（Skip List）</title><link>/blog/2018-11-02-skiplist/</link><pubDate>Fri, 02 Nov 2018 00:37:00 +0800</pubDate><guid>/blog/2018-11-02-skiplist/</guid><description>&lt;h1 id="跳表skip-list"&gt;跳表（Skip List） &lt;a href="#%e8%b7%b3%e8%a1%a8skip-list" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;hr&gt;
+&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在程序开发中，我们经常需要维护一个&lt;strong&gt;有序集合&lt;/strong&gt;，支持插入、删除、查找、范围查询等操作。对于这类需求，有哪些数据结构可选？它们各有什么优缺点？&lt;/p&gt;
+&lt;h2 id="有序数组"&gt;有序数组 &lt;a href="#%e6%9c%89%e5%ba%8f%e6%95%b0%e7%bb%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;有序数组通过二分查找可以在 &lt;strong&gt;O(log n)&lt;/strong&gt; 时间内定位元素，查找效率很高。但插入和删除需要移动大量元素，时间复杂度为 &lt;strong&gt;O(n)&lt;/strong&gt;。如果集合元素频繁变动，性能会急剧下降。&lt;/p&gt;
+&lt;h2 id="有序链表"&gt;有序链表 &lt;a href="#%e6%9c%89%e5%ba%8f%e9%93%be%e8%a1%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;有序链表在已知插入位置时，插入和删除操作只需 &lt;strong&gt;O(1)&lt;/strong&gt; 时间。但问题在于，链表不支持随机访问，查找一个元素必须从头遍历，时间复杂度为 &lt;strong&gt;O(n)&lt;/strong&gt;。即使链表本身已经有序，也无法像数组那样二分查找。&lt;/p&gt;
+&lt;h2 id="二叉查找树bst"&gt;二叉查找树（BST） &lt;a href="#%e4%ba%8c%e5%8f%89%e6%9f%a5%e6%89%be%e6%a0%91bst" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;二叉查找树试图兼顾两者：理想情况下，每个节点的左子树都小于它、右子树都大于它，查找、插入、删除都是 &lt;strong&gt;O(log n)&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;但 BST 有一个致命缺陷——它可能&lt;strong&gt;退化&lt;/strong&gt;。如果按升序或降序插入元素，BST 会退化成一条单链表，查找性能退化到 O(n)。&lt;/p&gt;
+&lt;h2 id="平衡树avl红黑树"&gt;平衡树（AVL、红黑树） &lt;a href="#%e5%b9%b3%e8%a1%a1%e6%a0%91avl%e7%ba%a2%e9%bb%91%e6%a0%91" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;为了解决退化问题，人们发明了平衡二叉查找树——通过&lt;strong&gt;严格的平衡条件&lt;/strong&gt;和&lt;strong&gt;旋转操作&lt;/strong&gt;保证树的高度始终为 O(log n)，从而保证 O(log n) 的查找性能。&lt;/p&gt;
+&lt;p&gt;平衡树的代价也很明显：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;实现复杂&lt;/strong&gt;：插入和删除时需要大量的条件判断和旋转操作来维持平衡，代码写起来容易出错；&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;旋转开销大&lt;/strong&gt;：当节点数量很多时，旋转调整的代价不可忽视；&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;键比较成本高&lt;/strong&gt;：如果存储的键是长字符串或其他比较耗时的类型，每次旋转带来的额外比较开销会进一步放大。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;并发不友好&lt;/strong&gt;：旋转操作会影响大片子树，实现高效并发平衡树需要极其复杂的锁或无锁机制。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;相对于平衡树，RBTree红黑树是放宽了一些条件，但是上面的开销依然存在。&lt;/p&gt;
+&lt;p&gt;正如 William Pugh 在 1989 年发表的论文 &lt;em&gt;Skip Lists: A Probabilistic Alternative to Balanced Trees&lt;/em&gt; 中所指出的：&lt;strong&gt;平衡树的实现过于复杂，我们需要一种更简单的替代方案&lt;/strong&gt;。&lt;/p&gt;
+&lt;h2 id="跳表的诞生"&gt;跳表的诞生 &lt;a href="#%e8%b7%b3%e8%a1%a8%e7%9a%84%e8%af%9e%e7%94%9f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;William Pugh 提出了一个大胆的想法：&lt;strong&gt;用概率来替代严格的平衡条件&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;与其在每次插入、删除后费尽心思地旋转调整，不如让每个节点随机决定自己的&amp;quot;高度&amp;quot;，用概率保证整体结构的平衡性。这就是&lt;strong&gt;跳表（Skip List）&lt;/strong&gt;。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;核心思想：概率平衡似乎比严格强制平衡更简单且更高效。——William Pugh&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h1 id="跳表的设计思想"&gt;跳表的设计思想 &lt;a href="#%e8%b7%b3%e8%a1%a8%e7%9a%84%e8%ae%be%e8%ae%a1%e6%80%9d%e6%83%b3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;跳表本质上是对&lt;strong&gt;有序链表&lt;/strong&gt;的改造。&lt;/p&gt;</description></item></channel></rss>

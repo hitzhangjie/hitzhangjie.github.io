@@ -1,0 +1,176 @@
+<!doctype html><html lang=en-US><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-regular.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-500.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-700.woff2 type=font/woff2 crossorigin><script>window.__LAYOUT_WIDTH_DEFAULT__="standard"</script><script>(()=>{(function(){var t,n={compact:1,standard:1,wide:1,fullscreen:1},s="layout-width-v",o="3",e=null,i=null;try{e=localStorage.getItem("layout-width"),i=localStorage.getItem(s)}catch{}if(i!==o){e==="standard"?e="compact":e==="compact"?e="standard":e==="normal"?e="compact":e==="reading"&&(e="wide");try{e&&localStorage.setItem("layout-width",e),localStorage.setItem(s,o)}catch{}}t=window.__LAYOUT_WIDTH_DEFAULT__||"standard",n[t]||(t="standard"),e&&!n[e]&&(e=null),document.documentElement.setAttribute("data-layout-width",e||t)})()})()</script><link rel=stylesheet href=/main.b615b1507c1e1c5443244530a5f48eca62cd4be6f7f25836a8424c64ffc4b17dfc5917bb55874c38fdd94a7b3507dd1e7a74a4f9cc39283854c7a11c5db3442b.css integrity="sha512-thWxUHweHFRDJEUwpfSOymLNS+b38lg2qEJMZP/EsX38WRe7VYdMOP3ZSns1B90eenSk+cw5KDhUx6EcXbNEKw==" crossorigin=anonymous><noscript><style>img.lazyload{display:none}</style></noscript><meta name=robots content="index, follow"><meta name=googlebot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><meta name=bingbot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><title>文件锁实现：从建议性锁到强制性锁 - MySpace</title><meta name=description content="系统梳理 Linux 下文件锁的三种实现方式：open O_EXCL、flock、fcntl，深入理解建议性锁与强制性锁的区别，以及强制性锁的启用方法。"><link rel=canonical href=/blog/2026-07-18-file-lock-implementations/><meta property="og:locale" content="en_US"><meta property="og:type" content="article"><meta property="og:title" content="文件锁实现：从建议性锁到强制性锁"><meta property="og:description" content="系统梳理 Linux 下文件锁的三种实现方式：open O_EXCL、flock、fcntl，深入理解建议性锁与强制性锁的区别，以及强制性锁的启用方法。"><meta property="og:url" content="/blog/2026-07-18-file-lock-implementations/"><meta property="og:site_name" content="MySpace"><meta property="article:published_time" content="2026-07-18T12:00:00+08:00"><meta property="article:modified_time" content="2026-07-18T12:00:00+08:00"><meta property="og:image" content="/doks.png"><meta property="og:image:alt" content="MySpace"><meta name=twitter:card content="summary_large_image"><meta name=twitter:site content="@hitzhangjie"><meta name=twitter:creator content="@hitzhangjie"><meta name=twitter:title content="文件锁实现：从建议性锁到强制性锁"><meta name=twitter:description content="系统梳理 Linux 下文件锁的三种实现方式：open O_EXCL、flock、fcntl，深入理解建议性锁与强制性锁的区别，以及强制性锁的启用方法。"><meta name=twitter:image content="/doks.png"><meta name=twitter:image:alt content="文件锁实现：从建议性锁到强制性锁"><script type=application/ld+json>{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/1","name":"","url":"/","sameAs":["https://twitter.com/hitzhangjie","https://www.linkedin.com/in/hitzhangjie/","https://github.com/hitzhangjie"],"image":{"@type":"ImageObject","@id":"/#/schema/image/1","url":"/\u003cnil\u003e","width":null,"height":null,"caption":""}},{"@type":"WebSite","@id":"/#/schema/website/1","url":"/","name":"MySpace","description":"MySpace is a hitzhangjie\u0027s personal space, for blogs, books, journey, thinkings.","publisher":{"@id":"/#/schema/person/1"}},{"@type":"WebPage","@id":"/blog/2026-07-18-file-lock-implementations/","url":"/blog/2026-07-18-file-lock-implementations/","name":"文件锁实现：从建议性锁到强制性锁","description":"系统梳理 Linux 下文件锁的三种实现方式：open O_EXCL、flock、fcntl，深入理解建议性锁与强制性锁的区别，以及强制性锁的启用方法。","isPartOf":{"@id":"/#/schema/website/1"},"about":{"@id":"/#/schema/person/1"},"datePublished":"2026-07-18T12:00:00CET","dateModified":"2026-07-18T12:00:00CET","breadcrumb":{"@id":"/blog/2026-07-18-file-lock-implementations/#/schema/breadcrumb/1"},"primaryImageOfPage":{"@id":"/blog/2026-07-18-file-lock-implementations/#/schema/image/2"},"inLanguage":"","potentialAction":[{"@type":"ReadAction","target":["/blog/2026-07-18-file-lock-implementations/"]}]},{"@type":"BreadcrumbList","@id":"/blog/2026-07-18-file-lock-implementations/#/schema/breadcrumb/1","name":"Breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"item":{"@type":"WebPage","@id":"/","url":"/","name":"Home"}},{"@type":"ListItem","position":2,"item":{"@id":"/blog2026-07-18-file-lock-implementations/"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Article","@id":"/#/schema/article/1","headline":"文件锁实现：从建议性锁到强制性锁","description":"系统梳理 Linux 下文件锁的三种实现方式：open O_EXCL、flock、fcntl，深入理解建议性锁与强制性锁的区别，以及强制性锁的启用方法。","isPartOf":{"@id":"/blog/2026-07-18-file-lock-implementations/"},"mainEntityOfPage":{"@id":"/blog/2026-07-18-file-lock-implementations/"},"datePublished":"2026-07-18T12:00:00CET","dateModified":"2026-07-18T12:00:00CET","author":{"@id":"/#/schema/person/2"},"publisher":{"@id":"/#/schema/person/1"},"image":{"@id":"/blog/2026-07-18-file-lock-implementations/#/schema/image/2"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/2","name":null,"sameAs":[]}]},{"@context":"https://schema.org","@graph":[{"@type":"ImageObject","@id":"/blog/2026-07-18-file-lock-implementations/#/schema/image/2","url":"/doks.png","contentUrl":"/doks.png","caption":"文件锁实现：从建议性锁到强制性锁"}]}]}</script><meta name=theme-color content="#fff"><link rel=icon href=/favicon.ico sizes=any><link rel=icon type=image/svg+xml href=/favicon.svg><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest crossorigin=use-credentials href=/site.webmanifest><script type=text/javascript src='https://platform-api.sharethis.com/js/sharethis.js#property=607868a58d7101001829a8df&product=sop' async></script><style>[alt~=sharing]{border:0;box-shadow:none}div#st-1{text-align:unset}div#st-1 .st-btn{height:24px;padding:0 4px}div#st-1 .st-btn>img{top:4.2px}div#st-2 .st-btn{height:24px;padding:0 4px}div#st-2 .st-btn>img{top:4.2px}</style><script async src="https://www.googletagmanager.com/gtag/js?id=UA-168027530-1"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","UA-168027530-1")</script></head><body class="blog single d-flex flex-column min-vh-100"><div class=sticky-top><div class=header-bar></div><header class="navbar navbar-expand-lg navbar-light doks-navbar"><nav class="container-xxl flex-wrap flex-lg-nowrap" aria-label="Main navigation"><a class="navbar-brand order-0" href=/ aria-label=MySpace>MySpace
+</a><button class="btn btn-menu order-2 d-block d-lg-none" type=button data-bs-toggle=offcanvas data-bs-target=#offcanvasDoks aria-controls=offcanvasDoks aria-label="Open main menu">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div class="offcanvas offcanvas-end border-0 py-lg-1" tabindex=-1 id=offcanvasDoks data-bs-backdrop=true aria-labelledby=offcanvasDoksLabel><div class="header-bar d-lg-none"></div><div class="offcanvas-header d-lg-none"><h2 class="h5 offcanvas-title ps-2" id=offcanvasDoksLabel><a class=text-dark href=/>MySpace</a></h2><button type=button class="btn-close text-reset me-2" data-bs-dismiss=offcanvas aria-label="Close main menu"></button></div><div class="offcanvas-body p-4 p-lg-0"><ul class="nav flex-column flex-lg-row align-items-lg-center mt-2 mt-lg-0 ms-lg-2 me-lg-auto"><li class=nav-item><a class="nav-link ps-0 py-1 active" href=/blog/>Blog</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/books/>Books</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/landscape>Landscape</a></li></ul><hr class="text-black-50 my-4 d-lg-none"><form class="doks-search position-relative flex-grow-1 ms-lg-auto me-lg-2"><input id=search class="form-control is-search" type=search placeholder="Search docs..." aria-label="Search docs..." autocomplete=off><div id=suggestions class="shadow bg-white rounded d-none"></div></form><hr class="text-black-50 my-4 d-lg-none"><ul class="nav flex-column flex-lg-row"><li class=nav-item><a class="nav-link social-link" href=https://twitter.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg><small class="ms-2 d-lg-none">Twitter</small></a></li><li class=nav-item><a class="nav-link social-link" href=https://github.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37.0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44.0 0020 4.77 5.07 5.07.0 0019.91 1S18.73.65 16 2.48a13.38 13.38.0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07.0 005 4.77 5.44 5.44.0 003.5 8.55c0 5.42 3.3 6.61 6.44 7A3.37 3.37.0 009 18.13V22"/></svg><small class="ms-2 d-lg-none">GitHub</small></a></li><li class="nav-item layout-width-dropdown"><a class="nav-link layout-width-dropdown-btn" href=# data-bs-toggle=dropdown aria-expanded=false aria-label=切换布局宽度 title=切换布局宽度><span class=lw-icon-standard><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-compact><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-wide><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span><span class=lw-icon-fullscreen><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg></span></a><ul class="dropdown-menu dropdown-menu-end"><li><button class="dropdown-item layout-width-option" data-layout-value=compact>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span>紧凑布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=standard>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>标准布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=wide>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span>宽松布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=fullscreen>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>全屏布局</button></li></ul></li></ul></div></div></nav></header></div><div class="wrap container-xxl" role=document><div class=content><div class="row flex-xl-nowrap" data-layout-width=standard><div class="col-lg-4 col-xl-3 docs-sidebar"><nav class=docs-links aria-label="Main navigation"><h3>Tag List</h3><ol><li><a href=/tags/linux/>linux</a></li><li><a href=/tags/filelock/>filelock</a></li><li><a href=/tags/flock/>flock</a></li><li><a href=/tags/fcntl/>fcntl</a></li><li><a href=/tags/advisory-lock/>advisory-lock</a></li><li><a href=/tags/mandatory-lock/>mandatory-lock</a></li><li><a href=/tags/c/>c</a></li></ol></nav></div><main class="docs-content col-lg-12 col-xl-10"><h1>文件锁实现：从建议性锁到强制性锁</h1><p><small>Posted 2026-07-18 12:00 +0800 by <a class="stretched-link position-relative" href>ZhangJie</a>&nbsp;&dash;&nbsp;<strong>5&nbsp;min read</strong></small><p><div style=display:flex><div>分享:&nbsp;&nbsp;</div><div><div class=sharethis-inline-share-buttons></div></div></div><hr><p class=lead></p><h1 id=背景>背景 <a href=#%e8%83%8c%e6%99%af class=anchor aria-hidden=true>#</a></h1><p>在多进程/多线程编程中，当多个执行流需要访问共享资源时，同步互斥是绕不开的话题。常见的同步机制有互斥锁（mutex）、信号量（semaphore）、条件变量等，这些适用于同一台机器上的线程或进程间同步。而当我们需要跨进程、甚至跨主机的同步时，<strong>文件锁</strong>（file lock）便成了一种简单有效的选择。</p><p>文件锁的实现方式有多种，从最简单的基于 <code>open()</code> 的排他性创建，到基于 <code>flock()</code> / <code>fcntl()</code> 的内核级锁机制。本文将系统性地梳理 Linux 下的文件锁实现方案，并深入讨论<strong>建议性锁</strong>（advisory lock）与<strong>强制性锁</strong>（mandatory lock）的区别。</p><h1 id=实现方式一open-o_creato_excl>实现方式一：open O_CREAT|O_EXCL <a href=#%e5%ae%9e%e7%8e%b0%e6%96%b9%e5%bc%8f%e4%b8%80open-o_creato_excl class=anchor aria-hidden=true>#</a></h1><h2 id=原理>原理 <a href=#%e5%8e%9f%e7%90%86 class=anchor aria-hidden=true>#</a><a href=#原理 class=anchor aria-hidden=true>#</a></h2><p>这是最"原始"的文件锁实现方式，利用的是文件系统本身的原子性语义：</p><ul><li>调用 <code>open(path, O_CREAT | O_EXCL, ...)</code> 时，内核会原子性地检查文件是否存在：<ul><li>若文件<strong>不存在</strong>，则创建文件并返回 fd —— 视为<strong>获取锁成功</strong>；</li><li>若文件<strong>已存在</strong>，则返回 <code>-1</code>，<code>errno</code> 设为 <code>EEXIST</code> —— 视为<strong>锁已被他人持有</strong>。</li></ul></li><li>解锁时，直接 <code>unlink()</code> 删除该文件，释放锁。</li></ul><p><code>O_CREAT | O_EXCL</code> 的组合保证"检查-创建"是一个原子操作，不会出现 TOCTOU（time-of-check-time-of-use）竞态问题。</p><h2 id=代码示例>代码示例 <a href=#%e4%bb%a3%e7%a0%81%e7%a4%ba%e4%be%8b class=anchor aria-hidden=true>#</a><a href=#代码示例 class=anchor aria-hidden=true>#</a></h2><pre><code class=language-c>#include &lt;sys/types.h&gt;
+#include &lt;sys/stat.h&gt;
+#include &lt;errno.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;iostream&gt;
+
+#define LOCKFILE &quot;/tmp/tmp.lock&quot;
+
+namespace FileLockExcl {
+
+class FileLock {
+public:
+    static int lock()
+    {
+        int tempfd;
+        // 循环重试，直到成功创建锁文件
+        while ((tempfd = open(LOCKFILE, O_CREAT | O_RDWR | O_EXCL,
+                              S_IRUSR | S_IWUSR)) &lt; 0) {
+            if (errno != EEXIST) {
+                std::cerr &lt;&lt; &quot;Failed to create lockfile: &quot; &lt;&lt; LOCKFILE &lt;&lt; std::endl;
+                return -1;
+            }
+            // 文件已存在，说明锁被他人持有，忙等待
+        }
+        close(tempfd); // 创建成功后立即关闭，锁文件的存在性即代表锁的状态
+        return 0;
+    }
+
+    static int unlock()
+    {
+        return unlink(LOCKFILE); // 删除文件即释放锁
+    }
+};
+
+} // namespace FileLockExcl
+</code></pre><h2 id=优缺点分析>优缺点分析 <a href=#%e4%bc%98%e7%bc%ba%e7%82%b9%e5%88%86%e6%9e%90 class=anchor aria-hidden=true>#</a><a href=#优缺点分析 class=anchor aria-hidden=true>#</a></h2><p><strong>优点：</strong></p><ul><li>实现简单，不依赖任何特殊的系统调用；</li><li>跨平台性好（POSIX 标准行为）；</li><li>锁文件的存在性直观可见（<code>ls /tmp/tmp.lock</code> 即可判断）。</li></ul><p><strong>缺点：</strong></p><ul><li>忙等待（busy-wait）浪费 CPU；</li><li>锁文件操作涉及实际的文件系统 I/O 和磁盘驱动，性能较低（benchmark 约 40 万次 lock/unlock 每秒）；</li><li>进程异常退出时锁文件可能残留（未正常 <code>unlink</code>），需要额外的清理机制；</li><li>不支持超时、不支持读锁/写锁分离、不支持范围锁；</li><li>锁粒度只能是整个文件，无法锁定部分区间。</li></ul><hr><h1 id=实现方式二flock--bsd-风格文件锁>实现方式二：flock() — BSD 风格文件锁 <a href=#%e5%ae%9e%e7%8e%b0%e6%96%b9%e5%bc%8f%e4%ba%8cflock--bsd-%e9%a3%8e%e6%a0%bc%e6%96%87%e4%bb%b6%e9%94%81 class=anchor aria-hidden=true>#</a></h1><h2 id=原理-1>原理 <a href=#%e5%8e%9f%e7%90%86-1 class=anchor aria-hidden=true>#</a><a href=#原理-1 class=anchor aria-hidden=true>#</a></h2><p><code>flock()</code> 是 BSD 引入的文件锁系统调用，它对<strong>整个文件</strong>加锁，锁与文件描述符（<code>fd</code>）关联：</p><pre><code class=language-c>#include &lt;sys/file.h&gt;
+int flock(int fd, int operation);
+</code></pre><p><code>operation</code> 可选值：</p><table><thead><tr><th>操作</th><th>说明</th></tr></thead><tbody><tr><td><code>LOCK_SH</code></td><td>共享锁（读锁），多个进程可同时持有</td></tr><tr><td><code>LOCK_EX</code></td><td>排他锁（写锁），同时只能有一个进程持有</td></tr><tr><td><code>LOCK_UN</code></td><td>解锁</td></tr><tr><td><code>LOCK_NB</code></td><td>非阻塞模式（与上述任一值按位或），若不指定则默认阻塞等待</td></tr></tbody></table><p>关键语义：</p><ul><li><code>flock()</code> 的锁与 <strong>file description</strong>（内核中的打开文件表项）关联，而非与进程或 fd 整数关联；</li><li>这意味着 <code>dup()</code>、<code>fork()</code> 产生的 fd 副本共享同一把锁；</li><li>进程退出时自动释放所有 <code>flock</code> 锁；</li><li>同一个进程对同一个文件多次调用 <code>flock()</code>，后续调用会<strong>变更</strong>锁类型（如从 <code>LOCK_SH</code> 升级为 <code>LOCK_EX</code>，或反之）。</li></ul><h2 id=代码示例-1>代码示例 <a href=#%e4%bb%a3%e7%a0%81%e7%a4%ba%e4%be%8b-1 class=anchor aria-hidden=true>#</a><a href=#代码示例-1 class=anchor aria-hidden=true>#</a></h2><pre><code class=language-c>#include &lt;sys/types.h&gt;
+#include &lt;sys/stat.h&gt;
+#include &lt;sys/file.h&gt;
+#include &lt;errno.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;cstdio&gt;
+
+#define LOCKFILE &quot;filelockv2.lock&quot;
+
+namespace FileLockFlock {
+
+class FileLockV2 {
+public:
+    static int lock_fd;
+
+    static int init()
+    {
+        // init 阶段创建锁文件（非锁操作本身）
+        int fd = open(LOCKFILE, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+        if (fd &lt; 0) {
+            printf(&quot;failed to create lockfile.\n&quot;);
+            return -1;
+        }
+        close(fd);
+        return 0;
+    }
+
+    static int lock()
+    {
+        lock_fd = open(LOCKFILE, O_RDONLY);
+        if (lock_fd &lt; 0) return -1;
+        flock(lock_fd, LOCK_EX); // 排他锁，默认阻塞等待
+        return 0;
+    }
+
+    static int unlock()
+    {
+        flock(lock_fd, LOCK_UN);
+        close(lock_fd);
+        return 0;
+    }
+
+    static int fini()
+    {
+        return unlink(LOCKFILE);
+    }
+};
+
+int FileLockV2::lock_fd = 0;
+
+} // namespace FileLockFlock
+</code></pre><h2 id=性能与内核实现>性能与内核实现 <a href=#%e6%80%a7%e8%83%bd%e4%b8%8e%e5%86%85%e6%a0%b8%e5%ae%9e%e7%8e%b0 class=anchor aria-hidden=true>#</a><a href=#性能与内核实现 class=anchor aria-hidden=true>#</a></h2><p><code>flock()</code> 的操作主要发生在内核内存中（对 file table entry 中的锁字段做标记/清除），不涉及实际的磁盘 I/O。benchmark 显示约 <strong>100 万次 lock/unlock 每秒</strong>，是 <code>O_EXCL</code> 方案的 2.5 倍。</p><p>在内核中，<code>fs/locks.c</code> 的 <code>__flock</code> 实现了核心逻辑：</p><p><img src=/blog/linux/sysprog/assets/flock.png alt="flock 内核实现"></p><h2 id=优缺点分析-1>优缺点分析 <a href=#%e4%bc%98%e7%bc%ba%e7%82%b9%e5%88%86%e6%9e%90-1 class=anchor aria-hidden=true>#</a><a href=#优缺点分析-1 class=anchor aria-hidden=true>#</a></h2><p><strong>优点：</strong></p><ul><li>性能远优于文件系统级别的实现；</li><li>支持共享锁/排他锁，语义更丰富；</li><li>支持阻塞等待（无需忙轮询）；</li><li>进程退出时自动释放，无残留问题。</li></ul><p><strong>缺点：</strong></p><ul><li>锁粒度只能是整个文件，无法锁定特定字节范围；</li><li>锁与 <code>file description</code> 关联，<code>fork()</code> 后父子进程共享同一把锁（这在某些场景下可能不是期望的行为）；</li><li>可移植性受限：<code>flock</code> 是 BSD 特性，虽然 Linux 也支持，但在某些 Unix 系统上行为可能有差异。</li></ul><hr><h1 id=实现方式三fcntl--posix-风格记录锁>实现方式三：fcntl() — POSIX 风格记录锁 <a href=#%e5%ae%9e%e7%8e%b0%e6%96%b9%e5%bc%8f%e4%b8%89fcntl--posix-%e9%a3%8e%e6%a0%bc%e8%ae%b0%e5%bd%95%e9%94%81 class=anchor aria-hidden=true>#</a></h1><h2 id=原理-2>原理 <a href=#%e5%8e%9f%e7%90%86-2 class=anchor aria-hidden=true>#</a><a href=#原理-2 class=anchor aria-hidden=true>#</a></h2><p><code>fcntl()</code> 提供了 POSIX 标准的文件锁接口，支持<strong>按字节范围</strong>加锁（record locking），是最灵活的文件锁实现：</p><pre><code class=language-c>#include &lt;fcntl.h&gt;
+int fcntl(int fd, int cmd, ... /* struct flock *arg */);
+</code></pre><p><code>struct flock</code> 定义：</p><pre><code class=language-c>struct flock {
+    short l_type;   // 锁类型：F_RDLCK（读锁）、F_WRLCK（写锁）、F_UNLCK（解锁）
+    short l_whence; // 偏移基准：SEEK_SET、SEEK_CUR、SEEK_END
+    off_t l_start;  // 起始偏移
+    off_t l_len;    // 锁定长度，0 表示锁定到文件末尾
+    pid_t l_pid;    // 持有锁的进程 PID（仅 F_GETLK 时填充）
+};
+</code></pre><p><code>cmd</code> 可选值：</p><table><thead><tr><th>命令</th><th>说明</th></tr></thead><tbody><tr><td><code>F_SETLK</code></td><td>非阻塞设置锁；若冲突则立即返回<code>-1</code>，<code>errno=EAGAIN/EACCES</code></td></tr><tr><td><code>F_SETLKW</code></td><td>阻塞设置锁（<code>W</code> = wait）；若冲突则阻塞等待</td></tr><tr><td><code>F_GETLK</code></td><td>查询当前锁状态：若已有冲突锁，则通过<code>flock</code> 结构返回冲突信息</td></tr></tbody></table><h2 id=关键语义>关键语义 <a href=#%e5%85%b3%e9%94%ae%e8%af%ad%e4%b9%89 class=anchor aria-hidden=true>#</a><a href=#关键语义 class=anchor aria-hidden=true>#</a></h2><p><code>fcntl</code> 锁与 <strong>进程 + inode</strong> 关联，而非 <code>file description</code>。这与 <code>flock</code> 的核心区别在于：</p><ul><li>同一个进程对同一个文件的不同 fd 加锁，后一次会<strong>覆盖</strong>前一次（因为是同一个进程）；</li><li>进程退出时自动释放所有 <code>fcntl</code> 锁；</li><li><code>fork()</code> 产生的子进程<strong>不继承</strong>父进程的 <code>fcntl</code> 锁；</li><li>如果一个 fd 被 <code>close()</code>，该进程通过<strong>任意 fd</strong> 在该文件上持有的所有 <code>fcntl</code> 锁都会被释放。</li></ul><h2 id=代码示例-2>代码示例 <a href=#%e4%bb%a3%e7%a0%81%e7%a4%ba%e4%be%8b-2 class=anchor aria-hidden=true>#</a><a href=#代码示例-2 class=anchor aria-hidden=true>#</a></h2><pre><code class=language-c>#include &lt;fcntl.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;cstdio&gt;
+#include &lt;cerrno&gt;
+
+int fcntl_write_lock(int fd, off_t start, off_t len)
+{
+    struct flock fl;
+    fl.l_type   = F_WRLCK;   // 写锁（排他锁）
+    fl.l_whence = SEEK_SET;
+    fl.l_start  = start;
+    fl.l_len    = len;       // 0 表示锁定到文件末尾
+
+    return fcntl(fd, F_SETLKW, &amp;fl); // 阻塞等待
+}
+
+int fcntl_read_lock(int fd, off_t start, off_t len)
+{
+    struct flock fl;
+    fl.l_type   = F_RDLCK;   // 读锁（共享锁）
+    fl.l_whence = SEEK_SET;
+    fl.l_start  = start;
+    fl.l_len    = len;
+
+    return fcntl(fd, F_SETLKW, &amp;fl);
+}
+
+int fcntl_unlock(int fd, off_t start, off_t len)
+{
+    struct flock fl;
+    fl.l_type   = F_UNLCK;
+    fl.l_whence = SEEK_SET;
+    fl.l_start  = start;
+    fl.l_len    = len;
+
+    return fcntl(fd, F_SETLK, &amp;fl);
+}
+
+// 示例：对文件的前 1024 字节加写锁
+int main()
+{
+    int fd = open(&quot;data.bin&quot;, O_RDWR | O_CREAT, 0644);
+    if (fd &lt; 0) { perror(&quot;open&quot;); return 1; }
+
+    if (fcntl_write_lock(fd, 0, 1024) &lt; 0) {
+        perror(&quot;fcntl write lock&quot;);
+        return 1;
+    }
+
+    // ... 临界区操作 ...
+
+    fcntl_unlock(fd, 0, 1024);
+    close(fd);
+    return 0;
+}
+</code></pre><h2 id=fcntl-vs-flock-核心差异总结>fcntl vs flock 核心差异总结 <a href=#fcntl-vs-flock-%e6%a0%b8%e5%bf%83%e5%b7%ae%e5%bc%82%e6%80%bb%e7%bb%93 class=anchor aria-hidden=true>#</a><a href=#fcntl-vs-flock-核心差异总结 class=anchor aria-hidden=true>#</a></h2><table><thead><tr><th>特性</th><th><code>flock()</code></th><th><code>fcntl()</code></th></tr></thead><tbody><tr><td>锁关联对象</td><td>file description</td><td>进程 + inode</td></tr><tr><td>锁粒度</td><td>整个文件</td><td>字节范围（record lock）</td></tr><tr><td>嵌套锁行为</td><td>同一 fd 再次调用会<strong>变更锁类型</strong></td><td>同一进程再次调用会<strong>覆盖</strong>旧锁</td></tr><tr><td><code>fork()</code> 继承</td><td>子进程共享（同一 file description）</td><td>子进程不继承</td></tr><tr><td><code>close()</code> 语义</td><td>仅关闭当前 fd，锁仍被其他 fd 副本持有</td><td>任意 fd 的 close 释放<strong>该进程中该文件上的全部锁</strong></td></tr><tr><td>标准来源</td><td>BSD</td><td>POSIX</td></tr><tr><td>可移植性</td><td>主要在 Linux/BSD 可用</td><td>所有 POSIX 系统</td></tr></tbody></table><hr><h1 id=建议性锁-vs-强制性锁>建议性锁 vs 强制性锁 <a href=#%e5%bb%ba%e8%ae%ae%e6%80%a7%e9%94%81-vs-%e5%bc%ba%e5%88%b6%e6%80%a7%e9%94%81 class=anchor aria-hidden=true>#</a></h1><h2 id=两种方式的共同点都是建议性锁>两种方式的共同点：都是建议性锁 <a href=#%e4%b8%a4%e7%a7%8d%e6%96%b9%e5%bc%8f%e7%9a%84%e5%85%b1%e5%90%8c%e7%82%b9%e9%83%bd%e6%98%af%e5%bb%ba%e8%ae%ae%e6%80%a7%e9%94%81 class=anchor aria-hidden=true>#</a><a href=#两种方式的共同点都是建议性锁 class=anchor aria-hidden=true>#</a></h2><p>上述三种实现方式——<code>O_EXCL</code>、<code>flock()</code>、<code>fcntl()</code> 默认情况下实现的都是<strong>建议性锁</strong>（advisory lock）。</p><p><strong>建议性锁的核心特征是：内核只跟踪锁的状态，不会在 I/O 操作时主动检查锁。</strong></p><p>也就是说，如果进程 A 通过 <code>flock(fd, LOCK_EX)</code> 对文件加了一把排他锁，进程 B 仍然可以完全不调用 <code>flock</code>，直接 <code>read()</code> / <code>write()</code> 操作该文件而不会被内核阻止。锁的语义完全依赖于<strong>所有参与进程都自觉、正确地在读写前进行加锁</strong>。</p><blockquote><p>打一个比方：建议性锁就像厕所门上的"有人/无人"标识牌。如果你不检查标识直接推门进去，标识牌本身不会阻止你。只有当每个人都遵守"先看标识、再进门、出来翻牌"的约定时，系统才能正常工作。</p></blockquote><p>这也是为什么文件锁被称为"建议性"的原因：<strong>内核建议你在操作前先获取锁，但不强制</strong>。</p><h2 id=强制性锁mandatory-lock>强制性锁（Mandatory Lock） <a href=#%e5%bc%ba%e5%88%b6%e6%80%a7%e9%94%81mandatory-lock class=anchor aria-hidden=true>#</a><a href=#强制性锁mandatory-lock class=anchor aria-hidden=true>#</a></h2><p>如果需要更严格的保护——即使某个进程不配合加锁，内核也能阻止其非法读写——那就需要<strong>强制性锁</strong>。</p><h3 id=启用条件>启用条件 <a href=#%e5%90%af%e7%94%a8%e6%9d%a1%e4%bb%b6 class=anchor aria-hidden=true>#</a><a href=#启用条件 class=anchor aria-hidden=true>#</a></h3><p>在 Linux 上启用强制性锁需要<strong>同时满足两个条件</strong>：</p><ol><li><p><strong>文件系统层面</strong>：挂载时加上 <code>mand</code> 选项</p><pre><code class=language-bash># 挂载时启用强制性锁支持
+mount -o mand /dev/sdb1 /mnt/data
+
+# 或在 /etc/fstab 中配置
+# /dev/sdb1  /mnt/data  ext4  defaults,mand  0  0
+</code></pre></li><li><p><strong>文件权限层面</strong>：要对目标文件设置 set-group-ID 位，并<strong>清除</strong> group-execute 位</p><pre><code class=language-bash>chmod g+s,g-x /path/to/file
+# 即权限位显示为 --s—— （group 位显示为 s 而非 x 或 S）
+</code></pre></li></ol><blockquote><p><strong>为什么要同时置 setgid、清 group-execute？</strong></p><p>set-group-ID 位与 group-execute 位的这种组合（<code>------s---</code> 即 0o2000 + ~0o0010）是一个特殊的标记。历史上 Linux 用这个组合来标识文件应受强制性锁保护，因为正常情况下一个有 setgid 的文件通常也应该有 group-execute 权限（<code>--x--s--x</code>），这个非正常组合不会与常规用法冲突。</p></blockquote><h3 id=强制锁的行为>强制锁的行为 <a href=#%e5%bc%ba%e5%88%b6%e9%94%81%e7%9a%84%e8%a1%8c%e4%b8%ba class=anchor aria-hidden=true>#</a><a href=#强制锁的行为 class=anchor aria-hidden=true>#</a></h3><p>当强制性锁定启用后，内核会在每次 <code>read()</code> / <code>write()</code> 时主动检查文件上的锁：</p><table><thead><tr><th>操作</th><th>对方持有读锁（F_RDLCK）</th><th>对方持有写锁（F_WRLCK）</th></tr></thead><tbody><tr><td>本方尝试<code>read()</code></td><td>✅ 允许（读锁兼容读）</td><td>⛔ 阻塞（读写互斥）</td></tr><tr><td>本方尝试<code>write()</code></td><td>⛔ 阻塞（读写互斥）</td><td>⛔ 阻塞（写写互斥）</td></tr></tbody></table><p>如果调用时使用了 <code>O_NONBLOCK</code>，则冲突时会立即返回 <code>EAGAIN</code> 而非阻塞。</p><h3 id=强制性锁的局限性>强制性锁的局限性 <a href=#%e5%bc%ba%e5%88%b6%e6%80%a7%e9%94%81%e7%9a%84%e5%b1%80%e9%99%90%e6%80%a7 class=anchor aria-hidden=true>#</a><a href=#强制性锁的局限性 class=anchor aria-hidden=true>#</a></h3><ol><li><strong>只适用于 <code>fcntl</code> POSIX 锁</strong>：<code>flock()</code> 的 BSD 锁无法升级为强制性锁。</li><li><strong>需要文件系统支持</strong>：仅适用于支持 <code>mand</code> 挂载选项的文件系统（ext4、XFS 等），NFS 等网络文件系统不支持。</li><li><strong>Truncate 不受控制</strong>：<code>truncate()</code> / <code>ftruncate()</code> 不会被强制性锁阻止。</li><li><strong>unlink / rename 不受控制</strong>：删除或重命名文件不会检查强制性锁。</li><li><strong>root 进程豁免</strong>：以 root 身份运行的进程不受强制性锁限制（但在某些配置下可能受影响）。</li><li><strong>管理成本高</strong>：需要协调挂载选项和文件权限，不适用于任意目录下的临时文件。</li></ol><blockquote><p><strong>实用建议</strong>：在实践中，强制性锁并不常用。大多数场景下，只要确保所有访问方遵循统一的加锁协议，建议性锁已足够。强制性锁主要适用于以下场景：</p><ul><li>你无法控制所有访问进程的代码（如第三方程序）；</li><li>需要防范疏漏导致的写冲突；</li><li>安全敏感场景，需要内核级别的访问控制兜底。</li></ul></blockquote><hr><h1 id=三种实现方式对比>三种实现方式对比 <a href=#%e4%b8%89%e7%a7%8d%e5%ae%9e%e7%8e%b0%e6%96%b9%e5%bc%8f%e5%af%b9%e6%af%94 class=anchor aria-hidden=true>#</a></h1><table><thead><tr><th>维度</th><th><code>O_CREAT|O_EXCL</code></th><th><code>flock()</code></th><th><code>fcntl()</code></th></tr></thead><tbody><tr><td>实现层级</td><td>文件系统语义</td><td>内核文件表</td><td>内核 VFS 层</td></tr><tr><td>锁粒度</td><td>整个文件</td><td>整个文件</td><td>字节范围</td></tr><tr><td>读锁/写锁</td><td>不支持</td><td>支持</td><td>支持</td></tr><tr><td>阻塞/非阻塞</td><td>仅忙等待</td><td>支持<code>LOCK_NB</code></td><td>支持<code>F_SETLK</code>/<code>F_SETLKW</code></td></tr><tr><td>死锁检测</td><td>无</td><td>无，但同一进程重复加锁会变更类型</td><td>内核会检测并拒绝死锁</td></tr><tr><td>进程退出自动释放</td><td>否（文件残留）</td><td>是</td><td>是</td></tr><tr><td>可升级为强制性锁</td><td>否</td><td>否</td><td><strong>是</strong></td></tr><tr><td>性能（ops/s）</td><td>~40 万</td><td>~100 万</td><td>接近<code>flock</code></td></tr><tr><td>可移植性</td><td>POSIX</td><td>BSD（Linux 支持）</td><td>POSIX</td></tr><tr><td>适用场景</td><td>简单的单实例守护进程</td><td>需要读写锁、不关心锁范围的场景</td><td>数据库记录锁、部分文件更新等需要范围锁的场景</td></tr></tbody></table><blockquote><p>这里的测试机型，印象中是用的v8机型，大致是8c16g机型。年代久远，当时笔记没有记录下测试机型，请重新进行benchmark测试。</p></blockquote><h1 id=总结>总结 <a href=#%e6%80%bb%e7%bb%93 class=anchor aria-hidden=true>#</a></h1><p>本文梳理了 Linux 下三种文件锁的实现方式：</p><ol><li><strong><code>open() + O_CREAT|O_EXCL</code></strong>：利用文件系统原子语义，最简单但也最受限。适用于只需"单实例运行"这类简单互斥场景。</li><li><strong><code>flock()</code></strong>：BSD 风格的整文件锁，与 file description 关联，性能较好。适用于需要读写锁但不关心锁范围的场景。注意 <code>fork()</code> 的继承语义。</li><li><strong><code>fcntl()</code></strong>：POSIX 风格的记录锁，与进程关联，支持灵活的范围锁。适用于需要精细控制锁粒度的场景，也是<strong>唯一可升级为强制性锁</strong>的方式。</li></ol><p>关于建议性锁与强制性锁：</p><ul><li>上述三种方式默认都是<strong>建议性锁</strong>：内核只记录锁状态，不强制 I/O 检查。一致性完全依赖于所有进程自觉遵守加锁协议。</li><li><strong>强制性锁</strong>在满足特定条件后（挂载 <code>mand</code> + 文件 <code>setgid</code> 置位且 <code>group-execute</code> 清位），内核会在每次 <code>read()/write()</code> 时主动检查 <code>fcntl</code> 锁，未获锁的进程将被阻塞。但由于其配置复杂、限制较多，实践中不如建议性锁普遍。</li></ul><p>选择哪一种方式，取决于你的具体需求：锁的粒度、是否需要进程间安全的释放语义、是否需要在不可控的进程中强制执行。理解每种方式的原理和局限，才能做出正确的选择。</p><div class=edit-page><a href=https://github.com/hitzhangjie/myspace/blob/master/content/blog/linux/sysprog/2026-07-18-file-lock-implementations.md><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2"><path d="M17 3a2.828 2.828.0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+Edit this page on GitHub</a></div><div class="docs-navigation d-flex justify-content-between"><a href=/blog/2019-05-23-gostring_vs_cstring/><div class="card my-1"><div class="card-body py-2">&larr; Go string与C string的区别</div></div></a><a class=ms-auto href=/blog/2026-07-18-pprof%E5%B7%A5%E5%85%B7%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97-%E5%91%BD%E4%BB%A4%E4%B8%8E%E7%94%A8%E6%B3%95%E8%AF%A6%E8%A7%A3/><div class="card my-1"><div class="card-body py-2">pprof 工具完全指南：命令与用法详解（译） &rarr;</div></div></a></div></main><div class="docs-toc d-none d-xl-block col-xl-3"><nav class=docs-toc-inner aria-label="Secondary navigation"><div class=page-links><h3>On this page</h3><nav id=TableOfContents><ul><li><a href=#背景>背景</a></li><li><a href=#实现方式一open-o_creato_excl>实现方式一：open O_CREAT|O_EXCL</a><ul><li><a href=#原理>原理</a></li><li><a href=#代码示例>代码示例</a></li><li><a href=#优缺点分析>优缺点分析</a></li></ul></li><li><a href=#实现方式二flock--bsd-风格文件锁>实现方式二：flock() — BSD 风格文件锁</a><ul><li><a href=#原理-1>原理</a></li><li><a href=#代码示例-1>代码示例</a></li><li><a href=#性能与内核实现>性能与内核实现</a></li><li><a href=#优缺点分析-1>优缺点分析</a></li></ul></li><li><a href=#实现方式三fcntl--posix-风格记录锁>实现方式三：fcntl() — POSIX 风格记录锁</a><ul><li><a href=#原理-2>原理</a></li><li><a href=#关键语义>关键语义</a></li><li><a href=#代码示例-2>代码示例</a></li><li><a href=#fcntl-vs-flock-核心差异总结>fcntl vs flock 核心差异总结</a></li></ul></li><li><a href=#建议性锁-vs-强制性锁>建议性锁 vs 强制性锁</a><ul><li><a href=#两种方式的共同点都是建议性锁>两种方式的共同点：都是建议性锁</a></li><li><a href=#强制性锁mandatory-lock>强制性锁（Mandatory Lock）</a><ul><li><a href=#启用条件>启用条件</a></li><li><a href=#强制锁的行为>强制锁的行为</a></li><li><a href=#强制性锁的局限性>强制性锁的局限性</a></li></ul></li></ul></li><li><a href=#三种实现方式对比>三种实现方式对比</a></li><li><a href=#总结>总结</a></li></ul></nav></div></nav></div></div></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.b49b5c2c44fdca07ee730ad1196420771d2a94176c7d367b414fb2e23f6a0ac3fbae11c2a6263392f17450f222ec2b518586e8ea96e23c361eb3ee8a255e145c.js integrity="sha512-tJtcLET9ygfucwrRGWQgdx0qlBdsfTZ7QU+y4j9qCsP7rhHCpiYzkvF0UPIi7CtRhYbo6pbiPDYes+6KJV4UXA==" crossorigin=anonymous defer></script><script src=/js/highlight.min.1a731f820940167b6fd11a8540a1ae7c4627f4009b13e229c411e9d890612a3f6b618133d96477c2cf238d6faaa28d745cd5141e443aa34f62785510dc873430.js integrity="sha512-GnMfgglAFntv0RqFQKGufEYn9ACbE+IpxBHp2JBhKj9rYYEz2WR3ws8jjW+qoo10XNUUHkQ6o09ieFUQ3Ic0MA==" crossorigin=anonymous defer></script><script src=/main.min.b58b01cf031e169076ec659deefba76e6f28ee7fb673b98a8f8f515705db29d50a62f11be71512f1e11b67fd203f11d5c4a911b43b4580eb9d4ca6b0833a4a4a.js integrity="sha512-tYsBzwMeFpB27GWd7vunbm8o7n+2c7mKj49RVwXbKdUKYvEb5xUS8eEbZ/0gPxHVxKkRtDtFgOudTKawgzpKSg==" crossorigin=anonymous defer></script><script src=/index.min.29b442791f446d2f61a7264cfe0fab0de3c57dadbd426b30a090af00d17b6b38767d71518f91749298abb555c3214e1c91ce8cee38a45909b84a5668aaa0181a.js integrity="sha512-KbRCeR9EbS9hpyZM/g+rDePFfa29QmswoJCvANF7azh2fXFRj5F0kpirtVXDIU4ckc6M7jikWQm4SlZoqqAYGg==" crossorigin=anonymous defer></script></body></html>

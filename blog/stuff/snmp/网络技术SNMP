@@ -1,0 +1,148 @@
+######################################################################################
+For linux:
+
+snmpget -v 2c -c public local .1.3.6.1.2.1.1.5.0
+
+edit /etc/snmp/snmp.conf to comment out the "mibs:"
+edit /etc/snmp/snmpd.conf to allow accessing all info from localhost
+
+temperature sensors:
+    snmptable -v 2c -c public localhost .1.3.6.1.4.1.2021.13.16.2
+fan sensors:
+    snmptable -v 2c -c public localhost .1.3.6.1.4.1.2021.13.16.3
+voltage sensors:
+
+For windows:
+
+install 'snmp' service
+configure 'snmp' service, 'services.msc', security tab and trap tab.
+configure firewall
+
+######################################################################################
+MIB中只是定义了，被管设备应该提供的信息，但是设备会不会实现，不一定。
+所以说，要想单纯的通过snmp协议（也就是借助于现有的或重写的snmp agent和snmp manager），
+来实现对所有期望信息的采集，是几乎不可能的，也是不可靠的。
+另外由于配置的原因，对某些MIB的访问可能也是受限制的，或者被管设备上没有提供对应的MIB文
+件以及对应的数据文件，那么我们就无法对其进行访问。
+但是考虑到我们是软件的开发者，理论上，我们可以解决这些问题，配置方面我们可以访问所有的
+MIB文件，理论上也可以获取所需要的MIB文件，但是关键在于设备是否实现了对应MIB文件中的各个
+对象的定义，如果没有实现的话，那么我们就只能通过其他手段来获取了。
+所以说，问题不仅仅在于MIB，以及对应的数据文件的读写，可能还需要综合各种手段。
+需要抓紧，排查那些可以获取，那些不可以，从而尽早对某些“杂症”提出解决方案。
+
+#######################################################################################
+MIB开发，同时需要MIB的定义文件和对应的数据文件？
+MIB的定义文件，也就是我们看到的*.mib文件，它包含了对被管设备应提供信息的定义，通过它我
+们可以获取到对应的具体信息在MIB层次树中所处的位置OID，对于一个具体的snmp代理，则可以根
+据唯一标识某一对象的OID来查询具体的设备信息。这些具体的设备信息被存储在与对应的MIB定义
+文件想对应的数据文件中。
+这个对应的数据文件是如何得到的呢？难道是设备生成的，并定期地写入当前运行状态信息？
+
+#######################################################################################
+install libsnmp1.4-java
+libsnmp1.4-java - Open Source implementation of the SNMP protocol in Java
+
+#######################################################################################
+
+关于snmpset命令执行时，Net-SNMP Agent拒绝执行，显示变量Not Writable，Doesn't support
+modification，这个原因是由于snmpd.conf引起的，如果在该文件中对某些变量进行了定义，那么
+通过snmpset对其进行修改时，Net-SNMP Agent拒绝执行。当然，这种做法并非snmp标准的一部分.
+
+snmpset -v 2c -c private localhost .1.3.6.1.2.1.1.4.0 s hit.zhangjie@gmail.com
+
+正确配置httpd.conf文件,这是后续工作哦的前提.
+编辑的时候，必须有root权限，否则是不让编辑的.
+
+#######################################################################################
+
+JDMK: java dynamic management kits
+
+jdmk: 可以针对MIB文件中对各种对象的定义，生成自动的Respond，Trap等Agent相关的代码，基
+本上是自动完成了Manager和Agent的开发，Manager与Agent之间采用SNMP协议进行交互.
+我们需要细化的工作，就是根据具体的设备，详细的定制jdmk为我们生成的响应代码.
+
+#######################################################################################
+
+apache log4j: for Trap
+
+#######################################################################################
+
+snmpv1: GET/GETNEXT/SET/TRAP
+snmpv2: GETBULK/INFORM
+
+The lists of operations supported in SNMP are,
+1.	Get Request
+    a.	Get Request is a Read operation on the Managed Device.
+    b.	Get request is used to fetch information from the Managed Device for a particula
+		-r Object Identifier (OID)
+2.	Get Next Request
+    a.	Get Next Request is same as Get Request operation. It is used to retrieve the va
+		-lue of the next OID value in the MIB hierarchy.
+    b.	Get Next Request is useful to retrieve more than one piece of information from t
+		-he Managed Device.
+3.	Get Bulk
+    a.	Get Bulk Request is used to retrieve large amount of data from the MIB objects.
+    b.	It internally uses series of Get Next operation to retrieve all data from the MIB
+		tables.
+4.	Set Request
+    a.	Set Request is a Write operation on the Managed Device.
+    b.	Set Request is used to set/write values in the Managed Device. Basically it is us
+		-ed to configure Network Elements.
+5.	Trap
+    a.	Trap is a type of Asynchronous Notification propagated from the Managed Device to
+		the Network Management System.
+    b.	Traps are generated from the Network Elements when it experiences some error cond
+		-ition.
+6.	Inform
+    a.	SNMP Inform is similar to Traps but is more reliable.
+    b.	When an Agent sends a Trap to the Network Management System (Manager), the Manage
+		-r 
+		receives the Trap and no acknowledgement is sent to Agent. By this way, the Agent 
+		doesn’t know whether the Trap has been received by Manager or not. Whereas in Inf
+		-orm Request, the Manager upon receiving the Inform Request can acknowledge the A
+		-gent with a SNMP Response PDU. By this way, Agent can be able to know whether In
+		-form has reached or not.
+
+	If the Agent didn't recive the Acknowledgement from the Manager, it can resend the In
+	-form Request again.
+
+#######################################################################################
+	snmptrap listening on port 162 is not allowed, why?	
+
+	because it's a well-know port which has been given to SNMP.
+
+	though we realize our app by SNMP, when we listening on that port, it's not allowd.
+	maybe it's a configuration problem, then check it.
+
+	now use ports whose number is larger than 1024 instead.
+
+#######################################################################################
+
+	Snmp.getBulk()并非是取出一个表所容纳的数据，它只是根据PDU.setMaxRepetitions()来决定
+迭代多少次getNext()操作，如果setMaxRepetitions取的小了，所得到的数据不全，就需要多次读
+取，如果偏大，就会取到过多的数据，需要剔除.
+	我已经实现了部分表格的读取，本质上所有表格的读取都是一样的，既然这样，为什么要说部分
+实现呢？因为，有些表格暂时无法读取成功，但是其他snmpd以及qtmib是可以通过getbulk获取到的，
+可能我的程序中有错无吧.
+
+#######################################################################################
+ for sensors:
+ install 'lm-sensors',
+ sudo sensors-detect, to check which sensors you have on the pc
+
+ 'intel digital themal sensor' -> driver: coretemp
+ add 'coretemp' into /etc/modules
+
+#######################################################################################
+ snmptranslate -Tp -IR oid/name
+
+#######################################################################################
+net-snmp agent extend
+
+#######################################################################################
+install 'libsnmp-dev'
+mib2c 
+
+#######################################################################################
+
+

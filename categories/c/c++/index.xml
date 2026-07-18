@@ -1,4 +1,42 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>C/C++ on</title><link>/categories/c/c++/</link><description>Recent content in C/C++ on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 24 Jul 2020 19:46:11 +0800</lastBuildDate><atom:link href="/categories/c/c++/index.xml" rel="self" type="application/rss+xml"/><item><title>你不认识的cc++ volatile</title><link>/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc-volatile/</link><pubDate>Fri, 24 Jul 2020 19:46:11 +0800</pubDate><guid>/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc-volatile/</guid><description>&lt;style&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>C/C++ on</title><link>/categories/c/c++/</link><description>Recent content in C/C++ on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 28 Jun 2022 23:08:51 +0800</lastBuildDate><atom:link href="/categories/c/c++/index.xml" rel="self" type="application/rss+xml"/><item><title>mac/win下linux c/c++开发</title><link>/blog/2022-06-28-devcontainer_linux-cc-%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E8%AE%BE%E7%BD%AE/</link><pubDate>Tue, 28 Jun 2022 23:08:51 +0800</pubDate><guid>/blog/2022-06-28-devcontainer_linux-cc-%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E8%AE%BE%E7%BD%AE/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;我们很多人主力操作系统是macOS或者Windows，用Linux作为主力操作系统的少吧，不过之前确实有连续7年多是用Fedora作为主力操作系统 :)&lt;/p&gt;
+&lt;p&gt;现在很多人开发人员使用MacBook Pro作为自己的开发机，大厂标配，我们很多后台呢，开发的程序一般最后还是要跑在Linux系统上的，尤其是c/c++开发涉及到这里的跨平台开发的问题，很多开发人员用着非常原始的方式在开发，开发体验比较差。&lt;/p&gt;
+&lt;p&gt;借这个契机，我调研了下现在比较好的一些开发方式，总结分享下。&lt;/p&gt;
+&lt;p&gt;先定一个要实现的小目标：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;能基于IDE进行开发，比如VSCode;&lt;/li&gt;
+&lt;li&gt;另外，编译构建必须能够&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="vscode-add-dockerfile-to-workspace"&gt;vscode: add dockerfile to workspace &lt;a href="#vscode-add-dockerfile-to-workspace" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;在vscode中cmd+p，输入add dockerfile to workspace并执行，此时会选择基础镜像，如面向c++开发的基础镜像，此时会生成默认的dockerfile。&lt;/li&gt;
+&lt;li&gt;然后在dockerfile选中后点击右键，选择build image，此时就完成镜像构建了，该默认dockerfile默认是一个编译镜像，里面包含了编译构建产物。&lt;/li&gt;
+&lt;li&gt;直接运行上述镜像默认就是运行程序，运行的方式可以在docker explorer里面找到镜像，右键菜单中选择Run，或者命令行执行。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这个镜像只是用来编译构建、测试运行的，还不能满足我们开发阶段的需求，因为开发阶段需要考虑头文件、库的搜索问题。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;解决思路：&lt;/strong&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;至少要构建一个支持开发的镜像，如c/c++镜像；&lt;/li&gt;
+&lt;li&gt;启动这个镜像，并将当前工程以volume的形式挂在到容器中，或者在容器中clone下来这个项目。提交代码要注意随时提交；&lt;/li&gt;
+&lt;li&gt;开发通过vscode remote连接到vscode server进行开发，其实是本地vscode通过ssh连接传输vscode server软件包到容器中并安装启动；&lt;/li&gt;
+&lt;li&gt;如果开发镜像支持类似WebIDE的方式进行开发，也可以代替3这种方式，只是一些本地vscode的快捷配置等可能不是很好同步。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id="docker-desktop-new-dev-environment"&gt;docker desktop: New Dev environment &lt;a href="#docker-desktop-new-dev-environment" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Docker Desktop的这种实现方式，就是上面提到的2\3这几步的组合，基本满足我们希望实现的目标了（支持开发容器Mount local directory或者容器中Clone git repository）。&lt;/p&gt;
+&lt;p&gt;这种方式也有不足，就是假设后续有人要接手这个项目，或者有人和你协作，你怎么办呢？
+我们可以直接提交一个镜像push到registry，他只要能拉代码，又能拉镜像就基本能还原之前的开发环境。&lt;/p&gt;
+&lt;p&gt;但是我为什么非要push一个镜像上去呢（包括自定义的基础镜像、开发阶段的分享镜像）？
+如果不push镜像而docker destop默认的开发镜像调整了或者我希望定制一个统一的怎么办？&lt;/p&gt;
+&lt;p&gt;Docker Desktop创建新的开发镜像的时候有一种方式，允许指定一个基础镜像，但是这个基础镜像要push到远程registry。代码会被clone到这个
+容器内部，我们就通过vscode remote进行开发即可。&lt;/p&gt;
+&lt;p&gt;尽管vscode鼓励非Linux用户尽量通过这种方式，因为fs操作更快，但是还是有点不方便，因为这数据卷相当于额外浪费一份存储，考虑到之前已经克隆过的情况下。
+有没有办法既能自定义基础镜像，又能挂载本地磁盘目录为数据卷的方式来解决呢？可以，请看方式3。&lt;/p&gt;
+&lt;h2 id="vscode-remote-containers"&gt;vscode: Remote-Containers &lt;a href="#vscode-remote-containers" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;vscode中Command Pallete中Remote-Containers: Add Development Container Configuration Files，执行这个我们可以为工程指定一个配置文件.devcontainer(实际是个目录)，.devcontainer/devcontainer.json中指明了我们要使用哪个镜像作为开发容器的基础镜像。
+这里的基础镜像可以用vscode官方提供的，也可以是自己自定义好push到registry的，也可以是Dockerfile需要vscode代为构建本地镜像的，这几种方式均可！&lt;/p&gt;
+&lt;p&gt;这样不就方便了吗，既不需要额外存储这个基础镜像，还保留了维护基础镜像的必要配置信息，如Dockerfile等。当然了如果基础镜像维护得当，我们引用registry
+中的基础镜像即可，没必要每个工程下都放一份镜像Dockerfile信息。&lt;/p&gt;
+&lt;p&gt;我目前比较喜欢这种方式，因为可以使用自定义基础镜像的同时，没有了额外容器中克隆代码导致的占用磁盘空间问题……不过这样性能会差点。&lt;/p&gt;</description></item><item><title>你不认识的cc++ volatile</title><link>/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc-volatile/</link><pubDate>Fri, 24 Jul 2020 19:46:11 +0800</pubDate><guid>/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc-volatile/</guid><description>&lt;style&gt;
 img {
 width: 680px;
 }
@@ -69,7 +107,49 @@ a += (a++)+(++a);
 return 0;
 40051d: b8 00 00 00 00 mov $0x0,%eax}
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;看完上面的解释后，你应该能总结处这样的规律，(a++) + (++a)中，a++是先于++a执行的，即普通的表达式一般都是从左向右进行运算，另外你也应该记住lea指令的用法，在这里还不失巧妙。&lt;/p&gt;</description></item><item><title>协程编程模型：Coroutine-Switching</title><link>/blog/2017-04-26-coroutine-switching/</link><pubDate>Wed, 26 Apr 2017 16:23:49 +0800</pubDate><guid>/blog/2017-04-26-coroutine-switching/</guid><description>&lt;h3 id="1-协程coroutine"&gt;1. 协程Coroutine &lt;a href="#1-%e5%8d%8f%e7%a8%8bcoroutine" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;看完上面的解释后，你应该能总结处这样的规律，(a++) + (++a)中，a++是先于++a执行的，即普通的表达式一般都是从左向右进行运算，另外你也应该记住lea指令的用法，在这里还不失巧妙。&lt;/p&gt;</description></item><item><title>C/C++ 开发基础：构建工具与常用开发库</title><link>/blog/2017-12-10-build_toolchains/</link><pubDate>Sun, 10 Dec 2017 00:00:00 +0800</pubDate><guid>/blog/2017-12-10-build_toolchains/</guid><description>&lt;h1 id="1-开发基础"&gt;1 开发基础 &lt;a href="#1-%e5%bc%80%e5%8f%91%e5%9f%ba%e7%a1%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="10-构建工具"&gt;1.0 构建工具 &lt;a href="#10-%e6%9e%84%e5%bb%ba%e5%b7%a5%e5%85%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="101-gnu-m4"&gt;1.0.1 GNU M4 &lt;a href="#101-gnu-m4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;GNU M4是一个经典的Unix宏处理器实现，与&lt;a href="https://kb.iu.edu/d/agjs"&gt;SVR4&lt;/a&gt;兼容但同时又增加了一些扩展（比如可以处理超过9个宏参数）。GNU M4也内置了文件包含、运行shell命令、算术运算等功能。&lt;/p&gt;
+&lt;p&gt;GNU M4拷贝输入的宏并处理后进一步展开成编译器可处理的宏，宏是M4内置的也可以是用户自定义的，支持任意参数。除了做&lt;strong&gt;宏展开&lt;/strong&gt;（macro expansion）之外，还可以执行**文件包含、运行shell命令、算术运算、处理文本、递归……**等操作。M4可以用作一个编译器前端也可以单独作为一个宏处理器。&lt;/p&gt;
+&lt;p&gt;M4少为人知，用的人可能也不会直接编写M4脚本，大多数人是因为使用了&lt;a href="https://en.wikipedia.org/wiki/Autoconf"&gt;Autoconf&lt;/a&gt;而Autoconf又依赖M4所以才安装了M4。但是M4确实是非常强大的，甚至让一些程序员欲罢不能。&lt;/p&gt;
+&lt;p&gt;关于M4的更多介绍，请看M4手册：&lt;a href="https://www.gnu.org/savannah-checkouts/gnu/m4/manual/m4-1.4.18/html_node/index.html"&gt;M4 Mannual&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;这里有一篇笔记介绍了M4的工作原理、使用：&lt;a href="http://mbreen.com/m4.html"&gt;Notes on the M4 Macro Language&lt;/a&gt;&lt;/p&gt;
+&lt;h2 id="11-常用的软件开发包"&gt;1.1 常用的软件开发包 &lt;a href="#11-%e5%b8%b8%e7%94%a8%e7%9a%84%e8%bd%af%e4%bb%b6%e5%bc%80%e5%8f%91%e5%8c%85" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在列举常用的软件开发包之前，需先描述下如何高效地设置软件包头文件、库文件的搜索路径。&lt;/p&gt;
+&lt;h3 id="111-如何配置头文件库文件搜索路径"&gt;1.1.1 如何配置头文件、库文件搜索路径 &lt;a href="#111-%e5%a6%82%e4%bd%95%e9%85%8d%e7%bd%ae%e5%a4%b4%e6%96%87%e4%bb%b6%e5%ba%93%e6%96%87%e4%bb%b6%e6%90%9c%e7%b4%a2%e8%b7%af%e5%be%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;使用第三方软件包开发时常需要设置头文件、库文件的搜索路径，如何确定软件包对应的文件路径呢？pkg-config可以简化这一设置工作，如获取glib-2.0的头文件、库文件搜索路径执行如下命令即可：&lt;code&gt;pkg-config --cflags --libs glib-2.0&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;pkg-config是如何得知软件包的头文件、库文件搜索路径的呢？每个软件包在安装的时候就已经包含了这一信息，这些信息保存在 &lt;strong&gt;/usr/lib64/pkg-config/${pkg}.pc&lt;/strong&gt; 描述文件中，pkg-config只是读取该文件中的描述项而已。&lt;/p&gt;
+&lt;p&gt;以glib-2.0这一面向linux c程序开发的集合框架开发包为例：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;pkg-config --cflags --libs glib-.20
+-I/usr/local/Cellar/glib/2.54.2/include/glib-2.0
+-I/usr/local/Cellar/glib/2.54.2/lib/glib-2.0/include
+-I/usr/local/opt/gettext/include
+-I/usr/local/Cellar/pcre/8.41/include
+-L/usr/local/Cellar/glib/2.54.2/lib
+-L/usr/local/opt/gettext/lib
+-lglib-2.0
+-lintl
+-Wl,-framework
+-Wl,CoreFoundation
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;其中不仅包括了glib-2.0自身的头文件、库文件搜索路径，还包括了某些依赖的头文件、库文件搜索路径，可见pkg-config确实能简化头文件、库文件搜索路径的设置工作，开发人员应该充分利用起此工具。&lt;/p&gt;
+&lt;h3 id="112-适用于linux-c程序开发的开发包"&gt;1.1.2 适用于linux c程序开发的开发包 &lt;a href="#112-%e9%80%82%e7%94%a8%e4%ba%8elinux-c%e7%a8%8b%e5%ba%8f%e5%bc%80%e5%8f%91%e7%9a%84%e5%bc%80%e5%8f%91%e5%8c%85" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;h4 id="1121-集合框架类"&gt;1.1.2.1 集合框架类 &lt;a href="#1121-%e9%9b%86%e5%90%88%e6%a1%86%e6%9e%b6%e7%b1%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;在开发过程中经常要用到一些常见的数据结构，比如单链表、双链表、集合、哈希表、多阶哈希、avl树、红黑树、队列、栈等等，C++中提供了STL（标准模板库）简化了开发工作，Java中提供了对应的集合框架JUC包。但是C标准库里面并没有类似工具……Linux平台经过多年发展积累了一些面向C语言的集合框架，比如&lt;strong&gt;gnulib&lt;/strong&gt;、&lt;strong&gt;glib&lt;/strong&gt;等。&lt;/p&gt;
+&lt;p&gt;我们这里只介绍glib，glib从96年开始就已经诞生了，前后20多年时间表明其经得起实践的检验。glib封装的api表意清楚、使用简单，如果是一个比较熟练的C程序开发人员的话，应该很容易就能上手。&lt;/p&gt;
+&lt;p&gt;这里抽时间学习了一下glib-2.0工具包，其提供了如下常用的数据结构：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;单链表 GSList&lt;/li&gt;
+&lt;li&gt;双链表 GList&lt;/li&gt;
+&lt;li&gt;哈希表 GHashTable&lt;/li&gt;
+&lt;li&gt;动态数组 GArray&lt;/li&gt;
+&lt;li&gt;AVL树 GTree&lt;/li&gt;
+&lt;li&gt;队列 GQueue&lt;/li&gt;
+&lt;li&gt;记录 Relation&lt;/li&gt;
+&lt;li&gt;其他&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;有关glib-2.0的教程可以参考：&lt;a href="https://www.ibm.com/developerworks/linux/tutorials/l-glib/"&gt;Manage C data using the GLib collections&lt;/a&gt;&lt;/p&gt;</description></item><item><title>协程编程模型：Coroutine-Switching</title><link>/blog/2017-04-26-coroutine-switching/</link><pubDate>Wed, 26 Apr 2017 16:23:49 +0800</pubDate><guid>/blog/2017-04-26-coroutine-switching/</guid><description>&lt;h3 id="1-协程coroutine"&gt;1. 协程Coroutine &lt;a href="#1-%e5%8d%8f%e7%a8%8bcoroutine" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;本文提供了一个模拟协程上下文切换过程的测试程序，基本思路是每当希望创建一个coroutine时，就在堆里申请一块内存，然后对内存进行整理，在其中保存预设的硬件上下文等信息（重点设置rbp、rsp、rip（callback）、rdi（callback-arg））。启动协程并进行切换时，通过__SwitchCoroutine__(cur,next)来完成cur向next的切换，切换过程中保存当前上下文信息到cur对应的堆内存中，并提取next对应的堆内存信息还原上下文完成切换。 测试程序中创建了4个coroutine，第1个coroutine只是为了用来启动其他3个，其他3个没有继续调度第一个，原因是第一个coroutine中rip保存的是main.c中__SwitchCoroutine__之后的指令地址，如果让第一个coroutine参与context-switch的话会使得进程结束执行。&lt;/p&gt;
 &lt;p&gt;在看下面的程序之前，需要先了解栈帧的构成、栈帧创建之前caller的动作&amp;amp;创建之后callee的动作、函数返回之前callee的动作&amp;amp;函数返回之后caller的动作，之前看过一篇整理的很不错的文章以供参考C Function Call Conventions and the Stack。&lt;/p&gt;
 &lt;p&gt;ps: 实际上直接使用linux下的ucontext_t实现会更简单，在我的介绍libmill的电子书中有详细介绍。&lt;/p&gt;
@@ -147,4 +227,1019 @@ unsigned long __rip;
 };
 typedef struct __jmp_buf jmp_buf[1];
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;但是呢，glibc里面重新定义了这个类型，这里面还对信号掩码进行了考虑。&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;但是呢，glibc里面重新定义了这个类型，这里面还对信号掩码进行了考虑。&lt;/p&gt;</description></item><item><title>Linux内联汇编基础</title><link>/blog/2014-10-01-linux%E5%86%85%E8%81%94%E6%B1%87%E7%BC%96%E5%9F%BA%E7%A1%80/</link><pubDate>Wed, 01 Oct 2014 00:16:34 +0800</pubDate><guid>/blog/2014-10-01-linux%E5%86%85%E8%81%94%E6%B1%87%E7%BC%96%E5%9F%BA%E7%A1%80/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是阅读内核源码《Linux内核源码情景分析》时对内联汇编的一些总结。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;1.full template
+__asm__(assembler template
+:output operands /* optional */
+:input operands /* optional */
+:list of clobbered registers /* optional */
+);
+2.x86 registers
+eax,ebx,ecx,edx
+edi,esi
+ebp,esp
+eip
+eflags
+3.linux代码中很多地方都使用了这种形式的汇编语言，嵌入汇编程序的格式如下：
+　　__asm__ __volatile__ (
+　　asm statements
+　　: outputs
+　　: inputs
+　　: registers-modified
+　　);
+　　asm statements是一组AT&amp;amp;T格式的汇编语言语句，每个语句一行，由\n分隔各行。所有的语句都被包裹在一对双引号内。其中使用的寄存器前面要加两个%%做前缀(%n表示参数,n:数字)；转移指令多是局部转移，因此多使用数字标号。
+　　inputs指明程序的输入参数，每个输入参数都括在一对圆括号内，各参数用逗号分开。每个参数前加一个用双引号括起来的标志，告诉编译器把该参数装入到何处。
+　　可用的标志有：
+　　“g”：让编译器决定如何装入它；
+　　“a”：装入到ax/eax；
+　　“b”：装入到bx/ebx；
+　　“c”：装入到cx/ecx；
+　　“d”：装入到dx/edx；
+　　“D”：装入到di/edi；
+　　“S”：装入到si/esi；
+　　“q”：a、b、c、d寄存器等；
+　　“r”：任一通用寄存器；
+　　“i”：整立即数；
+　　“I”：0-31 之间的立即数（用于32位移位指令）；
+　　“J”：0-63 之间的立即数（用于64 位移位指令）；
+　　“N”：0-255 ，之间的立即数（用于out 指令）；
+　　“n”：立即数，有些系统不支持除字以外的立即数，这些系统应该使用“n”而不是“i”；
+　　“p”：有效内存地址；
+　　“m”：内存变量；
+　　“o”：操作数为内存变量，但是其寻址方式是偏移量类型，也即是基址寻址，或者是基址加变址寻址；
+　　“V”：操作数为内存变量，但寻址方式不是偏移量类型；
+　　“,”：操作数为内存变量，但寻址方式为自动增量；
+　　“X”：操作数可以是任何类型；
+　　“f”：浮点数；
+　　“t”：第一个浮点寄存器；
+　　“u”：第二个浮点寄存器；
+　　“G”：标准的80387；
+　　% ：浮点常数,该操作数可以和下一个操作数交换位置；
+　　“=”：输出；
+　　“+”：既是输入又是输出；
+　　“&amp;amp;”：改变其值之前写,分配一个独立的寄存器,使得函数返回值和该变量不因为重复使用同一个寄存器,出现数据覆盖；
+　　“%”：与下一个操作数之间可互换；
+　　“#”：忽略其后的字符，直到逗号；
+　　“*”：当优先选择寄存器时，忽略下面的字符；
+　　“0”~“9”：指定一个操作数，它既做输入又做输出。通常用“g”；
+　　outputs指明程序的输出位置，通常是变量。每个输出变量都括在一对圆括号内，各个输出变量间用逗号隔开。每个输出变量前加一个标志，告诉编译器从何处输出。
+　　可用的标志与输入参数用的标志相同，只是前面加“=”。如“=g”。输出操作数必须是左值，而且必须是只写的。如果一个操作数即做输出又做输 入，那么必须将它们分开：一个只写操作数，一个输入操作数。输入操作数前加一个数字限制（0~9），指出输出操作数的序号，告诉编译器它们必须在同一个物 理位置。两个操作数可以是同一个表达式，也可以是不同的表达式。
+　　registers-modified告诉编译器程序中将要修改的寄存器。每个寄存器都用双引号括起来，并用逗号隔开。如“ax”。如果汇编程 序中引用了某个特定的硬件寄存器，就应该在此处列出这些寄存器，以告诉编译器这些寄存器的值被改变了。如果汇编程序中用某种不可预测的方式修改了内存，应 该在此处加上“memory”。这样以来，在整个汇编程序中，编译器就不会把它的值缓存在寄存器中了。
+　　如:
+　　“cc”：你使用的指令会改变CPU的条件寄存器cc；
+　　“memory”：你使用的指令会修改内存；
+　　__volatile__是可选的，它防止编译器修改该段汇编语句（重排序、重组、删除等）。
+　　输入参数和输出变量按顺序编号，先输出后输入，编号从0开始。程序中用编号代表输入参数和输出变量（加%做前缀）。
+　　输入、输出、寄存器部分都可有可无。如有，顺序不能变；如无，应保留“：”，除非不引起二意性。
+　　看一个在C语言中使用at&amp;amp;t的嵌入汇编程序的例子，c语言中的3个int变量，一般会是三个内存地址。每个操作数的长度则要根据操作系统和编译器来决定，一般32位操作系统为32位，则每个操作数占用4个字节：
+　　int i=0, j=1, k=0;
+　　__asm__ __volatile__(&amp;quot;
+　　pushl %%eax\n //asm statement
+　　movl %1, %%eax\n //asm statement
+　　addl %2, %%eax\n //asm statement
+　　movl %%eax, %0\n //...
+　　popl %%eax&amp;quot; //...
+　　: &amp;quot;=g&amp;quot; (k) //outputs
+　　: &amp;quot;g&amp;quot; (i), &amp;quot;g&amp;quot; (j) //inputs
+　　: &amp;quot;ax&amp;quot;, &amp;quot;memory&amp;quot; //registers modified
+　　);
+　　按照参数编号原则输出参数参数k为%0,输入参数i和j依次为%1和%2。值得注意的是输出和输入标志都使用了&amp;quot;g&amp;quot;,所以我们不必关心这些参数究竟是使用了寄存器还是内存操作数，编译器自己会决定。
+4.linux/windows汇编指令的区别
+Note:
+汇编指令的执行需要汇编程序将其翻译成机器代码，由于汇编程序是系统程序的一部分，而linux跟windows本身设计上存在很多不同，汇编程序当然不例外，所以，他们支持的汇编指令的格式也存在很多不同。
+DOS/Windows 下的汇编语言代码都是 Intel 风格的。但在 Unix 和 Linux 系统中，更多采用的还是 AT&amp;amp;T 格式，两者在语法格式上有着很大的不同：
+在 AT&amp;amp;T 汇编格式中，寄存器名要加上 '%' 作为前缀；而在 Intel 汇编格式中，寄存器名不需要加前缀。例如：
+AT&amp;amp;T 格式 pushl %eax
+Intel 格式 push eax
+在 AT&amp;amp;T 汇编格式中，用 '\$' 前缀表示一个立即操作数；而在 Intel 汇编格式中，立即数的表示不用带任何前缀。例如：
+AT&amp;amp;T 格式 pushl $1
+Intel 格式 push 1
+AT&amp;amp;T 和 Intel 格式中的源操作数和目标操作数的位置正好相反。在 Intel 汇编格式中，目标操作数在源操作数的左边；而在 AT&amp;amp;T 汇编格式中，目标操作数在源操作数的右边。例如：
+AT&amp;amp;T 格式 addl $1, %eax
+Intel 格式 add eax, 1
+在 AT&amp;amp;T 汇编格式中，操作数的字长由操作符的最后一个字母决定，后缀'b'、'w'、'l'分别表示操作数为字节（byte，8 比特）、字（word，16 比特）和长字（long，32比特）；而在 Intel 汇编格式中，操作数的字长是用 &amp;quot;byte ptr&amp;quot; 和 &amp;quot;word ptr&amp;quot; 等前缀来表示的。例如：
+AT&amp;amp;T 格式
+movb val, %al
+Intel 格式 mov al, byte ptr val
+在 AT&amp;amp;T 汇编格式中，绝对转移和调用指令（jump/call）的操作数前要加上'*'作为前缀，而在 Intel 格式中则不需要。
+远程转移指令和远程子调用指令的操作码，在 AT&amp;amp;T 汇编格式中为 &amp;quot;ljump&amp;quot; 和 &amp;quot;lcall&amp;quot;，而在 Intel 汇编格式中则为 &amp;quot;jmp far&amp;quot; 和 &amp;quot;call far&amp;quot;，即：
+AT&amp;amp;T 格式 ljump $section, $offset lcall $section, $offset
+Intel 格式 jmp far section:offset call far section:offset
+与之相应的远程返回指令则为：
+AT&amp;amp;T 格式 lret $stack_adjust
+Intel 格式 ret far stack_adjust
+在 AT&amp;amp;T 汇编格式中，内存操作数的寻址方式是
+section:disp(base, index, scale)
+而在 Intel 汇编格式中，内存操作数的寻址方式为：
+section:[base + index*scale + disp]
+&lt;/code&gt;&lt;/pre&gt;</description></item><item><title>C++核心知识点总结</title><link>/blog/2014-09-13-cplusplus%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93/</link><pubDate>Sun, 07 Sep 2014 08:00:00 +0800</pubDate><guid>/blog/2014-09-13-cplusplus%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是C++编程里的一些知识要点。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;=============================================================================
+Sun Sep 7 16:50:05 CST 2014
+=============================================================================
+为了开启c++11的某些特性，需要在g++编译时添加参数：-std=c++0x。
+c++语言里面，除了char类型被明确规定为占1个字节之外，其他的数据类型都没有指定其
+具体的尺寸，这样做的原因是，在不同的编译器实现中，编译器会根据运行平台的特点，
+自动为各个类型指定所占用的字节数，以使得编译后的程序能够尽可能适应运行平台。这
+样做的好处是，使得编写的c++程序，不仅能够适应现在的机器结构，也能适应将来的机
+器结构，实在是高明！
+c++11标准中变量的初始化方式有3种，这3中初始化方式是等价的：
+type varname = varvalue;
+type varname (varvalue);
+type varname {varvalue};
+auto varname = varvalue;
+变量auto会根据初始化时初值varvalue的类新，自动指定varname的类型；
+decltype(varname)可以获取变量varname的类型，例如可以这样使用：
+newvar；
+这样变量newvar与新变量oldvar是相同的类型，decltype主要是用于模板中根据模板参数
+的类型创建其他相同变量。
+c++中有专门的字符串类string，需要包含头文件string。
+cout输出时追加endl的作用不仅仅是输出换行符，考虑一下缓冲机制就明白了，在终端中
+，缓冲一般是采用行缓冲，因此在cout中追加endl不仅输出了换行符，还进行了行缓冲，
+从而确保信息被输出到cout上。
+如果在通过cout输出某些信息时不在末尾追加endl，如果输出信息中没有换行符做结尾，
+那么信息就不会输出到终端上，因为终端采用行缓冲，不碰到换行符或者待输出信息没有
+超过缓冲区的长度，信息不会被输出到终端上。
+std::cout，std是一个命名空间，c++标准库中的所有东西都包含在std这个命名空间中，
+cout指定了设备是输出设备，c++中常用的cin\cout\cerr就等效于c中的
+stdin\stdout\stderr。
+常量类型
+整型常量，常用的包括十进制、八进制、十六进制，分别如123,0234,0xffff；整型常量
+可以在末尾追加合适的字符表示该常量应该用什么类型进行存储：
+u/U表示unsigned；
+l/L表示long；
+ll/LL表示long long；
+浮点常量，常用的包括float、double、long double，浮点常量的形式包括3.1415、
+3.14e23，其中e表示10的多少次方，浮点常量默认是用一个double类型进行存储，也可以
+在浮点常量的末尾追加字符表示使用什么类型进行存储，例如：
+f/F表示float类型；
+l/L表示long double类型；
+什么都不加，即采用默认的double类型；
+在c++ shell中的测试结果显示，double表示8字节，long double表示16字节，这个跟编
+译器有关。
+字符常量、字符串常量'x',&amp;quot;xxxxx&amp;quot;，注意一些特殊的转义字符，例如：
+\n newline
+\r carriage return
+\t tab
+\v vertical tab
+\b backspace
+\f form feed (page feed)
+\a alert (beep)
+\' single quote (')
+\&amp;quot; double quote (&amp;quot;)
+\? question mark (?)
+\\ backslash (\)
+转义字符的输出还可以通过\后加八进制数字或者十六进制数字的形式进行，八进制数字
+直接加在\后面，十六进制数字需要在\后面加个x，然后再加上对应的十六进制数字，如
+下：
+\77
+\xff
+常量字符也可以在后面追加字母表示类型，例如：
+u表示char16_t，
+U表示char32_t，
+L表示wchar_t，
+什么都不加表示char。
+此外常量字符串前面还可以追加前缀，例如：
+u8,u8&amp;quot;hello world&amp;quot;，u8表示后面的字符串采用utf8编码，解码的时候怎么指定编码？；
+R,R&amp;quot;hello'''\xxx&amp;quot;，R表示后面的字符串是原始字符串，没看懂什么意思；
+其他常量类型：true、false、nullptr。
+通过const指定常量，通过预处理指令#define、#undef定义、取消定义常量。
+cin\cout\cerr\clog，其中clog是日志流，其他3个跟c中的类似。
+&amp;lt;sstream&amp;gt;中的stringstream允许将一个string对象当作一个流，然后从这样的流中读取
+、插入指定类型的数据，这就类似于c语言里面的sscanf、sprintf。
+string a = &amp;quot;1111&amp;quot;;
+int b;
+stringstream(a)&amp;gt;&amp;gt;b;
+cin类似于scanf，cout、cerr、clog类似于printf(stdin/stderr, &amp;quot;xxx&amp;quot;, xxx)。
+=============================================================================
+Mon Sep 8 01:48:59 CST 2014
+=============================================================================
+内联函数只是告诉编译器建议采用内联的形式，但是只是建议，具体是不是内敛要看编译
+器的具体实现。
+函数原型声明中只需要包含函数名称以及参数类型即可，不必指明参数名称以及具体的函
+数实现。
+通过模板参数来定义类和函数，可以适用于多种类型，增强适应性。模板参数的声明形式
+为：
+template &amp;lt;class T1, class T2, ..., class T3&amp;gt;
+{
+return (T3)xxx;
+}
+上面只是举了一个简单的例子，注意模板参数中的class可以用typename代替。
+命名空间的使用实例。
+1）定义一个命名空间：
+namespace my
+{
+int a,b;
+}
+2）使用一个命名空间：方式1是通过{using namespace my; cout&amp;lt;&amp;lt;a&amp;lt;&amp;lt;b;}，方式2是通过
+cout&amp;lt;&amp;lt;my::a&amp;lt;&amp;lt;my::b；
+3）命名空间可以创建别名，例如namespace aliasname == oldname;
+数组c++提供了一个library array, array&amp;lt;int,3&amp;gt; a {1,2,3}。
+char * str = &amp;quot;helloworld&amp;quot;;
+str[0] = 'A';
+因为helloworld是存放在常量存储区中的，str只是指向了这个常量存储区中的地址，其
+中的内容是不允许被修改的，因此str[0]被赋值的时候，会报段错误；
+char str[20] = &amp;quot;helloworld&amp;quot;;
+str[0] = 'A';
+因为helloworld是存放在str[20]中的，str这个数组是在栈中被创建的，因此是可以被修
+改的，后面的str[0]被赋值是合法操作；
+c风格的字符串与c++中string字符串类是可以相互转换的，例如将c风格的转换成string：
+char * str = &amp;quot;helloworld&amp;quot;;
+string s = str;
+将string字符串对象转换成c风格字符串：
+string s = &amp;quot;helloworld&amp;quot;;
+const char * str = s.c_str();
+=============================================================================
+Tue Sep 9 00:37:56 CST 2014
+=============================================================================
+关于const修饰的是指针还是值的问题，请参见如下形式：
+int x;
+int * p1 = &amp;amp;x; // non-const pointer to non-const int
+const int * p2 = &amp;amp;x; // non-const pointer to const int
+int * const p3 = &amp;amp;x; // const pointer to non-const int
+const int * const p4 = &amp;amp;x; // const pointer to const int
+可见const仅仅紧跟在其后的类型进行修饰。
+void类型表示没有类型或者没有指定类型，void*类型就可以指向任何数据类型，但是在
+对数据进行类型转换时，必须明确地知道数据的类型，然后进行强制类型转换。
+type (*funcPtr)(type,type,type...)，定义了一个函数指针funcPtr，例如：
+{
+return a+b;
+}
+{
+= add;
+int result = myadd(1,2);
+}
+pointer = new type
+pointer = new type [number]
+delete pointer
+delete [] pointer
+c++中通过new来申请内存的时候，内存如果申请失败该如何处理呢？c++语言提供了几种
+处理方式，如果内存申请失败，会抛出bad_alloc异常，如果这个异常没有被捕获，则程
+序会被强制终止；如果该异常通过try-catch捕获，则不会终止程序，而是从catch开始执
+行；通过在new语句中加入（nothrow）来阻止抛出异常，而将new返回的结果设为nullptr
+，这样程序也会继续向后执行。
+关于异常、nothrow两种方式对内存分配失败的处理，nothrow效率要低一些，因为这种机
+制对内存分配进行显示地检查，不管成功还是失败，而异常机制则只是在申请内存失败的
+时候才会触发，因此捕获异常这种机制的效率要更高些，但是nothrow相对来说要简洁些
+。
+需要特别强调的是，c++虽然支持c中的malloc、calloc、realloc、free方法，但是
+malloc等申请得到的内存块与new返回的内存块并不兼容，因此不应混用，例如malloc出
+来的内存块必须用free释放，而不能用delete释放。
+c++中定义类型可以通过struct、typedef、using，其中struct允许嵌套，typedef举例：
+typedef char C;
+typedef unsigned int WORD;
+typedef char * pChar;
+typedef char field [50]; // field == char[50]
+using new_type_name = existing_type;举例：
+using C = char;
+using WORD = unsigned int;
+using pChar = char *;
+using field = char [50];
+struct\union
+enum\enum class\enum struct
+c++中类访问修饰符：
+private：可以被当前类、friend类访问；
+protected：可以被当前类、friend类、派生类访问；
+public：可以被当前类、friend类、派生类、非派生类访问；
+定义类的时候，可以把类的成员函数的实现在类体中定义，也可以在类体外面定义，两种
+方式的区别是，在类体内部定义的成员函数会被自动当成inline函数,而在类体外定义的
+则不被当作inline函数，这对编译器对代码进行优化时有影响。
+关于如何调用构造函数：
+new func(x,y,z); // 传统函数式
+new func = x; // 如果构造函数只包含一个参数
+new func {x,y,z}; // c++11中引入的统一式
+对成员进行初始化可以在构造函数中进行，也可以在成员初始化器中进行。两者有所区别
+，在对基本数据类型进行初始化的时候，通过构造函数和成员初始化器这两种方式并没有
+多大区别，但是当类定义中有一个类对象作为成员时，假如不在成员初始化器中对其进行
+初始化，就会调用它的默认构造函数完成初始化，因此成员对象如果需要特别的初始化操
+作一般要放在成员初始化器中进行。
+c++中也可以用struct定义类似类的结构，其中也可以定义各种成员函数，但是struct中
+所有的成员默认都是public。
+至于union的话，自己搜索下吧。
+=============================================================================
+Wed Sep 10 17:49:15 CST 2014
+=============================================================================
+传参数、返回返回值，实际上都是创建了值的一份拷贝，不管是不是传引用、指针，即便
+是引用、指针，也是引用、指针值的一份拷贝，
+一般返回值都是放在eax寄存器里，但是有的时候eax寄存器装不下了，就得往其他地方放，
+对于大结构体、对象的返回值我确实没有研究过，不过我想返回的时候可能是在栈上创建
+了一个临时变量，然后将变量的值搬到另一个接收返回值的变量中。如果没有变量接收返
+回值呢，这样想的话，一定有某个中间的临时位置用于存储这个返回值。需要研究下。
+经过测试，不管是什么类型，只要返回值足够eax寄存器装下，那么就会将返回值存在eax
+寄存器中，如果返回值超出了eax寄存器的位宽呢？
+编译器是这么做的，假定有如下代码：
+struct num {
+long long a;
+long long b;
+};
+typedef num NUM;
+{
+NUM res;
+res.a = a.a+b.a;
+res.b = a.b +b.b;
+return res;
+}
+{
+NUM a,b;
+a.a=100; a.b=100;
+b.a=200; b.b=300;
+NUM c = add(a,b);
+}
+看这段简单的代码，首先编译器知道了返回值要往c这个地方存储，并且也知道了NUM类型
+的返回值超过了寄存器的位宽，不可能保存在eax寄存器中。
+这个时候，编译器会在栈中为c分配好空间，然后将变量c的内存单元地址存储到rdi这个
+基地变址寄存器中，然后开始调用add。
+add进入函数体后，将调用者传递过来的rdi寄存器的值，存储到当前函数所在栈帧中的某
+个位置，然后开始根据调用者传递过来的参数进行运算，并将运算结果存储到当前栈帧中
+的NUM res中。当return语句被执行时，从存储了rdi寄存器值的那个内存区域取回其中的
+值，这个值就是返回值所要存储到的位置，然后根据该值及一系列的mov指令将运算结果
+写入目标返回位置。此时执行完成时，对应的c=add(a,b)这条语句的赋值也就完成了。
+如果只是调用add(a,b)则在add调用开始之前，也需要调用者通过rdi寄存器通知add将结
+果存储到哪个位置，此时这个存储位置是调用者在其所在栈上创建的一个位置。
+ok! 现在把函数返回值的存储问题解决了！
+上面的问题解决了之后，又学到了新的知识，哈哈，幸亏我想不通了就会google！
+之前我学习linux编程基本上是在笔记本thinkpad x61t上进行的，当时我在做反汇编的时
+候发现所有的寄存器类型不外乎al,ah,ax,eax（现在明白了因为当时的cpu是L7500，应该
+是32位运算能力），当时我了解ax包括了ah、al，但是我不清楚eax跟它们的区别，由于
+看汇编计算字节偏移量时我只考虑了变量在内存中的开始位置，没有考虑结束位置，因此
+当时寄存器位宽这个问题，没有影响到我做实验，但是今天发现了汇编代码中出现了rax
+寄存器，而且发现每次移动struct结构体中的成员时，偏移量是8字节，我才想起这个问
+题，会不会是cpu寄存器位宽、数据总线宽度的问题，google了下，寄存器AT&amp;amp;T汇编中代
+码及其对应的位宽如下：
+|63..32|31..16|15-8|7-0|
+|AH. |AL.|
+|AX......|
+|EAX............|
+|RAX...................|
+看完这些就明白其中的原因了！
+=============================================================================
+Thu Sep 11 17:13:53 CST 2014
+=============================================================================
+c++中定义的类本质上是在c++中定义了一种新的数据类型。
+c++中规定了一些允许重载的运算符，汇总如下：
++ - * / = &amp;lt; &amp;gt; += -= *= /= &amp;lt;&amp;lt; &amp;gt;&amp;gt;
+&amp;lt;&amp;lt;= &amp;gt;&amp;gt;= == != &amp;lt;= &amp;gt;= ++ -- % &amp;amp; ^ ! |
+, -&amp;gt;* -&amp;gt; new
+delete new[] delete[]
+运算符重载的格式为：
+type operator sign (params);
+例如:
+{
+....
+return (Obj)objx;
+}
+当重载完成之后，可以隐式地调用+这个函数，也可以显示的调用+这个函数，其形式分别
+为：
+c = a+b;
+c = a.operator+(b);
+上述两种方法是等效的。
+注意二元运算符重载的时候，默认第一操作数（左侧的操作数）为当前运算符函数的调用
+者，例如a.operator+(b)中+的第一操作数即为a。
+二元运算符在重载的时候参数列表中只允许有一个参数，此时如果想用两个参数，可以使
+之成为友元函数；另外如果二元运算符两侧的操作数类型不一样，需要特别注意，调用的
+时候应该注意调用顺序。
+不同的运算符重载的时候的格式，汇总如下：
+Expression Operator Member function Non-member function
+operator@(A)
+operator@(A,int)
+operator@(A,B)
+-
+-
+-
+-
+c++类模板，形式大致如下：
+template &amp;lt;class T&amp;gt;
+class Obj {
+T ...
+T ...
+T func(T t1, T t2, ...);
+}
+指定类模板参数时除了可以使用class T，也可以使用typename T来代替。
+如果已经有了个类被声明为类模板，在此基础上我们可以实现自己的一个模板特例，例如：
+template &amp;lt;class T&amp;gt; class mycontainer { ... };
+template &amp;lt;&amp;gt; class mycontainer &amp;lt;char&amp;gt; { ... };
+我们定义了一个模板类mycontainer，如果有需要，在此基础上，我们可以实现一个模板
+特例，即template &amp;lt;&amp;gt; class mycontainer &amp;lt;char&amp;gt; {...};
+c++类中特殊的成员函数，有6个，整理成5条，我们将移动构造、赋值函数放在5）中进行
+描述，好的，下面以类Ex为例:
+1）默认构造函数 Ex::Ex()
+如果没有显示地为类定义一个构造函数，那么c++编译器会默认为其创建一个不带任何参
+数的构造函数，这个构造函数就称为默认构造函数；
+当显示地为该类指定了一个构造函数时，那么c++编译器便不再为该类隐式地创建默认构
+造函数；
+2）析构函数 Ex::~Ex()
+在析构函数里面执行一些与构造函数功能相反的任务，例如在构造函数中申请了内存，在
+类对象声明周期结束的时候，析构函数被自动调用，析构函数里面可以实现资源的回收及
+释放等清理工作；
+3）拷贝构造函数 Ex::Ex(const Ex&amp;amp;)/Ex::operator= (const Ex&amp;amp;)
+注意原型中参数Ex&amp;amp;表示的是某个对象的引用！参数类型需要与当前对象类型一致！
+假如有如下代码:
+Ex d;
+Ex e(d);
+如果没有显示地创建一个拷贝构造函数，那么c++编译器会提供一个默认的拷贝构造函数
+，这个默认的拷贝构造函数的实现只是简单的拷贝对象d中的成员的值到e中，而且拷贝是
+浅拷贝，所谓浅拷贝指的是，没有考虑指针指向的内存区域，例如d中有一个指针ptr指向
+一段内存区域，执行完默认的拷贝构造函数（浅拷贝）之后，d、e中的ptr的值是相同的
+，假如ptr指向的内存是动态分配的，并且d这个对象生命周期结束的时候释放了这段内存
+，那么e中ptr这个指针就变成了无效指针，它指向了一段无效的内存区域，继续访问这段
+内存区域的话将引起难以预料的后果。
+如果涉及到动态内存分配，并且对象里面包含了这样的指针的话，应该考虑提供自己定义
+的拷贝构造函数，实现深拷贝，从而避免上述情况。实现方法也很简单，比如在自定义的
+拷贝构造函数内部，首先申请一段新的内存区域，然后再将这段内存区域的地址赋值给成
+员ptr，这样就实现了深拷贝，不会出现之前提到的浅拷贝引发的内存访问问题。
+4）拷贝赋值函数 Ex&amp;amp; Ex::operator= (const Ex&amp;amp;)
+参数类型需要与当前对象类型一致！
+c++中对象的拷贝动作不仅仅是在构造的时候才会发生，当对象已经构造完成，在之后的
+有效声明周期过程中，也可以通过拷贝赋值函数完成拷贝对象的动作，注意c++11中引入
+的调用构造函数的3中方式：
+T t;
+T t(...);
+T{...};
+上述3中方式都是调用构造函数的方式，但是拷贝构造函数只有如下两种原型形式：
+T t1;
+T t2 = t1; 调用拷贝构造函数
+T t3(t1); 调用拷贝构造函数
+t2 = t1; 调用拷贝赋值函数
+需要注意上述几种形式的发生时间以及原型的区别。
+|| 移动赋值函数 Ex&amp;amp; Ex::operator= (Ex&amp;amp;&amp;amp;)
+注意，移动构造函数、移动赋值函数中，其参数类型与当前对象类型一致！
+移动的意思主要是针对动态分配的内存区域，将参数对象中指向动态分配的内存的指针赋
+值给目的对象，并将原对象中的指针设置为nullptr。在考虑尽量节省资源的需求下，可
+以考虑使用。
+那么c++为什么要提供这种移动构造函数呢？算是另一种形式的垃圾回收吧！？！
+在c++的世界里，所有的动态分配的内存都需要程序员自行管理，不像java里面那样有gc
+可以自动帮你把没有被引用的内存区域进行释放完成内存回收，举例来看，在java中假如
+有这样一段代码：
+ArrayList a = new ArrayList();
+a = new ArrayList();
+上述代码中，在执行第二行代码a = new ArrayList()时，a指向了新的内存区域，但是第
+一次申请的内存此时没有变量引用它，因此它的引用计数为0，当gc进行垃圾回收时会回
+收这样的内存，因此不需要程序员自己管理垃圾的释放、内存的回收，减轻了程序员的压
+力。但是gc也占用资源，而且回收不及时，对系统性能影响也比较大。
+我们来看看c++中是如何对内存进行更有效的管理的，通常程序员在堆上申请了内存之后
+，例如new了之后，必须通过delete显示地加以释放该内存区域，否则该内存不会被回收
+，程序员不得不认真考虑内存的占用问题，一定程度上，受此影响，程序员也对资源、性
+能、垃圾回收的概念比较清晰、谨慎。
+此外，需要注意的是，有的时候，在c++中，某些在堆上创建的匿名对象我们是无法去显
+示的释放的，例如有一段代码：
+new Ex();
+上面这行代码创建了一个对象，但是没有变量指向这个对象，我们是无法显示地通过
+delete释放其所占用的堆内存的，在c++中应该尽力避免这样的情况，但是有的时候无法
+避免这种情况。
+上面说了这么多，还没有说到移动构造函数、移动赋值函数诞生的原因，这两个特殊的函
+数参数都必须是匿名对象，我们看个例子。
+class Ex {
+string * ptr;
+{
+ptr = new string(param);
+}
+{
+this.ptr = t.ptr;
+t.ptr = nullptr;
+}
+{
+this.ptr = t.ptr;
+t.ptr = nullptr;
+}
+}
+Ex a(Ex(&amp;quot;xxx&amp;quot;));
+代码中首先首先创建了一个对象Ex(&amp;quot;xxx&amp;quot;)不过它是匿名对象，虽然创建的这个匿名对象
+是一个局部变量 在参数列表中创建的），但是这个变量内部包含了一个指向堆内存的指
+针，并且这段内存没有被在析构时释 ，这样这段内存会被泄漏，现在我通过移动构造函
+数，将这段ptr指向的差点泄漏的内存为新变量Ex a所使用，即通过移动构造函数将匿名
+对象中的ptr的值移动到对象a中，这样不仅没有造成内存泄漏，还巧妙的进行了对象a的
+初始化操作。参见Ex::Ex(Ex&amp;amp;&amp;amp; t)定义。
+移动构造函数与之类似，只不过是在对象构建之后继续操作，例如调用如下代码：
+Ex a(&amp;quot;hello&amp;quot;);
+a = Ex(&amp;quot;hello world&amp;quot;);
+第二行就是执行的移动赋值函数，参见Ex::operator=函数定义。
+但是经过测试，我发现移动赋值函数成功执行了，但是移动构造函数没有执行,可能是编
+译器的原因。因为“移动”的支持是c++11中才引入的。
+这里顺便讲一下运算符&amp;amp;和&amp;amp;&amp;amp;的区别：
+&amp;amp;：引用运算符，比如这样使用： int a = 100; int &amp;amp;b = a;我们定义了一个a的引用b，
+或者说b是a的引用。因为&amp;amp;b = a，a是a=100这条语句的左值，所以说&amp;amp;运算符称为左值引
+用或者简称为引用。
+&amp;amp;&amp;amp;: 右值引用运算符，比如这样使用:
+class Ex {...};
+Ex a; // default constructor
+Ex &amp;amp;b = a; // 创建了一个a对象的引用b
+Ex &amp;amp;&amp;amp;c = a; // invalid, 因为a是一个左值，第一条语句相当于Ex a = Ex();
+Ex &amp;amp;&amp;amp; p = Ex(); // valid， &amp;amp;&amp;amp;引用的是右值，右边的Ex()没有被任何左值变量所记录
+说明了什么呢？&amp;amp;&amp;amp;做右值引用的时候，赋值运算符右边创建按的临时对象，不能被任何变
+量所引用，也就是说匿名对象，而移动构造函数、移动赋值函数，也正是为了解决匿名对
+象的清理才引入的。
+简单总结一下：
+c++中类的6种特殊的默认成员函数：
+成员函数名称 成员函数原型
+Default constructor C::C();
+Destructor C::~C();
+Copy constructor C::C (const C&amp;amp;);
+Copy assignment C&amp;amp; operator= (const C&amp;amp;);
+Move constructor C::C (C&amp;amp;&amp;amp;);
+Move assignment C&amp;amp; operator= (C&amp;amp;&amp;amp;);
+上面提到的这6个成员函数都是由c++隐式定义的，下面说一下这些隐式定义会执行哪些操
+作：
+隐式成员函数名称 条件 操作
+Default constructor if no other constructors does nothing
+Destructor if no destructor does nothing
+Copy constructor if no move constructor and no move assignment copies all members
+Copy assignment if no move constructor and no move assignment copies all members
+Move constructor if no destructor, no copy constructor and no copy nor move assignment moves all members
+Move assignment if no destructor, no copy constructor and no copy nor move assignment moves all members
+这6个隐式的成员函数，默认都是被开启的，我们可以选择开启或者禁用其中的某个或者
+全部，显示开启或关闭的方法，很简单，只要按照如下格式在类声明中注明就可以了：
+function_declaration = default;
+function_declaration = delete;
+举个例子:
+class C {
+// 表明该原型将使用c++提供的默认构造函数
+= default;
+// 表明该原型（拷贝构造函数）被禁用，即不使用拷贝构造函数（默认的拷贝构造
+// 函数也一并被禁用了）
+= delete;
+}
+=============================================================================
+Sat Sep 13 00:13:16 CST 2014
+=============================================================================
+c++中，在类A中通过friend修饰的函数或者类不是A的成员，他可以直接访问A的private
+修饰的数据。
+类继承：
+class A : public B {
+};
+A继承自B，B前面有访问修饰符，继承时的访问修饰符规定：
+B中的成员的访问修饰符级别如果比继承时的访问修饰符更加严格，那么A继承B之后，对A
+来讲，B中的成员的访问级别保持不变；
+如果B中的成员的访问级别比继承时的访问级别要更加宽松或者相等，那么A继承B之后，
+对A来讲，B中对应的成员的访问级别由继承时的访问修饰符来修饰。
+继承时的访问修饰符的目的，其实还是为了对成员的访问进行限制，继承时的访问修饰符
+不会使被继承成员的访问更加宽松，而是使其访问级别变得更加严格或者保持不变。例如
+，如果继承时的修饰符是private，那么对A来讲，B中所有成员的访问修饰符将被限定为
+private，从A中将无法访问B中的任何成员。
+Access public protected private
+members of the same class yes yes yes
+members of derived class yes yes no
+not members yes no no
+类继承的时候，派生类会继承基类的成员，但是不包括下面这些成员：
+its constructors and its destructor
+its assignment operator members (operator=)
+its friends
+its private members
+多重继承，class A : public B, protected C, ... {};
+声明引用MyClass &amp;amp;obj2 = obj; 这样声明了一个引用obj2，它引用了obj这个对象，
+MyClass *ptr = &amp;amp;obj;则是创建了一个指向对象obj的指针，注意引用、指针声明方式的
+区别。
+c++中多态实现方式，简单地说是：指针+虚函数+类继承。
+首先，要实现多态，必须有个基类，然后定义几个派生类。然后需要创建几个基类指针，
+让基类指针指向派生类对象。然后通过基类指针去调用期望的成员函数，实现多态。这里
+要想让其表现出多态的特征，必须在基类中用virtual定义虚函数（虚函数可以由派生类
+重新定义），然后派生类重新定义虚函数。这样通过指向派生类对象的基类指针去调用这
+些虚函数时，就会根据指针指向的对象类型，自动调用目标对象中的这些成员函数。这样
+就实现了多态。
+注意，基类指针，可以访问到的成员函数，与其指向的对象类型无关，只与基类自身有关
+，基类中定义了什么，它就可以访问到什么，基类中如果没有定义，就算是派生类中定义
+了，它也是访问不到的，就相当于已经将派生类对象进行了强制类型转换，向上转换成了
+基类而将自己添加的部分丢弃了一样。
+虚函数可以有函数定义，没有函数定义的函数就变成了纯虚函数，其语法是type
+= 0;即将函数定义部分用“=0;&amp;quot;替换。
+包含纯虚函数的类就是抽象类（在java中，抽象类要通过abstract关键字指明），抽象类
+不能用来实例化对象，只适合用来做基类，然后创建它的派生类对象。但是抽象类也不是
+完全没有用的，作为基类是一个不错的选择，另外，它也可以用于创建指向派生类对象的
+基类指针，然后使用c++中多态的一切特征。
+类型转换：
+1）基本数据类型的类型转换：
+基本类型的隐式类型转换，例如从short a=2000; int b=a;这里就b=a就发生了short向
+int的饮食类型转换。对于c++中的基本数据类型，从精度较低的转换为精度较高的类型时
+，由于不会发生数据丢失，所以一般会自动地进行类型转换，不需要编码中显示指明，因
+此称之为隐式类型转换。
+但是当基本数据类型从精度较高的转换为精度较低的类型时，由于有可能发生数据丢失，
+一般情况下，编译器会报warning而不是错误，一般在编码时需要显示指明类型转换，我
+们称之为强制类型转换。
+2）类的类型转换：
+类之间也可以发生类型转换，但是试想一下，类有不是简单的数据类型，它还包括成员函
+数，怎么能实现类型的转换呢？更不用说也是类型转换了！对，那么它一定是通过某种诡
+辩术实现了这一类型转换，总结一下，类之间的饮食类型转换，主要通过3个成员函数进
+行：
+[single-argument constructor]：允许用一个特定的类型来初始化另一个类型，例如有
+两个类A、B，B中定义一个构造函数来完成利用对象A a对B对象的初始化：
+class B {
+{...};
+};
+A a; B b(a);
+注意这里的构造函数只是一个普通的构造函数，我们之前提到的拷贝构造函数、拷贝赋值
+函数、移动构造函数、移动赋值函数这几个特殊的成员函数，其参数类型与当前类类型都
+是一致的。
+[assignment operator]：通过这个赋值运算符，完成类型的转换。这里需要重载运算符=
+，例如还是两个类A、B，B希望能够实现在赋值时将对象A隐式转换成对象B，可以这样实
+现：
+class B {
+{....}
+};
+A a; B b; b=a;
+注意这里重载了赋值运算符，
+[type-cast operator]：通过类型转换运算符，完成类型的转换。这里需要重载运算符()
+，例如还是两个类A、B，B希望能够被强制类型转换成类A对象，这可以这样实现：
+class B {
+{return A()}
+};
+A a; B b;
+a = b;
+a=b;这行代码表示B类对象b需要被隐式转换成A类对象，因此会调用b.A()方法转换成A类
+对象。
+关于运算符重载，请仔细查看c++中运算符重载规则，有的运算符重载时有返回值，有的
+则没有返回值，需要注意。另外，运算符重载的时候，应保持其实现与其语义相一致。
+c++中在函数调用的时候，会检查传递给函数的参数类型，如果类型不匹配，例如传递的
+实参的类型为A，并且期望的参数类型B中提供了一个合适的隐式类型转换函数，能够将A
+转换成B，那么就会发生隐式类型转换。如果我们不希望这种隐式类型转换的发生，可以
+在B中的对应类型转换函数之前加上关键字explicit，这样就会阻止饮食类型转换的发生
+。例如：
+class A{};
+class B{
+{..}
+};
+{...}
+{
+A a;
+fn(a);
+}
+其中fn(a)这一行会报错，因为在B的类定义中已经通过explicit关键字禁用了从A向B的隐
+式类型转换。
+这种情况下，可以通过强制类型转换来解决，fn((b)a);其执行过程是，编译器检查到fn
+形参类型为B，但是实参类型为A，于是希望能够进行隐式类型转换，于是去检查B的定义
+中有没有合适的隐式类型转换函数，结果找到了B(A&amp;amp; a);这个合适的函数，但是它被
+explicit修饰，禁用了自动隐式类型转换，于是开始检查传递形参到fn时是否指明了强制
+类型转换，检查到传递的形参是(B)a，即指明了要从A向B进行强制类型转换，满足了
+explicit的要求，然后类型转换开始，将a转换为B类对象后作为实参传递给fn，fn执行。
+另外，多提一句，在c++中，对象的初始化的3中形式其实调用的是相同的构造函数。例如
+：
+A a;
+B b=a; // 形式1
+B b(a); // 形式2
+B b{a}; // 形式3
+这3种形式都是调用的构造函数B(A &amp;amp;)。
+类的显示类型转换，也是通过强制类型转换运算符实现()。c++中类型转换考虑的比较周
+全，首先提供了两个比较通用的强制类型转换形式：
+expression; // c-style notation
+new_type (expression); // functional notation
+此外还提供了4中类型转换运算符，在说明这4中类型转换运算符之前，先说明下其原因。
+由于通过强制类型转换，尤其是指针类型的转换，我们通过强制类型转换，可以将一个指
+针指向任何类对象，当我们通过这样的指针调用某些成员函数的时候，就会出现runtime
+错误，虽然在编译时没有任何问题，但是在运行时会出错。为了安全起见，c++提供了4中
+类型转换运算符用于对类对象的强制类型转换进行控制。
+它们分别是：
+dynamic_cast &amp;lt;new_type&amp;gt; (expression);
+reinterpret_cast &amp;lt;new_type&amp;gt; (expression);
+static_cast &amp;lt;new_type&amp;gt; (expression);
+const_cast &amp;lt;new_type&amp;gt; (expression);
+每一种类型转换都有自己独特的特征。
+dynamic_cast &amp;lt;new_type&amp;gt; (expression)：
+dynamic_cast可以实现upcast和downcast，dynamic_cast仅应被用于指类对象的指针或者
+引用的类型转换（包括void*），它的目的是确保转换后的指针或者引用可以指向一个有
+效的、完整的对象。如果转换成功，返回对应的指针或引用；如果转换指针失败，返回
+null，null就是0，内存0地址，如果转换引用失败，则抛出bad_cast异常，表示转换引用
+失败。
+看下面这个简单的例子：
+{} };
+class Derived: public Base { int a; };
+{
+try {
+Base * pba = new Derived;
+Base * pbb = new Base;
+Derived * pd;
+pd = dynamic_cast&amp;lt;Derived*&amp;gt;(pba);
+cout &amp;lt;&amp;lt; &amp;quot;Null pointer on first type-cast.\n&amp;quot;;
+pd = dynamic_cast&amp;lt;Derived*&amp;gt;(pbb);
+cout &amp;lt;&amp;lt; &amp;quot;Null pointer on second type-cast.\n&amp;quot;;
+{cout &amp;lt;&amp;lt; &amp;quot;Exception: &amp;quot; &amp;lt;&amp;lt; e.what();}
+return 0;
+}
+上面的代码中，第一次类型转换是成功的，因为pba指向了一个完整的派生类对象，虽然
+pba是一个基类指针，通过dynamic_cast可以被downcast成派生类指针；第二次类型转换
+是失败的，因为pbb指向的是一个基类对象，这个基类对象不是一个有效的、完整的派生
+类对象，所以将该基类指针downcast成派生类指针会失败。
+dynamic_cast需要RTTI（Runtime Type Information）的支持，需要编译器在编译的时候
+打开相应的feature在编译后的代码中假如相应的信息，以便在运行时追踪dynamic类型信
+息，以便完成这样的动态类型转换。
+static_cast &amp;lt;new_type&amp;gt; (expression):
+static_cast可以实现upcast和downcast，应该说static_cast是dynamic_cast的经济实用
+版，为什么这么说呢？首先，它会在编译时完成指针和引用的upcast和downcast ，这个
+与dynamic_cast相同，但是它不会像dynamic_cast那样，在运行时检查转换后的指针或引
+用是否指向了一个有效的、完整的对象，运行时安全可能无法保证，类型转换后的安全由
+程序员自己决定，因此，static_cast较之于dynamic_cast，损失了运行时安全检查，但
+是也正是由于此，也减少了因为类型安全检查所引起的开销。
+reinterpret_cast &amp;lt;new_type&amp;gt; (expression):
+dynamic_cast、static_cast基本上都是在基类和派生类指针、引用之间进行转换，与它
+们相比，reinterpret_cast可以实现任何指针类型向任何指针类型的转换，它的做法就是
+将指针的值拷贝过去。基于这样的实现，它甚至可以将整型转换为指针类型，只要指针变
+量的内存单元可以容纳这个整型值，这也是其提供的唯一的安全性检查。
+const_cast &amp;lt;new_type&amp;gt; (expression):
+const_cast主要是用于对指针set、remove const标志，即设置const标志或者移除const
+标志，根据当前类型与目标类型是否有const标志自动进行设置。
+在讲下面的例子之前，有几个基本常识需要了解，在c、c++中字符串常量都是存放在常量
+存储区中的，是不允许修改的，例如char *str=&amp;quot;helloworld&amp;quot;,这里的helloworld就是存
+储在常量存储区中的，虽然char *str前面没有const修饰，也不能通过str[i]去改变
+helloworld中某个字符的值。如果是这样赋值，char str[] = &amp;quot;helloworld&amp;quot;,则
+helloworld不是存储在常量存储区中的，而是存储在栈上的，str这个数组在栈上创建，
+hellowrold就存储在对应的内存单元中。
+其实为什么会有这些差别，说白了都是编译器实现的原因。应该了解下编译器对内存分配
+的管理，例如将内存分成堆区、栈区、程序文本区，刚才我习惯性说的常量存储区也就是
+程序文本区，反汇编的时候就是.text段，总之是不允许修改的。
+好了看下面一个简单的例子，理解下const_cast的使用：
+void print (char * str)
+{
+cout &amp;lt;&amp;lt; str &amp;lt;&amp;lt; '\n';
+str[0] = 'A';
+cout &amp;lt;&amp;lt; str &amp;lt;&amp;lt; '\n';
+}
+{
+char str[] = &amp;quot;hello world&amp;quot;;
+const char * c = str;
+);
+return 0;
+}
+这里主要看函数print，它的参数类型是char *而不是const char *，而参数c是const
+char *类型，我们在调用print时，使用了const_cast对c进行类型转换，转换的类型与c
+相同，只不过是需要const_cast根据需要为我们选择是设置const标志还是移除const标志
+，这里const_cast为我们移除了const标志，使我们在print中可以改变字符串中的值。
+通过typeid获取对象的类型信息，看一个简单的例子：
+{
+int * a,b;
+a=0; b=0;
+!= typeid(b))
+{
+cout &amp;lt;&amp;lt; &amp;quot;a and b are of different types:\n&amp;quot;;
+&amp;lt;&amp;lt; '\n';
+&amp;lt;&amp;lt; '\n';
+}
+return 0;
+}
+输出：
+a is: int *
+b is: int
+typeid可以通过参数的类型构建出一个对象，这个对象的name方法可以获取到这个类型的
+描述性字符串，这些类型信息在头文件&amp;lt;typeinfo&amp;gt;中定义。
+下面在看一个typeid获取类对象类型信息的简单例子：
+class Base { virtual void f(){} };
+class Derived : public Base {};
+{
+try {
+Base* a = new Base;
+Base* b = new Derived;
+&amp;lt;&amp;lt; '\n';
+&amp;lt;&amp;lt; '\n';
+&amp;lt;&amp;lt; '\n';
+&amp;lt;&amp;lt; '\n';
+&amp;lt;&amp;lt; '\n'; }
+return 0;
+}
+输出：
+a is: class Base *
+b is: class Base *
+*a is: class Base
+*b is: class Derived
+注意typeid这两个应用实例，应用起来就没有问题了。
+另外需要注意，如果typeid(*ptr)中ptr为null的话，会抛出bad_typeid异常。
+c++中异常处理：
+try-catch，try中包含可能抛出异常的代码，抛出的异常可以是基本数据类型，也可以是
+类对象，例如:
+throw 20;
+throw new B();
+捕获基本数据类型时需要注意，catch(int e)或者catch(int &amp;amp;e),其中必须精确指明异常
+类型为int，如果将其指明为short或者long则不会被捕获，如果需要一个能够捕获所有异
+常类型的处理句柄，可以使用catch(...)来作为默认异常捕获句柄。
+捕获类对象异常类型时，与捕获基本数据类型的异常稍微有所区别，例如假如有两个类A
+、B，并且B是A的派生类，如果我们throw new B()，如果希望捕获类B，要么直接在catch
+中捕获B类型异常对象，通过catch(B e)或者catch(B &amp;amp;e)进行直接捕获，要么通过
+catch(...)捕获。
+此外，还可以利用类的继承关系，来通过基类A来捕获派生类B，但是需要注意的是，基类
+A必须是c++中标准异常类std::exception的派生类才可以，如果满足了这个条件，catch
+的时候就可以通过catch(A &amp;amp;e)或者catch(A e)来捕获派生类B的对象。
+一般，异常类，应该继承自std::exception，这样我们可以通过类的继承链关系来对抛出
+的异常进行捕获，并且这样的话，也可以通过std::exception来统一对抛出的异常类对象
+进行捕获。
+与c++做个对比，java中捕获异常的时候，如果希望达到通过基类捕获派生类对象的目的
+，例如通过A捕获B，那么要求类A必须是java.lang.Throwable的派生类，在java中通过基
+类异常对象Exception捕获所有的异常对象。
+此外，java中要catch的对象必须是java.lang.Throwable的派生类，也就是普通的基本数
+据类型、非其派生类对象是不能够被当作异常抛出的。
+在try-catch的过程中，可能会出现层层嵌套的情况，这个时候，如果希望将所有的异常
+在外层进行统一处理，内层仅用来捕获异常的话，那么内层捕获异常之后可以选择将异常
+重新抛出 ，即通过不带任何参数的语句throw就可以将异常重新抛出。
+捕获异常的时候，为了提高效率，尽量传引用，而不是传值，这样可以一定程度上提高效
+率。
+try {
+try {
+throw xxx;
+}
+{
+throw;
+}
+}
+{
+...
+}
+捕获异常之后，为了能够将捕获到的对象的异常信息显示出来，可以重写std::exception
+中的成员函数what()。
+c++标准库中抛出的所有异常类都继承自std:exception这个类，这些异常类包括:
+bad_alloc thrown by new on allocation failure
+bad_cast thrown by dynamic_cast when it fails in a dynamic cast
+bad_exception thrown by certain dynamic exception specifiers
+bad_typeid thrown by typeid
+bad_function_call thrown by empty function objects
+bad_weak_ptr thrown by shared_ptr when passed a bad weak_ptr
+=============================================================================
+Sat Sep 13 12:05:00 CST 2014
+=============================================================================
+c++中的预处理指令，下面只介绍这些预处理指令中的一些常用的方法，具体地高级应用
+暂不涉及。
+宏定义#define,#undef:
+预处理指令创建的宏在#undef之前一直有效，与语句块无关。宏定义在编译之前由预处理
+器读取并进行相应的处理，宏定义的话，预处理器不会检查其数据类型，而仅仅是进行简
+单的文本替换。
+#define NUM 100
+a&amp;gt;b?a:b
+#x
+x ## y
+宏定义中的#表示将参数x两侧加上双引号,##表示将两个参数x，y连接在一起，连接的时
+候只是将x、y的值连接，##前后的空格不用于连接。
+条件包含指令：
+#ifdef,#ifndef,#if,#endif,#else,#elif
+条件包含指令在内核代码中大量出现，可以用于条件编译。
+行控制：
+#line linenumber &amp;quot;filename&amp;quot;，我们在编译源代码的时候，如果编译出错的时候，会报
+出在那个源文件的哪一行出现了错误，我们可以通过#line指令控制显示的文件的名称，
+即filename部分，另外，错误出现的行号可以被设置成基于某个初始行号的，例如我们设
+置linenumber为100，显示的出错行号，就是在100+实际的出错行号。
+错误指令：
+#error something， 预处理器遇到这个宏，就表示遇到了错误，后续的编译过程就不会
+被执行了。
+源文件包含或者头文件包含：
+#include，注意有两种形式#include &amp;lt;header&amp;gt;会在标准库中寻找对应的头文件实现，
+#include &amp;quot;header&amp;quot;会首先在当前目录中寻找其实现，如果找不到再到标准库中寻找其实
+现。有些时候允许我们设置include这个参数，让编译器自动到对应的目录中按照顺序检
+索头文件，如果这么做的话，那么不管是不是c++标准库的实现还是用户自己的实现还是
+其他第三方提供的库，使用#include &amp;quot;hedaer&amp;quot;或者#include &amp;lt;header&amp;gt;都是可以的。
+pragma指令:
+#pragam,该指令用于向编译器传递多种多样的控制选项，通常这些选项是与使用的平台和
+编译器相关的，需要我们自己查看使用的平台、编译器手册以便确定可以传递的参数。
+预定义宏：
+__LINE__：当前代码行的行编号；
+__FILE__：当前代码行所在源文件的名称；
+__DATE__：当前系统日期；
+__TIME__：当前系统时间；
+__cplusplus：当前编译器支持的c++版本；
+还有其他的一些编译器里面可选实现的宏定义选项，这里就布列出了。
+c++里面的输入输出，这些没有什么特别之处，用到的时候，可以查看相关手册。
+=============================================================================
+/* vim: set ft=text: */
+&lt;/code&gt;&lt;/pre&gt;</description></item><item><title>Unix环境高级编程</title><link>/blog/2014-06-01-unix%E7%8E%AF%E5%A2%83%E9%AB%98%E7%BA%A7%E7%BC%96%E7%A8%8B/</link><pubDate>Wed, 11 Jun 2014 08:00:00 +0800</pubDate><guid>/blog/2014-06-01-unix%E7%8E%AF%E5%A2%83%E9%AB%98%E7%BA%A7%E7%BC%96%E7%A8%8B/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是Unix环境高级编程里的一些知识要点。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;# Advanced Programming in Unix Environment
+############################################################################
+Mon Jun 9 09:22:41 CST 2014
+############################################################################
+M1 Unix基础知识
+1. man man
+1)user commands
+2)system calls
+3)c library functions
+4)devices and special files
+5)file formats and conventions
+6)games
+7)miscellanea
+8)system admistration tools and daemons
+2. c return values
+1)return 0, 正常结束
+2)return 1-255，表示错误代码
+3. 工作目录
+char *getcwd(char *buf, size_t size);
+int chdir(char *path);
+4. libc与glibc的关系
+libc是泛指c库，glibc是gnu组织对libc的一种实现，是unix、linux的根基，微软也有自
+己对libc的实现，叫msvcrt。
+5. read system call
+return 0, 表示到达了文件的结尾。
+6. Ctrl+D，默认的文件结束字符
+ctrl+c，中断键
+ctrl+\，退出键
+7. fork，执行一次，返回两次，对父进程返回子进程的进程id，对子进程返回0
+8. 出错处理和出错恢复
+errno
+当unix函数出错时，常常返回一个负值，同时将整形变量errno设置为含有附加信息的一
+个值，例如open调用失败返回-1，对应的有大约15中不同的errno值。
+errno.h中定义了errno以及可以赋予它的各种常量，这些常量都以字母E开头。
+举个例子：
+E2BIG：参数列表太长
+EAGAIN：资源临时不可获取
+EACCESS：权限不够，访问被拒绝
+EBADF：无效文件描述符
+EBUSY：设备忙或资源忙
+ECANCELED：操作被取消
+ECHILD：没有子进程
+EEXIST：文件已经存在
+EFAULT：无效地址
+EFBIG：文件尺寸过大
+EINTR：中断函数调用
+EIO：IO错误
+...
+char *strerror(int errno);
+void perror(char *msg);
+对于资源相关的非致命性错误，一般恢复动作是延迟一些时间，然后再试
+9. 支持线程的环境中，需要使用局部errno，避免线程间的相互干扰
+10. 为什么要将用户名、组名映射为id呢？
+1）如果使用全场ascii登录名和组名，则需要更多的磁盘空间进行存储；
+2）在查验权限期间，比较字符串较之比较整形更消耗时间
+11. 度量一个进程的执行时间：
+时钟时间、用户cpu时间、系统cpu时间，time命令
+12. 系统调用和库函数
+1)从实现者的角度来看，两者的实现有着重大的不同，通常库函数是在系统调用之上建立起
+来的；
+2)从用户的角度来看，两者并没有明显的区别；
+通常，我们可以替换库函数，但是不能或者很难替换系统调用；
+############################################################################
+M2 Unix标准化
+1.
+1)ISO C, (ANSI在ISO中代表美国的利益），按照改标准定义的头文件，将iso c库分成24
+个区
+2)IEEE POSIX，添加来pthreads（POSIX线程）、更多的实时接口、事件跟踪方面的扩展
+3)Single Unix Specification(SUS)，是POSIX的超集，在POSIX基础上，定义来一些附加
+的接口，相应的系统接口全集被称为X/Open系统接口(X/Open System Interface, XSI)
+ISO-&amp;gt;POSIX-&amp;gt;XSI
+只有遵循XSI的实现，才能称为是Unix系统
+2. 限制
+Unix定义了很多幻数和常量，不同的实现定义的值可能不一样，为了增加可移植性，需要
+解决这些问题，为此提供了如下三种限制：
+1)编译时限制（头文件）
+编译时需要确定的幻数和常量的值，可以在头文件中定义；
+2)不与文件或目录相关联的运行时限制，可以通过sysconf函数获取；
+3)与文件或目录相关链的运行时限制，可以通过pathconf或者fpathconf函数获取；
+1）iso c定义的限制都是编译时限制，例如头文件limits.h中定义的常量；
+2）posix和xsi定义的限制既有编译时限制，也有运行时限制；
+############################################################################
+M3 文件I/O
+1. 不带缓冲的IO，指的是每个read、write操作都对应内核中的一次系统调用
+2.将标准输入、输出、错误输出分别用文件描述符1、2、3来引用，是shell的惯例，与内
+核没有关系。
+一个进程可以打开的文件描述符的范围是0～OPEN_MAX。
+3. lseek，返回文件当前的偏移量，可以是负值，所以再测试lseek是否失败的时候，不
+能判断是否小于0，而应判断是否等于-1；lseek定位时指定的偏移量可以大于文件长度，
+这时会在文件中产生空洞;
+产生的空洞读为\0，可以在程序中进行处理，将\0去掉，即将空洞从文件中删除。
+4. IO效率，建议缓冲区长度采用4096字节，此时消耗的系统cpu时间最小，用户cpu时间
+、时钟时间也比较小4.
+5. 内核用于所有IO的数据结构
+1)进程表项中存储着打开的文件描述符列表，每个文件描述符表项包含文件描述符以及指
+向文件表项的指针；
+2)文件表，在文件表中，内核为所有打开的文件增加一个表项。其实进程每调用一次open
+，就会在文件表中增加一个文件表项；dup、dup2只是复制文件描述符，内核不会创建新
+的文件表项；
+每个文件表项，包含文件状态标志、当前文件的偏移量以及指向v节点表项的v节点指针
+3)v节点表，每个打开的文件，内核都在v节点表中创建一个v节点表项，v节点表项包含了
+i节点信息（索引节点信息）以及当前文件长度；
+每个打开的磁盘上的文件，只对应一个v节点表项
+6. 因为对文件的io操作，通常是采用的建议性锁机制，多个进程读写同一个文件时，可
+能在读写时产生冲突， pread、pwrite可以将定位和读写封装为一个原子性操作，可以解
+决这个问题；当然如果对文件操作施加强制性锁，不用pread、pwrite也是可以的
+7. sync，fsync，fdatasync
+平时我们说的不带缓冲的io，指的是每次read、write都是一个系统调用，然后进入内核
+进行操作。这里需要注意的是，并不是说内核在处理io相关的操作的时候，就没有缓冲。
+为了减少磁盘读写次数，内核总是使用了缓冲机制的，只不过用户通过不带缓冲的io进行
+访问时，会进入内核进行操作而已。
+例如通过write写一个文件，写入的数据内核不会立即将其更新到磁盘上，而是将其放入
+一个缓冲区中，等待缓冲区满时，在将其排入输出队列更新到磁盘上，这样做的优点是减
+少了写磁盘的次数，提高了效率；这样做的缺点是，延长了磁盘文件的更新时间，如果发
+生某种意外，可能会造成更新数据的丢失；
+为了使得内核缓冲区中的数据与磁盘上的数据保持一致，提供了三个函数
+sync,fsync,fdatasync，对于普通用户来讲，fsync应该是用的比较多的吧。
+8. fcntl函数，可以更改已打开文件的性质。
+9. 打开文件描述符/dev/fd/N等效于复制文件描述符N
+############################################################################
+M4 文件和目录
+1. stat结构体中的st_mode成员，对其进行测试，判断文件类型，判断的时候使用如下宏：
+S_ISREG(st_mode)：普通文件
+S_ISDIR(st_mode)：目录文件
+S_ISCHR(st_mode)：字符设备文件
+S_ISBLK(st_mode)：块设备文件
+S_ISFIFO(st_mode)：fifo，用于进程间通信，有时也称其为有名管道（mkfifo创建有名
+管道，pipe创建无名管道）
+S_ISLNK(st_mode)：符号链接文件（非符号链接文件的硬链接数至少为1）
+S_ISSOCK(st_mode)：socket文件，用于网络间的进程间通信
+2. shell命令过长，通过符号“\”来段行
+3. stat,fstat,lstat
+stat函数不会观察到符号链接，观察符号链接，应该使用lstat函数
+4. 与一个进程相关联的ID有6个或者更多
+1)实际用户ID/实际组ID：（标识进程实际上是谁创建的）
+2)有效用户ID/有效组ID/附加组ID：（用于进程的文件访问权限检查）
+3)保存的设置用户ID/保存的设置组ID：（exec从有效用户ID复制得到的）
+使用宏S_ISUID和S_ISGID对st_mode进行测试，判断有没有对设置用户ID位/设置组ID位进
+行设置, 例如S_ISUID &amp;amp; st.st_mode。
+```c
+#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;stdlib.h&amp;gt;
+#include &amp;lt;sys/types.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+int main(int argc, char *argv[])
+{
+printf(&amp;quot;euid is: %d\n&amp;quot;, (int)geteuid());
+printf(&amp;quot;uid is: %d\n&amp;quot;, (int)getuid());
+return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;测试uid，euid&lt;/p&gt;</description></item></channel></rss>

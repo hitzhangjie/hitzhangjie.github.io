@@ -917,7 +917,7 @@ round-trip min/avg/max = 0.1/0.1/0.4 ms
 改为localhost。这个时候，应用程序ping向主机发送了icmp请求包，网卡设备捕获到之
 后，会向cpu发送中断号为44的中断请求。现在该主机上有8个cpu，由于我们设置了编号
 为0-3的cpu可以接收该中断，其他的则不可以，那么如果我们查看cpu对中断44的接收情
-况时，只有编号为0-3的cpu才能接收到中断请求。&lt;/p&gt;</description></item><item><title>从0细说如何管理内存的？</title><link>/blog/2022-06-27-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86-%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E4%B8%8E%E9%87%8A%E6%94%BE/</link><pubDate>Mon, 27 Jun 2022 01:15:41 +0800</pubDate><guid>/blog/2022-06-27-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86-%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E4%B8%8E%E9%87%8A%E6%94%BE/</guid><description/></item><item><title>并发同步</title><link>/blog/2022-06-27-%E5%B9%B6%E5%8F%91%E5%90%8C%E6%AD%A5/</link><pubDate>Mon, 27 Jun 2022 01:15:41 +0800</pubDate><guid>/blog/2022-06-27-%E5%B9%B6%E5%8F%91%E5%90%8C%E6%AD%A5/</guid><description>&lt;p&gt;并发同步，在并发编程中是非常重要的。当我们讨论并发编程时，我们的程序可能是通过多线程来实现，也可能通过多进程来实现。&lt;/p&gt;
+况时，只有编号为0-3的cpu才能接收到中断请求。&lt;/p&gt;</description></item><item><title>并发同步</title><link>/blog/2022-06-27-%E5%B9%B6%E5%8F%91%E5%90%8C%E6%AD%A5/</link><pubDate>Mon, 27 Jun 2022 01:15:41 +0800</pubDate><guid>/blog/2022-06-27-%E5%B9%B6%E5%8F%91%E5%90%8C%E6%AD%A5/</guid><description>&lt;p&gt;并发同步，在并发编程中是非常重要的。当我们讨论并发编程时，我们的程序可能是通过多线程来实现，也可能通过多进程来实现。&lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;我们在OS理论中了解到进程是资源分配的最小单位，线程是调度的最小单位。在Linux里面，这么讲也是成立的。更细致地说，在Linux中，线程其实就是轻量级进程LWP来表示的。对Linux调度器而言，可调度实体既可以是进程、线程也可以是一个任务组，这个任务组中又可以有其他的可调度实体。&lt;/p&gt;
 &lt;/blockquote&gt;
@@ -984,6 +984,153 @@ person.age address: 0x16fdbac48
 &lt;li&gt;volatile，不能保证线程可见性，但是在不同的处理器平台上却是会有不同的表现，比如在x86平台上，加了volatile修饰的变量就能够保证线程可见性。为什么呢？首先加了volatile修饰后避免了寄存器优化，现在还有cache的顾虑对吧，但是x86平台比较特殊，它使用了一种称作 tso的memory model，x86多核能够看到其他核对某个cacheline的修改，因此能感知到最新写的数据，能做到线程可见性。&lt;/li&gt;
 &lt;li&gt;volatile在其他平台内存模型不同，不一定能和x86一样实现线程可见性。&lt;/li&gt;
 &lt;li&gt;要想实现线程可见性，编译器一般是结合语言本身的特性，为止生成一些内存屏障指令，这些屏障指令最终会触发cache的MESIF协议来使得当前核上的修改对其他核可见。&lt;/li&gt;
+&lt;/ul&gt;</description></item><item><title>系统调用在不同 CPU 架构上的实现差异</title><link>/blog/2019-07-14-syscall/</link><pubDate>Sun, 14 Jul 2019 00:00:00 +0800</pubDate><guid>/blog/2019-07-14-syscall/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;系统调用是用户态程序请求内核服务的唯一入口。但不同 CPU 架构下，进入系统调用的指令、传参方式各不相同。理解这些差异对于阅读内核源码、进行跨平台开发和性能优化都有帮助。&lt;/p&gt;
+&lt;h1 id="正文"&gt;正文 &lt;a href="#%e6%ad%a3%e6%96%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="核心问题"&gt;核心问题 &lt;a href="#%e6%a0%b8%e5%bf%83%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;对于系统调用，每个 CPU 架构都需要解决两个问题：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;用什么指令进入内核态？&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;如何传递系统调用号和参数？如何获取返回值？&lt;/strong&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id="x8632-位"&gt;x86（32 位） &lt;a href="#x8632-%e4%bd%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;机制&lt;/th&gt;
+&lt;th&gt;指令&lt;/th&gt;
+&lt;th&gt;说明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;传统方式&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;int 0x80&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;通过软中断进入内核，系统调用号存入 &lt;code&gt;eax&lt;/code&gt;，参数通过 &lt;code&gt;ebx&lt;/code&gt;、&lt;code&gt;ecx&lt;/code&gt;、&lt;code&gt;edx&lt;/code&gt;、&lt;code&gt;esi&lt;/code&gt;、&lt;code&gt;edi&lt;/code&gt;、&lt;code&gt;ebp&lt;/code&gt; 传递，返回值存入 &lt;code&gt;eax&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;快速方式&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;sysenter&lt;/code&gt; / &lt;code&gt;sysexit&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Intel 引入的快速系统调用指令对，比 &lt;code&gt;int 0x80&lt;/code&gt; 更快，无需经过完整的中断处理流程&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="x86_6464-位"&gt;x86_64（64 位） &lt;a href="#x86_6464-%e4%bd%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;指令&lt;/th&gt;
+&lt;th&gt;说明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;syscall&lt;/code&gt; / &lt;code&gt;sysret&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;AMD 引入的快速系统调用指令，被 x86_64 Linux 采用&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;参数传递：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;系统调用号：&lt;code&gt;rax&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;参数 1~6：&lt;code&gt;rdi&lt;/code&gt;、&lt;code&gt;rsi&lt;/code&gt;、&lt;code&gt;rdx&lt;/code&gt;、&lt;code&gt;r10&lt;/code&gt;、&lt;code&gt;r8&lt;/code&gt;、&lt;code&gt;r9&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;返回值：&lt;code&gt;rax&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;为何第 4 个参数用 &lt;code&gt;r10&lt;/code&gt; 而非 &lt;code&gt;rcx&lt;/code&gt;？因为 &lt;code&gt;syscall&lt;/code&gt; 指令会自动将 &lt;code&gt;rip&lt;/code&gt; 保存到 &lt;code&gt;rcx&lt;/code&gt;，会破坏 &lt;code&gt;rcx&lt;/code&gt; 的值。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="arm64"&gt;ARM64 &lt;a href="#arm64" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;指令&lt;/th&gt;
+&lt;th&gt;说明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;svc&lt;/code&gt; (Supervisor Call)&lt;/td&gt;
+&lt;td&gt;触发异常进入内核态&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;参数传递：&lt;/p&gt;</description></item><item><title>操作系统进程状态详解</title><link>/blog/2019-07-05-%E8%BF%9B%E7%A8%8B%E7%8A%B6%E6%80%81/</link><pubDate>Fri, 05 Jul 2019 00:00:00 +0800</pubDate><guid>/blog/2019-07-05-%E8%BF%9B%E7%A8%8B%E7%8A%B6%E6%80%81/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;进程状态是操作系统进程管理的基础概念。不同教材和不同角度（CPU 视角 vs 虚拟内存视角）会给出不同的状态分类。本文从两个维度完整梳理进程状态及其转换关系。&lt;/p&gt;
+&lt;h1 id="正文"&gt;正文 &lt;a href="#%e6%ad%a3%e6%96%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="cpu-视角三种基础状态"&gt;CPU 视角：三种基础状态 &lt;a href="#cpu-%e8%a7%86%e8%a7%92%e4%b8%89%e7%a7%8d%e5%9f%ba%e7%a1%80%e7%8a%b6%e6%80%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;从 CPU 的角度来看，它只关心&amp;quot;当前执行谁&amp;quot;，因此只需要三种状态：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;状态&lt;/th&gt;
+&lt;th&gt;含义&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;运行态（Running）&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;进程当前拥有 CPU，正在执行指令&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;就绪态（Ready）&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;进程拥有所有需要的资源，只等 CPU 调度&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;阻塞态（Blocked）&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;进程因等待某个事件（如 I/O 完成、锁释放）而暂时放弃 CPU&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;状态转换：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;运行 → 阻塞：进程发起 I/O 操作，主动让出 CPU&lt;/li&gt;
+&lt;li&gt;运行 → 就绪：时间片用完，被调度器抢占&lt;/li&gt;
+&lt;li&gt;阻塞 → 就绪：等待的 I/O 事件完成&lt;/li&gt;
+&lt;li&gt;就绪 → 运行：被调度器选中&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="虚拟内存视角引入两个挂起状态"&gt;虚拟内存视角：引入两个挂起状态 &lt;a href="#%e8%99%9a%e6%8b%9f%e5%86%85%e5%ad%98%e8%a7%86%e8%a7%92%e5%bc%95%e5%85%a5%e4%b8%a4%e4%b8%aa%e6%8c%82%e8%b5%b7%e7%8a%b6%e6%80%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当系统物理内存不足时，操作系统会进行交换（swap），将部分进程的内存映像换出到磁盘交换区。这时就引入了两个额外的状态：&lt;/p&gt;
+&lt;h3 id="挂起-阻塞态suspended-blocked"&gt;挂起-阻塞态（Suspended-Blocked） &lt;a href="#%e6%8c%82%e8%b5%b7-%e9%98%bb%e5%a1%9e%e6%80%81suspended-blocked" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;进程原本处于&lt;strong&gt;阻塞态&lt;/strong&gt;（正在等待 I/O），同时其内存映像&lt;strong&gt;被换出到磁盘&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果 I/O 事件完成 → 转入&lt;strong&gt;挂起-就绪态&lt;/strong&gt;（仍在外存，等待换入）&lt;/li&gt;
+&lt;li&gt;如果被换入物理内存 → 转入&lt;strong&gt;阻塞态&lt;/strong&gt;（继续等待 I/O 完成）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="挂起-就绪态suspended-ready"&gt;挂起-就绪态（Suspended-Ready） &lt;a href="#%e6%8c%82%e8%b5%b7-%e5%b0%b1%e7%bb%aa%e6%80%81suspended-ready" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;进程原本处于&lt;strong&gt;就绪态&lt;/strong&gt;（可以运行），但其内存映像&lt;strong&gt;被换出到磁盘&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果被换入物理内存 → 转入&lt;strong&gt;就绪态&lt;/strong&gt;（可以参与调度）&lt;/li&gt;
+&lt;li&gt;挂起-阻塞态的进程 I/O 完成后也会转入此状态&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="完整状态转换图"&gt;完整状态转换图 &lt;a href="#%e5%ae%8c%e6%95%b4%e7%8a%b6%e6%80%81%e8%bd%ac%e6%8d%a2%e5%9b%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code&gt; ┌──────────┐
+调度选中 │ 运行态 │ 等待I/O事件
+┌──────────► │ Running │ ──────────┐
+│ └──────────┘ │
+│ │ ▼
+│ 时间片用完 ┌──────────┐
+│ │ │ 阻塞态 │
+┌────┴─────┐ │ │ Blocked │
+│ 就绪态 │◄──────────┘ └────┬─────┘
+│ Ready │ │
+└────┬─────┘ I/O完成│
+│ │
+│ 换入内存 换入内存 │
+│ │
+┌────┴──────────┐ ┌─────────┴──────┐
+│ 挂起-就绪态 │◄───────────│ 挂起-阻塞态 │
+│ Susp-Ready │ I/O完成 │ Susp-Blocked │
+└───────────────┘ └────────────────┘
+▲ ▲
+│ 换出到磁盘 │
+└────────────────────────────┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id="总结"&gt;总结 &lt;a href="#%e6%80%bb%e7%bb%93" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;3 种 CPU 基础状态&lt;/strong&gt;：运行、就绪、阻塞&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;2 种挂起状态&lt;/strong&gt;：挂起-阻塞、挂起-就绪，由虚拟内存交换（swap）引入&lt;/li&gt;
+&lt;li&gt;挂起状态是独立于 CPU 调度状态的&amp;quot;第二维度&amp;quot;&lt;/li&gt;
+&lt;li&gt;理解进程状态对分析系统性能（如负载、I/O 等待）至关重要&lt;/li&gt;
 &lt;/ul&gt;</description></item><item><title>Daemonize：两次 fork 与脱离控制终端</title><link>/blog/2019-04-15-kernel-daemonize/</link><pubDate>Mon, 15 Apr 2019 21:14:57 +0800</pubDate><guid>/blog/2019-04-15-kernel-daemonize/</guid><description>&lt;p&gt;服务以daemon方式运行，是我们经常要实现的一种能力，两次&lt;code&gt;fork&lt;/code&gt;是大家熟悉的，但是有些可能是大家没了解过的。&lt;/p&gt;
 &lt;h1 id="为什么要以daemon方式运行"&gt;为什么要以Daemon方式运行？ &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e8%a6%81%e4%bb%a5daemon%e6%96%b9%e5%bc%8f%e8%bf%90%e8%a1%8c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;程序启动后以daemon方式运行，其实是想达到如下目的：&lt;/p&gt;
@@ -1055,7 +1202,32 @@ KiB Mem : 16171652 total, 3413496 free, 450324 used, 12307832 buff/cache
 KiB Swap: 0 total, 0 free, 0 used. 15009260 avail Mem
 PID USER PR NI VIRT RES SHR S %CPU %MEM TIME+ COMMAND
 2675 root 20 0 25968 140 0 S 0.0 0.0 0:00.00 main
-&lt;/code&gt;&lt;/pre&gt;</description></item><item><title>Linux 内核参数</title><link>/blog/2019-02-12-kernel-%E5%86%85%E6%A0%B8%E5%8F%82%E6%95%B0/</link><pubDate>Tue, 12 Feb 2019 10:49:01 +0800</pubDate><guid>/blog/2019-02-12-kernel-%E5%86%85%E6%A0%B8%E5%8F%82%E6%95%B0/</guid><description>&lt;h1 id="1-tcpip内核参数"&gt;1 tcpip内核参数 &lt;a href="#1-tcpip%e5%86%85%e6%a0%b8%e5%8f%82%e6%95%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;/code&gt;&lt;/pre&gt;</description></item><item><title>从0细说如何管理内存的？</title><link>/blog/2022-06-27-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86-%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E4%B8%8E%E9%87%8A%E6%94%BE/</link><pubDate>Wed, 13 Feb 2019 01:15:41 +0800</pubDate><guid>/blog/2022-06-27-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86-%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E4%B8%8E%E9%87%8A%E6%94%BE/</guid><description>&lt;h1 id="1-内存管理"&gt;1 内存管理 &lt;a href="#1-%e5%86%85%e5%ad%98%e7%ae%a1%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在编写程序时常常涉及到动态内存分配相关的内容，这个时候我们会通过c malloc/free来动态申请、释放内存。&lt;strong&gt;然而对于内存分配、释放而言，却不仅仅只有动态内存分配、释放的时候才会触发，函数栈帧的创建和销毁、页面的换入和换出、mmap、unmap等也会涉及到内存的分配、释放动作&lt;/strong&gt;。这些内存分配动作，底层都依赖操作系统来为进程分配页帧使用或者回收页帧。&lt;/p&gt;
+&lt;p&gt;大家常见的c malloc/free，除了操作系统内存管理，它还牵扯到**内存分配器（Memory Allocator）**的问题，为了避免频繁进入系统内核，内存分配器通常会申请一块内存自己管理应用程序内存分配，c free之后的内存也并不会立即归还给操作系统，而是留给后续c malloc使用，只有当heapsize超过了指定的阈值之后才会将空闲内存归还给操作系统。&lt;/p&gt;
+&lt;p&gt;要理清C在Linux下的内存分配细节，就至少需要从两个方面入手：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;操作系统如何管理内存？&lt;/li&gt;
+&lt;li&gt;C库中内存分配器如何管理内存?&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id="2-linux内存管理"&gt;2 Linux内存管理 &lt;a href="#2-linux%e5%86%85%e5%ad%98%e7%ae%a1%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;参考《Linux内核架构》补充Linux内存管理相关的细节。&lt;/p&gt;
+&lt;h1 id="3-libc内存分配器"&gt;3 libc内存分配器 &lt;a href="#3-libc%e5%86%85%e5%ad%98%e5%88%86%e9%85%8d%e5%99%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;参考下面几个视频以及更多libc内容完善内存分配器相关细节：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="https://youtu.be/RSuZhdwvNmA?list=PL0oekSefhQVJdk0hSRu6sZ2teWM740NtL"&gt;Memory Allocation, Video 1: Introduction&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://youtu.be/PY1PgGktEOw?list=PL0oekSefhQVJdk0hSRu6sZ2teWM740NtL"&gt;Memory Allocation, Video 2: Examples&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://youtu.be/74s0m4YoHgM?list=PL0oekSefhQVJdk0hSRu6sZ2teWM740NtL"&gt;Memory Allocation, Video 3: Implementation&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://youtu.be/rhLk2lf6QXA?list=PL0oekSefhQVJdk0hSRu6sZ2teWM740NtL"&gt;Memory Allocation, Video 4: Explicit free list&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;上面讲述的是内存分配器的通用实现方法，具体libc中是如何实现的，需要结合相应的源码来进一步确定。&lt;/p&gt;
+&lt;p&gt;libc中内存是怎么进行申请的？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;当申请内存尺寸&amp;gt;=512字节时，使用“best-fit”分配器；&lt;/li&gt;
+&lt;li&gt;当申请内存尺寸&amp;lt;=64字节时，使用“caching”分配器；&lt;/li&gt;
+&lt;li&gt;当申请内存尺寸介于64和512之间时，使用“大、小内存申请”的组合来达到更好的效率；&lt;/li&gt;
+&lt;li&gt;当申请内存尺寸&amp;gt;=128KB时，依赖于系统的内存映射mmap机制，如果系统支持的话。&lt;/li&gt;
+&lt;/ul&gt;</description></item><item><title>Linux 内核参数</title><link>/blog/2019-02-12-kernel-%E5%86%85%E6%A0%B8%E5%8F%82%E6%95%B0/</link><pubDate>Tue, 12 Feb 2019 10:49:01 +0800</pubDate><guid>/blog/2019-02-12-kernel-%E5%86%85%E6%A0%B8%E5%8F%82%E6%95%B0/</guid><description>&lt;h1 id="1-tcpip内核参数"&gt;1 tcpip内核参数 &lt;a href="#1-tcpip%e5%86%85%e6%a0%b8%e5%8f%82%e6%95%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;所有的TCP/IP调优参数都位于/proc/sys/net/目录，下面是最重要、常用的tcp/ip调优参数：&lt;/p&gt;
 &lt;table&gt;
 &lt;thead&gt;
@@ -1327,7 +1499,33 @@ return 0;
 &lt;/ul&gt;
 &lt;p&gt;ps: REUSEADDR还可以快速复用TIME_WAIT状态的地址(ipport)，比如服务器重启后重新listen同一个地址，但是单独这个选项不允许多个active listeners复用这个地址。&lt;/p&gt;
 &lt;p&gt;原文出自：&lt;a href="https://stackoverflow.com/a/14388707/3817040"&gt;reuseport &amp;amp; reuseaddr, how they differ?&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;Welcome to the wonderful world of portability&amp;hellip; or rather the lack of it. Before we start analyzing these two options in detail and take a deeper look how different operating systems handle them, it should be noted that the BSD socket implementation is the mother of all socket implementations. Basically all other systems copied the BSD socket implementation at some point in time (or at least its interfaces) and then started evolving it on their own. Of course the BSD socket implementation was evolved as well at the same time and thus systems that copied it later got features that were lacking in systems that copied it earlier. Understanding the BSD socket implementation is the key to understanding all other socket implementations, so you should read about it even if you don&amp;rsquo;t care to ever write code for a BSD system.&lt;/p&gt;</description></item><item><title>GDT / LDT 与 TSS</title><link>/blog/2017-12-10-kernel-gdt-ldt/</link><pubDate>Sun, 10 Dec 2017 23:19:17 +0800</pubDate><guid>/blog/2017-12-10-kernel-gdt-ldt/</guid><description>&lt;p&gt;每个进程在gdt中存储两项，分别是tss和ldt，Linux源码中对两个结构体的定义如下。&lt;/p&gt;
+&lt;p&gt;Welcome to the wonderful world of portability&amp;hellip; or rather the lack of it. Before we start analyzing these two options in detail and take a deeper look how different operating systems handle them, it should be noted that the BSD socket implementation is the mother of all socket implementations. Basically all other systems copied the BSD socket implementation at some point in time (or at least its interfaces) and then started evolving it on their own. Of course the BSD socket implementation was evolved as well at the same time and thus systems that copied it later got features that were lacking in systems that copied it earlier. Understanding the BSD socket implementation is the key to understanding all other socket implementations, so you should read about it even if you don&amp;rsquo;t care to ever write code for a BSD system.&lt;/p&gt;</description></item><item><title>中断与信号的区别</title><link>/blog/2018-09-06-interrupt-vs-signal/</link><pubDate>Thu, 06 Sep 2018 00:00:00 +0800</pubDate><guid>/blog/2018-09-06-interrupt-vs-signal/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;很多人容易混淆 Linux 中的&amp;quot;信号（signal）&amp;ldquo;和&amp;quot;中断（interrupt）&amp;quot;，甚至认为信号是通过软中断实现的。本文从内核实现的角度澄清这两者的关系。&lt;/p&gt;
+&lt;h1 id="正文"&gt;正文 &lt;a href="#%e6%ad%a3%e6%96%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="信号不是通过中断实现的"&gt;信号不是通过中断实现的 &lt;a href="#%e4%bf%a1%e5%8f%b7%e4%b8%8d%e6%98%af%e9%80%9a%e8%bf%87%e4%b8%ad%e6%96%ad%e5%ae%9e%e7%8e%b0%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Linux 的信号是在进程的进程描述符（&lt;code&gt;task_struct&lt;/code&gt;）中维护了一个信号队列，用于接收发送给该进程的信号。&lt;/p&gt;
+&lt;p&gt;当进程被调度时，调度器会检查进程是否有未处理的不可屏蔽信号。如果有，内核会在进程返回用户态之前执行信号对应的信号处理函数。&lt;strong&gt;这个过程根本不是什么软中断&lt;/strong&gt;，它是内核在正常的&amp;quot;返回到用户态&amp;quot;路径上的检查。&lt;/p&gt;
+&lt;h2 id="中断的分类"&gt;中断的分类 &lt;a href="#%e4%b8%ad%e6%96%ad%e7%9a%84%e5%88%86%e7%b1%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="硬件中断"&gt;硬件中断 &lt;a href="#%e7%a1%ac%e4%bb%b6%e4%b8%ad%e6%96%ad" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;由设备控制器向 CPU 引脚发送中断请求：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;可屏蔽中断（Maskable Interrupt）&lt;/strong&gt;：通过 INTR 引脚发送，CPU 可以通过清除 EFLAGS 中的 IF 位来暂时屏蔽。绝大多数外设中断都属此类。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;不可屏蔽中断（Non-Maskable Interrupt, NMI）&lt;/strong&gt;：通过 NMI 引脚发送，CPU 无法屏蔽。通常用于极其紧急的事件，如硬件内存错误、看门狗超时。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="异常exception"&gt;异常（Exception） &lt;a href="#%e5%bc%82%e5%b8%b8exception" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;由 CPU 自身在执行指令过程中检测到的错误条件触发：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Fault&lt;/strong&gt;：可纠正的异常，如缺页异常（page fault）。CPU 保存的返回地址是触发异常的指令地址，处理完后重新执行该指令。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Trap&lt;/strong&gt;：主动触发的异常，如调试断点（&lt;code&gt;int3&lt;/code&gt;）。返回地址是下一条指令地址。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Abort&lt;/strong&gt;：不可恢复的错误，如硬件错误。不保存可靠的返回地址。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="软中断software-interrupt"&gt;软中断（Software Interrupt） &lt;a href="#%e8%bd%af%e4%b8%ad%e6%96%adsoftware-interrupt" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;软中断是通过 &lt;code&gt;int&lt;/code&gt; 指令由软件主动触发的，不是由设备控制器发出的。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;常见的例子是 &lt;code&gt;int 0x80&lt;/code&gt; —— 在 x86 早期，Linux 使用 &lt;code&gt;int 0x80&lt;/code&gt; 作为系统调用的入口（已被 &lt;code&gt;sysenter&lt;/code&gt;/&lt;code&gt;syscall&lt;/code&gt; 取代）。注意这里的中断向量已经不是 BIOS 初始化的那个了，Linux 内核初始化时已经重新设置了中断向量表（IDT）。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="中断向量号分配"&gt;中断向量号分配 &lt;a href="#%e4%b8%ad%e6%96%ad%e5%90%91%e9%87%8f%e5%8f%b7%e5%88%86%e9%85%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;x86 体系下，中断向量号的分配大致如下：&lt;/p&gt;</description></item><item><title>GDT / LDT 与 TSS</title><link>/blog/2017-12-10-kernel-gdt-ldt/</link><pubDate>Sun, 10 Dec 2017 23:19:17 +0800</pubDate><guid>/blog/2017-12-10-kernel-gdt-ldt/</guid><description>&lt;p&gt;每个进程在gdt中存储两项，分别是tss和ldt，Linux源码中对两个结构体的定义如下。&lt;/p&gt;
 &lt;h3 id="tss任务状态段"&gt;tss，任务状态段 &lt;a href="#tss%e4%bb%bb%e5%8a%a1%e7%8a%b6%e6%80%81%e6%ae%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;tss中维持了与进程相关的处理器硬件上下文信息，主要是用于进程切换，其在内核源码中对应的数据结构为struct tss_struct，定义如下：&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;286 struct tss_struct {
@@ -1354,4 +1552,121 @@ return 0;
 307
 308 } ____cacheline_aligned;
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;其中结构体struct x86_hw_tss x86_tss中存储的是处理器中各个寄存器的值（根据处理器架构不同定义的结构体内容也不同），定义如下：&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;其中结构体struct x86_hw_tss x86_tss中存储的是处理器中各个寄存器的值（根据处理器架构不同定义的结构体内容也不同），定义如下：&lt;/p&gt;</description></item><item><title>理解 Linux 进程的三种 UID：Real、Effective、Saved Set-UID</title><link>/blog/2017-12-10-ruid-euid-suid/</link><pubDate>Sun, 10 Dec 2017 00:00:00 +0800</pubDate><guid>/blog/2017-12-10-ruid-euid-suid/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Linux 的权限模型中，每个进程都拥有三种用户 ID：&lt;strong&gt;real uid&lt;/strong&gt;、&lt;strong&gt;effective uid&lt;/strong&gt; 和 &lt;strong&gt;saved set-user-id&lt;/strong&gt;。它们是 Linux 权限控制和特权管理（特别是 setuid 程序）的基石。&lt;/p&gt;
+&lt;p&gt;本文基于 APUE 中的总结，配合一个 C 语言示例来帮助理解这三者的关系。&lt;/p&gt;
+&lt;h1 id="正文"&gt;正文 &lt;a href="#%e6%ad%a3%e6%96%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="三种-uid-的定义"&gt;三种 UID 的定义 &lt;a href="#%e4%b8%89%e7%a7%8d-uid-%e7%9a%84%e5%ae%9a%e4%b9%89" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;UID 类型&lt;/th&gt;
+&lt;th&gt;含义&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Real UID&lt;/strong&gt; (ruid)&lt;/td&gt;
+&lt;td&gt;实际用户 ID，标识&amp;quot;谁启动了这个进程&amp;quot;。通常是登录用户或父进程的 ruid&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Effective UID&lt;/strong&gt; (euid)&lt;/td&gt;
+&lt;td&gt;有效用户 ID，用于权限检查。内核在判断进程能否能执行某个操作（如读写文件）时看的是这个值&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Saved Set-UID&lt;/strong&gt; (suid)&lt;/td&gt;
+&lt;td&gt;保存的设置用户 ID，由&lt;code&gt;exec&lt;/code&gt; 从 euid 复制而来。用于让进程在临时切换权限后能恢复回来&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="setuid-位的作用"&gt;setuid 位的作用 &lt;a href="#setuid-%e4%bd%8d%e7%9a%84%e4%bd%9c%e7%94%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;可执行文件上可以设置 &amp;ldquo;set-user-ID&amp;rdquo; 位（&lt;code&gt;chmod u+s&lt;/code&gt;）。当这样的程序被执行时：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;进程的 &lt;strong&gt;effective uid&lt;/strong&gt; 会被设置为&lt;strong&gt;文件属主的 uid&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;进程的 &lt;strong&gt;saved set-uid&lt;/strong&gt; 会被从 euid 复制&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这允许普通用户临时获得文件属主（通常是 root）的权限来执行特定操作。&lt;/p&gt;
+&lt;h2 id="代码示例"&gt;代码示例 &lt;a href="#%e4%bb%a3%e7%a0%81%e7%a4%ba%e4%be%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;下面通过一个完整的示例来观察三种 UID 的变化：&lt;/p&gt;</description></item><item><title>Linux内核文档索引</title><link>/blog/2014-10-24-linux%E5%86%85%E6%A0%B8%E6%96%87%E6%A1%A3%E7%B4%A2%E5%BC%95/</link><pubDate>Fri, 24 Oct 2014 00:10:00 +0800</pubDate><guid>/blog/2014-10-24-linux%E5%86%85%E6%A0%B8%E6%96%87%E6%A1%A3%E7%B4%A2%E5%BC%95/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文是看内核源码时对文档的一个阅读、内容总结。&lt;/p&gt;
+&lt;h1 id="fri-sep-18-122306-cst-2014"&gt;=============================================================================
+Fri Sep 18 12:23:06 CST 2014 &lt;a href="#fri-sep-18-122306-cst-2014" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Documentation/&lt;/p&gt;
+&lt;p&gt;[1] zorro.txt
+zorro bus ii\iiioZorro II is the name of the general purpose expansion bus
+used by the Amiga 2000 computer. The bus is mainly a buffered extension of the
+Motorola 68000 bus, with support for bus mastering DMA. The expansion slots
+use a 100-pin connector and the card form factor is the same as the IBM PC.
+Zorro II cards implement the Autoconfig protocol for automatic address space
+assignment (designed before, yet similar to, Plug and Play on the PC). Zorro
+II was succeeded by Zorro III.&lt;/p&gt;</description></item><item><title>文件锁阻塞与信号响应</title><link>/blog/2017-11-20-filelock-signal/</link><pubDate>Sat, 01 Jan 2000 00:00:00 +0800</pubDate><guid>/blog/2017-11-20-filelock-signal/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;文件锁（&lt;code&gt;flock&lt;/code&gt;/&lt;code&gt;fcntl&lt;/code&gt;）是进程间同步的常用手段。当一个进程尝试获取已被占用的文件锁时，默认行为是阻塞等待。但问题来了：&lt;strong&gt;此时进程还能响应信号（如 &lt;code&gt;Ctrl+C&lt;/code&gt; 发送的 &lt;code&gt;SIGINT&lt;/code&gt;）吗？&lt;/strong&gt;&lt;/p&gt;
+&lt;h1 id="正文"&gt;正文 &lt;a href="#%e6%ad%a3%e6%96%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="结论可以"&gt;结论：可以！ &lt;a href="#%e7%bb%93%e8%ae%ba%e5%8f%af%e4%bb%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;如果文件锁被另一个进程持有，尝试获取锁的进程会被阻塞。但内核只会将此进程的状态改为**可中断等待（interruptible sleep）&lt;strong&gt;状态，而非&lt;/strong&gt;不可中断等待（uninterruptible sleep）**状态。&lt;/p&gt;
+&lt;p&gt;这意味着：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;没有信号到达时，进程处于睡眠状态，不参与调度&lt;/li&gt;
+&lt;li&gt;一旦有信号到达且未被进程屏蔽，内核会立即将进程状态修改为**可运行（running）**状态，使进程重新参与调度&lt;/li&gt;
+&lt;li&gt;信号处理函数得以执行&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="实测信号打断锁等待"&gt;实测：信号打断锁等待 &lt;a href="#%e5%ae%9e%e6%b5%8b%e4%bf%a1%e5%8f%b7%e6%89%93%e6%96%ad%e9%94%81%e7%ad%89%e5%be%85" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;下面的 C 程序演示：一个进程持有锁，另一个进程阻塞在 &lt;code&gt;fcntl(F_SETLKW)&lt;/code&gt; 上，此时 &lt;code&gt;Ctrl+C&lt;/code&gt; 发送 &lt;code&gt;SIGINT&lt;/code&gt; 能否唤醒它。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;stdlib.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+#include &amp;lt;fcntl.h&amp;gt;
+#include &amp;lt;signal.h&amp;gt;
+void handle_sigint(int sig) {
+printf(&amp;quot;Received signal %d, exiting...\n&amp;quot;, sig);
+exit(0);
+}
+int main() {
+signal(SIGINT, handle_sigint);
+int fd = open(&amp;quot;/tmp/test.lock&amp;quot;, O_RDWR | O_CREAT, 0644);
+if (fd == -1) {
+perror(&amp;quot;open&amp;quot;);
+return 1;
+}
+struct flock fl = {
+.l_type = F_WRLCK,
+.l_whence = SEEK_SET,
+.l_start = 0,
+.l_len = 0, // 锁定整个文件
+};
+printf(&amp;quot;Trying to acquire lock...\n&amp;quot;);
+fcntl(fd, F_SETLKW, &amp;amp;fl); // 阻塞等待锁
+printf(&amp;quot;Lock acquired!\n&amp;quot;);
+pause(); // 持有锁，等待测试
+close(fd);
+return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;# 终端 1：先启动一个实例持有锁
+$ gcc -o main main.c &amp;amp;&amp;amp; ./main &amp;amp;
+Trying to acquire lock...
+Lock acquired!
+# 终端 2：启动第二个实例，它会阻塞在 fcntl(F_SETLKW) 上
+$ ./main &amp;amp;
+Trying to acquire lock...
+# &amp;lt;阻塞中，状态为 interruptible sleep&amp;gt;
+# 按 Ctrl+C 发送 SIGINT
+^CReceived signal 2, exiting...
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;进程在获取不到文件锁时，内核只是将进程状态修改为&lt;strong&gt;可中断等待状态&lt;/strong&gt;，因此 &lt;code&gt;Ctrl+C&lt;/code&gt; 产生的 &lt;code&gt;SIGINT&lt;/code&gt; 能被正常接收和处理。&lt;/p&gt;</description></item><item><title>进程调度工具：taskset 与 top</title><link>/blog/2019-04-15-%E8%BF%9B%E7%A8%8B%E8%B0%83%E5%BA%A6%E5%B7%A5%E5%85%B7/</link><pubDate>Sat, 01 Jan 2000 00:00:00 +0800</pubDate><guid>/blog/2019-04-15-%E8%BF%9B%E7%A8%8B%E8%B0%83%E5%BA%A6%E5%B7%A5%E5%85%B7/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在日常运维和性能调优中，我们经常需要控制或观察进程调度行为。Linux 提供了 &lt;code&gt;taskset&lt;/code&gt; 和 &lt;code&gt;top&lt;/code&gt; 等工具来帮助我们完成这些任务。前者用于绑定 CPU，后者用于监控调度情况。&lt;/p&gt;
+&lt;h1 id="正文"&gt;正文 &lt;a href="#%e6%ad%a3%e6%96%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="taskset设置进程-cpu-亲和性"&gt;taskset：设置进程 CPU 亲和性 &lt;a href="#taskset%e8%ae%be%e7%bd%ae%e8%bf%9b%e7%a8%8b-cpu-%e4%ba%b2%e5%92%8c%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;taskset&lt;/code&gt; 可以限制进程只在指定的 CPU 核心上运行。&lt;/p&gt;
+&lt;h3 id="基本用法"&gt;基本用法 &lt;a href="#%e5%9f%ba%e6%9c%ac%e7%94%a8%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;NAME
+taskset - retrieve or set a process's CPU affinity
+SYNOPSIS
+taskset [options] mask command [arg]...
+taskset [options] -p [mask] pid
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="两种使用方式"&gt;两种使用方式 &lt;a href="#%e4%b8%a4%e7%a7%8d%e4%bd%bf%e7%94%a8%e6%96%b9%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;方式一：启动新进程时指定 CPU 粘性&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;taskset 0x00000001 ./my_program # 绑定到 CPU #0
+taskset -c 0,2,4 ./my_program # 绑定到 CPU #0, #2, #4
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;mask&lt;/code&gt; 是 CPU 掩码，&lt;code&gt;0x00000001&lt;/code&gt; 的二进制为 &lt;code&gt;...0001&lt;/code&gt;，表示 CPU CORE #0。&lt;code&gt;0x00000003&lt;/code&gt; 表示 CPU CORE #0 和 #1。&lt;/p&gt;</description></item></channel></rss>

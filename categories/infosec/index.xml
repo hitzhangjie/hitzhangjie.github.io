@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Infosec on</title><link>/categories/infosec/</link><description>Recent content in Infosec on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 30 Sep 2013 02:08:29 +0800</lastBuildDate><atom:link href="/categories/infosec/index.xml" rel="self" type="application/rss+xml"/><item><title>TCP/IP网络安全篇</title><link>/blog/2013-09-30-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8tcpipnetworksecurity/</link><pubDate>Mon, 30 Sep 2013 02:08:29 +0800</pubDate><guid>/blog/2013-09-30-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8tcpipnetworksecurity/</guid><description>&lt;p&gt;《TCP/IP 网络安全篇》，作者是日本的寺田真敏 萱岛 信。&lt;/p&gt;
+&lt;p&gt;感谢作者理论与实践结合的教学方式，简单地介绍了网络安全的方方面面，让
+我学起来也是很有兴趣，真诚地向寺田真敏先生道一声谢谢。&lt;/p&gt;
+&lt;p&gt;下面是我对本书学习过程中的一个总结，难免有理解偏差之处，还需在以后的
+学习实践过程中，进一步体会、纠正。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h1 id="1-tcpip的基础知识"&gt;1 TCP/IP的基础知识 &lt;a href="#1-tcpip%e7%9a%84%e5%9f%ba%e7%a1%80%e7%9f%a5%e8%af%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="11-tcpip与因特网"&gt;1.1 TCP/IP与因特网 &lt;a href="#11-tcpip%e4%b8%8e%e5%9b%a0%e7%89%b9%e7%bd%91" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;OSI 7-layer model&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-markdown"&gt;
+Host layers: applications Message
+presentation
+session
+--------------------------
+transport Message segment
+--------------------------
+media layer: network packet/datagram
+--------------------------
+data link frame
+--------------------------
+physical bit
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;用于分组交换的设备，IMP（Interface Message Processor）接口报文处理机
+的第一号机被设计制成。&lt;/p&gt;
+&lt;p&gt;TCP/IP协议，是以tcp协议和ip协议为中心，构成的协议族的总称。
+TCP/IP协议，从最底层开始，是由网络接口层、网络层、传输层、应用层构成。
+像这样的构成层次，可以使开发工作形成模块式开发。&lt;/p&gt;
+&lt;h2 id="12-ip"&gt;1.2 IP &lt;a href="#12-ip" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="ip地址与网络分类"&gt;IP地址与网络分类 &lt;a href="#ip%e5%9c%b0%e5%9d%80%e4%b8%8e%e7%bd%91%e7%bb%9c%e5%88%86%e7%b1%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;IP数据包的数据最大长度为65535字节。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;IP地址由网络号与主机号组成&lt;/strong&gt;。可以类对网络进行划分，根据网络的规模，从
+A类到C类，也存在用于多播通信的D类，其他用于实验的地址还有E类。&lt;/p&gt;
+&lt;p&gt;但是在目前，为了有效利用已经濒临枯竭的IPv4地址，采用了不依赖于类的IP
+地址分配方法——&lt;strong&gt;CIDR（Classless Inter Domain Routing，无类域间路由）&lt;/strong&gt;。
+而且为了解决IPv4地址的资源枯竭问题，也开发了具有128位长度的IPv6。&lt;/p&gt;
+&lt;h3 id="无类域间路由cidr"&gt;无类域间路由CIDR &lt;a href="#%e6%97%a0%e7%b1%bb%e5%9f%9f%e9%97%b4%e8%b7%af%e7%94%b1cidr" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;无类域间路由中关键的就是子网掩码。&lt;strong&gt;子网掩码，是为了改变网络号与主机号的分界位置&lt;/strong&gt;而采用的方法，如192.168.0.0/24，表示网络号24位，主机号8位，这个子网掩码设置就比之前分类的方式要灵活多了。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;特殊的IP地址:&lt;/strong&gt;
+&lt;strong&gt;1)本地环路地址&lt;/strong&gt;:linux下常见的回环接口lo，地址127.0.0.1，其ip地址可以
+根据需要任意设定，也称为localhost。常被用于同一计算机上的通信。
+&lt;strong&gt;2)广播地址&lt;/strong&gt;:主机号字段全部为1。
+&lt;strong&gt;3)多播地址&lt;/strong&gt;:224.0.0.0～239.255.255.255,常被用于特定工作组中的通信。
+&lt;strong&gt;4)私有IP地址&lt;/strong&gt;:限定于内部网络使用而分配的地址，rfc1597中，建议使用以下
+的地址段:
+A类中，10.0.0.0～10.255.255.255
+B类中，172.16.0.0～172.31.255.255
+C类中，192.168.0.0～192.168.255.255
+与私有IP地址相对，对于那些只使用于因特网上的IP地址，我们称为全局IP地址。&lt;/p&gt;</description></item></channel></rss>

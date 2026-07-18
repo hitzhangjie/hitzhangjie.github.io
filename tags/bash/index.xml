@@ -1,10 +1,104 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Bash on</title><link>/tags/bash/</link><description>Recent content in Bash on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 21 Mar 2019 14:32:38 +0800</lastBuildDate><atom:link href="/tags/bash/index.xml" rel="self" type="application/rss+xml"/><item><title>Bash Job Control：前后台进程管理</title><link>/blog/2019-03-21-admin-jobs-control/</link><pubDate>Thu, 21 Mar 2019 14:32:38 +0800</pubDate><guid>/blog/2019-03-21-admin-jobs-control/</guid><description>&lt;h1 id="how-to-use-bashs-job-control-to-manage-foreground-and-background-processes"&gt;How To Use Bash&amp;rsquo;s Job Control to Manage Foreground and Background Processes &lt;a href="#how-to-use-bashs-job-control-to-manage-foreground-and-background-processes" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Bash on</title><link>/tags/bash/</link><description>Recent content in Bash on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 19 May 2024 09:10:25 +0800</lastBuildDate><atom:link href="/tags/bash/index.xml" rel="self" type="application/rss+xml"/><item><title>Bash常用命令</title><link>/blog/linux-bash%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/</link><pubDate>Sun, 19 May 2024 09:10:25 +0800</pubDate><guid>/blog/linux-bash%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是一些日常高频使用的Linux命令。&lt;/p&gt;
+&lt;h2 id="navigation"&gt;Navigation &lt;a href="#navigation" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;pwd&lt;/code&gt;: print current workdir, &lt;code&gt;print -P&lt;/code&gt; print workdir and resolves symbolic link&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;pushd &amp;lt;dir&amp;gt;&lt;/code&gt;, record current workdir and change to dir&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;popd &amp;lt;dir&amp;gt;&lt;/code&gt;, change to previous recorded workdir&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;cd -&lt;/code&gt;, change to previous path&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="pattern-matching"&gt;Pattern Matching &lt;a href="#pattern-matching" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="basics"&gt;Basics &lt;a href="#basics" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;?&lt;/code&gt;: zero or one character&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;*&lt;/code&gt;: zero or more characters&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;[a-zA-Z0-9,.]&lt;/code&gt;, any character in this range&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;{a|b|c}&lt;/code&gt;, any character in this set, examples: &lt;code&gt;b{ed,olt,ar}s&lt;/code&gt; or &lt;code&gt;ls *.{c,h,o}&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="command-grep"&gt;Command: grep &lt;a href="#command-grep" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;grep --color&lt;/code&gt;: output the matching lines, &lt;code&gt;--color&lt;/code&gt; highlight the matches&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="command-find"&gt;Command: find &lt;a href="#command-find" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;find &amp;lt;dir&amp;gt; -iname &amp;lt;pattern&amp;gt;&lt;/code&gt;: find matching files in &lt;dir&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="file-operations"&gt;File Operations &lt;a href="#file-operations" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="basics-1"&gt;Basics &lt;a href="#basics-1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;cat&lt;/code&gt;: concatenate files and print on the standard output&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;tac&lt;/code&gt;: concatenate and print files in reverse&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;grep&lt;/code&gt;: search a file for a pattern&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;sort&lt;/code&gt;: sort lines of text files&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;uniq&lt;/code&gt;: deduplicate the lines, combined with &lt;code&gt;sort&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="word-count"&gt;Word count &lt;a href="#word-count" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;wc&lt;/code&gt;: count quantities of new lines, bytes, words, etc.&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;wc -m&lt;/code&gt;: count quantities of characters&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;wc -c&lt;/code&gt;: count quantities of bytes&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;wc -w&lt;/code&gt;: count quantities of words&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;wc -l&lt;/code&gt;: count quantities of lines&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="extract"&gt;Extract &lt;a href="#extract" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;cut -d, -f1,2&lt;/code&gt;: remove/extract sections from each line of files
+&lt;ul&gt;
+&lt;li&gt;How to set the delimiter to space?
+&lt;ul&gt;
+&lt;li&gt;Note: &lt;code&gt;-d' '&lt;/code&gt; only specifies space as the delimiter, not including tab. It&amp;rsquo;s inconvenient when files contain both space and tab.
+Example: &lt;code&gt;cut -d' ' -f2 filename&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;Note: &lt;code&gt;awk&lt;/code&gt; uses tab and space as the delimiter, which may be more convenient.
+Example: &lt;code&gt;cat filename | awk '{print $2}'&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;awk {print $1 $2 $NF-1}&lt;/code&gt;: print the columns 1, 2, the last&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;column -s, -t&lt;/code&gt;: split columns by &amp;lsquo;,&amp;rsquo; and output as table&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="edit"&gt;Edit &lt;a href="#edit" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;sed&lt;/code&gt;: &lt;code&gt;-i&lt;/code&gt; edit the input inplace, &lt;code&gt;s/a/b/g&lt;/code&gt; or &lt;code&gt;s|a|b|g&lt;/code&gt; to replace a with b&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;tr&lt;/code&gt;: convert input characters to others&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="compare"&gt;Compare &lt;a href="#compare" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;diff&lt;/code&gt;, compare files line by line
+Examples:
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;diff -s -y file1 file2&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;diff -q -y file1 file2&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;diff -r &amp;lt;dir1&amp;gt; &amp;lt;dir2&amp;gt;&lt;/code&gt;, compare folders recursively&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="compress"&gt;Compress &lt;a href="#compress" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;tar cvf[|z|j|J]&lt;/code&gt;, compress files&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;tar xvf&lt;/code&gt;, decompress files&lt;/li&gt;
+&lt;li&gt;supported compression format:
+&lt;ul&gt;
+&lt;li&gt;default, *.tar&lt;/li&gt;
+&lt;li&gt;-z, *.tar.gz or *.tgz&lt;/li&gt;
+&lt;li&gt;-j, *.bzip2&lt;/li&gt;
+&lt;li&gt;-J, *.xz&lt;/li&gt;
+&lt;li&gt;etc.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="print"&gt;Print &lt;a href="#print" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;lp&lt;/code&gt;: submit files and print&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="explorer"&gt;Explorer &lt;a href="#explorer" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;mc, 命令行下的文件管理器
+除了对文件的相关操作之外，还可以登录ftp服务器。&lt;/p&gt;</description></item><item><title>Bash Job Control：前后台进程管理</title><link>/blog/2019-03-21-admin-jobs-control/</link><pubDate>Thu, 21 Mar 2019 14:32:38 +0800</pubDate><guid>/blog/2019-03-21-admin-jobs-control/</guid><description>&lt;h1 id="how-to-use-bashs-job-control-to-manage-foreground-and-background-processes"&gt;How To Use Bash&amp;rsquo;s Job Control to Manage Foreground and Background Processes &lt;a href="#how-to-use-bashs-job-control-to-manage-foreground-and-background-processes" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;Posted October 5, 2015 198.6kviews&lt;/p&gt;
 &lt;p&gt;&lt;a href="https://www.digitalocean.com/community/tags/linux-basics?type=tutorials"&gt;LINUX BASICS&lt;/a&gt; &lt;a href="https://www.digitalocean.com/community/tags/linux-commands?type=tutorials"&gt;LINUX COMMANDS&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;Author: Justin Ellingwood&lt;/p&gt;
 &lt;h3 id="introduction"&gt;Introduction &lt;a href="#introduction" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;In this guide, we&amp;rsquo;ll talk about how &lt;code&gt;bash&lt;/code&gt;, the Linux system, and your terminal come together to offer process and job control. In a &lt;a href="https://www.digitalocean.com/community/tutorials/how-to-use-ps-kill-and-nice-to-manage-processes-in-linux"&gt;previous guide&lt;/a&gt;, we discussed how the &lt;code&gt;ps&lt;/code&gt;, &lt;code&gt;kill&lt;/code&gt;, and &lt;code&gt;nice&lt;/code&gt; commands can be used to control processes on your system.&lt;/p&gt;
-&lt;p&gt;This article will focus on managing foreground and background processes and will demonstrate how to leverage your shell&amp;rsquo;s job control functions to gain more flexibility in how you run commands.&lt;/p&gt;</description></item><item><title>常用 Shell 命令备忘</title><link>/blog/2017-12-10-admin-shell-cmds/</link><pubDate>Sun, 10 Dec 2017 14:32:38 +0800</pubDate><guid>/blog/2017-12-10-admin-shell-cmds/</guid><description>&lt;h1 id="常用命令"&gt;常用命令 &lt;a href="#%e5%b8%b8%e7%94%a8%e5%91%bd%e4%bb%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;This article will focus on managing foreground and background processes and will demonstrate how to leverage your shell&amp;rsquo;s job control functions to gain more flexibility in how you run commands.&lt;/p&gt;</description></item><item><title>常用 Shell 命令备忘</title><link>/blog/2017-12-10-shell-cmds-cheatsheet/</link><pubDate>Sun, 10 Dec 2017 14:32:38 +0800</pubDate><guid>/blog/2017-12-10-shell-cmds-cheatsheet/</guid><description>&lt;h1 id="常用命令"&gt;常用命令 &lt;a href="#%e5%b8%b8%e7%94%a8%e5%91%bd%e4%bb%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;h2 id="0-基础知识"&gt;0 基础知识 &lt;a href="#0-%e5%9f%ba%e7%a1%80%e7%9f%a5%e8%af%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;h3 id="01-停止解析命令行选项"&gt;0.1 停止解析命令行选项“&amp;ndash;” &lt;a href="#01-%e5%81%9c%e6%ad%a2%e8%a7%a3%e6%9e%90%e5%91%bd%e4%bb%a4%e8%a1%8c%e9%80%89%e9%a1%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;一般Linux下命令行参数可以通过两种方式来指定，一种是短选项“-?”，一种是长选项“&amp;ndash;？”，当希望停止解析命令行参数，将后续参数全部当做文件名来处理时，可以添加“&amp;ndash;”来告诉shell停止解析命令行参数。&lt;/p&gt;
@@ -33,7 +127,7 @@ echo ''$val'' 123 单引号内又有单引号，执行变量替换，内部嵌�
 echo &amp;quot;&amp;quot;$val&amp;quot;&amp;quot; 123 双引号内又有双引号，执行变量替换，内部嵌套的双引号不展示
 &lt;/code&gt;&lt;/pre&gt;
 &lt;h3 id="05-dfdu查看磁盘占用情况"&gt;0.5 df、du查看磁盘占用情况 &lt;a href="#05-dfdu%e6%9f%a5%e7%9c%8b%e7%a3%81%e7%9b%98%e5%8d%a0%e7%94%a8%e6%83%85%e5%86%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;查看各个分区占用情况：&lt;code&gt;df -h&lt;/code&gt;，加参数&lt;code&gt;-s&lt;/code&gt;查看所有分区汇总的占用情况；&lt;/p&gt;</description></item><item><title>Linux系统最佳实践 - 命令行技术</title><link>/blog/2012-06-21-linux%E7%B3%BB%E7%BB%9F%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5-%E5%91%BD%E4%BB%A4%E8%A1%8C%E6%8A%80%E6%9C%AF/</link><pubDate>Thu, 21 Jun 2012 08:00:00 +0800</pubDate><guid>/blog/2012-06-21-linux%E7%B3%BB%E7%BB%9F%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5-%E5%91%BD%E4%BB%A4%E8%A1%8C%E6%8A%80%E6%9C%AF/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是《Linux系统最佳实践工具-命令行技术》里的一些知识要点。&lt;/p&gt;
+&lt;p&gt;查看各个分区占用情况：&lt;code&gt;df -h&lt;/code&gt;，加参数&lt;code&gt;-s&lt;/code&gt;查看所有分区汇总的占用情况；&lt;/p&gt;</description></item><item><title>Linux系统最佳实践 - 命令行技术</title><link>/blog/2012-06-21-linux%E7%B3%BB%E7%BB%9F%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5%E5%91%BD%E4%BB%A4%E8%A1%8C%E6%8A%80%E6%9C%AF/</link><pubDate>Thu, 21 Jun 2012 08:00:00 +0800</pubDate><guid>/blog/2012-06-21-linux%E7%B3%BB%E7%BB%9F%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5%E5%91%BD%E4%BB%A4%E8%A1%8C%E6%8A%80%E6%9C%AF/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是《Linux系统最佳实践工具-命令行技术》里的一些知识要点。&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;# 《Linux系统最佳实践》学习笔记
 &amp;gt; 参考书目： 《Linux 系统最佳实践工具 —— 命令行技术 》
 &amp;gt; 本文撰写： 张 杰

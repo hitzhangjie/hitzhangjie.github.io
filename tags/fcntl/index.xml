@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Fcntl on</title><link>/tags/fcntl/</link><description>Recent content in Fcntl on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 18 Jul 2026 12:00:00 +0800</lastBuildDate><atom:link href="/tags/fcntl/index.xml" rel="self" type="application/rss+xml"/><item><title>文件锁实现：从建议性锁到强制性锁</title><link>/blog/2026-07-18-file-lock-implementations/</link><pubDate>Sat, 18 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-18-file-lock-implementations/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在多进程/多线程编程中，当多个执行流需要访问共享资源时，同步互斥是绕不开的话题。常见的同步机制有互斥锁（mutex）、信号量（semaphore）、条件变量等，这些适用于同一台机器上的线程或进程间同步。而当我们需要跨进程、甚至跨主机的同步时，&lt;strong&gt;文件锁&lt;/strong&gt;（file lock）便成了一种简单有效的选择。&lt;/p&gt;
+&lt;p&gt;文件锁的实现方式有多种，从最简单的基于 &lt;code&gt;open()&lt;/code&gt; 的排他性创建，到基于 &lt;code&gt;flock()&lt;/code&gt; / &lt;code&gt;fcntl()&lt;/code&gt; 的内核级锁机制。本文将系统性地梳理 Linux 下的文件锁实现方案，并深入讨论&lt;strong&gt;建议性锁&lt;/strong&gt;（advisory lock）与&lt;strong&gt;强制性锁&lt;/strong&gt;（mandatory lock）的区别。&lt;/p&gt;
+&lt;h1 id="实现方式一open-o_creato_excl"&gt;实现方式一：open O_CREAT|O_EXCL &lt;a href="#%e5%ae%9e%e7%8e%b0%e6%96%b9%e5%bc%8f%e4%b8%80open-o_creato_excl" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="原理"&gt;原理 &lt;a href="#%e5%8e%9f%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;这是最&amp;quot;原始&amp;quot;的文件锁实现方式，利用的是文件系统本身的原子性语义：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;调用 &lt;code&gt;open(path, O_CREAT | O_EXCL, ...)&lt;/code&gt; 时，内核会原子性地检查文件是否存在：
+&lt;ul&gt;
+&lt;li&gt;若文件&lt;strong&gt;不存在&lt;/strong&gt;，则创建文件并返回 fd —— 视为&lt;strong&gt;获取锁成功&lt;/strong&gt;；&lt;/li&gt;
+&lt;li&gt;若文件&lt;strong&gt;已存在&lt;/strong&gt;，则返回 &lt;code&gt;-1&lt;/code&gt;，&lt;code&gt;errno&lt;/code&gt; 设为 &lt;code&gt;EEXIST&lt;/code&gt; —— 视为&lt;strong&gt;锁已被他人持有&lt;/strong&gt;。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;解锁时，直接 &lt;code&gt;unlink()&lt;/code&gt; 删除该文件，释放锁。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;code&gt;O_CREAT | O_EXCL&lt;/code&gt; 的组合保证&amp;quot;检查-创建&amp;quot;是一个原子操作，不会出现 TOCTOU（time-of-check-time-of-use）竞态问题。&lt;/p&gt;
+&lt;h2 id="代码示例"&gt;代码示例 &lt;a href="#%e4%bb%a3%e7%a0%81%e7%a4%ba%e4%be%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;#include &amp;lt;sys/types.h&amp;gt;
+#include &amp;lt;sys/stat.h&amp;gt;
+#include &amp;lt;errno.h&amp;gt;
+#include &amp;lt;fcntl.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+#include &amp;lt;iostream&amp;gt;
+#define LOCKFILE &amp;quot;/tmp/tmp.lock&amp;quot;
+namespace FileLockExcl {
+class FileLock {
+public:
+static int lock()
+{
+int tempfd;
+// 循环重试，直到成功创建锁文件
+while ((tempfd = open(LOCKFILE, O_CREAT | O_RDWR | O_EXCL,
+S_IRUSR | S_IWUSR)) &amp;lt; 0) {
+if (errno != EEXIST) {
+std::cerr &amp;lt;&amp;lt; &amp;quot;Failed to create lockfile: &amp;quot; &amp;lt;&amp;lt; LOCKFILE &amp;lt;&amp;lt; std::endl;
+return -1;
+}
+// 文件已存在，说明锁被他人持有，忙等待
+}
+close(tempfd); // 创建成功后立即关闭，锁文件的存在性即代表锁的状态
+return 0;
+}
+static int unlock()
+{
+return unlink(LOCKFILE); // 删除文件即释放锁
+}
+};
+} // namespace FileLockExcl
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="优缺点分析"&gt;优缺点分析 &lt;a href="#%e4%bc%98%e7%bc%ba%e7%82%b9%e5%88%86%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;优点：&lt;/strong&gt;&lt;/p&gt;</description></item></channel></rss>

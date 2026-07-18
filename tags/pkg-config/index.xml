@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Pkg-Config on</title><link>/tags/pkg-config/</link><description>Recent content in Pkg-Config on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 10 Dec 2017 00:00:00 +0800</lastBuildDate><atom:link href="/tags/pkg-config/index.xml" rel="self" type="application/rss+xml"/><item><title>C/C++ 开发基础：构建工具与常用开发库</title><link>/blog/2017-12-10-build_toolchains/</link><pubDate>Sun, 10 Dec 2017 00:00:00 +0800</pubDate><guid>/blog/2017-12-10-build_toolchains/</guid><description>&lt;h1 id="1-开发基础"&gt;1 开发基础 &lt;a href="#1-%e5%bc%80%e5%8f%91%e5%9f%ba%e7%a1%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="10-构建工具"&gt;1.0 构建工具 &lt;a href="#10-%e6%9e%84%e5%bb%ba%e5%b7%a5%e5%85%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="101-gnu-m4"&gt;1.0.1 GNU M4 &lt;a href="#101-gnu-m4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;GNU M4是一个经典的Unix宏处理器实现，与&lt;a href="https://kb.iu.edu/d/agjs"&gt;SVR4&lt;/a&gt;兼容但同时又增加了一些扩展（比如可以处理超过9个宏参数）。GNU M4也内置了文件包含、运行shell命令、算术运算等功能。&lt;/p&gt;
+&lt;p&gt;GNU M4拷贝输入的宏并处理后进一步展开成编译器可处理的宏，宏是M4内置的也可以是用户自定义的，支持任意参数。除了做&lt;strong&gt;宏展开&lt;/strong&gt;（macro expansion）之外，还可以执行**文件包含、运行shell命令、算术运算、处理文本、递归……**等操作。M4可以用作一个编译器前端也可以单独作为一个宏处理器。&lt;/p&gt;
+&lt;p&gt;M4少为人知，用的人可能也不会直接编写M4脚本，大多数人是因为使用了&lt;a href="https://en.wikipedia.org/wiki/Autoconf"&gt;Autoconf&lt;/a&gt;而Autoconf又依赖M4所以才安装了M4。但是M4确实是非常强大的，甚至让一些程序员欲罢不能。&lt;/p&gt;
+&lt;p&gt;关于M4的更多介绍，请看M4手册：&lt;a href="https://www.gnu.org/savannah-checkouts/gnu/m4/manual/m4-1.4.18/html_node/index.html"&gt;M4 Mannual&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;这里有一篇笔记介绍了M4的工作原理、使用：&lt;a href="http://mbreen.com/m4.html"&gt;Notes on the M4 Macro Language&lt;/a&gt;&lt;/p&gt;
+&lt;h2 id="11-常用的软件开发包"&gt;1.1 常用的软件开发包 &lt;a href="#11-%e5%b8%b8%e7%94%a8%e7%9a%84%e8%bd%af%e4%bb%b6%e5%bc%80%e5%8f%91%e5%8c%85" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在列举常用的软件开发包之前，需先描述下如何高效地设置软件包头文件、库文件的搜索路径。&lt;/p&gt;
+&lt;h3 id="111-如何配置头文件库文件搜索路径"&gt;1.1.1 如何配置头文件、库文件搜索路径 &lt;a href="#111-%e5%a6%82%e4%bd%95%e9%85%8d%e7%bd%ae%e5%a4%b4%e6%96%87%e4%bb%b6%e5%ba%93%e6%96%87%e4%bb%b6%e6%90%9c%e7%b4%a2%e8%b7%af%e5%be%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;使用第三方软件包开发时常需要设置头文件、库文件的搜索路径，如何确定软件包对应的文件路径呢？pkg-config可以简化这一设置工作，如获取glib-2.0的头文件、库文件搜索路径执行如下命令即可：&lt;code&gt;pkg-config --cflags --libs glib-2.0&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;pkg-config是如何得知软件包的头文件、库文件搜索路径的呢？每个软件包在安装的时候就已经包含了这一信息，这些信息保存在 &lt;strong&gt;/usr/lib64/pkg-config/${pkg}.pc&lt;/strong&gt; 描述文件中，pkg-config只是读取该文件中的描述项而已。&lt;/p&gt;
+&lt;p&gt;以glib-2.0这一面向linux c程序开发的集合框架开发包为例：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;pkg-config --cflags --libs glib-.20
+-I/usr/local/Cellar/glib/2.54.2/include/glib-2.0
+-I/usr/local/Cellar/glib/2.54.2/lib/glib-2.0/include
+-I/usr/local/opt/gettext/include
+-I/usr/local/Cellar/pcre/8.41/include
+-L/usr/local/Cellar/glib/2.54.2/lib
+-L/usr/local/opt/gettext/lib
+-lglib-2.0
+-lintl
+-Wl,-framework
+-Wl,CoreFoundation
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;其中不仅包括了glib-2.0自身的头文件、库文件搜索路径，还包括了某些依赖的头文件、库文件搜索路径，可见pkg-config确实能简化头文件、库文件搜索路径的设置工作，开发人员应该充分利用起此工具。&lt;/p&gt;
+&lt;h3 id="112-适用于linux-c程序开发的开发包"&gt;1.1.2 适用于linux c程序开发的开发包 &lt;a href="#112-%e9%80%82%e7%94%a8%e4%ba%8elinux-c%e7%a8%8b%e5%ba%8f%e5%bc%80%e5%8f%91%e7%9a%84%e5%bc%80%e5%8f%91%e5%8c%85" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;h4 id="1121-集合框架类"&gt;1.1.2.1 集合框架类 &lt;a href="#1121-%e9%9b%86%e5%90%88%e6%a1%86%e6%9e%b6%e7%b1%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;在开发过程中经常要用到一些常见的数据结构，比如单链表、双链表、集合、哈希表、多阶哈希、avl树、红黑树、队列、栈等等，C++中提供了STL（标准模板库）简化了开发工作，Java中提供了对应的集合框架JUC包。但是C标准库里面并没有类似工具……Linux平台经过多年发展积累了一些面向C语言的集合框架，比如&lt;strong&gt;gnulib&lt;/strong&gt;、&lt;strong&gt;glib&lt;/strong&gt;等。&lt;/p&gt;
+&lt;p&gt;我们这里只介绍glib，glib从96年开始就已经诞生了，前后20多年时间表明其经得起实践的检验。glib封装的api表意清楚、使用简单，如果是一个比较熟练的C程序开发人员的话，应该很容易就能上手。&lt;/p&gt;
+&lt;p&gt;这里抽时间学习了一下glib-2.0工具包，其提供了如下常用的数据结构：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;单链表 GSList&lt;/li&gt;
+&lt;li&gt;双链表 GList&lt;/li&gt;
+&lt;li&gt;哈希表 GHashTable&lt;/li&gt;
+&lt;li&gt;动态数组 GArray&lt;/li&gt;
+&lt;li&gt;AVL树 GTree&lt;/li&gt;
+&lt;li&gt;队列 GQueue&lt;/li&gt;
+&lt;li&gt;记录 Relation&lt;/li&gt;
+&lt;li&gt;其他&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;有关glib-2.0的教程可以参考：&lt;a href="https://www.ibm.com/developerworks/linux/tutorials/l-glib/"&gt;Manage C data using the GLib collections&lt;/a&gt;&lt;/p&gt;</description></item></channel></rss>

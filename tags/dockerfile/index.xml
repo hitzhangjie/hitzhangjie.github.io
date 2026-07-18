@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Dockerfile on</title><link>/tags/dockerfile/</link><description>Recent content in Dockerfile on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 11 Nov 2018 00:00:00 +0800</lastBuildDate><atom:link href="/tags/dockerfile/index.xml" rel="self" type="application/rss+xml"/><item><title>如何编写 Dockerfile：从入门到系统化实践</title><link>/blog/2018-11-11-dockerfile%E7%B3%BB%E7%BB%9F%E5%8C%96%E5%AE%9E%E8%B7%B5/</link><pubDate>Sun, 11 Nov 2018 00:00:00 +0800</pubDate><guid>/blog/2018-11-11-dockerfile%E7%B3%BB%E7%BB%9F%E5%8C%96%E5%AE%9E%E8%B7%B5/</guid><description>&lt;blockquote&gt;
+&lt;p&gt;Dockerfile 是容器化应用的第一道门槛，也是 Docker 工程师的核心基本功。本文从零开始，系统性梳理如何编写一个高质量的 Dockerfile —— 从基础语法到定制镜像，再到构建优化和最佳实践。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id="1-dockerfile-是什么"&gt;1 Dockerfile 是什么 &lt;a href="#1-dockerfile-%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Dockerfile 是一个文本文件，其中包含了一系列指令（Instruction），用于描述如何基于一个基础镜像构建出目标镜像。每一条指令都会在基础镜像上创建一个新的&lt;strong&gt;镜像层（Layer）&lt;/strong&gt;，最终叠加成一个完整的镜像。&lt;/p&gt;
+&lt;p&gt;相比于 &lt;code&gt;docker commit&lt;/code&gt; 的手动、黑盒方式，Dockerfile &lt;strong&gt;可重复、可审计、可版本化&lt;/strong&gt;，是构建镜像的唯一推荐方式。&lt;/p&gt;
+&lt;h1 id="2-指令全览"&gt;2 指令全览 &lt;a href="#2-%e6%8c%87%e4%bb%a4%e5%85%a8%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Dockerfile 指令是构建块，下面按使用频率和重要性梳理每条指令的语义。&lt;/p&gt;
+&lt;h2 id="21-from--指定基础镜像"&gt;2.1 FROM — 指定基础镜像 &lt;a href="#21-from--%e6%8c%87%e5%ae%9a%e5%9f%ba%e7%a1%80%e9%95%9c%e5%83%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;必须是 Dockerfile 的第一条非注释指令。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-dockerfile"&gt;FROM ubuntu:22.04
+FROM golang:1.21-alpine AS builder # 多阶段构建时给阶段命名
+FROM scratch # 从空镜像开始，用于构建极简镜像
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;优先使用&lt;strong&gt;官方镜像&lt;/strong&gt;（&lt;code&gt;_/ubuntu&lt;/code&gt;、&lt;code&gt;_/golang&lt;/code&gt; 等）&lt;/li&gt;
+&lt;li&gt;指定&lt;strong&gt;精确 tag&lt;/strong&gt;，不要用 &lt;code&gt;latest&lt;/code&gt;（可重复性问题）&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;scratch&lt;/code&gt; 是 Docker Hub 上的保留名，代表一个完全空的镜像&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="22-run--构建时执行命令"&gt;2.2 RUN — 构建时执行命令 &lt;a href="#22-run--%e6%9e%84%e5%bb%ba%e6%97%b6%e6%89%a7%e8%a1%8c%e5%91%bd%e4%bb%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在镜像构建阶段执行命令，通常用于安装系统包、编译代码等。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-dockerfile"&gt;# shell 形式
+RUN apt-get update &amp;amp;&amp;amp; apt-get install -y nginx
+# exec 形式
+RUN [&amp;quot;apt-get&amp;quot;, &amp;quot;update&amp;quot;]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;关键原则&lt;/strong&gt;：多条命令用 &lt;code&gt;&amp;amp;&amp;amp;&lt;/code&gt; 串联在同一个 RUN 中，并在同一层清理安装缓存。每多一个 RUN 就多一层镜像，会增加镜像体积。&lt;/p&gt;</description></item></channel></rss>

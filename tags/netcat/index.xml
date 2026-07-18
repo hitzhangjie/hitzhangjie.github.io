@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Netcat on</title><link>/tags/netcat/</link><description>Recent content in Netcat on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 27 May 2019 00:00:00 +0800</lastBuildDate><atom:link href="/tags/netcat/index.xml" rel="self" type="application/rss+xml"/><item><title>用 nc 快速创建 Unix Domain Socket</title><link>/blog/2019-05-27-create-unix-socket/</link><pubDate>Mon, 27 May 2019 00:00:00 +0800</pubDate><guid>/blog/2019-05-27-create-unix-socket/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Unix Domain Socket 是 Linux 下高效的进程间通信（IPC）方式，与网络 socket 使用相同的 API，但数据不经过网络协议栈，直接在内核中传递，性能更好。&lt;/p&gt;
+&lt;p&gt;有时我们需要快速创建一个 Unix Domain Socket 来做测试或替代某些依赖，&lt;code&gt;nc&lt;/code&gt;（netcat）可以很方便地做到这一点。&lt;/p&gt;
+&lt;h1 id="正文"&gt;正文 &lt;a href="#%e6%ad%a3%e6%96%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="创建-unix-domain-socket"&gt;创建 Unix Domain Socket &lt;a href="#%e5%88%9b%e5%bb%ba-unix-domain-socket" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;使用 &lt;code&gt;nc&lt;/code&gt; 的 &lt;code&gt;-U&lt;/code&gt; 选项可以操作 Unix Domain Socket：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;nc -lkU /data/container2host/cdc
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;参数说明：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;-l&lt;/code&gt;：listen 模式，作为服务端监听&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;-k&lt;/code&gt;：保持监听状态，接受多个连接（客户端断开后不退出）&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;-U&lt;/code&gt;：使用 Unix Domain Socket 而非网络 socket&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这个命令会在 &lt;code&gt;/data/container2host/cdc&lt;/code&gt; 路径创建一个 Unix socket 文件并开始监听。&lt;/p&gt;
+&lt;h2 id="连接-unix-domain-socket"&gt;连接 Unix Domain Socket &lt;a href="#%e8%bf%9e%e6%8e%a5-unix-domain-socket" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;客户端可以通过同样的 &lt;code&gt;-U&lt;/code&gt; 选项连接：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;nc -U /data/container2host/cdc
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;然后就可以在两端之间双向传输数据了。&lt;/p&gt;
+&lt;h2 id="适用场景"&gt;适用场景 &lt;a href="#%e9%80%82%e7%94%a8%e5%9c%ba%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="1-替代缺失的依赖"&gt;1. 替代缺失的依赖 &lt;a href="#1-%e6%9b%bf%e4%bb%a3%e7%bc%ba%e5%a4%b1%e7%9a%84%e4%be%9d%e8%b5%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;有时候开发环境缺少某些服务（如 &lt;code&gt;dc&lt;/code&gt; 等），而这些服务背后其实只依赖一个 Unix socket 做通信。此时可以用 &lt;code&gt;nc -lkU&lt;/code&gt; 快速建立一个 stub socket，让上游可以正常连接。&lt;/p&gt;</description></item></channel></rss>

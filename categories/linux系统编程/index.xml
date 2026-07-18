@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Linux系统编程 on</title><link>/categories/linux%E7%B3%BB%E7%BB%9F%E7%BC%96%E7%A8%8B/</link><description>Recent content in Linux系统编程 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 18 Jul 2026 12:00:00 +0800</lastBuildDate><atom:link href="/categories/linux%E7%B3%BB%E7%BB%9F%E7%BC%96%E7%A8%8B/index.xml" rel="self" type="application/rss+xml"/><item><title>文件锁实现：从建议性锁到强制性锁</title><link>/blog/2026-07-18-file-lock-implementations/</link><pubDate>Sat, 18 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-18-file-lock-implementations/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在多进程/多线程编程中，当多个执行流需要访问共享资源时，同步互斥是绕不开的话题。常见的同步机制有互斥锁（mutex）、信号量（semaphore）、条件变量等，这些适用于同一台机器上的线程或进程间同步。而当我们需要跨进程、甚至跨主机的同步时，&lt;strong&gt;文件锁&lt;/strong&gt;（file lock）便成了一种简单有效的选择。&lt;/p&gt;
+&lt;p&gt;文件锁的实现方式有多种，从最简单的基于 &lt;code&gt;open()&lt;/code&gt; 的排他性创建，到基于 &lt;code&gt;flock()&lt;/code&gt; / &lt;code&gt;fcntl()&lt;/code&gt; 的内核级锁机制。本文将系统性地梳理 Linux 下的文件锁实现方案，并深入讨论&lt;strong&gt;建议性锁&lt;/strong&gt;（advisory lock）与&lt;strong&gt;强制性锁&lt;/strong&gt;（mandatory lock）的区别。&lt;/p&gt;
+&lt;h1 id="实现方式一open-o_creato_excl"&gt;实现方式一：open O_CREAT|O_EXCL &lt;a href="#%e5%ae%9e%e7%8e%b0%e6%96%b9%e5%bc%8f%e4%b8%80open-o_creato_excl" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="原理"&gt;原理 &lt;a href="#%e5%8e%9f%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;这是最&amp;quot;原始&amp;quot;的文件锁实现方式，利用的是文件系统本身的原子性语义：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;调用 &lt;code&gt;open(path, O_CREAT | O_EXCL, ...)&lt;/code&gt; 时，内核会原子性地检查文件是否存在：
+&lt;ul&gt;
+&lt;li&gt;若文件&lt;strong&gt;不存在&lt;/strong&gt;，则创建文件并返回 fd —— 视为&lt;strong&gt;获取锁成功&lt;/strong&gt;；&lt;/li&gt;
+&lt;li&gt;若文件&lt;strong&gt;已存在&lt;/strong&gt;，则返回 &lt;code&gt;-1&lt;/code&gt;，&lt;code&gt;errno&lt;/code&gt; 设为 &lt;code&gt;EEXIST&lt;/code&gt; —— 视为&lt;strong&gt;锁已被他人持有&lt;/strong&gt;。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;解锁时，直接 &lt;code&gt;unlink()&lt;/code&gt; 删除该文件，释放锁。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;code&gt;O_CREAT | O_EXCL&lt;/code&gt; 的组合保证&amp;quot;检查-创建&amp;quot;是一个原子操作，不会出现 TOCTOU（time-of-check-time-of-use）竞态问题。&lt;/p&gt;
+&lt;h2 id="代码示例"&gt;代码示例 &lt;a href="#%e4%bb%a3%e7%a0%81%e7%a4%ba%e4%be%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;#include &amp;lt;sys/types.h&amp;gt;
+#include &amp;lt;sys/stat.h&amp;gt;
+#include &amp;lt;errno.h&amp;gt;
+#include &amp;lt;fcntl.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+#include &amp;lt;iostream&amp;gt;
+#define LOCKFILE &amp;quot;/tmp/tmp.lock&amp;quot;
+namespace FileLockExcl {
+class FileLock {
+public:
+static int lock()
+{
+int tempfd;
+// 循环重试，直到成功创建锁文件
+while ((tempfd = open(LOCKFILE, O_CREAT | O_RDWR | O_EXCL,
+S_IRUSR | S_IWUSR)) &amp;lt; 0) {
+if (errno != EEXIST) {
+std::cerr &amp;lt;&amp;lt; &amp;quot;Failed to create lockfile: &amp;quot; &amp;lt;&amp;lt; LOCKFILE &amp;lt;&amp;lt; std::endl;
+return -1;
+}
+// 文件已存在，说明锁被他人持有，忙等待
+}
+close(tempfd); // 创建成功后立即关闭，锁文件的存在性即代表锁的状态
+return 0;
+}
+static int unlock()
+{
+return unlink(LOCKFILE); // 删除文件即释放锁
+}
+};
+} // namespace FileLockExcl
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="优缺点分析"&gt;优缺点分析 &lt;a href="#%e4%bc%98%e7%bc%ba%e7%82%b9%e5%88%86%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;优点：&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>Linux内联汇编基础</title><link>/blog/2014-10-01-linux%E5%86%85%E8%81%94%E6%B1%87%E7%BC%96%E5%9F%BA%E7%A1%80/</link><pubDate>Wed, 01 Oct 2014 00:16:34 +0800</pubDate><guid>/blog/2014-10-01-linux%E5%86%85%E8%81%94%E6%B1%87%E7%BC%96%E5%9F%BA%E7%A1%80/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是阅读内核源码《Linux内核源码情景分析》时对内联汇编的一些总结。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;1.full template
+__asm__(assembler template
+:output operands /* optional */
+:input operands /* optional */
+:list of clobbered registers /* optional */
+);
+2.x86 registers
+eax,ebx,ecx,edx
+edi,esi
+ebp,esp
+eip
+eflags
+3.linux代码中很多地方都使用了这种形式的汇编语言，嵌入汇编程序的格式如下：
+　　__asm__ __volatile__ (
+　　asm statements
+　　: outputs
+　　: inputs
+　　: registers-modified
+　　);
+　　asm statements是一组AT&amp;amp;T格式的汇编语言语句，每个语句一行，由\n分隔各行。所有的语句都被包裹在一对双引号内。其中使用的寄存器前面要加两个%%做前缀(%n表示参数,n:数字)；转移指令多是局部转移，因此多使用数字标号。
+　　inputs指明程序的输入参数，每个输入参数都括在一对圆括号内，各参数用逗号分开。每个参数前加一个用双引号括起来的标志，告诉编译器把该参数装入到何处。
+　　可用的标志有：
+　　“g”：让编译器决定如何装入它；
+　　“a”：装入到ax/eax；
+　　“b”：装入到bx/ebx；
+　　“c”：装入到cx/ecx；
+　　“d”：装入到dx/edx；
+　　“D”：装入到di/edi；
+　　“S”：装入到si/esi；
+　　“q”：a、b、c、d寄存器等；
+　　“r”：任一通用寄存器；
+　　“i”：整立即数；
+　　“I”：0-31 之间的立即数（用于32位移位指令）；
+　　“J”：0-63 之间的立即数（用于64 位移位指令）；
+　　“N”：0-255 ，之间的立即数（用于out 指令）；
+　　“n”：立即数，有些系统不支持除字以外的立即数，这些系统应该使用“n”而不是“i”；
+　　“p”：有效内存地址；
+　　“m”：内存变量；
+　　“o”：操作数为内存变量，但是其寻址方式是偏移量类型，也即是基址寻址，或者是基址加变址寻址；
+　　“V”：操作数为内存变量，但寻址方式不是偏移量类型；
+　　“,”：操作数为内存变量，但寻址方式为自动增量；
+　　“X”：操作数可以是任何类型；
+　　“f”：浮点数；
+　　“t”：第一个浮点寄存器；
+　　“u”：第二个浮点寄存器；
+　　“G”：标准的80387；
+　　% ：浮点常数,该操作数可以和下一个操作数交换位置；
+　　“=”：输出；
+　　“+”：既是输入又是输出；
+　　“&amp;amp;”：改变其值之前写,分配一个独立的寄存器,使得函数返回值和该变量不因为重复使用同一个寄存器,出现数据覆盖；
+　　“%”：与下一个操作数之间可互换；
+　　“#”：忽略其后的字符，直到逗号；
+　　“*”：当优先选择寄存器时，忽略下面的字符；
+　　“0”~“9”：指定一个操作数，它既做输入又做输出。通常用“g”；
+　　outputs指明程序的输出位置，通常是变量。每个输出变量都括在一对圆括号内，各个输出变量间用逗号隔开。每个输出变量前加一个标志，告诉编译器从何处输出。
+　　可用的标志与输入参数用的标志相同，只是前面加“=”。如“=g”。输出操作数必须是左值，而且必须是只写的。如果一个操作数即做输出又做输 入，那么必须将它们分开：一个只写操作数，一个输入操作数。输入操作数前加一个数字限制（0~9），指出输出操作数的序号，告诉编译器它们必须在同一个物 理位置。两个操作数可以是同一个表达式，也可以是不同的表达式。
+　　registers-modified告诉编译器程序中将要修改的寄存器。每个寄存器都用双引号括起来，并用逗号隔开。如“ax”。如果汇编程 序中引用了某个特定的硬件寄存器，就应该在此处列出这些寄存器，以告诉编译器这些寄存器的值被改变了。如果汇编程序中用某种不可预测的方式修改了内存，应 该在此处加上“memory”。这样以来，在整个汇编程序中，编译器就不会把它的值缓存在寄存器中了。
+　　如:
+　　“cc”：你使用的指令会改变CPU的条件寄存器cc；
+　　“memory”：你使用的指令会修改内存；
+　　__volatile__是可选的，它防止编译器修改该段汇编语句（重排序、重组、删除等）。
+　　输入参数和输出变量按顺序编号，先输出后输入，编号从0开始。程序中用编号代表输入参数和输出变量（加%做前缀）。
+　　输入、输出、寄存器部分都可有可无。如有，顺序不能变；如无，应保留“：”，除非不引起二意性。
+　　看一个在C语言中使用at&amp;amp;t的嵌入汇编程序的例子，c语言中的3个int变量，一般会是三个内存地址。每个操作数的长度则要根据操作系统和编译器来决定，一般32位操作系统为32位，则每个操作数占用4个字节：
+　　int i=0, j=1, k=0;
+　　__asm__ __volatile__(&amp;quot;
+　　pushl %%eax\n //asm statement
+　　movl %1, %%eax\n //asm statement
+　　addl %2, %%eax\n //asm statement
+　　movl %%eax, %0\n //...
+　　popl %%eax&amp;quot; //...
+　　: &amp;quot;=g&amp;quot; (k) //outputs
+　　: &amp;quot;g&amp;quot; (i), &amp;quot;g&amp;quot; (j) //inputs
+　　: &amp;quot;ax&amp;quot;, &amp;quot;memory&amp;quot; //registers modified
+　　);
+　　按照参数编号原则输出参数参数k为%0,输入参数i和j依次为%1和%2。值得注意的是输出和输入标志都使用了&amp;quot;g&amp;quot;,所以我们不必关心这些参数究竟是使用了寄存器还是内存操作数，编译器自己会决定。
+4.linux/windows汇编指令的区别
+Note:
+汇编指令的执行需要汇编程序将其翻译成机器代码，由于汇编程序是系统程序的一部分，而linux跟windows本身设计上存在很多不同，汇编程序当然不例外，所以，他们支持的汇编指令的格式也存在很多不同。
+DOS/Windows 下的汇编语言代码都是 Intel 风格的。但在 Unix 和 Linux 系统中，更多采用的还是 AT&amp;amp;T 格式，两者在语法格式上有着很大的不同：
+在 AT&amp;amp;T 汇编格式中，寄存器名要加上 '%' 作为前缀；而在 Intel 汇编格式中，寄存器名不需要加前缀。例如：
+AT&amp;amp;T 格式 pushl %eax
+Intel 格式 push eax
+在 AT&amp;amp;T 汇编格式中，用 '\$' 前缀表示一个立即操作数；而在 Intel 汇编格式中，立即数的表示不用带任何前缀。例如：
+AT&amp;amp;T 格式 pushl $1
+Intel 格式 push 1
+AT&amp;amp;T 和 Intel 格式中的源操作数和目标操作数的位置正好相反。在 Intel 汇编格式中，目标操作数在源操作数的左边；而在 AT&amp;amp;T 汇编格式中，目标操作数在源操作数的右边。例如：
+AT&amp;amp;T 格式 addl $1, %eax
+Intel 格式 add eax, 1
+在 AT&amp;amp;T 汇编格式中，操作数的字长由操作符的最后一个字母决定，后缀'b'、'w'、'l'分别表示操作数为字节（byte，8 比特）、字（word，16 比特）和长字（long，32比特）；而在 Intel 汇编格式中，操作数的字长是用 &amp;quot;byte ptr&amp;quot; 和 &amp;quot;word ptr&amp;quot; 等前缀来表示的。例如：
+AT&amp;amp;T 格式
+movb val, %al
+Intel 格式 mov al, byte ptr val
+在 AT&amp;amp;T 汇编格式中，绝对转移和调用指令（jump/call）的操作数前要加上'*'作为前缀，而在 Intel 格式中则不需要。
+远程转移指令和远程子调用指令的操作码，在 AT&amp;amp;T 汇编格式中为 &amp;quot;ljump&amp;quot; 和 &amp;quot;lcall&amp;quot;，而在 Intel 汇编格式中则为 &amp;quot;jmp far&amp;quot; 和 &amp;quot;call far&amp;quot;，即：
+AT&amp;amp;T 格式 ljump $section, $offset lcall $section, $offset
+Intel 格式 jmp far section:offset call far section:offset
+与之相应的远程返回指令则为：
+AT&amp;amp;T 格式 lret $stack_adjust
+Intel 格式 ret far stack_adjust
+在 AT&amp;amp;T 汇编格式中，内存操作数的寻址方式是
+section:disp(base, index, scale)
+而在 Intel 汇编格式中，内存操作数的寻址方式为：
+section:[base + index*scale + disp]
+&lt;/code&gt;&lt;/pre&gt;</description></item><item><title>Unix环境高级编程</title><link>/blog/2014-06-01-unix%E7%8E%AF%E5%A2%83%E9%AB%98%E7%BA%A7%E7%BC%96%E7%A8%8B/</link><pubDate>Wed, 11 Jun 2014 08:00:00 +0800</pubDate><guid>/blog/2014-06-01-unix%E7%8E%AF%E5%A2%83%E9%AB%98%E7%BA%A7%E7%BC%96%E7%A8%8B/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是Unix环境高级编程里的一些知识要点。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;# Advanced Programming in Unix Environment
+############################################################################
+Mon Jun 9 09:22:41 CST 2014
+############################################################################
+M1 Unix基础知识
+1. man man
+1)user commands
+2)system calls
+3)c library functions
+4)devices and special files
+5)file formats and conventions
+6)games
+7)miscellanea
+8)system admistration tools and daemons
+2. c return values
+1)return 0, 正常结束
+2)return 1-255，表示错误代码
+3. 工作目录
+char *getcwd(char *buf, size_t size);
+int chdir(char *path);
+4. libc与glibc的关系
+libc是泛指c库，glibc是gnu组织对libc的一种实现，是unix、linux的根基，微软也有自
+己对libc的实现，叫msvcrt。
+5. read system call
+return 0, 表示到达了文件的结尾。
+6. Ctrl+D，默认的文件结束字符
+ctrl+c，中断键
+ctrl+\，退出键
+7. fork，执行一次，返回两次，对父进程返回子进程的进程id，对子进程返回0
+8. 出错处理和出错恢复
+errno
+当unix函数出错时，常常返回一个负值，同时将整形变量errno设置为含有附加信息的一
+个值，例如open调用失败返回-1，对应的有大约15中不同的errno值。
+errno.h中定义了errno以及可以赋予它的各种常量，这些常量都以字母E开头。
+举个例子：
+E2BIG：参数列表太长
+EAGAIN：资源临时不可获取
+EACCESS：权限不够，访问被拒绝
+EBADF：无效文件描述符
+EBUSY：设备忙或资源忙
+ECANCELED：操作被取消
+ECHILD：没有子进程
+EEXIST：文件已经存在
+EFAULT：无效地址
+EFBIG：文件尺寸过大
+EINTR：中断函数调用
+EIO：IO错误
+...
+char *strerror(int errno);
+void perror(char *msg);
+对于资源相关的非致命性错误，一般恢复动作是延迟一些时间，然后再试
+9. 支持线程的环境中，需要使用局部errno，避免线程间的相互干扰
+10. 为什么要将用户名、组名映射为id呢？
+1）如果使用全场ascii登录名和组名，则需要更多的磁盘空间进行存储；
+2）在查验权限期间，比较字符串较之比较整形更消耗时间
+11. 度量一个进程的执行时间：
+时钟时间、用户cpu时间、系统cpu时间，time命令
+12. 系统调用和库函数
+1)从实现者的角度来看，两者的实现有着重大的不同，通常库函数是在系统调用之上建立起
+来的；
+2)从用户的角度来看，两者并没有明显的区别；
+通常，我们可以替换库函数，但是不能或者很难替换系统调用；
+############################################################################
+M2 Unix标准化
+1.
+1)ISO C, (ANSI在ISO中代表美国的利益），按照改标准定义的头文件，将iso c库分成24
+个区
+2)IEEE POSIX，添加来pthreads（POSIX线程）、更多的实时接口、事件跟踪方面的扩展
+3)Single Unix Specification(SUS)，是POSIX的超集，在POSIX基础上，定义来一些附加
+的接口，相应的系统接口全集被称为X/Open系统接口(X/Open System Interface, XSI)
+ISO-&amp;gt;POSIX-&amp;gt;XSI
+只有遵循XSI的实现，才能称为是Unix系统
+2. 限制
+Unix定义了很多幻数和常量，不同的实现定义的值可能不一样，为了增加可移植性，需要
+解决这些问题，为此提供了如下三种限制：
+1)编译时限制（头文件）
+编译时需要确定的幻数和常量的值，可以在头文件中定义；
+2)不与文件或目录相关联的运行时限制，可以通过sysconf函数获取；
+3)与文件或目录相关链的运行时限制，可以通过pathconf或者fpathconf函数获取；
+1）iso c定义的限制都是编译时限制，例如头文件limits.h中定义的常量；
+2）posix和xsi定义的限制既有编译时限制，也有运行时限制；
+############################################################################
+M3 文件I/O
+1. 不带缓冲的IO，指的是每个read、write操作都对应内核中的一次系统调用
+2.将标准输入、输出、错误输出分别用文件描述符1、2、3来引用，是shell的惯例，与内
+核没有关系。
+一个进程可以打开的文件描述符的范围是0～OPEN_MAX。
+3. lseek，返回文件当前的偏移量，可以是负值，所以再测试lseek是否失败的时候，不
+能判断是否小于0，而应判断是否等于-1；lseek定位时指定的偏移量可以大于文件长度，
+这时会在文件中产生空洞;
+产生的空洞读为\0，可以在程序中进行处理，将\0去掉，即将空洞从文件中删除。
+4. IO效率，建议缓冲区长度采用4096字节，此时消耗的系统cpu时间最小，用户cpu时间
+、时钟时间也比较小4.
+5. 内核用于所有IO的数据结构
+1)进程表项中存储着打开的文件描述符列表，每个文件描述符表项包含文件描述符以及指
+向文件表项的指针；
+2)文件表，在文件表中，内核为所有打开的文件增加一个表项。其实进程每调用一次open
+，就会在文件表中增加一个文件表项；dup、dup2只是复制文件描述符，内核不会创建新
+的文件表项；
+每个文件表项，包含文件状态标志、当前文件的偏移量以及指向v节点表项的v节点指针
+3)v节点表，每个打开的文件，内核都在v节点表中创建一个v节点表项，v节点表项包含了
+i节点信息（索引节点信息）以及当前文件长度；
+每个打开的磁盘上的文件，只对应一个v节点表项
+6. 因为对文件的io操作，通常是采用的建议性锁机制，多个进程读写同一个文件时，可
+能在读写时产生冲突， pread、pwrite可以将定位和读写封装为一个原子性操作，可以解
+决这个问题；当然如果对文件操作施加强制性锁，不用pread、pwrite也是可以的
+7. sync，fsync，fdatasync
+平时我们说的不带缓冲的io，指的是每次read、write都是一个系统调用，然后进入内核
+进行操作。这里需要注意的是，并不是说内核在处理io相关的操作的时候，就没有缓冲。
+为了减少磁盘读写次数，内核总是使用了缓冲机制的，只不过用户通过不带缓冲的io进行
+访问时，会进入内核进行操作而已。
+例如通过write写一个文件，写入的数据内核不会立即将其更新到磁盘上，而是将其放入
+一个缓冲区中，等待缓冲区满时，在将其排入输出队列更新到磁盘上，这样做的优点是减
+少了写磁盘的次数，提高了效率；这样做的缺点是，延长了磁盘文件的更新时间，如果发
+生某种意外，可能会造成更新数据的丢失；
+为了使得内核缓冲区中的数据与磁盘上的数据保持一致，提供了三个函数
+sync,fsync,fdatasync，对于普通用户来讲，fsync应该是用的比较多的吧。
+8. fcntl函数，可以更改已打开文件的性质。
+9. 打开文件描述符/dev/fd/N等效于复制文件描述符N
+############################################################################
+M4 文件和目录
+1. stat结构体中的st_mode成员，对其进行测试，判断文件类型，判断的时候使用如下宏：
+S_ISREG(st_mode)：普通文件
+S_ISDIR(st_mode)：目录文件
+S_ISCHR(st_mode)：字符设备文件
+S_ISBLK(st_mode)：块设备文件
+S_ISFIFO(st_mode)：fifo，用于进程间通信，有时也称其为有名管道（mkfifo创建有名
+管道，pipe创建无名管道）
+S_ISLNK(st_mode)：符号链接文件（非符号链接文件的硬链接数至少为1）
+S_ISSOCK(st_mode)：socket文件，用于网络间的进程间通信
+2. shell命令过长，通过符号“\”来段行
+3. stat,fstat,lstat
+stat函数不会观察到符号链接，观察符号链接，应该使用lstat函数
+4. 与一个进程相关联的ID有6个或者更多
+1)实际用户ID/实际组ID：（标识进程实际上是谁创建的）
+2)有效用户ID/有效组ID/附加组ID：（用于进程的文件访问权限检查）
+3)保存的设置用户ID/保存的设置组ID：（exec从有效用户ID复制得到的）
+使用宏S_ISUID和S_ISGID对st_mode进行测试，判断有没有对设置用户ID位/设置组ID位进
+行设置, 例如S_ISUID &amp;amp; st.st_mode。
+```c
+#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;stdlib.h&amp;gt;
+#include &amp;lt;sys/types.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+int main(int argc, char *argv[])
+{
+printf(&amp;quot;euid is: %d\n&amp;quot;, (int)geteuid());
+printf(&amp;quot;uid is: %d\n&amp;quot;, (int)getuid());
+return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;测试uid，euid&lt;/p&gt;</description></item></channel></rss>

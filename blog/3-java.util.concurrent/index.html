@@ -1,0 +1,262 @@
+<!doctype html><html lang=en-US><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-regular.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-500.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-700.woff2 type=font/woff2 crossorigin><script>window.__LAYOUT_WIDTH_DEFAULT__="standard"</script><script>(()=>{(function(){var t,n={compact:1,standard:1,wide:1,fullscreen:1},s="layout-width-v",o="3",e=null,i=null;try{e=localStorage.getItem("layout-width"),i=localStorage.getItem(s)}catch{}if(i!==o){e==="standard"?e="compact":e==="compact"?e="standard":e==="normal"?e="compact":e==="reading"&&(e="wide");try{e&&localStorage.setItem("layout-width",e),localStorage.setItem(s,o)}catch{}}t=window.__LAYOUT_WIDTH_DEFAULT__||"standard",n[t]||(t="standard"),e&&!n[e]&&(e=null),document.documentElement.setAttribute("data-layout-width",e||t)})()})()</script><link rel=stylesheet href=/main.b615b1507c1e1c5443244530a5f48eca62cd4be6f7f25836a8424c64ffc4b17dfc5917bb55874c38fdd94a7b3507dd1e7a74a4f9cc39283854c7a11c5db3442b.css integrity="sha512-thWxUHweHFRDJEUwpfSOymLNS+b38lg2qEJMZP/EsX38WRe7VYdMOP3ZSns1B90eenSk+cw5KDhUx6EcXbNEKw==" crossorigin=anonymous><noscript><style>img.lazyload{display:none}</style></noscript><meta name=robots content="index, follow"><meta name=googlebot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><meta name=bingbot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><title>- MySpace</title><meta name=description content="package java.util.concurrent提供了并发编程相关的一些工具，包括同步互斥相关的工具（如锁、条件变量）和并发数据结构，这里总结一下。
+1 并发同步 # 1.1 锁 # 1.1.1 Lock接口 # lock接口定义如下，lock提供了排他性访问能力：
+package java.util.concurrent.locks; public interface Lock { // 申请加锁，如果已经被占用，则阻塞当前线程 void lock(); // 申请加锁，如果已经被占用，则阻塞当前线程，只有被中断才能被唤醒 void lockInterruptibly() throws InterruptedExeption; // 尝试加锁，如果已经被占用，则立即返回加锁失败 boolean tryLock(); // 解锁操作 unlock(); // 创建新的monitor条件 Condition newCondition(); } 不可重入的Lock接口实现在实际使用中是非常不友好的，jdk里面提供的Lock接口实现，都至少是锁可重入的。
+ReentrantLock，是一个可重入锁实现，具有如下特点：
+是可重入锁； 可要求同时持有多个锁，通过newCondition()方法； 可通过new ReentrantLock(isFairLock)中的参数来指定是否创建公平锁（该锁有公平、非公平两种实现）； 可以不用一直阻塞，通过tryLock(time, unit)来实现这一点，等待一段时间仍不能获得锁就返回加锁失败。 公平锁、非公平锁，指获得锁的顺序是否与申请加锁的顺序一致，一致就是公平锁实现，反之就是非公平锁实现。
+1.1.2 ReadWriteLock接口 # public interface ReadWriteLock { // 返回一个用于read的读锁 Lock readLock(); // 返回一个用于write的写锁 Lock writeLock(); } ReentrantReadWriteLock，是一个可重入的读写锁实现。
+1.2 条件变量 # Condition接口，提供了同步操作的条件判断能力：
+"><link rel=canonical href=/blog/3-java.util.concurrent/><meta property="og:locale" content="en_US"><meta property="og:type" content="article"><meta property="og:title" content><meta property="og:description" content="package java.util.concurrent提供了并发编程相关的一些工具，包括同步互斥相关的工具（如锁、条件变量）和并发数据结构，这里总结一下。
+1 并发同步 #
+1.1 锁 #
+1.1.1 Lock接口 #
+lock接口定义如下，lock提供了排他性访问能力：
+package java.util.concurrent.locks;
+
+public interface Lock {
+    // 申请加锁，如果已经被占用，则阻塞当前线程
+    void lock();
+    // 申请加锁，如果已经被占用，则阻塞当前线程，只有被中断才能被唤醒
+    void lockInterruptibly() throws InterruptedExeption;
+    // 尝试加锁，如果已经被占用，则立即返回加锁失败
+    boolean tryLock();
+    // 解锁操作
+    unlock();
+    // 创建新的monitor条件
+    Condition newCondition();
+}
+
+不可重入的Lock接口实现在实际使用中是非常不友好的，jdk里面提供的Lock接口实现，都至少是锁可重入的。
+ReentrantLock，是一个可重入锁实现，具有如下特点：
+
+是可重入锁；
+可要求同时持有多个锁，通过newCondition()方法；
+可通过new ReentrantLock(isFairLock)中的参数来指定是否创建公平锁（该锁有公平、非公平两种实现）；
+可以不用一直阻塞，通过tryLock(time, unit)来实现这一点，等待一段时间仍不能获得锁就返回加锁失败。
+
+
+公平锁、非公平锁，指获得锁的顺序是否与申请加锁的顺序一致，一致就是公平锁实现，反之就是非公平锁实现。
+
+1.1.2 ReadWriteLock接口 #
+public interface ReadWriteLock {
+    // 返回一个用于read的读锁
+    Lock readLock();
+    // 返回一个用于write的写锁
+    Lock writeLock();
+}
+
+ReentrantReadWriteLock，是一个可重入的读写锁实现。
+1.2 条件变量 #
+Condition接口，提供了同步操作的条件判断能力："><meta property="og:url" content="/blog/3-java.util.concurrent/"><meta property="og:site_name" content="MySpace"><meta property="og:image" content="/doks.png"><meta property="og:image:alt" content="MySpace"><meta name=twitter:card content="summary_large_image"><meta name=twitter:site content="@hitzhangjie"><meta name=twitter:creator content="@hitzhangjie"><meta name=twitter:title content><meta name=twitter:description content><meta name=twitter:image content="/doks.png"><meta name=twitter:image:alt content><script type=application/ld+json>{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/1","name":"","url":"/","sameAs":["https://twitter.com/hitzhangjie","https://www.linkedin.com/in/hitzhangjie/","https://github.com/hitzhangjie"],"image":{"@type":"ImageObject","@id":"/#/schema/image/1","url":"/\u003cnil\u003e","width":null,"height":null,"caption":""}},{"@type":"WebSite","@id":"/#/schema/website/1","url":"/","name":"MySpace","description":"MySpace is a hitzhangjie\u0027s personal space, for blogs, books, journey, thinkings.","publisher":{"@id":"/#/schema/person/1"}},{"@type":"WebPage","@id":"/blog/3-java.util.concurrent/","url":"/blog/3-java.util.concurrent/","name":"","description":"","isPartOf":{"@id":"/#/schema/website/1"},"about":{"@id":"/#/schema/person/1"},"datePublished":"0001-01-01T00:00:00CET","dateModified":"0001-01-01T00:00:00CET","breadcrumb":{"@id":"/blog/3-java.util.concurrent/#/schema/breadcrumb/1"},"primaryImageOfPage":{"@id":"/blog/3-java.util.concurrent/#/schema/image/2"},"inLanguage":"","potentialAction":[{"@type":"ReadAction","target":["/blog/3-java.util.concurrent/"]}]},{"@type":"BreadcrumbList","@id":"/blog/3-java.util.concurrent/#/schema/breadcrumb/1","name":"Breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"item":{"@type":"WebPage","@id":"/","url":"/","name":"Home"}},{"@type":"ListItem","position":2,"item":{"@id":"/blog3-java.util.concurrent/"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Article","@id":"/#/schema/article/1","headline":"","description":"","isPartOf":{"@id":"/blog/3-java.util.concurrent/"},"mainEntityOfPage":{"@id":"/blog/3-java.util.concurrent/"},"datePublished":"0001-01-01T00:00:00CET","dateModified":"0001-01-01T00:00:00CET","author":{"@id":"/#/schema/person/2"},"publisher":{"@id":"/#/schema/person/1"},"image":{"@id":"/blog/3-java.util.concurrent/#/schema/image/2"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/2","name":null,"sameAs":[]}]},{"@context":"https://schema.org","@graph":[{"@type":"ImageObject","@id":"/blog/3-java.util.concurrent/#/schema/image/2","url":"/doks.png","contentUrl":"/doks.png","caption":""}]}]}</script><meta name=theme-color content="#fff"><link rel=icon href=/favicon.ico sizes=any><link rel=icon type=image/svg+xml href=/favicon.svg><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest crossorigin=use-credentials href=/site.webmanifest><script type=text/javascript src='https://platform-api.sharethis.com/js/sharethis.js#property=607868a58d7101001829a8df&product=sop' async></script><style>[alt~=sharing]{border:0;box-shadow:none}div#st-1{text-align:unset}div#st-1 .st-btn{height:24px;padding:0 4px}div#st-1 .st-btn>img{top:4.2px}div#st-2 .st-btn{height:24px;padding:0 4px}div#st-2 .st-btn>img{top:4.2px}</style><script async src="https://www.googletagmanager.com/gtag/js?id=UA-168027530-1"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","UA-168027530-1")</script></head><body class="blog single d-flex flex-column min-vh-100"><div class=sticky-top><div class=header-bar></div><header class="navbar navbar-expand-lg navbar-light doks-navbar"><nav class="container-xxl flex-wrap flex-lg-nowrap" aria-label="Main navigation"><a class="navbar-brand order-0" href=/ aria-label=MySpace>MySpace
+</a><button class="btn btn-menu order-2 d-block d-lg-none" type=button data-bs-toggle=offcanvas data-bs-target=#offcanvasDoks aria-controls=offcanvasDoks aria-label="Open main menu">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div class="offcanvas offcanvas-end border-0 py-lg-1" tabindex=-1 id=offcanvasDoks data-bs-backdrop=true aria-labelledby=offcanvasDoksLabel><div class="header-bar d-lg-none"></div><div class="offcanvas-header d-lg-none"><h2 class="h5 offcanvas-title ps-2" id=offcanvasDoksLabel><a class=text-dark href=/>MySpace</a></h2><button type=button class="btn-close text-reset me-2" data-bs-dismiss=offcanvas aria-label="Close main menu"></button></div><div class="offcanvas-body p-4 p-lg-0"><ul class="nav flex-column flex-lg-row align-items-lg-center mt-2 mt-lg-0 ms-lg-2 me-lg-auto"><li class=nav-item><a class="nav-link ps-0 py-1 active" href=/blog/>Blog</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/books/>Books</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/landscape>Landscape</a></li></ul><hr class="text-black-50 my-4 d-lg-none"><form class="doks-search position-relative flex-grow-1 ms-lg-auto me-lg-2"><input id=search class="form-control is-search" type=search placeholder="Search docs..." aria-label="Search docs..." autocomplete=off><div id=suggestions class="shadow bg-white rounded d-none"></div></form><hr class="text-black-50 my-4 d-lg-none"><ul class="nav flex-column flex-lg-row"><li class=nav-item><a class="nav-link social-link" href=https://twitter.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg><small class="ms-2 d-lg-none">Twitter</small></a></li><li class=nav-item><a class="nav-link social-link" href=https://github.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37.0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44.0 0020 4.77 5.07 5.07.0 0019.91 1S18.73.65 16 2.48a13.38 13.38.0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07.0 005 4.77 5.44 5.44.0 003.5 8.55c0 5.42 3.3 6.61 6.44 7A3.37 3.37.0 009 18.13V22"/></svg><small class="ms-2 d-lg-none">GitHub</small></a></li><li class="nav-item layout-width-dropdown"><a class="nav-link layout-width-dropdown-btn" href=# data-bs-toggle=dropdown aria-expanded=false aria-label=切换布局宽度 title=切换布局宽度><span class=lw-icon-standard><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-compact><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-wide><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span><span class=lw-icon-fullscreen><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg></span></a><ul class="dropdown-menu dropdown-menu-end"><li><button class="dropdown-item layout-width-option" data-layout-value=compact>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span>紧凑布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=standard>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>标准布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=wide>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span>宽松布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=fullscreen>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>全屏布局</button></li></ul></li></ul></div></div></nav></header></div><div class="wrap container-xxl" role=document><div class=content><div class="row flex-xl-nowrap" data-layout-width=standard><div class="col-lg-4 col-xl-3 docs-sidebar"><nav class=docs-links aria-label="Main navigation"></nav></div><main class="docs-content col-lg-12 col-xl-10"><h1></h1><p><small>Posted 0001-01-01 00:00 +0800 by <a class="stretched-link position-relative" href>ZhangJie</a>&nbsp;&dash;&nbsp;<strong>3&nbsp;min read</strong></small><p><div style=display:flex><div>分享:&nbsp;&nbsp;</div><div><div class=sharethis-inline-share-buttons></div></div></div><hr><p class=lead></p><p><code>package java.util.concurrent</code>提供了并发编程相关的一些工具，包括同步互斥相关的工具（如锁、条件变量）和并发数据结构，这里总结一下。</p><h1 id=1-并发同步>1 并发同步 <a href=#1-%e5%b9%b6%e5%8f%91%e5%90%8c%e6%ad%a5 class=anchor aria-hidden=true>#</a></h1><h2 id=11-锁>1.1 锁 <a href=#11-%e9%94%81 class=anchor aria-hidden=true>#</a><a href=#11-锁 class=anchor aria-hidden=true>#</a></h2><h3 id=111-lock接口>1.1.1 Lock接口 <a href=#111-lock%e6%8e%a5%e5%8f%a3 class=anchor aria-hidden=true>#</a><a href=#111-lock接口 class=anchor aria-hidden=true>#</a></h3><p>lock接口定义如下，lock提供了排他性访问能力：</p><pre><code class=language-java>package java.util.concurrent.locks;
+
+public interface Lock {
+    // 申请加锁，如果已经被占用，则阻塞当前线程
+    void lock();
+    // 申请加锁，如果已经被占用，则阻塞当前线程，只有被中断才能被唤醒
+    void lockInterruptibly() throws InterruptedExeption;
+    // 尝试加锁，如果已经被占用，则立即返回加锁失败
+    boolean tryLock();
+    // 解锁操作
+    unlock();
+    // 创建新的monitor条件
+    Condition newCondition();
+}
+</code></pre><p>不可重入的Lock接口实现在实际使用中是非常不友好的，jdk里面提供的Lock接口实现，都至少是锁可重入的。</p><p>ReentrantLock，是一个可重入锁实现，具有如下特点：</p><ul><li>是可重入锁；</li><li>可要求同时持有多个锁，通过<code>newCondition()</code>方法；</li><li>可通过<code>new ReentrantLock(isFairLock)</code>中的参数来指定是否创建公平锁（该锁有公平、非公平两种实现）；</li><li>可以不用一直阻塞，通过<code>tryLock(time, unit)</code>来实现这一点，等待一段时间仍不能获得锁就返回加锁失败。</li></ul><blockquote><p>公平锁、非公平锁，指获得锁的顺序是否与申请加锁的顺序一致，一致就是公平锁实现，反之就是非公平锁实现。</p></blockquote><h3 id=112-readwritelock接口>1.1.2 ReadWriteLock接口 <a href=#112-readwritelock%e6%8e%a5%e5%8f%a3 class=anchor aria-hidden=true>#</a><a href=#112-readwritelock接口 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-java>public interface ReadWriteLock {
+    // 返回一个用于read的读锁
+    Lock readLock();
+    // 返回一个用于write的写锁
+    Lock writeLock();
+}
+</code></pre><p><code>ReentrantReadWriteLock</code>，是一个可重入的读写锁实现。</p><h2 id=12-条件变量>1.2 条件变量 <a href=#12-%e6%9d%a1%e4%bb%b6%e5%8f%98%e9%87%8f class=anchor aria-hidden=true>#</a><a href=#12-条件变量 class=anchor aria-hidden=true>#</a></h2><p><code>Condition</code>接口，提供了同步操作的条件判断能力：</p><pre><code class=language-java>package java.util.conconcurrent.locks;
+
+public interface Condition {
+    // 让线程进入waiting状态，除非被signal唤醒或者interrupt
+    void await() throws InterruptedException;
+    // 让线程进入waiting状态，除非被signale唤醒
+    void awaitUninterruptibly();
+    // 让线程进入timed_waiting状态，可以被signale唤醒或者interrupt，或等定时器超时
+    void awaitNanos(long nanosTimeout) throws InterruptedException;
+    // 让线程进入timed_waiting状态，与awaitNaos类似，区别是可以自己指定时间单位  
+    void await(long time, TimeUnit unit) throws InterruptedExeption;
+    // 让线程进入timed_waiting状态，与前两个区别是指定的超时时间是一个日期
+    boolean awaitUntil(Date deadline) throws InterruptedException;
+    // 唤醒在当前condition上等待的众多线程中的其中一个
+    void signal();
+    // 唤醒在当前condition上等待的所有的线程
+    void signalAll();
+}
+</code></pre><h1 id=2-并发调度>2 并发调度 <a href=#2-%e5%b9%b6%e5%8f%91%e8%b0%83%e5%ba%a6 class=anchor aria-hidden=true>#</a></h1><h2 id=21-executor接口>2.1 Executor接口 <a href=#21-executor%e6%8e%a5%e5%8f%a3 class=anchor aria-hidden=true>#</a><a href=#21-executor接口 class=anchor aria-hidden=true>#</a></h2><h3 id=211-executor>2.1.1 Executor <a href=#211-executor class=anchor aria-hidden=true>#</a><a href=#211-executor class=anchor aria-hidden=true>#</a></h3><p>Executor，是最最基本的执行器接口，其他的都是这个的派生。这个接口只是定义了execute方法，并告知该接口的实现类应该可以接受一个任务（Runnable的实现类）并予以调度。但是调度的方式（比如是定时调度，还是周期性调度，是同步调度，还是异步调度，是并行调度，还是串行调度），以及调度的时间，这些都没有进行明确的规定。这给其他的Executor接口以及实现提供了扩展的空间。</p><pre><code class=language-java>public interface Executor {
+
+    /**
+     * Executes the given command at some time in the future.  The command
+     * may execute in a new thread, in a pooled thread, or in the calling
+     * thread, at the discretion of the &lt;tt&gt;Executor&lt;/tt&gt; implementation.
+     *
+     * @param command the runnable task
+     * @throws RejectedExecutionException if this task cannot be
+     * accepted for execution.
+     * @throws NullPointerException if command is null
+     */
+    void execute(Runnable command);
+}
+</code></pre><h3 id=212-executorservice>2.1.2 ExecutorService <a href=#212-executorservice class=anchor aria-hidden=true>#</a><a href=#212-executorservice class=anchor aria-hidden=true>#</a></h3><p>ExecutorService是Executor的派生接口，它扩展了Executor的具体功能，表现在添加了很多有用的函数，描述了完整的异步（不在调用线程中执行提交的任务）并发任务调度能力。可以向其提交一个或者多个任务，可以调度其中的任意一个或者所有的任务，并可以设定超时时限。submit函数还可以返回一个或者一系列的Future对象，用于跟踪任务执行的状态，并可以控制任务继续执行、取消等动作。</p><pre><code class=language-java>public interface ExecutorService extends Executor {
+
+    // 不再接受新的task；
+    // 对于已经提交的task，会允许其执行完成；
+    void shutdown();
+
+    // 不再接受新的task；
+    // 对于正在执行的tasks，尽最大努力让其停止；
+    // 对于正在waiting的tasks，阻止其执行；
+    // 返回未完成的tasks列表。
+    List&lt;Runnable&gt; shutdownNow();
+
+	// 当前executor service是否已经shutdown
+    boolean isShutdown();
+
+    // executor service调用了shutdown或shutdownNow之后才会返回true；
+    // 表示的是所有的线程都被停止了；
+    boolean isTerminated();
+
+	// 调用了shutdown之后，再调用该方法，会阻塞调用线程，直到executor中所有线程结束
+    boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException;
+
+    // 提交任务；
+    // 通过返回的Future对象可以跟踪任务的执行状态；
+    Future&lt;T&gt; submit(Callable&lt;T&gt; task);
+    Future&lt;T&gt; submit(Runnable task, T result);
+
+    // 激活所有的或任意的一个任务，在指定时间内如果没有完成，则返回；
+    // 通过返回的Future对象，可以跟踪任务的执行状态；
+    List&lt;Future&lt;T&gt;&gt; invokeAll(Collection&lt;? extends Callable&lt;T&gt;&gt; tasks, 
+                            long timeout, TimeUnit unit) 
+        					throws InterruptedException;
+    T invokeAny(Collection&lt;? extends Callable&lt;T&gt;&gt; tasks, 
+                			long timeout, TimeUnit unit)
+        					throws InterruptedException, ExecutionException, TimeoutException;
+}
+</code></pre><h3 id=213-scheduledexecutorservice>2.1.3 ScheduledExecutorService <a href=#213-scheduledexecutorservice class=anchor aria-hidden=true>#</a><a href=#213-scheduledexecutorservice class=anchor aria-hidden=true>#</a></h3><p>它是ExecutorService的派生接口，在ExecutorService的基础上，添加了<strong>延时调度</strong>、<strong>周期性调度</strong>的功能。</p><pre><code class=language-java>public interface ScheduledExecutorService extends ExecutorService {
+
+	// 延时指定时延之后，调度一次command（线程池中线程调用command.run）
+    public ScheduledFuture&lt;?&gt; schedule(Runnable command,
+                                       long delay, TimeUnit unit);
+	// ………………………………………………………………………………（线程池中线程调用callable.call)
+    public ScheduledFuture&lt;V&gt; schedule(Callable&lt;V&gt; callable,
+                                           long delay, TimeUnit unit);
+	// 在指定时延之后，按指定地周期，周期性地调度command；
+    public ScheduledFuture&lt;?&gt; scheduleAtFixedRate(Runnable command,
+                                                  long initialDelay,
+                                                  long period,
+                                                  TimeUnit unit);
+	// 在指定时延之后，按指定地时延，周期性地调度command
+    public ScheduledFuture&lt;?&gt; scheduleWithFixedDelay(Runnable command,
+                                                     long initialDelay,
+                                                     long delay,
+                                                     TimeUnit unit);
+}
+</code></pre><p>上述几个方法都可以根据返回的<strong>ScheduledFuture</strong>对象来跟踪被调度任务的执行状态。</p><p>注意：需要对上面的2个方法进行一下特别说明：</p><p><strong>1）scheduleAtFixedRate</strong></p><ul><li>这方法会创建一个动作，并在指定的时延initialDelay之后激活这个动作；</li><li>这个方法在初始时延之后会周期性地调度这个动作，这里的周期性调度的参考开始时间是initialDelay，即如果第一次在initialDelay时刻调度，那么在initialDelay+1<em>period时刻第二次调度，在initialDelay+2</em>period时刻发生第三次调度……；</li><li>如果当这个动作调度一次的执行时间，大于period时，此时后续的调度会被延迟，至于怎么延迟，看具体实现。不要以为调度一次时间大于period之后，executors会利用多个线程来并发地调度，不会的；
+如何实现周期性地调度，肯定是将这个动作，按照period插入到任务队列里面，如果其中的某次调度抛出了异常，则后续的动作都将不会被调度；
+只可以通过调用cancel或者terminate方法来终止调度；</li></ul><p><strong>2）scheduleWithFixedDelay</strong></p><ul><li>这个方法，要更加明确一点，它指的是在指定时延之后开始对任务的调度，当这个任务当前次调度执行结束之后，从结束时刻开始计时，直到过了delay的时间长度，然后再调度下一次执行；</li><li>当前面一次调度出现异常之后，后续的调度也是不再被调度；</li><li>只可以通过调用cancel或者terminate方法来终止调度；</li></ul><p>从这里可以看到，ScheduledExecutorService并不能真正精确地按照FixedRate调度或者FixedDelay调度，只能尽最大能力来模拟，程序员还是要知道Executor的实现细节才能选择出更好的调度方案、实现预设的并发任务调度。</p><h2 id=22-executor实现>2.2 Executor实现 <a href=#22-executor%e5%ae%9e%e7%8e%b0 class=anchor aria-hidden=true>#</a><a href=#22-executor实现 class=anchor aria-hidden=true>#</a></h2><h3 id=221-threadpoolexecutor>2.2.1 ThreadPoolExecutor <a href=#221-threadpoolexecutor class=anchor aria-hidden=true>#</a><a href=#221-threadpoolexecutor class=anchor aria-hidden=true>#</a></h3><pre><code class=language-java>public class ThreadPoolExecutor extends AbstractExecutorService {
+    // 这个阻塞队列中存储着要执行的任务，poll取出一个任务交给worker线程进行处理
+    private final BlockingQueue&lt;Runnable&gt; workQueue;
+
+    // 可重入锁
+    private final ReentrantLock mainLock = new ReentrantLock();
+
+    // worker线程集合，访问workers时必须持有mainLock
+    private final HashSet&lt;Worker&gt; workes = new HashSet&lt;Worker&gt;();
+
+    // 跟踪线程池中线程数量的峰值，访问时，需要持有mainLock
+    private int largestPoolSize;
+
+    // 已经完成的任务数量，当worker线程结束之后才会执行+1操作，需要持有mainLock
+    private long completedTaskCount;
+
+    // 所有worker线程的创建都是通过这里的线程工厂，然后调用addWorker方法加入workers
+    private volatile ThreadFactory threadFactory;
+    
+    // 线程池中要求保持alive状态的线程数量的最小值
+    private volatile int corePoolSize;
+    // 线程池中允许创建的线程数量的最大值
+    private volatile int maximumPoolSize;
+
+    // 添加一个worker线程，新创建的worker线程被加入到workers这个集合中，添加成功返回true。
+    private boolean addWorker(Runnable firstTask, boolean core) {
+        // ……
+        w = new Worker(firstTask);
+        Thread t = w.Thread;
+
+        workers.add(w);
+        if(workerAdded) {
+        	// addWorker的时候，线程就启动了，启动之后就开始执行任务队列中的任务
+        	t.start();
+        }
+        // ……
+    }
+    
+    // 获取一个任务
+    private Runnable getTask() {
+        // ……
+        // 如果允许超时，则用poll，poll可以指定超时参数，此时如果没有task可以获取，
+        // 超出corePoolSize的线程超时候将保持alived状态；
+        // 如果不允许超时，则用take，take会一直阻塞，直到task可以获取。
+        Runnable r = timed ?
+        workQueue.poll(keepAliveTime, TimeUnit.NANOSECONDS) :
+        workQueue.take();
+        // ……
+    }
+    
+    // 运行一个worker线程
+    final void runWorker(Worker w) {
+        Thread wt = Thread.currentThread();
+        Runnable task = w.firstTask;
+        w.firstTask = null;
+        w.unlock();	// allow interrupts
+
+        try {
+            while(task!=null || task=getTask()!=null) {
+                w.lock()
+                // ……
+                task.run();	// 在当前线程上执行
+                // ……
+                w.unlock
+                // ……
+            }
+	    }
+    }
+    
+    // 内部类Worker线程
+    private final class Worker extends AbstractQueuedSynchronizer implements Runnable {
+        public void run() {
+        	// 父类的runWorker方法中可以不停地获取到任务并在当前Worker线程上执行
+        	runWorker(this);
+        }
+    }
+}
+</code></pre><p><strong>线程池数量如何控制？合适创建、销毁新线程？</strong></p><ol><li><p>当线程池中线程数量 &lt; corePoolSize的时候，如果新任务到达，会创建一个Thread加入线程池；</p></li><li><p>当线程池子中线程数量 > corePoolSize，并且 &lt; maxiumPoolSize的时候，只有workQueue中task已满的情况下，才会创建新线程，否则不创建。</p><blockquote><p>因为如果task不满表示当前线程数就可以处理完，如果task已满的情况下为了避免后续任务无法提交，需要立即对task进行消费、处理，因此需要创建新线程。</p></blockquote></li></ol><p><strong>线程池ThreadPoolExecutor中比较重要的几个点？</strong></p><ol><li><p>待执行的任务，都保存在阻塞队列BlockingQueue<runnable>里面；</p></li><li><p>执行任务的线程，都存放在线程池里面，这些线程都记录在一个集合Set<worker> workers里面，称为工作线程；</p></li><li><p>使用工厂模式来创建线程，这里依赖类ThreadFactory threadFactory，通过它来创建worker线程；</p><p>什么时候创建线程？提交任务的时候，参考几个参数决定是否创建线程。</p><ul><li>corePoolSize，为线程池中保持alive状态的线程的最小数量，线程start之后、terminated之前都是alive的；</li><li>maxiumPoolSize，表示线程池中允许创建的线程的最大数量；</li><li>largestPoolSize，记录线程池中出现的线程数量的峰值；</li></ul><p>创建线程的控制逻辑可以参考前面的问题，其中有提及线程池如何控制线程创建、销毁。线程创建之后启动执行，具体过程是由threadFactory new一个Worker线程对象，并调用其start方法，这个start方法调用run方法，run方法中调用的是外部类ThreadPoolExecutor中的runWorker(this)，这里的runWorker由于是外部类的函数，其中可以通过getTask从任务队列获取任务，并调用任务的run方法在worker线程上运行。runWorker中获取task并执行task.run()。</p></li><li><p>Worker线程内部类，Worker线程初始创建的时候，一般都有一个firstTask，执行了该task之后，就将firstTask设置为null，有点模仿进程调度idle进程的意思。</p></li><li><p>ThreadPoolExecutor在getTask中获取任务时，如果alive状态线程数量超过了corePoolSize，这个时候根据是否允许该部分线程进入idle状态：</p><ul><li>如果允许，这部分线程就用带超时限制的poll方法调用来获取task，如果获取不到就返回idle状态稍后再试；</li><li>如果不允许，这部分线程获取不到任务就会进入waiting状态，直到有任务可以获取被唤醒。</li></ul></li></ol><h3 id=222-scheduledthreadpoolexecutor>2.2.2 ScheduledThreadPoolExecutor <a href=#222-scheduledthreadpoolexecutor class=anchor aria-hidden=true>#</a><a href=#222-scheduledthreadpoolexecutor class=anchor aria-hidden=true>#</a></h3><p>这个Executor提供了延时调度、周期性调度方法。通过这两种方法调度时，一个任务被多次调度，这里的一次调度我们称为一个执行点，即一个周期性调度的任务有多个执行时间点。</p><ul><li>同一个任务的不同执行点，可能由不同的线程进行调度；同一个任务的不同的执行点在被调度时，在时间序列上一定不会出现重叠（比如ScheduleAtFixedRate，task执行时间超过间隔时间，后续执行点将被推迟调度）！</li><li>并且调度队列中排在前面的执行点与排在后面的执行点，确立了一个happends-before关系，即前一个执行点时做的修改，对后续执行点调度时是可见的。</li></ul><pre><code class=language-java>public class ScheduledThreadPoolExecutor
+        extends ThreadPoolExecutor
+        implements ScheduledExecutorService {
+
+    private class ScheduledFutureTask&lt;V&gt;
+    	extends FutureTask&lt;V&gt; implements RunnableScheduledFuture&lt;V&gt; {
+        
+        private long time;		// 上次执行点时间	
+        private long period;	// 调度周期
+
+		// ……
+    } 	
+}
+</code></pre><p>该Executor之所以能够实现周期性调度，是因为当一个task在某个worker线程上被执行了之后，就立即把task中的time修改一下，然后重新加入了任务队列tasks中。</p><p>当worker线程再次从tasks中取出这个task的时候，如果立即调度，可能不满足周期性调度、延时调度的条件，以周期性调度为例，它就会计算一下当前时间与期望的时间点之间的差值，period-(now-task.time)，如果这个值为正值，表示还没到期望调度的执行时间，此时当前worker线程执行awaitNanos，等待一定N纳秒后再次执行，以校准执行时间点。</p><p><strong>“按固定频率调度” 与 “按固定延时调度”，两种调度方式都需要在任务结束后处理下次调度时间task.time，只不过修改task.time时使用的参照物不一样：</strong></p><ul><li>scheduledAtFixedRate按固定频率执行，参考的是<strong>task执行点开始的时间</strong>；</li><li>scheduledWithFixedDelay按固定延时执行，参考的是<strong>task执行点结束的时间</strong>。</li></ul><h2 id=23-forkjoinpool>2.3 ForkJoinPool <a href=#23-forkjoinpool class=anchor aria-hidden=true>#</a><a href=#23-forkjoinpool class=anchor aria-hidden=true>#</a></h2><p>Java 7里面引入了fork/join框架，任务处理通过“<strong>分治（Divide and Conquer）</strong>”的方式将其递归地细分为多个不相关的、足够简单的子任务，然后充分利用多处理器、多核来并行处理各个子任务，最后再将计算结果递归地汇总，从而提高并发处理能力。</p><p>为了高效地进行并发处理，fork/join框架使用一个线程池<strong>ForkJoinPool</strong>来管理worker线程<strong>ForkJoinWorkerThread</strong>。</p><h3 id=231-forkjoinpool>2.3.1 ForkJoinPool <a href=#231-forkjoinpool class=anchor aria-hidden=true>#</a><a href=#231-forkjoinpool class=anchor aria-hidden=true>#</a></h3><p>ForkJoinPool是fork/join框架的核心，它实现了ExecutorService接口，实现了对worker线程的管理，也提供了一些工具给我们方便查询线程池的状态和性能。worker线程一次只能执行一个task，ForkJoinPool不会为每一个subtask都创建一个新的worker线程。</p><p>ScheduledThreadPoolExecutor中是所有的worker线程共享一个全局task队列，所有worker线程都从这个队列中抢任务，全局锁就可能会成为性能瓶颈。ForkJoinPool中使用了不同的方式，<strong>每一个worker线程都有自己的一个任务队列</strong>，实现时用双端队列deque实现的。这种架构设计对于worker线程通过“<strong>work-stealing算法</strong>”平衡各自的负载是至关重要的。</p><blockquote><p>这一点有点类似于golang中的scheduler实现，golang scheduler GPM模型的设计，也是采用了work-stealing算法，物理线程M优先从绑定的P中获取G执行，如果没有则从其他P中获取G执行，再没有从全局队列中获取G执行。</p></blockquote><h3 id=232-work-stealing算法>2.3.2 Work-Stealing算法 <a href=#232-work-stealing%e7%ae%97%e6%b3%95 class=anchor aria-hidden=true>#</a><a href=#232-work-stealing算法 class=anchor aria-hidden=true>#</a></h3><p><strong>Work-Stealing算法，简单地讲就是，worker线程会从负载比较高的worker线程的任务队列中获取任务执行。</strong></p><p>默认地，worker线程会从自己的deque任务队列队首出队task来执行，当这个队列空时，该线程就会从其他worker线程的队尾出队task来执行，或者从全局任务队列中获取。这种方式降低了多个worker线程争抢任务的情况，也减少了线程获取task需要的次数。</p><h3 id=233-forkjoinpool示例>2.3.3 ForkJoinPool示例 <a href=#233-forkjoinpool%e7%a4%ba%e4%be%8b class=anchor aria-hidden=true>#</a><a href=#233-forkjoinpool示例 class=anchor aria-hidden=true>#</a></h3><p>这里有个Java中fork/join的示例，可以参考下：<a href=https://www.baeldung.com/java-fork-join>Java Fork/Join示例</a>。从使用的API上来看，还是多少有点复杂，golang可以轻轻松松地写一个类似功能的示例出来。</p><div class=edit-page><a href=https://github.com/hitzhangjie/myspace/blob/master/content/blog/stuff/jdk%e6%ba%90%e7%a0%81%e5%88%86%e6%9e%90/3%20java.util.concurrent.md><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2"><path d="M17 3a2.828 2.828.0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+Edit this page on GitHub</a></div><div class="docs-navigation d-flex justify-content-between"><a href=/blog/2-happens-before/><div class="card my-1"><div class="card-body py-2">&larr;</div></div></a><a class=ms-auto href=/blog/windows-vm%E5%AE%89%E8%A3%85osx/><div class="card my-1"><div class="card-body py-2">&rarr;</div></div></a></div></main><div class="docs-toc d-none d-xl-block col-xl-3"><nav class=docs-toc-inner aria-label="Secondary navigation"><div class=page-links><h3>On this page</h3><nav id=TableOfContents><ul><li><a href=#1-并发同步>1 并发同步</a><ul><li><a href=#11-锁>1.1 锁</a><ul><li><a href=#111-lock接口>1.1.1 Lock接口</a></li><li><a href=#112-readwritelock接口>1.1.2 ReadWriteLock接口</a></li></ul></li><li><a href=#12-条件变量>1.2 条件变量</a></li></ul></li><li><a href=#2-并发调度>2 并发调度</a><ul><li><a href=#21-executor接口>2.1 Executor接口</a><ul><li><a href=#211-executor>2.1.1 Executor</a></li><li><a href=#212-executorservice>2.1.2 ExecutorService</a></li><li><a href=#213-scheduledexecutorservice>2.1.3 ScheduledExecutorService</a></li></ul></li><li><a href=#22-executor实现>2.2 Executor实现</a><ul><li><a href=#221-threadpoolexecutor>2.2.1 ThreadPoolExecutor</a></li><li><a href=#222-scheduledthreadpoolexecutor>2.2.2 ScheduledThreadPoolExecutor</a></li></ul></li><li><a href=#23-forkjoinpool>2.3 ForkJoinPool</a><ul><li><a href=#231-forkjoinpool>2.3.1 ForkJoinPool</a></li><li><a href=#232-work-stealing算法>2.3.2 Work-Stealing算法</a></li><li><a href=#233-forkjoinpool示例>2.3.3 ForkJoinPool示例</a></li></ul></li></ul></li></ul></nav></div></nav></div></div></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.b49b5c2c44fdca07ee730ad1196420771d2a94176c7d367b414fb2e23f6a0ac3fbae11c2a6263392f17450f222ec2b518586e8ea96e23c361eb3ee8a255e145c.js integrity="sha512-tJtcLET9ygfucwrRGWQgdx0qlBdsfTZ7QU+y4j9qCsP7rhHCpiYzkvF0UPIi7CtRhYbo6pbiPDYes+6KJV4UXA==" crossorigin=anonymous defer></script><script src=/js/highlight.min.1a731f820940167b6fd11a8540a1ae7c4627f4009b13e229c411e9d890612a3f6b618133d96477c2cf238d6faaa28d745cd5141e443aa34f62785510dc873430.js integrity="sha512-GnMfgglAFntv0RqFQKGufEYn9ACbE+IpxBHp2JBhKj9rYYEz2WR3ws8jjW+qoo10XNUUHkQ6o09ieFUQ3Ic0MA==" crossorigin=anonymous defer></script><script src=/main.min.b58b01cf031e169076ec659deefba76e6f28ee7fb673b98a8f8f515705db29d50a62f11be71512f1e11b67fd203f11d5c4a911b43b4580eb9d4ca6b0833a4a4a.js integrity="sha512-tYsBzwMeFpB27GWd7vunbm8o7n+2c7mKj49RVwXbKdUKYvEb5xUS8eEbZ/0gPxHVxKkRtDtFgOudTKawgzpKSg==" crossorigin=anonymous defer></script><script src=/index.min.29b442791f446d2f61a7264cfe0fab0de3c57dadbd426b30a090af00d17b6b38767d71518f91749298abb555c3214e1c91ce8cee38a45909b84a5668aaa0181a.js integrity="sha512-KbRCeR9EbS9hpyZM/g+rDePFfa29QmswoJCvANF7azh2fXFRj5F0kpirtVXDIU4ckc6M7jikWQm4SlZoqqAYGg==" crossorigin=anonymous defer></script></body></html>

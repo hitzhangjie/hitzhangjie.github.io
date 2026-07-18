@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Memory Management on</title><link>/tags/memory-management/</link><description>Recent content in Memory Management on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 15 Jun 2026 19:00:00 +0800</lastBuildDate><atom:link href="/tags/memory-management/index.xml" rel="self" type="application/rss+xml"/><item><title>内存管理：Linux Buddy Allocator</title><link>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_linuxbuddyallocator/</link><pubDate>Mon, 15 Jun 2026 19:00:00 +0800</pubDate><guid>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_linuxbuddyallocator/</guid><description>&lt;style&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Memory-Management on</title><link>/tags/memory-management/</link><description>Recent content in Memory-Management on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 15 Jun 2026 19:00:00 +0800</lastBuildDate><atom:link href="/tags/memory-management/index.xml" rel="self" type="application/rss+xml"/><item><title>内存管理：Linux Buddy Allocator</title><link>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_linuxbuddyallocator/</link><pubDate>Mon, 15 Jun 2026 19:00:00 +0800</pubDate><guid>/blog/2026-06-15-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86_linuxbuddyallocator/</guid><description>&lt;style&gt;
 .iframe-container {
 position: relative;
 height: 100vh;
@@ -31,4 +31,29 @@ top: -170px;
 &lt;/style&gt;
 &lt;div class="iframe-container"&gt;
 &lt;iframe src="https://docs.qq.com/aio/DYnZ4VVVSVkxjbHFG"/&gt;
-&lt;/div&gt;</description></item></channel></rss>
+&lt;/div&gt;</description></item><item><title>从0细说如何管理内存的？</title><link>/blog/2022-06-27-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86-%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E4%B8%8E%E9%87%8A%E6%94%BE/</link><pubDate>Wed, 13 Feb 2019 01:15:41 +0800</pubDate><guid>/blog/2022-06-27-%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86-%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E4%B8%8E%E9%87%8A%E6%94%BE/</guid><description>&lt;h1 id="1-内存管理"&gt;1 内存管理 &lt;a href="#1-%e5%86%85%e5%ad%98%e7%ae%a1%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在编写程序时常常涉及到动态内存分配相关的内容，这个时候我们会通过c malloc/free来动态申请、释放内存。&lt;strong&gt;然而对于内存分配、释放而言，却不仅仅只有动态内存分配、释放的时候才会触发，函数栈帧的创建和销毁、页面的换入和换出、mmap、unmap等也会涉及到内存的分配、释放动作&lt;/strong&gt;。这些内存分配动作，底层都依赖操作系统来为进程分配页帧使用或者回收页帧。&lt;/p&gt;
+&lt;p&gt;大家常见的c malloc/free，除了操作系统内存管理，它还牵扯到**内存分配器（Memory Allocator）**的问题，为了避免频繁进入系统内核，内存分配器通常会申请一块内存自己管理应用程序内存分配，c free之后的内存也并不会立即归还给操作系统，而是留给后续c malloc使用，只有当heapsize超过了指定的阈值之后才会将空闲内存归还给操作系统。&lt;/p&gt;
+&lt;p&gt;要理清C在Linux下的内存分配细节，就至少需要从两个方面入手：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;操作系统如何管理内存？&lt;/li&gt;
+&lt;li&gt;C库中内存分配器如何管理内存?&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id="2-linux内存管理"&gt;2 Linux内存管理 &lt;a href="#2-linux%e5%86%85%e5%ad%98%e7%ae%a1%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;参考《Linux内核架构》补充Linux内存管理相关的细节。&lt;/p&gt;
+&lt;h1 id="3-libc内存分配器"&gt;3 libc内存分配器 &lt;a href="#3-libc%e5%86%85%e5%ad%98%e5%88%86%e9%85%8d%e5%99%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;参考下面几个视频以及更多libc内容完善内存分配器相关细节：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="https://youtu.be/RSuZhdwvNmA?list=PL0oekSefhQVJdk0hSRu6sZ2teWM740NtL"&gt;Memory Allocation, Video 1: Introduction&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://youtu.be/PY1PgGktEOw?list=PL0oekSefhQVJdk0hSRu6sZ2teWM740NtL"&gt;Memory Allocation, Video 2: Examples&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://youtu.be/74s0m4YoHgM?list=PL0oekSefhQVJdk0hSRu6sZ2teWM740NtL"&gt;Memory Allocation, Video 3: Implementation&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://youtu.be/rhLk2lf6QXA?list=PL0oekSefhQVJdk0hSRu6sZ2teWM740NtL"&gt;Memory Allocation, Video 4: Explicit free list&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;上面讲述的是内存分配器的通用实现方法，具体libc中是如何实现的，需要结合相应的源码来进一步确定。&lt;/p&gt;
+&lt;p&gt;libc中内存是怎么进行申请的？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;当申请内存尺寸&amp;gt;=512字节时，使用“best-fit”分配器；&lt;/li&gt;
+&lt;li&gt;当申请内存尺寸&amp;lt;=64字节时，使用“caching”分配器；&lt;/li&gt;
+&lt;li&gt;当申请内存尺寸介于64和512之间时，使用“大、小内存申请”的组合来达到更好的效率；&lt;/li&gt;
+&lt;li&gt;当申请内存尺寸&amp;gt;=128KB时，依赖于系统的内存映射mmap机制，如果系统支持的话。&lt;/li&gt;
+&lt;/ul&gt;</description></item></channel></rss>

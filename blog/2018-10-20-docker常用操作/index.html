@@ -1,0 +1,315 @@
+<!doctype html><html lang=en-US><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-regular.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-500.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-700.woff2 type=font/woff2 crossorigin><script>window.__LAYOUT_WIDTH_DEFAULT__="standard"</script><script>(()=>{(function(){var t,n={compact:1,standard:1,wide:1,fullscreen:1},s="layout-width-v",o="3",e=null,i=null;try{e=localStorage.getItem("layout-width"),i=localStorage.getItem(s)}catch{}if(i!==o){e==="standard"?e="compact":e==="compact"?e="standard":e==="normal"?e="compact":e==="reading"&&(e="wide");try{e&&localStorage.setItem("layout-width",e),localStorage.setItem(s,o)}catch{}}t=window.__LAYOUT_WIDTH_DEFAULT__||"standard",n[t]||(t="standard"),e&&!n[e]&&(e=null),document.documentElement.setAttribute("data-layout-width",e||t)})()})()</script><link rel=stylesheet href=/main.b615b1507c1e1c5443244530a5f48eca62cd4be6f7f25836a8424c64ffc4b17dfc5917bb55874c38fdd94a7b3507dd1e7a74a4f9cc39283854c7a11c5db3442b.css integrity="sha512-thWxUHweHFRDJEUwpfSOymLNS+b38lg2qEJMZP/EsX38WRe7VYdMOP3ZSns1B90eenSk+cw5KDhUx6EcXbNEKw==" crossorigin=anonymous><noscript><style>img.lazyload{display:none}</style></noscript><meta name=robots content="index, follow"><meta name=googlebot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><meta name=bingbot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><title>Docker 常用操作速查手册 - MySpace</title><meta name=description content="系统性梳理 Docker 日常使用中的常用命令，涵盖镜像管理、容器生命周期、数据卷、网络、Docker Compose 及系统维护等场景，适合作为速查参考。"><link rel=canonical href=/blog/2018-10-20-docker%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/><meta property="og:locale" content="en_US"><meta property="og:type" content="article"><meta property="og:title" content="Docker 常用操作速查手册"><meta property="og:description" content="系统性梳理 Docker 日常使用中的常用命令，涵盖镜像管理、容器生命周期、数据卷、网络、Docker Compose 及系统维护等场景，适合作为速查参考。"><meta property="og:url" content="/blog/2018-10-20-docker%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/"><meta property="og:site_name" content="MySpace"><meta property="article:published_time" content="2018-10-20T00:00:00+08:00"><meta property="article:modified_time" content="2026-07-18T00:00:00+08:00"><meta property="og:image" content="/doks.png"><meta property="og:image:alt" content="MySpace"><meta name=twitter:card content="summary_large_image"><meta name=twitter:site content="@hitzhangjie"><meta name=twitter:creator content="@hitzhangjie"><meta name=twitter:title content="Docker 常用操作速查手册"><meta name=twitter:description content="系统性梳理 Docker 日常使用中的常用命令，涵盖镜像管理、容器生命周期、数据卷、网络、Docker Compose 及系统维护等场景，适合作为速查参考。"><meta name=twitter:image content="/doks.png"><meta name=twitter:image:alt content="Docker 常用操作速查手册"><script type=application/ld+json>{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/1","name":"","url":"/","sameAs":["https://twitter.com/hitzhangjie","https://www.linkedin.com/in/hitzhangjie/","https://github.com/hitzhangjie"],"image":{"@type":"ImageObject","@id":"/#/schema/image/1","url":"/\u003cnil\u003e","width":null,"height":null,"caption":""}},{"@type":"WebSite","@id":"/#/schema/website/1","url":"/","name":"MySpace","description":"MySpace is a hitzhangjie\u0027s personal space, for blogs, books, journey, thinkings.","publisher":{"@id":"/#/schema/person/1"}},{"@type":"WebPage","@id":"/blog/2018-10-20-docker%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/","url":"/blog/2018-10-20-docker%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/","name":"Docker 常用操作速查手册","description":"系统性梳理 Docker 日常使用中的常用命令，涵盖镜像管理、容器生命周期、数据卷、网络、Docker Compose 及系统维护等场景，适合作为速查参考。","isPartOf":{"@id":"/#/schema/website/1"},"about":{"@id":"/#/schema/person/1"},"datePublished":"2018-10-20T00:00:00CET","dateModified":"2026-07-18T00:00:00CET","breadcrumb":{"@id":"/blog/2018-10-20-docker%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/#/schema/breadcrumb/1"},"primaryImageOfPage":{"@id":"/blog/2018-10-20-docker%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/#/schema/image/2"},"inLanguage":"","potentialAction":[{"@type":"ReadAction","target":["/blog/2018-10-20-docker%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/"]}]},{"@type":"BreadcrumbList","@id":"/blog/2018-10-20-docker%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/#/schema/breadcrumb/1","name":"Breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"item":{"@type":"WebPage","@id":"/","url":"/","name":"Home"}},{"@type":"ListItem","position":2,"item":{"@id":"/blog2018-10-20-docker%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Article","@id":"/#/schema/article/1","headline":"Docker 常用操作速查手册","description":"系统性梳理 Docker 日常使用中的常用命令，涵盖镜像管理、容器生命周期、数据卷、网络、Docker Compose 及系统维护等场景，适合作为速查参考。","isPartOf":{"@id":"/blog/2018-10-20-docker%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/"},"mainEntityOfPage":{"@id":"/blog/2018-10-20-docker%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/"},"datePublished":"2018-10-20T00:00:00CET","dateModified":"2026-07-18T00:00:00CET","author":{"@id":"/#/schema/person/2"},"publisher":{"@id":"/#/schema/person/1"},"image":{"@id":"/blog/2018-10-20-docker%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/#/schema/image/2"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/2","name":null,"sameAs":[]}]},{"@context":"https://schema.org","@graph":[{"@type":"ImageObject","@id":"/blog/2018-10-20-docker%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/#/schema/image/2","url":"/doks.png","contentUrl":"/doks.png","caption":"Docker 常用操作速查手册"}]}]}</script><meta name=theme-color content="#fff"><link rel=icon href=/favicon.ico sizes=any><link rel=icon type=image/svg+xml href=/favicon.svg><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest crossorigin=use-credentials href=/site.webmanifest><script type=text/javascript src='https://platform-api.sharethis.com/js/sharethis.js#property=607868a58d7101001829a8df&product=sop' async></script><style>[alt~=sharing]{border:0;box-shadow:none}div#st-1{text-align:unset}div#st-1 .st-btn{height:24px;padding:0 4px}div#st-1 .st-btn>img{top:4.2px}div#st-2 .st-btn{height:24px;padding:0 4px}div#st-2 .st-btn>img{top:4.2px}</style><script async src="https://www.googletagmanager.com/gtag/js?id=UA-168027530-1"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","UA-168027530-1")</script></head><body class="blog single d-flex flex-column min-vh-100"><div class=sticky-top><div class=header-bar></div><header class="navbar navbar-expand-lg navbar-light doks-navbar"><nav class="container-xxl flex-wrap flex-lg-nowrap" aria-label="Main navigation"><a class="navbar-brand order-0" href=/ aria-label=MySpace>MySpace
+</a><button class="btn btn-menu order-2 d-block d-lg-none" type=button data-bs-toggle=offcanvas data-bs-target=#offcanvasDoks aria-controls=offcanvasDoks aria-label="Open main menu">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div class="offcanvas offcanvas-end border-0 py-lg-1" tabindex=-1 id=offcanvasDoks data-bs-backdrop=true aria-labelledby=offcanvasDoksLabel><div class="header-bar d-lg-none"></div><div class="offcanvas-header d-lg-none"><h2 class="h5 offcanvas-title ps-2" id=offcanvasDoksLabel><a class=text-dark href=/>MySpace</a></h2><button type=button class="btn-close text-reset me-2" data-bs-dismiss=offcanvas aria-label="Close main menu"></button></div><div class="offcanvas-body p-4 p-lg-0"><ul class="nav flex-column flex-lg-row align-items-lg-center mt-2 mt-lg-0 ms-lg-2 me-lg-auto"><li class=nav-item><a class="nav-link ps-0 py-1 active" href=/blog/>Blog</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/books/>Books</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/landscape>Landscape</a></li></ul><hr class="text-black-50 my-4 d-lg-none"><form class="doks-search position-relative flex-grow-1 ms-lg-auto me-lg-2"><input id=search class="form-control is-search" type=search placeholder="Search docs..." aria-label="Search docs..." autocomplete=off><div id=suggestions class="shadow bg-white rounded d-none"></div></form><hr class="text-black-50 my-4 d-lg-none"><ul class="nav flex-column flex-lg-row"><li class=nav-item><a class="nav-link social-link" href=https://twitter.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg><small class="ms-2 d-lg-none">Twitter</small></a></li><li class=nav-item><a class="nav-link social-link" href=https://github.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37.0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44.0 0020 4.77 5.07 5.07.0 0019.91 1S18.73.65 16 2.48a13.38 13.38.0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07.0 005 4.77 5.44 5.44.0 003.5 8.55c0 5.42 3.3 6.61 6.44 7A3.37 3.37.0 009 18.13V22"/></svg><small class="ms-2 d-lg-none">GitHub</small></a></li><li class="nav-item layout-width-dropdown"><a class="nav-link layout-width-dropdown-btn" href=# data-bs-toggle=dropdown aria-expanded=false aria-label=切换布局宽度 title=切换布局宽度><span class=lw-icon-standard><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-compact><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-wide><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span><span class=lw-icon-fullscreen><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg></span></a><ul class="dropdown-menu dropdown-menu-end"><li><button class="dropdown-item layout-width-option" data-layout-value=compact>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span>紧凑布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=standard>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>标准布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=wide>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span>宽松布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=fullscreen>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>全屏布局</button></li></ul></li></ul></div></div></nav></header></div><div class="wrap container-xxl" role=document><div class=content><div class="row flex-xl-nowrap" data-layout-width=standard><div class="col-lg-4 col-xl-3 docs-sidebar"><nav class=docs-links aria-label="Main navigation"><h3>Tag List</h3><ol><li><a href=/tags/docker/>docker</a></li><li><a href=/tags/devops/>devops</a></li><li><a href=/tags/%e5%ae%b9%e5%99%a8/>容器</a></li></ol></nav></div><main class="docs-content col-lg-12 col-xl-10"><h1>Docker 常用操作速查手册</h1><p><small>Posted 2018-10-20 00:00 +0800 by <a class="stretched-link position-relative" href>ZhangJie</a>&nbsp;&dash;&nbsp;<strong>5&nbsp;min read</strong></small><p><div style=display:flex><div>分享:&nbsp;&nbsp;</div><div><div class=sharethis-inline-share-buttons></div></div></div><hr><p class=lead></p><p>Docker 是一种容器技术，与虚拟机不同，容器更加轻量。Docker 简化了开发、运维人员的工作——Build, Ship, and Run Anywhere。</p><p>本文以实用为导向，按场景分类梳理 Docker 常用命令，方便日常速查。</p><h2 id=1-镜像管理>1 镜像管理 <a href=#1-%e9%95%9c%e5%83%8f%e7%ae%a1%e7%90%86 class=anchor aria-hidden=true>#</a><a href=#1-镜像管理 class=anchor aria-hidden=true>#</a></h2><p>镜像（Image）是容器的模板，所有容器都基于镜像启动。</p><h3 id=11-拉取与搜索>1.1 拉取与搜索 <a href=#11-%e6%8b%89%e5%8f%96%e4%b8%8e%e6%90%9c%e7%b4%a2 class=anchor aria-hidden=true>#</a><a href=#11-拉取与搜索 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-sh># 搜索 Docker Hub 上的镜像
+docker search centos
+docker search nginx --filter=stars=100    # 按 star 数筛选
+
+# 拉取镜像（默认 latest 标签）
+docker pull centos
+
+# 拉取指定版本的镜像
+docker pull centos:7
+docker pull nginx:1.24-alpine
+
+# 从私有仓库拉取
+docker pull registry.example.com/myapp:v1.0
+</code></pre><h3 id=12-查看镜像>1.2 查看镜像 <a href=#12-%e6%9f%a5%e7%9c%8b%e9%95%9c%e5%83%8f class=anchor aria-hidden=true>#</a><a href=#12-查看镜像 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-sh># 列出本地镜像
+docker images
+docker image ls
+
+# 只显示仓库名和标签
+docker images --format &quot;table {{.Repository}}\t{{.Tag}}\t{{.Size}}&quot;
+
+# 查看悬空镜像（无标签的中间层镜像）
+docker images -f dangling=true
+
+# 查看镜像详细信息（分层、环境变量、入口点等）
+docker inspect centos:7
+docker history centos:7        # 查看镜像构建历史及每层大小
+</code></pre><h3 id=13-构建与打标签>1.3 构建与打标签 <a href=#13-%e6%9e%84%e5%bb%ba%e4%b8%8e%e6%89%93%e6%a0%87%e7%ad%be class=anchor aria-hidden=true>#</a><a href=#13-构建与打标签 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-sh># 从 Dockerfile 构建镜像，-t 指定名称和标签
+docker build -t myapp:v1.0 .
+
+# 指定 Dockerfile 路径
+docker build -f /path/to/Dockerfile -t myapp:v1.0 .
+
+# 构建时不使用缓存
+docker build --no-cache -t myapp:v1.0 .
+
+# 给镜像打标签（相当于复制一个别名）
+docker tag centos:7 mycentos:latest
+docker tag myapp:v1.0 registry.example.com/myapp:v1.0
+</code></pre><h3 id=14-镜像导入导出>1.4 镜像导入导出 <a href=#14-%e9%95%9c%e5%83%8f%e5%af%bc%e5%85%a5%e5%af%bc%e5%87%ba class=anchor aria-hidden=true>#</a><a href=#14-镜像导入导出 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-sh># 将镜像保存为 tar 文件
+docker save -o centos.tar centos:7
+docker save centos:7 | gzip &gt; centos.tar.gz    # 压缩保存
+
+# 从 tar 文件加载镜像
+docker load -i centos.tar
+docker load &lt; centos.tar.gz
+
+# 导入/导出容器文件系统（会丢失历史和元数据）
+docker export container_id -o container.tar
+docker import container.tar myimage:latest
+</code></pre><blockquote><p><code>save/load</code> 保留镜像层和历史，适合镜像迁移；<code>export/import</code> 只保留文件系统快照，体积更小。</p></blockquote><h3 id=15-删除镜像>1.5 删除镜像 <a href=#15-%e5%88%a0%e9%99%a4%e9%95%9c%e5%83%8f class=anchor aria-hidden=true>#</a><a href=#15-删除镜像 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-sh># 删除指定镜像
+docker rmi centos:7
+docker image rm centos:7
+
+# 强制删除（即使有容器引用）
+docker rmi -f centos:7
+
+# 删除所有悬空镜像
+docker image prune
+
+# 删除所有未被容器引用的镜像
+docker image prune -a
+</code></pre><h2 id=2-容器管理>2 容器管理 <a href=#2-%e5%ae%b9%e5%99%a8%e7%ae%a1%e7%90%86 class=anchor aria-hidden=true>#</a><a href=#2-容器管理 class=anchor aria-hidden=true>#</a></h2><p>容器（Container）是镜像的运行实例，是日常使用最频繁的部分。</p><h3 id=21-启动容器>2.1 启动容器 <a href=#21-%e5%90%af%e5%8a%a8%e5%ae%b9%e5%99%a8 class=anchor aria-hidden=true>#</a><a href=#21-启动容器 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-sh># 交互模式运行，并分配终端
+docker run -it centos /bin/bash
+
+# 后台运行
+docker run -d --name mynginx nginx
+
+# 挂载本地目录到容器
+docker run -it -v ~/debugger:/root/debugger centos /bin/bash
+
+# 端口映射（主机端口:容器端口）
+docker run -d -p 8080:80 nginx
+
+# 设置环境变量
+docker run -d -e MYSQL_ROOT_PASSWORD=123456 --name mysql mysql:8
+
+# 容器退出后自动删除
+docker run --rm -it centos /bin/bash
+
+# 限制资源
+docker run -d --cpus=2 --memory=512m nginx
+
+# 指定重启策略
+docker run -d --restart=always nginx
+docker run -d --restart=on-failure:3 nginx
+</code></pre><h3 id=22-查看容器>2.2 查看容器 <a href=#22-%e6%9f%a5%e7%9c%8b%e5%ae%b9%e5%99%a8 class=anchor aria-hidden=true>#</a><a href=#22-查看容器 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-sh># 列出运行中的容器
+docker ps
+
+# 列出所有容器（包括已停止的）
+docker ps -a
+
+# 自定义输出格式
+docker ps --format &quot;table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Ports}}&quot;
+
+# 查看最新创建的容器（含已停止）
+docker ps -l
+
+# 只显示容器 ID
+docker ps -q
+
+# 查看容器详细信息（挂载、网络、环境变量等）
+docker inspect container_name
+
+# 查看容器内进程
+docker top container_name
+
+# 查看容器资源使用情况（CPU、内存、网络、磁盘）
+docker stats
+docker stats container_name
+
+# 查看容器内文件系统变化（与镜像的差异）
+docker diff container_name
+</code></pre><h3 id=23-进入容器与执行命令>2.3 进入容器与执行命令 <a href=#23-%e8%bf%9b%e5%85%a5%e5%ae%b9%e5%99%a8%e4%b8%8e%e6%89%a7%e8%a1%8c%e5%91%bd%e4%bb%a4 class=anchor aria-hidden=true>#</a><a href=#23-进入容器与执行命令 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-sh># 在运行中的容器内执行命令
+docker exec container_name ls /app
+
+# 以交互模式进入容器
+docker exec -it container_name /bin/bash
+
+# 以指定用户执行
+docker exec -it -u root container_name /bin/bash
+
+# 以指定工作目录执行
+docker exec -it -w /app container_name /bin/bash
+
+# 附加到容器的主进程（连接其 stdin/stdout/stderr）
+docker attach container_name
+</code></pre><blockquote><p><code>attach</code> 直接连到容器主进程，退出会导致容器停止；<code>exec</code> 启动新进程，退出不影响容器运行。</p></blockquote><h3 id=24-启停与生命周期>2.4 启停与生命周期 <a href=#24-%e5%90%af%e5%81%9c%e4%b8%8e%e7%94%9f%e5%91%bd%e5%91%a8%e6%9c%9f class=anchor aria-hidden=true>#</a><a href=#24-启停与生命周期 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-sh># 停止容器（发送 SIGTERM，超时后发送 SIGKILL）
+docker stop container_name
+
+# 立即强制停止（发送 SIGKILL）
+docker kill container_name
+
+# 启动已停止的容器
+docker start container_name
+
+# 重启容器
+docker restart container_name
+
+# 暂停/恢复容器内所有进程
+docker pause container_name
+docker unpause container_name
+
+# 阻塞等待容器停止，并返回退出码
+docker wait container_name
+</code></pre><h3 id=25-日志与文件传输>2.5 日志与文件传输 <a href=#25-%e6%97%a5%e5%bf%97%e4%b8%8e%e6%96%87%e4%bb%b6%e4%bc%a0%e8%be%93 class=anchor aria-hidden=true>#</a><a href=#25-日志与文件传输 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-sh># 查看容器日志
+docker logs container_name
+
+# 实时跟踪日志
+docker logs -f container_name
+
+# 查看最近 N 行
+docker logs --tail 100 container_name
+
+# 按时间过滤
+docker logs --since 2024-01-01T00:00:00 container_name
+docker logs --until 2024-01-02T00:00:00 container_name
+
+# 带上时间戳
+docker logs -t container_name
+
+# 从容器拷贝文件到主机
+docker cp container_name:/app/log.txt ./log.txt
+
+# 从主机拷贝文件到容器
+docker cp ./config.yaml container_name:/app/config.yaml
+</code></pre><h3 id=26-提交与重命名>2.6 提交与重命名 <a href=#26-%e6%8f%90%e4%ba%a4%e4%b8%8e%e9%87%8d%e5%91%bd%e5%90%8d class=anchor aria-hidden=true>#</a><a href=#26-提交与重命名 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-sh># 将容器的当前状态保存为新镜像
+docker commit -a &quot;author&quot; -m &quot;installed gcc&quot; container_id repo:tag
+
+# 重命名容器
+docker rename old_name new_name
+</code></pre><h3 id=27-删除容器>2.7 删除容器 <a href=#27-%e5%88%a0%e9%99%a4%e5%ae%b9%e5%99%a8 class=anchor aria-hidden=true>#</a><a href=#27-删除容器 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-sh># 删除已停止的容器
+docker rm container_name
+
+# 强制删除运行中的容器
+docker rm -f container_name
+
+# 删除所有已停止的容器
+docker container prune
+
+# 一次删除多个容器
+docker rm container1 container2 container3
+</code></pre><h2 id=3-数据卷管理>3 数据卷管理 <a href=#3-%e6%95%b0%e6%8d%ae%e5%8d%b7%e7%ae%a1%e7%90%86 class=anchor aria-hidden=true>#</a><a href=#3-数据卷管理 class=anchor aria-hidden=true>#</a></h2><p>Volume 是 Docker 推荐的持久化数据方式，独立于容器生命周期。</p><pre><code class=language-sh># 创建数据卷
+docker volume create myvolume
+
+# 列出所有数据卷
+docker volume ls
+
+# 查看数据卷详细信息（挂载点在宿主机的位置）
+docker volume inspect myvolume
+
+# 删除未使用的数据卷
+docker volume prune
+
+# 删除指定数据卷
+docker volume rm myvolume
+
+# 使用数据卷启动容器
+docker run -d -v myvolume:/data nginx
+
+# 绑定挂载（bind mount）——直接挂载主机路径
+docker run -d -v /host/path:/container/path nginx
+
+# 只读挂载
+docker run -d -v /host/path:/container/path:ro nginx
+
+# tmpfs 挂载（仅内存，不写磁盘）
+docker run -d --tmpfs /tmp nginx
+</code></pre><h2 id=4-网络管理>4 网络管理 <a href=#4-%e7%bd%91%e7%bb%9c%e7%ae%a1%e7%90%86 class=anchor aria-hidden=true>#</a><a href=#4-网络管理 class=anchor aria-hidden=true>#</a></h2><p>Docker 提供多种网络驱动：<code>bridge</code>（默认）、<code>host</code>、<code>overlay</code>、<code>none</code>。</p><pre><code class=language-sh># 列出所有网络
+docker network ls
+
+# 创建自定义桥接网络（支持容器名 DNS 解析）
+docker network create mynet
+
+# 查看网络详细信息
+docker network inspect mynet
+
+# 将运行中的容器连接到网络
+docker network connect mynet container_name
+
+# 断开容器与网络的连接
+docker network disconnect mynet container_name
+
+# 使用指定网络启动容器
+docker run -d --network=mynet nginx
+
+# 使用 host 网络模式（容器与主机共享网络栈）
+docker run -d --network=host nginx
+
+# 删除网络
+docker network rm mynet
+
+# 删除所有未使用的网络
+docker network prune
+</code></pre><h2 id=5-docker-compose>5 Docker Compose <a href=#5-docker-compose class=anchor aria-hidden=true>#</a><a href=#5-docker-compose class=anchor aria-hidden=true>#</a></h2><p>Docker Compose 用于定义和运行多容器应用，通过 <code>docker-compose.yml</code> 描述服务。</p><pre><code class=language-sh># 启动所有服务（后台运行）
+docker-compose up -d
+
+# 重新构建并启动
+docker-compose up -d --build
+
+# 查看服务状态
+docker-compose ps
+
+# 查看服务日志
+docker-compose logs -f
+
+# 停止所有服务
+docker-compose down
+
+# 停止并删除数据卷
+docker-compose down -v
+
+# 重启单个服务
+docker-compose restart nginx
+
+# 进入服务容器
+docker-compose exec nginx /bin/bash
+
+# 执行一次性命令
+docker-compose run --rm app python manage.py migrate
+
+# 构建/拉取/推送服务镜像
+docker-compose build
+docker-compose pull
+docker-compose push
+</code></pre><h2 id=6-登录与仓库>6 登录与仓库 <a href=#6-%e7%99%bb%e5%bd%95%e4%b8%8e%e4%bb%93%e5%ba%93 class=anchor aria-hidden=true>#</a><a href=#6-登录与仓库 class=anchor aria-hidden=true>#</a></h2><pre><code class=language-sh># 登录 Docker Hub（需要 docker ID，非邮箱）
+docker login
+
+# 登录私有仓库
+docker login registry.example.com
+
+# 登出
+docker logout
+
+# 推送镜像到仓库
+docker push myname/myimage:v1.0
+docker push registry.example.com/myimage:v1.0
+</code></pre><h2 id=7-系统维护与清理>7 系统维护与清理 <a href=#7-%e7%b3%bb%e7%bb%9f%e7%bb%b4%e6%8a%a4%e4%b8%8e%e6%b8%85%e7%90%86 class=anchor aria-hidden=true>#</a><a href=#7-系统维护与清理 class=anchor aria-hidden=true>#</a></h2><pre><code class=language-sh># 查看 Docker 系统信息
+docker info
+
+# 查看 Docker 版本
+docker version
+
+# 查看磁盘占用
+docker system df
+
+# 查看各组件磁盘占用的详细信息
+docker system df -v
+
+# 一键清理所有未使用资源（镜像、容器、网络、构建缓存）
+docker system prune
+
+# 更彻底的清理（包含未使用的镜像）
+docker system prune -a --volumes
+</code></pre><h2 id=8-常用组合场景>8 常用组合场景 <a href=#8-%e5%b8%b8%e7%94%a8%e7%bb%84%e5%90%88%e5%9c%ba%e6%99%af class=anchor aria-hidden=true>#</a><a href=#8-常用组合场景 class=anchor aria-hidden=true>#</a></h2><h3 id=81-停用并删除所有容器>8.1 停用并删除所有容器 <a href=#81-%e5%81%9c%e7%94%a8%e5%b9%b6%e5%88%a0%e9%99%a4%e6%89%80%e6%9c%89%e5%ae%b9%e5%99%a8 class=anchor aria-hidden=true>#</a><a href=#81-停用并删除所有容器 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-sh>docker stop $(docker ps -q)
+docker rm $(docker ps -aq)
+</code></pre><h3 id=82-批量删除退出码非-0-的容器>8.2 批量删除退出码非 0 的容器 <a href=#82-%e6%89%b9%e9%87%8f%e5%88%a0%e9%99%a4%e9%80%80%e5%87%ba%e7%a0%81%e9%9d%9e-0-%e7%9a%84%e5%ae%b9%e5%99%a8 class=anchor aria-hidden=true>#</a><a href=#82-批量删除退出码非-0-的容器 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-sh>docker rm $(docker ps -aq -f &quot;exited=1&quot;)
+</code></pre><h3 id=83-查看容器-ip-地址>8.3 查看容器 IP 地址 <a href=#83-%e6%9f%a5%e7%9c%8b%e5%ae%b9%e5%99%a8-ip-%e5%9c%b0%e5%9d%80 class=anchor aria-hidden=true>#</a><a href=#83-查看容器-ip-地址 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-sh>docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' container_name
+</code></pre><h3 id=84-进入已停止容器的文件系统>8.4 进入已停止容器的文件系统 <a href=#84-%e8%bf%9b%e5%85%a5%e5%b7%b2%e5%81%9c%e6%ad%a2%e5%ae%b9%e5%99%a8%e7%9a%84%e6%96%87%e4%bb%b6%e7%b3%bb%e7%bb%9f class=anchor aria-hidden=true>#</a><a href=#84-进入已停止容器的文件系统 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-sh>docker run --rm -it -v /:/host alpine chroot /host
+</code></pre><h3 id=85-将运行中的容器导出为新镜像>8.5 将运行中的容器导出为新镜像 <a href=#85-%e5%b0%86%e8%bf%90%e8%a1%8c%e4%b8%ad%e7%9a%84%e5%ae%b9%e5%99%a8%e5%af%bc%e5%87%ba%e4%b8%ba%e6%96%b0%e9%95%9c%e5%83%8f class=anchor aria-hidden=true>#</a><a href=#85-将运行中的容器导出为新镜像 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-sh>docker commit container_id new_image:tag
+docker save -o new_image.tar new_image:tag
+</code></pre><h2 id=总结>总结 <a href=#%e6%80%bb%e7%bb%93 class=anchor aria-hidden=true>#</a><a href=#总结 class=anchor aria-hidden=true>#</a></h2><p>本文以系统化的方式整理了 Docker 日常使用中的常用命令，覆盖了镜像管理、容器生命周期、数据卷、网络、Compose 及系统维护等核心场景。对于 Dockerfile 编写和镜像构建优化等更深入的话题，可参考本博客中的 <a href=/blog/docker/dockerfile%E7%B3%BB%E7%BB%9F%E5%8C%96%E5%AE%9E%E8%B7%B5/>Dockerfile 系统化实践</a> 一文。</p><div class=edit-page><a href=https://github.com/hitzhangjie/myspace/blob/master/content/blog/docker/2018-10-20-docker%e5%b8%b8%e7%94%a8%e6%93%8d%e4%bd%9c.md><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2"><path d="M17 3a2.828 2.828.0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+Edit this page on GitHub</a></div><div class="docs-navigation d-flex justify-content-between"><a href=/blog/2018-11-02-skiplist/><div class="card my-1"><div class="card-body py-2">&larr; 跳表（Skip List）</div></div></a><a class=ms-auto href=/blog/2018-10-12-%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7_elk/><div class="card my-1"><div class="card-body py-2">ELK Stack 集中式日志管理 &rarr;</div></div></a></div></main><div class="docs-toc d-none d-xl-block col-xl-3"><nav class=docs-toc-inner aria-label="Secondary navigation"><div class=page-links><h3>On this page</h3><nav id=TableOfContents><ul><li><ul><li><a href=#1-镜像管理>1 镜像管理</a><ul><li><a href=#11-拉取与搜索>1.1 拉取与搜索</a></li><li><a href=#12-查看镜像>1.2 查看镜像</a></li><li><a href=#13-构建与打标签>1.3 构建与打标签</a></li><li><a href=#14-镜像导入导出>1.4 镜像导入导出</a></li><li><a href=#15-删除镜像>1.5 删除镜像</a></li></ul></li><li><a href=#2-容器管理>2 容器管理</a><ul><li><a href=#21-启动容器>2.1 启动容器</a></li><li><a href=#22-查看容器>2.2 查看容器</a></li><li><a href=#23-进入容器与执行命令>2.3 进入容器与执行命令</a></li><li><a href=#24-启停与生命周期>2.4 启停与生命周期</a></li><li><a href=#25-日志与文件传输>2.5 日志与文件传输</a></li><li><a href=#26-提交与重命名>2.6 提交与重命名</a></li><li><a href=#27-删除容器>2.7 删除容器</a></li></ul></li><li><a href=#3-数据卷管理>3 数据卷管理</a></li><li><a href=#4-网络管理>4 网络管理</a></li><li><a href=#5-docker-compose>5 Docker Compose</a></li><li><a href=#6-登录与仓库>6 登录与仓库</a></li><li><a href=#7-系统维护与清理>7 系统维护与清理</a></li><li><a href=#8-常用组合场景>8 常用组合场景</a><ul><li><a href=#81-停用并删除所有容器>8.1 停用并删除所有容器</a></li><li><a href=#82-批量删除退出码非-0-的容器>8.2 批量删除退出码非 0 的容器</a></li><li><a href=#83-查看容器-ip-地址>8.3 查看容器 IP 地址</a></li><li><a href=#84-进入已停止容器的文件系统>8.4 进入已停止容器的文件系统</a></li><li><a href=#85-将运行中的容器导出为新镜像>8.5 将运行中的容器导出为新镜像</a></li></ul></li><li><a href=#总结>总结</a></li></ul></li></ul></nav></div></nav></div></div></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.b49b5c2c44fdca07ee730ad1196420771d2a94176c7d367b414fb2e23f6a0ac3fbae11c2a6263392f17450f222ec2b518586e8ea96e23c361eb3ee8a255e145c.js integrity="sha512-tJtcLET9ygfucwrRGWQgdx0qlBdsfTZ7QU+y4j9qCsP7rhHCpiYzkvF0UPIi7CtRhYbo6pbiPDYes+6KJV4UXA==" crossorigin=anonymous defer></script><script src=/js/highlight.min.1a731f820940167b6fd11a8540a1ae7c4627f4009b13e229c411e9d890612a3f6b618133d96477c2cf238d6faaa28d745cd5141e443aa34f62785510dc873430.js integrity="sha512-GnMfgglAFntv0RqFQKGufEYn9ACbE+IpxBHp2JBhKj9rYYEz2WR3ws8jjW+qoo10XNUUHkQ6o09ieFUQ3Ic0MA==" crossorigin=anonymous defer></script><script src=/main.min.b58b01cf031e169076ec659deefba76e6f28ee7fb673b98a8f8f515705db29d50a62f11be71512f1e11b67fd203f11d5c4a911b43b4580eb9d4ca6b0833a4a4a.js integrity="sha512-tYsBzwMeFpB27GWd7vunbm8o7n+2c7mKj49RVwXbKdUKYvEb5xUS8eEbZ/0gPxHVxKkRtDtFgOudTKawgzpKSg==" crossorigin=anonymous defer></script><script src=/index.min.29b442791f446d2f61a7264cfe0fab0de3c57dadbd426b30a090af00d17b6b38767d71518f91749298abb555c3214e1c91ce8cee38a45909b84a5668aaa0181a.js integrity="sha512-KbRCeR9EbS9hpyZM/g+rDePFfa29QmswoJCvANF7azh2fXFRj5F0kpirtVXDIU4ckc6M7jikWQm4SlZoqqAYGg==" crossorigin=anonymous defer></script></body></html>

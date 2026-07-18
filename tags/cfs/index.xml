@@ -171,4 +171,21 @@ struct sched_avg avg;
 &lt;/blockquote&gt;
 &lt;h4 id="旋转楼梯调度器"&gt;旋转楼梯调度器 &lt;a href="#%e6%97%8b%e8%bd%ac%e6%a5%bc%e6%a2%af%e8%b0%83%e5%ba%a6%e5%99%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
 &lt;p&gt;2007年，Con Kolivas继续提出了 “&lt;a href="https://lwn.net/Articles/224654/"&gt;旋转楼梯截止时间调度器(Rotating Staircase Deadline Scheduler, RSDL)&lt;/a&gt;”，旋转楼梯调度器，是对楼梯调度器的增强，为什么呢？我个人认为，旋转楼梯调度器更好的建模了优先级、公平性、响应性、解决饿死等的问题，它更好理解和维护。&lt;/p&gt;
-&lt;p&gt;简而言之，CPU调度似乎是一项无法完美解决的工作。尽管开发者不断优化调度算法，但总会有某些类型的工作负载得不到很好的调度服务，特别是对交互型任务要求响应迅速的用户。现在的调度器为了提高交互式进程的响应,已经发展出了非常复杂的优化手段。但复杂的代码也带来维护困难，而用户对响应时间的抱怨仍未止息。CPU调度需要持续改进，才能更好平衡不同类型任务的需要。&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;简而言之，CPU调度似乎是一项无法完美解决的工作。尽管开发者不断优化调度算法，但总会有某些类型的工作负载得不到很好的调度服务，特别是对交互型任务要求响应迅速的用户。现在的调度器为了提高交互式进程的响应,已经发展出了非常复杂的优化手段。但复杂的代码也带来维护困难，而用户对响应时间的抱怨仍未止息。CPU调度需要持续改进，才能更好平衡不同类型任务的需要。&lt;/p&gt;</description></item><item><title>进程调度工具：taskset 与 top</title><link>/blog/2019-04-15-%E8%BF%9B%E7%A8%8B%E8%B0%83%E5%BA%A6%E5%B7%A5%E5%85%B7/</link><pubDate>Sat, 01 Jan 2000 00:00:00 +0800</pubDate><guid>/blog/2019-04-15-%E8%BF%9B%E7%A8%8B%E8%B0%83%E5%BA%A6%E5%B7%A5%E5%85%B7/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在日常运维和性能调优中，我们经常需要控制或观察进程调度行为。Linux 提供了 &lt;code&gt;taskset&lt;/code&gt; 和 &lt;code&gt;top&lt;/code&gt; 等工具来帮助我们完成这些任务。前者用于绑定 CPU，后者用于监控调度情况。&lt;/p&gt;
+&lt;h1 id="正文"&gt;正文 &lt;a href="#%e6%ad%a3%e6%96%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="taskset设置进程-cpu-亲和性"&gt;taskset：设置进程 CPU 亲和性 &lt;a href="#taskset%e8%ae%be%e7%bd%ae%e8%bf%9b%e7%a8%8b-cpu-%e4%ba%b2%e5%92%8c%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;taskset&lt;/code&gt; 可以限制进程只在指定的 CPU 核心上运行。&lt;/p&gt;
+&lt;h3 id="基本用法"&gt;基本用法 &lt;a href="#%e5%9f%ba%e6%9c%ac%e7%94%a8%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;NAME
+taskset - retrieve or set a process's CPU affinity
+SYNOPSIS
+taskset [options] mask command [arg]...
+taskset [options] -p [mask] pid
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="两种使用方式"&gt;两种使用方式 &lt;a href="#%e4%b8%a4%e7%a7%8d%e4%bd%bf%e7%94%a8%e6%96%b9%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;方式一：启动新进程时指定 CPU 粘性&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;taskset 0x00000001 ./my_program # 绑定到 CPU #0
+taskset -c 0,2,4 ./my_program # 绑定到 CPU #0, #2, #4
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;mask&lt;/code&gt; 是 CPU 掩码，&lt;code&gt;0x00000001&lt;/code&gt; 的二进制为 &lt;code&gt;...0001&lt;/code&gt;，表示 CPU CORE #0。&lt;code&gt;0x00000003&lt;/code&gt; 表示 CPU CORE #0 和 #1。&lt;/p&gt;</description></item></channel></rss>

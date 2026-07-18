@@ -10,4 +10,30 @@
 &lt;/ol&gt;
 &lt;h3 id="broken-pipe-vs-use-of-closed-network-connection"&gt;broken pipe vs use of closed network connection &lt;a href="#broken-pipe-vs-use-of-closed-network-connection" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;&lt;strong&gt;场景一（broken pipe）&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;Client 第一次写时，server 会回 FIN 或 RST，client 刚感知到对端连接销毁，但上层应用还没有调用 &lt;code&gt;conn.Close()&lt;/code&gt; 销毁本端 fd（见下文 &lt;code&gt;mutexClosed&lt;/code&gt; 标记）。第二次写会走到 &lt;code&gt;syscall.Write(...)&lt;/code&gt;，返回 &lt;code&gt;EPIPE&lt;/code&gt;，上层 &lt;code&gt;err.Error()&lt;/code&gt; 即：&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;Client 第一次写时，server 会回 FIN 或 RST，client 刚感知到对端连接销毁，但上层应用还没有调用 &lt;code&gt;conn.Close()&lt;/code&gt; 销毁本端 fd（见下文 &lt;code&gt;mutexClosed&lt;/code&gt; 标记）。第二次写会走到 &lt;code&gt;syscall.Write(...)&lt;/code&gt;，返回 &lt;code&gt;EPIPE&lt;/code&gt;，上层 &lt;code&gt;err.Error()&lt;/code&gt; 即：&lt;/p&gt;</description></item><item><title>half-closed：强调的是通信方向关闭，还是通信一方的socket关闭？</title><link>/blog/2026-07-17-tcpip_half_closed_connection/</link><pubDate>Tue, 18 Dec 2018 12:01:00 +0800</pubDate><guid>/blog/2026-07-17-tcpip_half_closed_connection/</guid><description>&lt;p&gt;如果a、b通信，a调用了close(fd)直接关掉连接，此时可能会向对端发送rst or fin，对端还没有收到rst or fin包的时候继续给a发数据，然后会收到rst &amp;hellip; 这种场景，网络编程中比较常见。时常会有开发说出这样的话来，”b写half-closed connection ……”。严格来说这种提法是不准确的，混淆了Socket（接口层） 与 Connection（协议/连接层） 的概念，误将half-closed理解成了peer单方面关掉了这个socket。而half-closed强调的是TCP全双工通信中的某一个方向的通信被关闭了，是强调的connection direction这个层面。&lt;/p&gt;
+&lt;h2 id="1-为什么b写-half-closed是不准确的"&gt;1. 为什么“B写 half-closed”是不准确的？ &lt;a href="#1-%e4%b8%ba%e4%bb%80%e4%b9%88b%e5%86%99-half-closed%e6%98%af%e4%b8%8d%e5%87%86%e7%a1%ae%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 TCP 标准规范中，Half-Closed（半关闭） 是一个严格的连接层状态：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;它特指一端主动关闭了发送通道，但依然保持接收通道开启（通常通过调用 shutdown(fd, SHUT_WR) 实现）。&lt;/li&gt;
+&lt;li&gt;在真正的半关闭状态下，A 虽然不能发数据，但 A 的接收缓冲区和协议栈依然准备着接收 B 的数据。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;而在你描述的场景中：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;A 调用的是 close(fd)。&lt;/li&gt;
+&lt;li&gt;close() 的语义是完全销毁该套接字（Socket）。A 既不发送，也不再接收。&lt;/li&gt;
+&lt;li&gt;此时在 A 看来，这个连接已经彻底不存在了。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;因此，B 此时写入的不是一个“半关闭的连接”，而是一个已经被 A 单方面宣告死亡（释放资源）的连接。&lt;/p&gt;
+&lt;h2 id="2-这种场景在底层究竟发生了什么"&gt;2. 这种场景在底层究竟发生了什么？ &lt;a href="#2-%e8%bf%99%e7%a7%8d%e5%9c%ba%e6%99%af%e5%9c%a8%e5%ba%95%e5%b1%82%e7%a9%b6%e7%ab%9f%e5%8f%91%e7%94%9f%e4%ba%86%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;由于网络存在延迟，B 在不知道 A 已经执行 close() 的情况下继续发送数据，会导致以下结果：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;内核行为（RST 产生）： 当 B 的数据到达 A 时，A 的操作系统发现该 TCP 端口/连接对应的 Socket 早就被释放了（找不到对应的 TCB 控制块）。A 的协议栈会直接回绝，向 B 发送一个 RST（重置） 报文。&lt;/li&gt;
+&lt;li&gt;B 的应用层报错：&lt;/li&gt;
+&lt;li&gt;B 第一次写数据时，由于 RST 还没返回，写入可能在本地成功。
+&lt;ul&gt;
+&lt;li&gt;当 B 收到 A 发来的 RST 后，如果 B 再次尝试写入，操作系统就会直接向 B 的进程发送 SIGPIPE 信号，或者返回 EPIPE（Broken pipe）错误。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="3-精确的专业称呼是什么"&gt;3. 精确的专业称呼是什么？ &lt;a href="#3-%e7%b2%be%e7%a1%ae%e7%9a%84%e4%b8%93%e4%b8%9a%e7%a7%b0%e5%91%bc%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在网络编程和内核讨论中，这种经典场景通常被称为：&lt;/p&gt;</description></item></channel></rss>

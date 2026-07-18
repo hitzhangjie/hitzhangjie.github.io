@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Process-State on</title><link>/tags/process-state/</link><description>Recent content in Process-State on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 05 Jul 2019 00:00:00 +0800</lastBuildDate><atom:link href="/tags/process-state/index.xml" rel="self" type="application/rss+xml"/><item><title>操作系统进程状态详解</title><link>/blog/2019-07-05-%E8%BF%9B%E7%A8%8B%E7%8A%B6%E6%80%81/</link><pubDate>Fri, 05 Jul 2019 00:00:00 +0800</pubDate><guid>/blog/2019-07-05-%E8%BF%9B%E7%A8%8B%E7%8A%B6%E6%80%81/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;进程状态是操作系统进程管理的基础概念。不同教材和不同角度（CPU 视角 vs 虚拟内存视角）会给出不同的状态分类。本文从两个维度完整梳理进程状态及其转换关系。&lt;/p&gt;
+&lt;h1 id="正文"&gt;正文 &lt;a href="#%e6%ad%a3%e6%96%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="cpu-视角三种基础状态"&gt;CPU 视角：三种基础状态 &lt;a href="#cpu-%e8%a7%86%e8%a7%92%e4%b8%89%e7%a7%8d%e5%9f%ba%e7%a1%80%e7%8a%b6%e6%80%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;从 CPU 的角度来看，它只关心&amp;quot;当前执行谁&amp;quot;，因此只需要三种状态：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;状态&lt;/th&gt;
+&lt;th&gt;含义&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;运行态（Running）&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;进程当前拥有 CPU，正在执行指令&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;就绪态（Ready）&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;进程拥有所有需要的资源，只等 CPU 调度&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;阻塞态（Blocked）&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;进程因等待某个事件（如 I/O 完成、锁释放）而暂时放弃 CPU&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;状态转换：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;运行 → 阻塞：进程发起 I/O 操作，主动让出 CPU&lt;/li&gt;
+&lt;li&gt;运行 → 就绪：时间片用完，被调度器抢占&lt;/li&gt;
+&lt;li&gt;阻塞 → 就绪：等待的 I/O 事件完成&lt;/li&gt;
+&lt;li&gt;就绪 → 运行：被调度器选中&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="虚拟内存视角引入两个挂起状态"&gt;虚拟内存视角：引入两个挂起状态 &lt;a href="#%e8%99%9a%e6%8b%9f%e5%86%85%e5%ad%98%e8%a7%86%e8%a7%92%e5%bc%95%e5%85%a5%e4%b8%a4%e4%b8%aa%e6%8c%82%e8%b5%b7%e7%8a%b6%e6%80%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当系统物理内存不足时，操作系统会进行交换（swap），将部分进程的内存映像换出到磁盘交换区。这时就引入了两个额外的状态：&lt;/p&gt;
+&lt;h3 id="挂起-阻塞态suspended-blocked"&gt;挂起-阻塞态（Suspended-Blocked） &lt;a href="#%e6%8c%82%e8%b5%b7-%e9%98%bb%e5%a1%9e%e6%80%81suspended-blocked" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;进程原本处于&lt;strong&gt;阻塞态&lt;/strong&gt;（正在等待 I/O），同时其内存映像&lt;strong&gt;被换出到磁盘&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果 I/O 事件完成 → 转入&lt;strong&gt;挂起-就绪态&lt;/strong&gt;（仍在外存，等待换入）&lt;/li&gt;
+&lt;li&gt;如果被换入物理内存 → 转入&lt;strong&gt;阻塞态&lt;/strong&gt;（继续等待 I/O 完成）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="挂起-就绪态suspended-ready"&gt;挂起-就绪态（Suspended-Ready） &lt;a href="#%e6%8c%82%e8%b5%b7-%e5%b0%b1%e7%bb%aa%e6%80%81suspended-ready" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;进程原本处于&lt;strong&gt;就绪态&lt;/strong&gt;（可以运行），但其内存映像&lt;strong&gt;被换出到磁盘&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果被换入物理内存 → 转入&lt;strong&gt;就绪态&lt;/strong&gt;（可以参与调度）&lt;/li&gt;
+&lt;li&gt;挂起-阻塞态的进程 I/O 完成后也会转入此状态&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="完整状态转换图"&gt;完整状态转换图 &lt;a href="#%e5%ae%8c%e6%95%b4%e7%8a%b6%e6%80%81%e8%bd%ac%e6%8d%a2%e5%9b%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code&gt; ┌──────────┐
+调度选中 │ 运行态 │ 等待I/O事件
+┌──────────► │ Running │ ──────────┐
+│ └──────────┘ │
+│ │ ▼
+│ 时间片用完 ┌──────────┐
+│ │ │ 阻塞态 │
+┌────┴─────┐ │ │ Blocked │
+│ 就绪态 │◄──────────┘ └────┬─────┘
+│ Ready │ │
+└────┬─────┘ I/O完成│
+│ │
+│ 换入内存 换入内存 │
+│ │
+┌────┴──────────┐ ┌─────────┴──────┐
+│ 挂起-就绪态 │◄───────────│ 挂起-阻塞态 │
+│ Susp-Ready │ I/O完成 │ Susp-Blocked │
+└───────────────┘ └────────────────┘
+▲ ▲
+│ 换出到磁盘 │
+└────────────────────────────┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id="总结"&gt;总结 &lt;a href="#%e6%80%bb%e7%bb%93" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;3 种 CPU 基础状态&lt;/strong&gt;：运行、就绪、阻塞&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;2 种挂起状态&lt;/strong&gt;：挂起-阻塞、挂起-就绪，由虚拟内存交换（swap）引入&lt;/li&gt;
+&lt;li&gt;挂起状态是独立于 CPU 调度状态的&amp;quot;第二维度&amp;quot;&lt;/li&gt;
+&lt;li&gt;理解进程状态对分析系统性能（如负载、I/O 等待）至关重要&lt;/li&gt;
+&lt;/ul&gt;</description></item><item><title>文件锁阻塞与信号响应</title><link>/blog/2017-11-20-filelock-signal/</link><pubDate>Sat, 01 Jan 2000 00:00:00 +0800</pubDate><guid>/blog/2017-11-20-filelock-signal/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;文件锁（&lt;code&gt;flock&lt;/code&gt;/&lt;code&gt;fcntl&lt;/code&gt;）是进程间同步的常用手段。当一个进程尝试获取已被占用的文件锁时，默认行为是阻塞等待。但问题来了：&lt;strong&gt;此时进程还能响应信号（如 &lt;code&gt;Ctrl+C&lt;/code&gt; 发送的 &lt;code&gt;SIGINT&lt;/code&gt;）吗？&lt;/strong&gt;&lt;/p&gt;
+&lt;h1 id="正文"&gt;正文 &lt;a href="#%e6%ad%a3%e6%96%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="结论可以"&gt;结论：可以！ &lt;a href="#%e7%bb%93%e8%ae%ba%e5%8f%af%e4%bb%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;如果文件锁被另一个进程持有，尝试获取锁的进程会被阻塞。但内核只会将此进程的状态改为**可中断等待（interruptible sleep）&lt;strong&gt;状态，而非&lt;/strong&gt;不可中断等待（uninterruptible sleep）**状态。&lt;/p&gt;
+&lt;p&gt;这意味着：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;没有信号到达时，进程处于睡眠状态，不参与调度&lt;/li&gt;
+&lt;li&gt;一旦有信号到达且未被进程屏蔽，内核会立即将进程状态修改为**可运行（running）**状态，使进程重新参与调度&lt;/li&gt;
+&lt;li&gt;信号处理函数得以执行&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="实测信号打断锁等待"&gt;实测：信号打断锁等待 &lt;a href="#%e5%ae%9e%e6%b5%8b%e4%bf%a1%e5%8f%b7%e6%89%93%e6%96%ad%e9%94%81%e7%ad%89%e5%be%85" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;下面的 C 程序演示：一个进程持有锁，另一个进程阻塞在 &lt;code&gt;fcntl(F_SETLKW)&lt;/code&gt; 上，此时 &lt;code&gt;Ctrl+C&lt;/code&gt; 发送 &lt;code&gt;SIGINT&lt;/code&gt; 能否唤醒它。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;stdlib.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+#include &amp;lt;fcntl.h&amp;gt;
+#include &amp;lt;signal.h&amp;gt;
+void handle_sigint(int sig) {
+printf(&amp;quot;Received signal %d, exiting...\n&amp;quot;, sig);
+exit(0);
+}
+int main() {
+signal(SIGINT, handle_sigint);
+int fd = open(&amp;quot;/tmp/test.lock&amp;quot;, O_RDWR | O_CREAT, 0644);
+if (fd == -1) {
+perror(&amp;quot;open&amp;quot;);
+return 1;
+}
+struct flock fl = {
+.l_type = F_WRLCK,
+.l_whence = SEEK_SET,
+.l_start = 0,
+.l_len = 0, // 锁定整个文件
+};
+printf(&amp;quot;Trying to acquire lock...\n&amp;quot;);
+fcntl(fd, F_SETLKW, &amp;amp;fl); // 阻塞等待锁
+printf(&amp;quot;Lock acquired!\n&amp;quot;);
+pause(); // 持有锁，等待测试
+close(fd);
+return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;# 终端 1：先启动一个实例持有锁
+$ gcc -o main main.c &amp;amp;&amp;amp; ./main &amp;amp;
+Trying to acquire lock...
+Lock acquired!
+# 终端 2：启动第二个实例，它会阻塞在 fcntl(F_SETLKW) 上
+$ ./main &amp;amp;
+Trying to acquire lock...
+# &amp;lt;阻塞中，状态为 interruptible sleep&amp;gt;
+# 按 Ctrl+C 发送 SIGINT
+^CReceived signal 2, exiting...
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;进程在获取不到文件锁时，内核只是将进程状态修改为&lt;strong&gt;可中断等待状态&lt;/strong&gt;，因此 &lt;code&gt;Ctrl+C&lt;/code&gt; 产生的 &lt;code&gt;SIGINT&lt;/code&gt; 能被正常接收和处理。&lt;/p&gt;</description></item></channel></rss>

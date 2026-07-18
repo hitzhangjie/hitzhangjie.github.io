@@ -36,4 +36,227 @@
 这里的基础镜像可以用vscode官方提供的，也可以是自己自定义好push到registry的，也可以是Dockerfile需要vscode代为构建本地镜像的，这几种方式均可！&lt;/p&gt;
 &lt;p&gt;这样不就方便了吗，既不需要额外存储这个基础镜像，还保留了维护基础镜像的必要配置信息，如Dockerfile等。当然了如果基础镜像维护得当，我们引用registry
 中的基础镜像即可，没必要每个工程下都放一份镜像Dockerfile信息。&lt;/p&gt;
-&lt;p&gt;我目前比较喜欢这种方式，因为可以使用自定义基础镜像的同时，没有了额外容器中克隆代码导致的占用磁盘空间问题……不过这样性能会差点。&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;我目前比较喜欢这种方式，因为可以使用自定义基础镜像的同时，没有了额外容器中克隆代码导致的占用磁盘空间问题……不过这样性能会差点。&lt;/p&gt;</description></item><item><title>Docker技术入门与实战 读书笔记</title><link>/blog/2019-12-03-docker%E6%8A%80%E6%9C%AF%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E6%88%98/</link><pubDate>Tue, 03 Dec 2019 00:00:00 +0800</pubDate><guid>/blog/2019-12-03-docker%E6%8A%80%E6%9C%AF%E5%85%A5%E9%97%A8%E4%B8%8E%E5%AE%9E%E6%88%98/</guid><description>&lt;blockquote&gt;
+&lt;p&gt;这段时间在学习《Docker技术入门与实战》，下面是学习过程中整理的一些知识点。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;img src="assets/docker技术入门与实战.png" style="zoom:15%;" align="left" /&gt;
+&lt;h1 id="1-初识docker与容器"&gt;1 初识Docker与容器 &lt;a href="#1-%e5%88%9d%e8%af%86docker%e4%b8%8e%e5%ae%b9%e5%99%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;如果说主机时代比拼的是单个服务器物理处理能力（如CPU主频和内存）的强弱，那么在云时代，最为看重的则是凭借虚拟化技术所构建的集群处理能力。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;我们服务性能遇到瓶颈时，可能会选择垂直升级，即升级单物理服务器的处理能力；也可能会水平扩容，即通过增加集群中计算节点的数量来提升服务处理性能。垂直升级是不可能一劳永逸解决问题的，终究会有某个时刻请求量超过最大机器负载，支持水平伸缩才是更好的解决问题的方式。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;伴随着信息技术的飞速发展，虚拟化的概念早已广泛应用到各种关键场景中。从20世纪60年代IBM推出的大型主机虚拟化，到后来以Xen、KVM为代表的虚拟机虚拟化，再到现在以Docker为代表的容器技术，虚拟化技术自身也在不断进行创新和突破。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;strong&gt;虚拟化技术，从60年代以来也在不停地演进，经历了大型主机虚拟化、虚拟机虚拟化、容器技术&lt;/strong&gt;。虚拟化可以通过硬件模拟来实现，也可以通过操作系统软件来实现，而容器技术更加优雅，它充分利用了操作系统本身已有的机制和特性，可以实现远超传统虚拟机的轻量级虚拟化。&lt;/p&gt;
+&lt;p&gt;Docker是基于go语言开发的，该项目已经加入Linux基金会，遵循Apache 2.0协议。Docker的构想是要实现 “&lt;strong&gt;Build, Ship and Run Any App, Anywhere&lt;/strong&gt;”。即通过对应用的封装（packaging）、分发（distribution）、部署（deployment）、运行（runtime）生命周期进行管理，达到应用组件级别的“&lt;strong&gt;一次封装，导出运行&lt;/strong&gt;”。Docker首次为应用的开发、运行、部署提供了一站式的解决方案。&lt;/p&gt;
+&lt;p&gt;Docker也是站在巨人的肩膀上诞生的，其中最重要的就是&lt;strong&gt;Linux容器（Linux Containers，LXC）技术&lt;/strong&gt;。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;IBM DeveloperWorks对容器技术的描述：&lt;/p&gt;
+&lt;p&gt;容器有效地将由单个操作系统管理的资源划分到孤立的组中，以更好地在鼓励的组之间平衡有冲突的资源使用需求。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;如果我们了解过Linux内核中的cgroups、namespaces，对这段描述的感受会更深，Docker技术就是在其上构建起来的。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;容器技术（包括LXC），也经历了长期的演化：&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;最早的容器技术可追溯到1982年Unix系列系统上的chroot工具（至今主流Unix、Linux操作系统仍保留着该工具）；&lt;/li&gt;
+&lt;li&gt;早期的容器实现技术有Sun Solaris系统上的Solaris Containers（2004年发布）；&lt;/li&gt;
+&lt;li&gt;FreeBSD系统上的jail（2000年左右发布）；&lt;/li&gt;
+&lt;li&gt;以及GNU/Linux上的Linux-VServer（2001年）和OpenVZ（2005年）。&lt;/li&gt;
+&lt;li&gt;在LXC之前，这些相关技术已经成熟、稳定，但是由于种种原因没有集成到主流的Linux内核中，使用起来非常不便，如必须手动打补丁后才能使用。后来LXC取其精华去其糟粕，实现了根据扩展性的虚拟化容器方案，而且被集成到了Linux内核中，成为Linux系统轻量级容器技术的事实标准。&lt;/li&gt;
+&lt;li&gt;在LXC的基础上，Docker进一步优化了容器的使用体验，使其走入了寻常百姓家。如Docker引入了一系列的容器管理工具（如分发、版本、移植等），让用户无需关注底层操作，更加简单明了的管理和使用容器；其次引入了分层文件系统构建以及高效的镜像构建机制，降低了迁移难度，极大改善了用户体验。&lt;/li&gt;
+&lt;li&gt;Docker最开始是直接基于LXC的，后来0.9版本开始Docker开发了libcontainer项目作为更广泛的容器驱动实现，从而替换掉了LXC的实现。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;为什么要使用Docker？Docker项目的发起人Soloman Hykes认为，&lt;strong&gt;Docker在正确的地点、正确的时间顺应了正确的趋势—— 如何正确地构建应用&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;构建、打包、部署、迁移等等工作，这些琐碎而无趣的“体力活”，极大地降低了用户的开发效率。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;究其原因是因为，这些应用直接运行在底层操作系统上，无法保证同一份应用在不同的环境中仍然行为一致。&lt;strong&gt;Docker提供了一种更为聪明的方式，通过容器来打包应用、解耦应用和运行平台&lt;/strong&gt;，这意味着迁移的时候，只需要在新的服务器上启动需要的容器就可以了，无论是新旧服务器是否是同一类型的平台。这无疑会节约大量的时间，降低部署过程中出问题的风险。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Docker容器技术与传统虚拟机技术的比较&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;特性&lt;/th&gt;
+&lt;th&gt;容器&lt;/th&gt;
+&lt;th&gt;虚拟机&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;启动速度&lt;/td&gt;
+&lt;td&gt;秒级&lt;/td&gt;
+&lt;td&gt;分钟级&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;性能&lt;/td&gt;
+&lt;td&gt;接近原生&lt;/td&gt;
+&lt;td&gt;较弱&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;内存代价&lt;/td&gt;
+&lt;td&gt;很小&lt;/td&gt;
+&lt;td&gt;较多&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;硬盘使用&lt;/td&gt;
+&lt;td&gt;一般为MB&lt;/td&gt;
+&lt;td&gt;一般为GB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;运行密度&lt;/td&gt;
+&lt;td&gt;单机支持上千个容器&lt;/td&gt;
+&lt;td&gt;单机一般支持几十个&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;隔离性&lt;/td&gt;
+&lt;td&gt;安全隔离&lt;/td&gt;
+&lt;td&gt;完全隔离&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;迁移性&lt;/td&gt;
+&lt;td&gt;优秀&lt;/td&gt;
+&lt;td&gt;一般&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Docker作为一种轻量级的虚拟化方式，Docker在运行应用上与传统的虚拟机方式相比具有显著的优势。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;虚拟化（virtualization）技术是一个通用的概念，在不同的领域有不同的理解。在计算领域，一般指的是计算虚拟化（computing virtualization），或通常说的服务器虚拟化。&lt;/p&gt;
+&lt;p&gt;wikipedia这样定义：&lt;strong&gt;在计算机技术中，虚拟化是一种资源管理技术，是将计算机的各种实体资源，如服务器、网络、内存及存储等，予以抽象、转换后呈现出来，打破实体结构间的不可切割的障碍，使用户可以用比原本的组态更好的方式来应用这些资源。&lt;/strong&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;虚拟化技术，从大类上可分为：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;基于硬件的虚拟化&lt;/p&gt;</description></item><item><title>50行代码构建Linux容器：理解容器技术的本质</title><link>/blog/2018-11-11-50%E8%A1%8C%E4%BB%A3%E7%A0%81%E6%9E%84%E5%BB%BAlinux%E5%AE%B9%E5%99%A8/</link><pubDate>Sun, 11 Nov 2018 00:00:00 +0800</pubDate><guid>/blog/2018-11-11-50%E8%A1%8C%E4%BB%A3%E7%A0%81%E6%9E%84%E5%BB%BAlinux%E5%AE%B9%E5%99%A8/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h2 id="容器-vs-虚拟机"&gt;容器 vs 虚拟机 &lt;a href="#%e5%ae%b9%e5%99%a8-vs-%e8%99%9a%e6%8b%9f%e6%9c%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在容器技术流行之前，虚拟机（VM）是实现资源隔离和应用的打包部署的主流方案。虚拟机通过 Hypervisor 在物理硬件之上模拟出一套完整的虚拟硬件，每台虚拟机拥有独立的操作系统内核，隔离性极强，但代价也很明显：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;资源开销大&lt;/strong&gt;：每台 VM 需要运行完整的 OS，占用大量内存和磁盘；&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;启动慢&lt;/strong&gt;：需要经历完整的 OS 启动流程，通常以分钟计；&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;密度低&lt;/strong&gt;：单台物理机能承载的 VM 数量有限。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;容器则走了一条完全不同的路：&lt;strong&gt;它不虚拟化硬件，而是虚拟化操作系统&lt;/strong&gt;。同一宿主机上的所有容器共享同一个 Linux 内核，通过 Linux namespace 和 cgroups 等机制实现进程级别的隔离与资源限制。这使得容器：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;启动极快&lt;/strong&gt;：本质上是启动一个（组）进程，毫秒级；&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;资源开销极小&lt;/strong&gt;：没有额外的 OS 开销，内存和磁盘占用远小于 VM；&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;密度高&lt;/strong&gt;：单机可以运行成百上千个容器。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;下面的表格总结了容器与 VM 的核心区别：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;维度&lt;/th&gt;
+&lt;th&gt;容器&lt;/th&gt;
+&lt;th&gt;虚拟机&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;隔离粒度&lt;/td&gt;
+&lt;td&gt;进程级（共享宿主机内核）&lt;/td&gt;
+&lt;td&gt;硬件级（独立内核）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;启动速度&lt;/td&gt;
+&lt;td&gt;毫秒级&lt;/td&gt;
+&lt;td&gt;分钟级&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;资源开销&lt;/td&gt;
+&lt;td&gt;MB 级内存，几乎没有 CPU 开销&lt;/td&gt;
+&lt;td&gt;GB 级内存，需模拟硬件&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;镜像大小&lt;/td&gt;
+&lt;td&gt;通常几十 MB&lt;/td&gt;
+&lt;td&gt;通常几 GB&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;密度&lt;/td&gt;
+&lt;td&gt;单机成百上千&lt;/td&gt;
+&lt;td&gt;单机几十上百&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="容器技术的本质linux-namespace"&gt;容器技术的本质：Linux namespace &lt;a href="#%e5%ae%b9%e5%99%a8%e6%8a%80%e6%9c%af%e7%9a%84%e6%9c%ac%e8%b4%a8linux-namespace" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;容器的底层技术支撑正是 Linux namespace。Linux namespace 是内核提供的一种资源隔离机制，它让不同进程组看到的系统资源视图互不相同——每个进程组仿佛独占一个独立的系统环境。&lt;/p&gt;
+&lt;p&gt;Linux 内核当前支持以下 8 种 namespace：&lt;/p&gt;</description></item><item><title>如何编写 Dockerfile：从入门到系统化实践</title><link>/blog/2018-11-11-dockerfile%E7%B3%BB%E7%BB%9F%E5%8C%96%E5%AE%9E%E8%B7%B5/</link><pubDate>Sun, 11 Nov 2018 00:00:00 +0800</pubDate><guid>/blog/2018-11-11-dockerfile%E7%B3%BB%E7%BB%9F%E5%8C%96%E5%AE%9E%E8%B7%B5/</guid><description>&lt;blockquote&gt;
+&lt;p&gt;Dockerfile 是容器化应用的第一道门槛，也是 Docker 工程师的核心基本功。本文从零开始，系统性梳理如何编写一个高质量的 Dockerfile —— 从基础语法到定制镜像，再到构建优化和最佳实践。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id="1-dockerfile-是什么"&gt;1 Dockerfile 是什么 &lt;a href="#1-dockerfile-%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Dockerfile 是一个文本文件，其中包含了一系列指令（Instruction），用于描述如何基于一个基础镜像构建出目标镜像。每一条指令都会在基础镜像上创建一个新的&lt;strong&gt;镜像层（Layer）&lt;/strong&gt;，最终叠加成一个完整的镜像。&lt;/p&gt;
+&lt;p&gt;相比于 &lt;code&gt;docker commit&lt;/code&gt; 的手动、黑盒方式，Dockerfile &lt;strong&gt;可重复、可审计、可版本化&lt;/strong&gt;，是构建镜像的唯一推荐方式。&lt;/p&gt;
+&lt;h1 id="2-指令全览"&gt;2 指令全览 &lt;a href="#2-%e6%8c%87%e4%bb%a4%e5%85%a8%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Dockerfile 指令是构建块，下面按使用频率和重要性梳理每条指令的语义。&lt;/p&gt;
+&lt;h2 id="21-from--指定基础镜像"&gt;2.1 FROM — 指定基础镜像 &lt;a href="#21-from--%e6%8c%87%e5%ae%9a%e5%9f%ba%e7%a1%80%e9%95%9c%e5%83%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;必须是 Dockerfile 的第一条非注释指令。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-dockerfile"&gt;FROM ubuntu:22.04
+FROM golang:1.21-alpine AS builder # 多阶段构建时给阶段命名
+FROM scratch # 从空镜像开始，用于构建极简镜像
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;优先使用&lt;strong&gt;官方镜像&lt;/strong&gt;（&lt;code&gt;_/ubuntu&lt;/code&gt;、&lt;code&gt;_/golang&lt;/code&gt; 等）&lt;/li&gt;
+&lt;li&gt;指定&lt;strong&gt;精确 tag&lt;/strong&gt;，不要用 &lt;code&gt;latest&lt;/code&gt;（可重复性问题）&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;scratch&lt;/code&gt; 是 Docker Hub 上的保留名，代表一个完全空的镜像&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="22-run--构建时执行命令"&gt;2.2 RUN — 构建时执行命令 &lt;a href="#22-run--%e6%9e%84%e5%bb%ba%e6%97%b6%e6%89%a7%e8%a1%8c%e5%91%bd%e4%bb%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在镜像构建阶段执行命令，通常用于安装系统包、编译代码等。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-dockerfile"&gt;# shell 形式
+RUN apt-get update &amp;amp;&amp;amp; apt-get install -y nginx
+# exec 形式
+RUN [&amp;quot;apt-get&amp;quot;, &amp;quot;update&amp;quot;]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;关键原则&lt;/strong&gt;：多条命令用 &lt;code&gt;&amp;amp;&amp;amp;&lt;/code&gt; 串联在同一个 RUN 中，并在同一层清理安装缓存。每多一个 RUN 就多一层镜像，会增加镜像体积。&lt;/p&gt;</description></item><item><title>Docker 常用操作速查手册</title><link>/blog/2018-10-20-docker%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/</link><pubDate>Sat, 20 Oct 2018 00:00:00 +0800</pubDate><guid>/blog/2018-10-20-docker%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/</guid><description>&lt;p&gt;Docker 是一种容器技术，与虚拟机不同，容器更加轻量。Docker 简化了开发、运维人员的工作——Build, Ship, and Run Anywhere。&lt;/p&gt;
+&lt;p&gt;本文以实用为导向，按场景分类梳理 Docker 常用命令，方便日常速查。&lt;/p&gt;
+&lt;h2 id="1-镜像管理"&gt;1 镜像管理 &lt;a href="#1-%e9%95%9c%e5%83%8f%e7%ae%a1%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;镜像（Image）是容器的模板，所有容器都基于镜像启动。&lt;/p&gt;
+&lt;h3 id="11-拉取与搜索"&gt;1.1 拉取与搜索 &lt;a href="#11-%e6%8b%89%e5%8f%96%e4%b8%8e%e6%90%9c%e7%b4%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-sh"&gt;# 搜索 Docker Hub 上的镜像
+docker search centos
+docker search nginx --filter=stars=100 # 按 star 数筛选
+# 拉取镜像（默认 latest 标签）
+docker pull centos
+# 拉取指定版本的镜像
+docker pull centos:7
+docker pull nginx:1.24-alpine
+# 从私有仓库拉取
+docker pull registry.example.com/myapp:v1.0
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="12-查看镜像"&gt;1.2 查看镜像 &lt;a href="#12-%e6%9f%a5%e7%9c%8b%e9%95%9c%e5%83%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-sh"&gt;# 列出本地镜像
+docker images
+docker image ls
+# 只显示仓库名和标签
+docker images --format &amp;quot;table {{.Repository}}\t{{.Tag}}\t{{.Size}}&amp;quot;
+# 查看悬空镜像（无标签的中间层镜像）
+docker images -f dangling=true
+# 查看镜像详细信息（分层、环境变量、入口点等）
+docker inspect centos:7
+docker history centos:7 # 查看镜像构建历史及每层大小
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="13-构建与打标签"&gt;1.3 构建与打标签 &lt;a href="#13-%e6%9e%84%e5%bb%ba%e4%b8%8e%e6%89%93%e6%a0%87%e7%ad%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-sh"&gt;# 从 Dockerfile 构建镜像，-t 指定名称和标签
+docker build -t myapp:v1.0 .
+# 指定 Dockerfile 路径
+docker build -f /path/to/Dockerfile -t myapp:v1.0 .
+# 构建时不使用缓存
+docker build --no-cache -t myapp:v1.0 .
+# 给镜像打标签（相当于复制一个别名）
+docker tag centos:7 mycentos:latest
+docker tag myapp:v1.0 registry.example.com/myapp:v1.0
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="14-镜像导入导出"&gt;1.4 镜像导入导出 &lt;a href="#14-%e9%95%9c%e5%83%8f%e5%af%bc%e5%85%a5%e5%af%bc%e5%87%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-sh"&gt;# 将镜像保存为 tar 文件
+docker save -o centos.tar centos:7
+docker save centos:7 | gzip &amp;gt; centos.tar.gz # 压缩保存
+# 从 tar 文件加载镜像
+docker load -i centos.tar
+docker load &amp;lt; centos.tar.gz
+# 导入/导出容器文件系统（会丢失历史和元数据）
+docker export container_id -o container.tar
+docker import container.tar myimage:latest
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;code&gt;save/load&lt;/code&gt; 保留镜像层和历史，适合镜像迁移；&lt;code&gt;export/import&lt;/code&gt; 只保留文件系统快照，体积更小。&lt;/p&gt;</description></item></channel></rss>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Tcpcopy on</title><link>/tags/tcpcopy/</link><description>Recent content in Tcpcopy on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 07 Oct 2018 00:00:00 +0800</lastBuildDate><atom:link href="/tags/tcpcopy/index.xml" rel="self" type="application/rss+xml"/><item><title>TCP 流量复制转发：tcpcopy + intercept</title><link>/blog/2019-10-07-tcpip-tcp%E6%B5%81%E9%87%8F%E5%A4%8D%E5%88%B6/</link><pubDate>Sun, 07 Oct 2018 00:00:00 +0800</pubDate><guid>/blog/2019-10-07-tcpip-tcp%E6%B5%81%E9%87%8F%E5%A4%8D%E5%88%B6/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在服务开发和测试过程中，经常需要用真实线上流量来验证新版本的正确性和性能。&lt;code&gt;tcpcopy&lt;/code&gt; 是一个开源的 TCP 流量复制工具，可以将生产环境的 TCP 流量实时复制到测试环境，进行流量回放测试。&lt;/p&gt;
+&lt;h1 id="正文"&gt;正文 &lt;a href="#%e6%ad%a3%e6%96%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="基本用法"&gt;基本用法 &lt;a href="#%e5%9f%ba%e6%9c%ac%e7%94%a8%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="客户端流量发起端"&gt;客户端（流量发起端） &lt;a href="#%e5%ae%a2%e6%88%b7%e7%ab%af%e6%b5%81%e9%87%8f%e5%8f%91%e8%b5%b7%e7%ab%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在需要复制流量的机器上运行 &lt;code&gt;tcpcopy&lt;/code&gt;，将本地 15251 端口的流量向远程 &lt;code&gt;10.213.144.140:18108&lt;/code&gt; 转发：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;./tcpcopy -x 15251-10.213.144.140:18108 -s 10.213.144.140 -c 99.99.99.x -d
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;-x&lt;/code&gt;：指定源端口和目标地址端口映射&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;-s&lt;/code&gt;：指定 intercept 服务端地址&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;-c&lt;/code&gt;：指定伪装客户端的 IP 地址&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;-d&lt;/code&gt;：以 daemon 方式运行&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="服务端流量接收端"&gt;服务端（流量接收端） &lt;a href="#%e6%9c%8d%e5%8a%a1%e7%ab%af%e6%b5%81%e9%87%8f%e6%8e%a5%e6%94%b6%e7%ab%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在目标测试服务器上运行 &lt;code&gt;intercept&lt;/code&gt;，监听 18108 端口：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;./intercept -i eth1 -F &amp;quot;tcp and src port 18108&amp;quot; -d
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;-i&lt;/code&gt;：指定网络接口&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;-F&lt;/code&gt;：指定 BPF 过滤规则&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;-d&lt;/code&gt;：以 daemon 方式运行&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="工作原理"&gt;工作原理 &lt;a href="#%e5%b7%a5%e4%bd%9c%e5%8e%9f%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;tcpcopy&lt;/code&gt; 工作在网络层，它会：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;捕获指定端口上的 TCP 数据包&lt;/li&gt;
+&lt;li&gt;修改目标 IP 和端口，将包发送到测试服务器&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;intercept&lt;/code&gt; 在测试服务器上拦截返回的响应包，避免干扰真实客户端&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;这样测试服务器就能接收到与生产环境完全相同的请求流量。&lt;/p&gt;</description></item></channel></rss>

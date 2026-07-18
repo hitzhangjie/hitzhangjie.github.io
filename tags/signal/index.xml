@@ -52,4 +52,84 @@
 &lt;p&gt;sigtramp是注册到操作系统的信号处理函数，当操作系统执行系统调用返回时检查进程有没有信号到达，有并且没有屏蔽信号则执行对应的信号处理函数，这个时候是切到了用户态去执行信号处理函数。在执行信号处理函数的时候比较特殊，go需要为信号处理函数准备一个不同的栈帧，即信号处理栈，这个前面提过了是一个32KB大小的栈，然后将当前m.g设置为gsignal（栈大小为32KB），栈准备好之后，执行前面提过的sighandler执行信号处理，处理完成返回后，再将m.g设置为原来的g恢复正常执行。其实signhandler执行过程中，sigsend发送到outgoing sigqueue，然后signal_recv收信号发送到os.Notify订阅的chan，就完事了，后面就是我们熟悉的chan read并处理逻辑了。&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;算是介绍的比较详细了吧，篇幅、时间原因就不贴源码了，感兴趣的可以对着提及的源码仔细看看、求证一下。&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;算是介绍的比较详细了吧，篇幅、时间原因就不贴源码了，感兴趣的可以对着提及的源码仔细看看、求证一下。&lt;/p&gt;</description></item><item><title>中断与信号的区别</title><link>/blog/2018-09-06-interrupt-vs-signal/</link><pubDate>Thu, 06 Sep 2018 00:00:00 +0800</pubDate><guid>/blog/2018-09-06-interrupt-vs-signal/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;很多人容易混淆 Linux 中的&amp;quot;信号（signal）&amp;ldquo;和&amp;quot;中断（interrupt）&amp;quot;，甚至认为信号是通过软中断实现的。本文从内核实现的角度澄清这两者的关系。&lt;/p&gt;
+&lt;h1 id="正文"&gt;正文 &lt;a href="#%e6%ad%a3%e6%96%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="信号不是通过中断实现的"&gt;信号不是通过中断实现的 &lt;a href="#%e4%bf%a1%e5%8f%b7%e4%b8%8d%e6%98%af%e9%80%9a%e8%bf%87%e4%b8%ad%e6%96%ad%e5%ae%9e%e7%8e%b0%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Linux 的信号是在进程的进程描述符（&lt;code&gt;task_struct&lt;/code&gt;）中维护了一个信号队列，用于接收发送给该进程的信号。&lt;/p&gt;
+&lt;p&gt;当进程被调度时，调度器会检查进程是否有未处理的不可屏蔽信号。如果有，内核会在进程返回用户态之前执行信号对应的信号处理函数。&lt;strong&gt;这个过程根本不是什么软中断&lt;/strong&gt;，它是内核在正常的&amp;quot;返回到用户态&amp;quot;路径上的检查。&lt;/p&gt;
+&lt;h2 id="中断的分类"&gt;中断的分类 &lt;a href="#%e4%b8%ad%e6%96%ad%e7%9a%84%e5%88%86%e7%b1%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="硬件中断"&gt;硬件中断 &lt;a href="#%e7%a1%ac%e4%bb%b6%e4%b8%ad%e6%96%ad" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;由设备控制器向 CPU 引脚发送中断请求：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;可屏蔽中断（Maskable Interrupt）&lt;/strong&gt;：通过 INTR 引脚发送，CPU 可以通过清除 EFLAGS 中的 IF 位来暂时屏蔽。绝大多数外设中断都属此类。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;不可屏蔽中断（Non-Maskable Interrupt, NMI）&lt;/strong&gt;：通过 NMI 引脚发送，CPU 无法屏蔽。通常用于极其紧急的事件，如硬件内存错误、看门狗超时。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="异常exception"&gt;异常（Exception） &lt;a href="#%e5%bc%82%e5%b8%b8exception" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;由 CPU 自身在执行指令过程中检测到的错误条件触发：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Fault&lt;/strong&gt;：可纠正的异常，如缺页异常（page fault）。CPU 保存的返回地址是触发异常的指令地址，处理完后重新执行该指令。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Trap&lt;/strong&gt;：主动触发的异常，如调试断点（&lt;code&gt;int3&lt;/code&gt;）。返回地址是下一条指令地址。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Abort&lt;/strong&gt;：不可恢复的错误，如硬件错误。不保存可靠的返回地址。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="软中断software-interrupt"&gt;软中断（Software Interrupt） &lt;a href="#%e8%bd%af%e4%b8%ad%e6%96%adsoftware-interrupt" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;软中断是通过 &lt;code&gt;int&lt;/code&gt; 指令由软件主动触发的，不是由设备控制器发出的。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;常见的例子是 &lt;code&gt;int 0x80&lt;/code&gt; —— 在 x86 早期，Linux 使用 &lt;code&gt;int 0x80&lt;/code&gt; 作为系统调用的入口（已被 &lt;code&gt;sysenter&lt;/code&gt;/&lt;code&gt;syscall&lt;/code&gt; 取代）。注意这里的中断向量已经不是 BIOS 初始化的那个了，Linux 内核初始化时已经重新设置了中断向量表（IDT）。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="中断向量号分配"&gt;中断向量号分配 &lt;a href="#%e4%b8%ad%e6%96%ad%e5%90%91%e9%87%8f%e5%8f%b7%e5%88%86%e9%85%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;x86 体系下，中断向量号的分配大致如下：&lt;/p&gt;</description></item><item><title>文件锁阻塞与信号响应</title><link>/blog/2017-11-20-filelock-signal/</link><pubDate>Sat, 01 Jan 2000 00:00:00 +0800</pubDate><guid>/blog/2017-11-20-filelock-signal/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;文件锁（&lt;code&gt;flock&lt;/code&gt;/&lt;code&gt;fcntl&lt;/code&gt;）是进程间同步的常用手段。当一个进程尝试获取已被占用的文件锁时，默认行为是阻塞等待。但问题来了：&lt;strong&gt;此时进程还能响应信号（如 &lt;code&gt;Ctrl+C&lt;/code&gt; 发送的 &lt;code&gt;SIGINT&lt;/code&gt;）吗？&lt;/strong&gt;&lt;/p&gt;
+&lt;h1 id="正文"&gt;正文 &lt;a href="#%e6%ad%a3%e6%96%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="结论可以"&gt;结论：可以！ &lt;a href="#%e7%bb%93%e8%ae%ba%e5%8f%af%e4%bb%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;如果文件锁被另一个进程持有，尝试获取锁的进程会被阻塞。但内核只会将此进程的状态改为**可中断等待（interruptible sleep）&lt;strong&gt;状态，而非&lt;/strong&gt;不可中断等待（uninterruptible sleep）**状态。&lt;/p&gt;
+&lt;p&gt;这意味着：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;没有信号到达时，进程处于睡眠状态，不参与调度&lt;/li&gt;
+&lt;li&gt;一旦有信号到达且未被进程屏蔽，内核会立即将进程状态修改为**可运行（running）**状态，使进程重新参与调度&lt;/li&gt;
+&lt;li&gt;信号处理函数得以执行&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="实测信号打断锁等待"&gt;实测：信号打断锁等待 &lt;a href="#%e5%ae%9e%e6%b5%8b%e4%bf%a1%e5%8f%b7%e6%89%93%e6%96%ad%e9%94%81%e7%ad%89%e5%be%85" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;下面的 C 程序演示：一个进程持有锁，另一个进程阻塞在 &lt;code&gt;fcntl(F_SETLKW)&lt;/code&gt; 上，此时 &lt;code&gt;Ctrl+C&lt;/code&gt; 发送 &lt;code&gt;SIGINT&lt;/code&gt; 能否唤醒它。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;stdlib.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+#include &amp;lt;fcntl.h&amp;gt;
+#include &amp;lt;signal.h&amp;gt;
+void handle_sigint(int sig) {
+printf(&amp;quot;Received signal %d, exiting...\n&amp;quot;, sig);
+exit(0);
+}
+int main() {
+signal(SIGINT, handle_sigint);
+int fd = open(&amp;quot;/tmp/test.lock&amp;quot;, O_RDWR | O_CREAT, 0644);
+if (fd == -1) {
+perror(&amp;quot;open&amp;quot;);
+return 1;
+}
+struct flock fl = {
+.l_type = F_WRLCK,
+.l_whence = SEEK_SET,
+.l_start = 0,
+.l_len = 0, // 锁定整个文件
+};
+printf(&amp;quot;Trying to acquire lock...\n&amp;quot;);
+fcntl(fd, F_SETLKW, &amp;amp;fl); // 阻塞等待锁
+printf(&amp;quot;Lock acquired!\n&amp;quot;);
+pause(); // 持有锁，等待测试
+close(fd);
+return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;# 终端 1：先启动一个实例持有锁
+$ gcc -o main main.c &amp;amp;&amp;amp; ./main &amp;amp;
+Trying to acquire lock...
+Lock acquired!
+# 终端 2：启动第二个实例，它会阻塞在 fcntl(F_SETLKW) 上
+$ ./main &amp;amp;
+Trying to acquire lock...
+# &amp;lt;阻塞中，状态为 interruptible sleep&amp;gt;
+# 按 Ctrl+C 发送 SIGINT
+^CReceived signal 2, exiting...
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;进程在获取不到文件锁时，内核只是将进程状态修改为&lt;strong&gt;可中断等待状态&lt;/strong&gt;，因此 &lt;code&gt;Ctrl+C&lt;/code&gt; 产生的 &lt;code&gt;SIGINT&lt;/code&gt; 能被正常接收和处理。&lt;/p&gt;</description></item></channel></rss>

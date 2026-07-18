@@ -25,7 +25,57 @@ cap int
 &lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;另外要注意，golang里面将\0当做是一个八进制数值的开始标识，不管是在字符串中，还是再byte中，如果定义一个字符串&lt;code&gt;s := “hello\0world”&lt;/code&gt;会报错：non-octal character in escape sequence，因为\0wo不是一个有效的八进制数值。&lt;/p&gt;
-&lt;p&gt;\0结尾是c spec规定的，go不认，go里面就是StringHeader {data, cap, len}，go里面不可见字符就是不可见字符，没赋予它截断字符串的特殊含义，这么想，感觉go比c设计的要好一点。&lt;/p&gt;</description></item><item><title>mac/win下linux c/c++开发</title><link>/blog/2022-06-28-devcontainer_linux-cc-%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E8%AE%BE%E7%BD%AE/</link><pubDate>Tue, 28 Jun 2022 23:08:51 +0800</pubDate><guid>/blog/2022-06-28-devcontainer_linux-cc-%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E8%AE%BE%E7%BD%AE/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;\0结尾是c spec规定的，go不认，go里面就是StringHeader {data, cap, len}，go里面不可见字符就是不可见字符，没赋予它截断字符串的特殊含义，这么想，感觉go比c设计的要好一点。&lt;/p&gt;</description></item><item><title>文件锁实现：从建议性锁到强制性锁</title><link>/blog/2026-07-18-file-lock-implementations/</link><pubDate>Sat, 18 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-18-file-lock-implementations/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在多进程/多线程编程中，当多个执行流需要访问共享资源时，同步互斥是绕不开的话题。常见的同步机制有互斥锁（mutex）、信号量（semaphore）、条件变量等，这些适用于同一台机器上的线程或进程间同步。而当我们需要跨进程、甚至跨主机的同步时，&lt;strong&gt;文件锁&lt;/strong&gt;（file lock）便成了一种简单有效的选择。&lt;/p&gt;
+&lt;p&gt;文件锁的实现方式有多种，从最简单的基于 &lt;code&gt;open()&lt;/code&gt; 的排他性创建，到基于 &lt;code&gt;flock()&lt;/code&gt; / &lt;code&gt;fcntl()&lt;/code&gt; 的内核级锁机制。本文将系统性地梳理 Linux 下的文件锁实现方案，并深入讨论&lt;strong&gt;建议性锁&lt;/strong&gt;（advisory lock）与&lt;strong&gt;强制性锁&lt;/strong&gt;（mandatory lock）的区别。&lt;/p&gt;
+&lt;h1 id="实现方式一open-o_creato_excl"&gt;实现方式一：open O_CREAT|O_EXCL &lt;a href="#%e5%ae%9e%e7%8e%b0%e6%96%b9%e5%bc%8f%e4%b8%80open-o_creato_excl" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="原理"&gt;原理 &lt;a href="#%e5%8e%9f%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;这是最&amp;quot;原始&amp;quot;的文件锁实现方式，利用的是文件系统本身的原子性语义：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;调用 &lt;code&gt;open(path, O_CREAT | O_EXCL, ...)&lt;/code&gt; 时，内核会原子性地检查文件是否存在：
+&lt;ul&gt;
+&lt;li&gt;若文件&lt;strong&gt;不存在&lt;/strong&gt;，则创建文件并返回 fd —— 视为&lt;strong&gt;获取锁成功&lt;/strong&gt;；&lt;/li&gt;
+&lt;li&gt;若文件&lt;strong&gt;已存在&lt;/strong&gt;，则返回 &lt;code&gt;-1&lt;/code&gt;，&lt;code&gt;errno&lt;/code&gt; 设为 &lt;code&gt;EEXIST&lt;/code&gt; —— 视为&lt;strong&gt;锁已被他人持有&lt;/strong&gt;。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;解锁时，直接 &lt;code&gt;unlink()&lt;/code&gt; 删除该文件，释放锁。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;code&gt;O_CREAT | O_EXCL&lt;/code&gt; 的组合保证&amp;quot;检查-创建&amp;quot;是一个原子操作，不会出现 TOCTOU（time-of-check-time-of-use）竞态问题。&lt;/p&gt;
+&lt;h2 id="代码示例"&gt;代码示例 &lt;a href="#%e4%bb%a3%e7%a0%81%e7%a4%ba%e4%be%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;#include &amp;lt;sys/types.h&amp;gt;
+#include &amp;lt;sys/stat.h&amp;gt;
+#include &amp;lt;errno.h&amp;gt;
+#include &amp;lt;fcntl.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+#include &amp;lt;iostream&amp;gt;
+#define LOCKFILE &amp;quot;/tmp/tmp.lock&amp;quot;
+namespace FileLockExcl {
+class FileLock {
+public:
+static int lock()
+{
+int tempfd;
+// 循环重试，直到成功创建锁文件
+while ((tempfd = open(LOCKFILE, O_CREAT | O_RDWR | O_EXCL,
+S_IRUSR | S_IWUSR)) &amp;lt; 0) {
+if (errno != EEXIST) {
+std::cerr &amp;lt;&amp;lt; &amp;quot;Failed to create lockfile: &amp;quot; &amp;lt;&amp;lt; LOCKFILE &amp;lt;&amp;lt; std::endl;
+return -1;
+}
+// 文件已存在，说明锁被他人持有，忙等待
+}
+close(tempfd); // 创建成功后立即关闭，锁文件的存在性即代表锁的状态
+return 0;
+}
+static int unlock()
+{
+return unlink(LOCKFILE); // 删除文件即释放锁
+}
+};
+} // namespace FileLockExcl
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="优缺点分析"&gt;优缺点分析 &lt;a href="#%e4%bc%98%e7%bc%ba%e7%82%b9%e5%88%86%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;优点：&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>mac/win下linux c/c++开发</title><link>/blog/2022-06-28-devcontainer_linux-cc-%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E8%AE%BE%E7%BD%AE/</link><pubDate>Tue, 28 Jun 2022 23:08:51 +0800</pubDate><guid>/blog/2022-06-28-devcontainer_linux-cc-%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E8%AE%BE%E7%BD%AE/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;我们很多人主力操作系统是macOS或者Windows，用Linux作为主力操作系统的少吧，不过之前确实有连续7年多是用Fedora作为主力操作系统 :)&lt;/p&gt;
 &lt;p&gt;现在很多人开发人员使用MacBook Pro作为自己的开发机，大厂标配，我们很多后台呢，开发的程序一般最后还是要跑在Linux系统上的，尤其是c/c++开发涉及到这里的跨平台开发的问题，很多开发人员用着非常原始的方式在开发，开发体验比较差。&lt;/p&gt;
 &lt;p&gt;借这个契机，我调研了下现在比较好的一些开发方式，总结分享下。&lt;/p&gt;
@@ -63,7 +113,24 @@ cap int
 这里的基础镜像可以用vscode官方提供的，也可以是自己自定义好push到registry的，也可以是Dockerfile需要vscode代为构建本地镜像的，这几种方式均可！&lt;/p&gt;
 &lt;p&gt;这样不就方便了吗，既不需要额外存储这个基础镜像，还保留了维护基础镜像的必要配置信息，如Dockerfile等。当然了如果基础镜像维护得当，我们引用registry
 中的基础镜像即可，没必要每个工程下都放一份镜像Dockerfile信息。&lt;/p&gt;
-&lt;p&gt;我目前比较喜欢这种方式，因为可以使用自定义基础镜像的同时，没有了额外容器中克隆代码导致的占用磁盘空间问题……不过这样性能会差点。&lt;/p&gt;</description></item><item><title>数组与指针</title><link>/blog/%E6%95%B0%E7%BB%84%E4%B8%8E%E6%8C%87%E9%92%88/</link><pubDate>Wed, 13 Feb 2019 08:00:00 +0800</pubDate><guid>/blog/%E6%95%B0%E7%BB%84%E4%B8%8E%E6%8C%87%E9%92%88/</guid><description>&lt;h1 id="1-二维数组之行列指针"&gt;1 二维数组之行列指针 &lt;a href="#1-%e4%ba%8c%e7%bb%b4%e6%95%b0%e7%bb%84%e4%b9%8b%e8%a1%8c%e5%88%97%e6%8c%87%e9%92%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;我目前比较喜欢这种方式，因为可以使用自定义基础镜像的同时，没有了额外容器中克隆代码导致的占用磁盘空间问题……不过这样性能会差点。&lt;/p&gt;</description></item><item><title>你不认识的cc++ volatile</title><link>/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc-volatile/</link><pubDate>Fri, 24 Jul 2020 19:46:11 +0800</pubDate><guid>/blog/2019-01-07-%E4%BD%A0%E4%B8%8D%E8%AE%A4%E8%AF%86%E7%9A%84cc-volatile/</guid><description>&lt;style&gt;
+img {
+width: 680px;
+}
+&lt;/style&gt;
+&lt;h2 id="1-令人困惑的volatile"&gt;1. 令人困惑的volatile &lt;a href="#1-%e4%bb%a4%e4%ba%ba%e5%9b%b0%e6%83%91%e7%9a%84volatile" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;volatile字面意思是“&lt;strong&gt;不稳定的、易变的&lt;/strong&gt;”，不少编程语言中存在volatile关键字，也有共同之处，如“&lt;strong&gt;表示程序执行期间数据可能会被外部操作修改&lt;/strong&gt;”，如被外设修改或者被其他线程修改等。这只是字面上给我们的一般性认识，然而具体到不同的编程语言中volatile的语义可能相差甚远。&lt;/p&gt;
+&lt;p&gt;很多人以为自己精通CC++，但是被问起volatile的时候却无法清晰、果断地表明态度，那只能说明还是处在“从入门到精通”的路上，如果了解一门语言常见特性的使用、能够写健壮高效的程序就算精通的话，那实在是太藐视“大师”的存在了。从一个volatile关键字折射出了对CC++标准、编译器、操作系统、处理器、MMU各个方面的掌握程度。&lt;/p&gt;
+&lt;p&gt;几十年的发展，很多开发者因为自己的偏见、误解，或者对某些语言特性（如Java中的volatile语义）的根深蒂固的认识，赋予了CC++ volatile本不属于它的能力，自己却浑然不知自己犯了多大的一个错误。&lt;/p&gt;
+&lt;p&gt;我曾经以为CC++中volatile可以保证线程可见性，因为Java中是这样的，直到后来阅读Linux内核看到Linus Torvards的一篇文档，他强调了volatile可能带来的坏处“任何使用volatile的地方，都可能潜藏了一个bug”，我为他的“危言耸听”感到吃惊，所以我当时搜索了不少资料来求证CC++ volatile的能力，事后我认为CC++ volatile不能保证线程可见性。但是后来部门内一次分享，分享中提到了volatile来保证线程可见性，我当时心存疑虑，事后验证时犯了一个错误导致我错误地认为volatile可以保证线程可见性。直到我最近翻阅以前的笔记，翻到了几年前对volatile的疑虑……我决定深入研究下这个问题，以便能顺利入眠。&lt;/p&gt;
+&lt;h2 id="2-从规范认识volatile"&gt;2. 从规范认识volatile &lt;a href="#2-%e4%bb%8e%e8%a7%84%e8%8c%83%e8%ae%a4%e8%af%86volatile" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;以常见的编程语言C、C++、Java为例，它们都有一个关键字volatile，但是对volatile的定义却并非完全相同。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;Java中对volatile的定义：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;8.3.1.4. &lt;code&gt;volatile&lt;/code&gt; Fields&lt;/p&gt;
+&lt;p&gt;The Java programming language allows threads to access shared variables (&lt;a href="https://docs.oracle.com/javase/specs/jls/se7/html/jls-17.html#jls-17.1"&gt;§17.1&lt;/a&gt;). As a rule, to ensure that shared variables are consistently and reliably updated, a thread should ensure that it has exclusive use of such variables by obtaining a lock that, conventionally, enforces mutual exclusion for those shared variables.&lt;/p&gt;</description></item><item><title>数组与指针</title><link>/blog/%E6%95%B0%E7%BB%84%E4%B8%8E%E6%8C%87%E9%92%88/</link><pubDate>Wed, 13 Feb 2019 08:00:00 +0800</pubDate><guid>/blog/%E6%95%B0%E7%BB%84%E4%B8%8E%E6%8C%87%E9%92%88/</guid><description>&lt;h1 id="1-二维数组之行列指针"&gt;1 二维数组之行列指针 &lt;a href="#1-%e4%ba%8c%e7%bb%b4%e6%95%b0%e7%bb%84%e4%b9%8b%e8%a1%8c%e5%88%97%e6%8c%87%e9%92%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;pre&gt;&lt;code class="language-c"&gt;//数组名是数组首元素的地址，但是数组是一种类型，不能完全等同于指针，
 //sizeof(指针)=操作系统虚拟内存位数对应的字节数，sizeof(a)=sizeof(int)*2*3=24字节
 int a[2][3] = {1,2,3,4,5,6};
@@ -158,7 +225,49 @@ return 0;
 &lt;/tbody&gt;
 &lt;/table&gt;
 &lt;h2 id="go---environment-setup"&gt;Go - Environment Setup &lt;a href="#go---environment-setup" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;&lt;strong&gt;要点&lt;/strong&gt;：安装 Go 工具链，配置 &lt;code&gt;GOROOT&lt;/code&gt;（安装根）、&lt;code&gt;GOPATH&lt;/code&gt;（工作区，旧工作流）或 module 模式（&lt;code&gt;go.mod&lt;/code&gt;，现代默认）。&lt;code&gt;go run&lt;/code&gt; / &lt;code&gt;go build&lt;/code&gt; / &lt;code&gt;go install&lt;/code&gt; 覆盖编译运行；&lt;code&gt;go fmt&lt;/code&gt; 统一格式。&lt;/p&gt;</description></item><item><title>gdb调试常用操作</title><link>/blog/2022-07-09-gdb%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/</link><pubDate>Sun, 28 May 2017 23:56:48 +0800</pubDate><guid>/blog/2022-07-09-gdb%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是gdb调试的常用操作。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;要点&lt;/strong&gt;：安装 Go 工具链，配置 &lt;code&gt;GOROOT&lt;/code&gt;（安装根）、&lt;code&gt;GOPATH&lt;/code&gt;（工作区，旧工作流）或 module 模式（&lt;code&gt;go.mod&lt;/code&gt;，现代默认）。&lt;code&gt;go run&lt;/code&gt; / &lt;code&gt;go build&lt;/code&gt; / &lt;code&gt;go install&lt;/code&gt; 覆盖编译运行；&lt;code&gt;go fmt&lt;/code&gt; 统一格式。&lt;/p&gt;</description></item><item><title>C/C++ 开发基础：构建工具与常用开发库</title><link>/blog/2017-12-10-build_toolchains/</link><pubDate>Sun, 10 Dec 2017 00:00:00 +0800</pubDate><guid>/blog/2017-12-10-build_toolchains/</guid><description>&lt;h1 id="1-开发基础"&gt;1 开发基础 &lt;a href="#1-%e5%bc%80%e5%8f%91%e5%9f%ba%e7%a1%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="10-构建工具"&gt;1.0 构建工具 &lt;a href="#10-%e6%9e%84%e5%bb%ba%e5%b7%a5%e5%85%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="101-gnu-m4"&gt;1.0.1 GNU M4 &lt;a href="#101-gnu-m4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;GNU M4是一个经典的Unix宏处理器实现，与&lt;a href="https://kb.iu.edu/d/agjs"&gt;SVR4&lt;/a&gt;兼容但同时又增加了一些扩展（比如可以处理超过9个宏参数）。GNU M4也内置了文件包含、运行shell命令、算术运算等功能。&lt;/p&gt;
+&lt;p&gt;GNU M4拷贝输入的宏并处理后进一步展开成编译器可处理的宏，宏是M4内置的也可以是用户自定义的，支持任意参数。除了做&lt;strong&gt;宏展开&lt;/strong&gt;（macro expansion）之外，还可以执行**文件包含、运行shell命令、算术运算、处理文本、递归……**等操作。M4可以用作一个编译器前端也可以单独作为一个宏处理器。&lt;/p&gt;
+&lt;p&gt;M4少为人知，用的人可能也不会直接编写M4脚本，大多数人是因为使用了&lt;a href="https://en.wikipedia.org/wiki/Autoconf"&gt;Autoconf&lt;/a&gt;而Autoconf又依赖M4所以才安装了M4。但是M4确实是非常强大的，甚至让一些程序员欲罢不能。&lt;/p&gt;
+&lt;p&gt;关于M4的更多介绍，请看M4手册：&lt;a href="https://www.gnu.org/savannah-checkouts/gnu/m4/manual/m4-1.4.18/html_node/index.html"&gt;M4 Mannual&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;这里有一篇笔记介绍了M4的工作原理、使用：&lt;a href="http://mbreen.com/m4.html"&gt;Notes on the M4 Macro Language&lt;/a&gt;&lt;/p&gt;
+&lt;h2 id="11-常用的软件开发包"&gt;1.1 常用的软件开发包 &lt;a href="#11-%e5%b8%b8%e7%94%a8%e7%9a%84%e8%bd%af%e4%bb%b6%e5%bc%80%e5%8f%91%e5%8c%85" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在列举常用的软件开发包之前，需先描述下如何高效地设置软件包头文件、库文件的搜索路径。&lt;/p&gt;
+&lt;h3 id="111-如何配置头文件库文件搜索路径"&gt;1.1.1 如何配置头文件、库文件搜索路径 &lt;a href="#111-%e5%a6%82%e4%bd%95%e9%85%8d%e7%bd%ae%e5%a4%b4%e6%96%87%e4%bb%b6%e5%ba%93%e6%96%87%e4%bb%b6%e6%90%9c%e7%b4%a2%e8%b7%af%e5%be%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;使用第三方软件包开发时常需要设置头文件、库文件的搜索路径，如何确定软件包对应的文件路径呢？pkg-config可以简化这一设置工作，如获取glib-2.0的头文件、库文件搜索路径执行如下命令即可：&lt;code&gt;pkg-config --cflags --libs glib-2.0&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;pkg-config是如何得知软件包的头文件、库文件搜索路径的呢？每个软件包在安装的时候就已经包含了这一信息，这些信息保存在 &lt;strong&gt;/usr/lib64/pkg-config/${pkg}.pc&lt;/strong&gt; 描述文件中，pkg-config只是读取该文件中的描述项而已。&lt;/p&gt;
+&lt;p&gt;以glib-2.0这一面向linux c程序开发的集合框架开发包为例：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;pkg-config --cflags --libs glib-.20
+-I/usr/local/Cellar/glib/2.54.2/include/glib-2.0
+-I/usr/local/Cellar/glib/2.54.2/lib/glib-2.0/include
+-I/usr/local/opt/gettext/include
+-I/usr/local/Cellar/pcre/8.41/include
+-L/usr/local/Cellar/glib/2.54.2/lib
+-L/usr/local/opt/gettext/lib
+-lglib-2.0
+-lintl
+-Wl,-framework
+-Wl,CoreFoundation
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;其中不仅包括了glib-2.0自身的头文件、库文件搜索路径，还包括了某些依赖的头文件、库文件搜索路径，可见pkg-config确实能简化头文件、库文件搜索路径的设置工作，开发人员应该充分利用起此工具。&lt;/p&gt;
+&lt;h3 id="112-适用于linux-c程序开发的开发包"&gt;1.1.2 适用于linux c程序开发的开发包 &lt;a href="#112-%e9%80%82%e7%94%a8%e4%ba%8elinux-c%e7%a8%8b%e5%ba%8f%e5%bc%80%e5%8f%91%e7%9a%84%e5%bc%80%e5%8f%91%e5%8c%85" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;h4 id="1121-集合框架类"&gt;1.1.2.1 集合框架类 &lt;a href="#1121-%e9%9b%86%e5%90%88%e6%a1%86%e6%9e%b6%e7%b1%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;在开发过程中经常要用到一些常见的数据结构，比如单链表、双链表、集合、哈希表、多阶哈希、avl树、红黑树、队列、栈等等，C++中提供了STL（标准模板库）简化了开发工作，Java中提供了对应的集合框架JUC包。但是C标准库里面并没有类似工具……Linux平台经过多年发展积累了一些面向C语言的集合框架，比如&lt;strong&gt;gnulib&lt;/strong&gt;、&lt;strong&gt;glib&lt;/strong&gt;等。&lt;/p&gt;
+&lt;p&gt;我们这里只介绍glib，glib从96年开始就已经诞生了，前后20多年时间表明其经得起实践的检验。glib封装的api表意清楚、使用简单，如果是一个比较熟练的C程序开发人员的话，应该很容易就能上手。&lt;/p&gt;
+&lt;p&gt;这里抽时间学习了一下glib-2.0工具包，其提供了如下常用的数据结构：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;单链表 GSList&lt;/li&gt;
+&lt;li&gt;双链表 GList&lt;/li&gt;
+&lt;li&gt;哈希表 GHashTable&lt;/li&gt;
+&lt;li&gt;动态数组 GArray&lt;/li&gt;
+&lt;li&gt;AVL树 GTree&lt;/li&gt;
+&lt;li&gt;队列 GQueue&lt;/li&gt;
+&lt;li&gt;记录 Relation&lt;/li&gt;
+&lt;li&gt;其他&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;有关glib-2.0的教程可以参考：&lt;a href="https://www.ibm.com/developerworks/linux/tutorials/l-glib/"&gt;Manage C data using the GLib collections&lt;/a&gt;&lt;/p&gt;</description></item><item><title>gdb调试常用操作</title><link>/blog/2022-07-09-gdb%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/</link><pubDate>Sun, 28 May 2017 23:56:48 +0800</pubDate><guid>/blog/2022-07-09-gdb%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是gdb调试的常用操作。&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;### execute and trace step by step
 help &amp;lt;topic/cmd&amp;gt;
 list

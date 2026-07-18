@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Which on</title><link>/tags/which/</link><description>Recent content in Which on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 07 Oct 2019 00:00:00 +0800</lastBuildDate><atom:link href="/tags/which/index.xml" rel="self" type="application/rss+xml"/><item><title>which 命令：查找可执行文件路径</title><link>/blog/2019-10-07-which-command/</link><pubDate>Mon, 07 Oct 2019 00:00:00 +0800</pubDate><guid>/blog/2019-10-07-which-command/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;code&gt;which&lt;/code&gt; 是 Shell 中用来查找可执行文件路径的常用命令。默认情况下它只返回 &lt;code&gt;$PATH&lt;/code&gt; 中第一个匹配的结果，但通过 &lt;code&gt;-a&lt;/code&gt; 选项可以列出全部匹配。&lt;/p&gt;
+&lt;h1 id="正文"&gt;正文 &lt;a href="#%e6%ad%a3%e6%96%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="基本用法"&gt;基本用法 &lt;a href="#%e5%9f%ba%e6%9c%ac%e7%94%a8%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;which python
+# /usr/bin/python
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这表示在 &lt;code&gt;$PATH&lt;/code&gt; 中第一个找到的 &lt;code&gt;python&lt;/code&gt; 位于 &lt;code&gt;/usr/bin/&lt;/code&gt;。&lt;/p&gt;
+&lt;h2 id="-a-列出所有匹配"&gt;&lt;code&gt;-a&lt;/code&gt; 列出所有匹配 &lt;a href="#-a-%e5%88%97%e5%87%ba%e6%89%80%e6%9c%89%e5%8c%b9%e9%85%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;which -a python
+# /usr/bin/python
+# /usr/local/bin/python
+# /home/user/.local/bin/python
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;-a&lt;/code&gt; 选项会列出 &lt;code&gt;$PATH&lt;/code&gt; 中所有包含名为 &lt;code&gt;python&lt;/code&gt; 可执行文件的路径。这在以下场景特别有用：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;排查&amp;quot;明明改了配置但执行的是另一个版本&amp;quot;的问题&lt;/li&gt;
+&lt;li&gt;确认某个命令在不同路径下的多个安装&lt;/li&gt;
+&lt;li&gt;检查 &lt;code&gt;$PATH&lt;/code&gt; 中是否存在命令覆盖&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="与-typecommand-的区别"&gt;与 type、command 的区别 &lt;a href="#%e4%b8%8e-typecommand-%e7%9a%84%e5%8c%ba%e5%88%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;命令&lt;/th&gt;
+&lt;th&gt;特点&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;which&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;简单粗暴，在 &lt;code&gt;$PATH&lt;/code&gt; 中搜索&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;type&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Shell 内建命令，能识别 alias、function、内建命令&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;command -v&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;POSIX 标准方式，可移植性好&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;### help
+$ which help
+which: no help in ...
+$ type help
+help is a shell builtin
+$ command -v help
+help
+### ls
+$ which ls
+/usr/bin/ls
+$ type ls
+ls is aliased to `ls --color -vp'
+$ command -v ls
+alias ls='ls --color -vp
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;可以看到 &lt;code&gt;type&lt;/code&gt; 和 &lt;code&gt;command -v&lt;/code&gt; 能正确识别 内置函数、alias，而 &lt;code&gt;which&lt;/code&gt; 只查 &lt;code&gt;$PATH&lt;/code&gt;。&lt;/p&gt;</description></item></channel></rss>

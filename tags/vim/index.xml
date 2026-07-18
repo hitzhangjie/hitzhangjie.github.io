@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Vim on</title><link>/tags/vim/</link><description>Recent content in Vim on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 26 Jun 2022 11:44:40 +0800</lastBuildDate><atom:link href="/tags/vim/index.xml" rel="self" type="application/rss+xml"/><item><title>vim使用进阶常用操作</title><link>/blog/2016-01-07-vim_vim%E8%BF%9B%E9%98%B6%E7%AE%80%E6%98%93%E6%89%8B%E5%86%8C/</link><pubDate>Sun, 26 Jun 2022 11:44:40 +0800</pubDate><guid>/blog/2016-01-07-vim_vim%E8%BF%9B%E9%98%B6%E7%AE%80%E6%98%93%E6%89%8B%E5%86%8C/</guid><description>&lt;h1 id="vim使用进阶常用操作"&gt;vim使用进阶常用操作 &lt;a href="#vim%e4%bd%bf%e7%94%a8%e8%bf%9b%e9%98%b6%e5%b8%b8%e7%94%a8%e6%93%8d%e4%bd%9c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Vim on</title><link>/tags/vim/</link><description>Recent content in Vim on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 26 Jun 2022 11:44:40 +0800</lastBuildDate><atom:link href="/tags/vim/index.xml" rel="self" type="application/rss+xml"/><item><title>vim使用进阶常用操作</title><link>/blog/vim%E4%BD%BF%E7%94%A8%E8%BF%9B%E9%98%B6%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/</link><pubDate>Sun, 26 Jun 2022 11:44:40 +0800</pubDate><guid>/blog/vim%E4%BD%BF%E7%94%A8%E8%BF%9B%E9%98%B6%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/</guid><description>&lt;h1 id="vim使用进阶常用操作"&gt;vim使用进阶常用操作 &lt;a href="#vim%e4%bd%bf%e7%94%a8%e8%bf%9b%e9%98%b6%e5%b8%b8%e7%94%a8%e6%93%8d%e4%bd%9c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;h2 id="文件打开退出"&gt;文件打开退出 &lt;a href="#%e6%96%87%e4%bb%b6%e6%89%93%e5%bc%80%e9%80%80%e5%87%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;ol&gt;
 &lt;li&gt;
@@ -13,4 +13,49 @@
 &lt;/ul&gt;
 &lt;/li&gt;
 &lt;li&gt;
-&lt;p&gt;providing you have edited the file,if you press:&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;providing you have edited the file,if you press:&lt;/p&gt;</description></item><item><title>vim开发guideline插件</title><link>/blog/vim%E5%BC%80%E5%8F%91guideline%E6%8F%92%E4%BB%B6/</link><pubDate>Mon, 16 Nov 2015 01:57:44 +0800</pubDate><guid>/blog/vim%E5%BC%80%E5%8F%91guideline%E6%8F%92%E4%BB%B6/</guid><description>&lt;h1 id="如何为vim开发一个guideline插件"&gt;如何为vim开发一个guideline插件 &lt;a href="#%e5%a6%82%e4%bd%95%e4%b8%bavim%e5%bc%80%e5%8f%91%e4%b8%80%e4%b8%aaguideline%e6%8f%92%e4%bb%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Wed Jan 14 20:40:48 CST 2015&lt;/p&gt;
+&lt;h2 id="目标vim编辑代码时显示guidelines"&gt;目标：vim编辑代码时显示guidelines &lt;a href="#%e7%9b%ae%e6%a0%87vim%e7%bc%96%e8%be%91%e4%bb%a3%e7%a0%81%e6%97%b6%e6%98%be%e7%a4%baguidelines" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;前几天从小明处看到一个挺不错的插件，它的目的就是能够在写代码时在indent的时
+候显示guidelines，这个非常方便，也很人性化，本来我想直接安装这个插件的，但是经
+过查看，我发现即使不安装这个插件，也可以在通过tab进行缩进的地方显示guidelines
+。&lt;/p&gt;
+&lt;p&gt;因为我在写代码时才希望显示guidelines，而不是在普通文本文件中也显示
+guidelines ，为此我自己写了一个vim的脚本，算不上什么功能强大的插件，但是的确很
+实用。&lt;/p&gt;
+&lt;h2 id="实现实现一个vim-guidelines插件"&gt;实现：实现一个vim guidelines插件 &lt;a href="#%e5%ae%9e%e7%8e%b0%e5%ae%9e%e7%8e%b0%e4%b8%80%e4%b8%aavim-guidelines%e6%8f%92%e4%bb%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;将写好的脚本放置到~/.vim/plugin目录下面，vim会自动加载并执行这个脚本。
+顺便说一下吧，通过查看runtimepath可以查看到脚本的搜索顺序，通过scriptnames
+可以查看到脚本的加载顺序，通过help scripts可以查看到vim脚本的编写说明。&lt;/p&gt;
+&lt;p&gt;我写的脚本如下所示。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-vim"&gt;&amp;quot;----------------------------------------------------------------------------
+&amp;quot; Guidelines
+&amp;quot;
+&amp;quot; Introduction
+&amp;quot; this plugin is used to dynamically display the guidelines for indent depend
+&amp;quot; on the filename's extension. if you want to show the guidelines for
+&amp;quot; specified filetype which has extension '*.xxx', then you must put 'xxx' in
+&amp;quot; the list s:languages.
+&amp;quot;
+&amp;quot; that's all, hope you like it.
+&amp;quot; ---------------------------------------------------------------------------
+if exists('g:show_guidelines')
+if g:show_guidelines == 1
+&amp;quot; show indent guidelines for programming
+let s:current_ft = expand('%:e')
+let s:languages = [
+\ 'c', 'cpp', 'cc', 'java',
+\ 'js', 'html', 'htm', 'xml',
+\ 'php', 'jsp', 'asp',
+\ 'sh', 'bash'
+\ ]
+let s:existed = index(s:languages, s:current_ft)
+if s:existed &amp;gt;= 0
+set list lcs=tab:\¦\
+hi SpecialKey ctermfg=60 guifg=#000000
+endif
+endif
+endif
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="总结"&gt;总结 &lt;a href="#%e6%80%bb%e7%bb%93" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;本文简要介绍了如何为vim开发一个guidelines插件，vim的扩展性确实非常好。目前这个插件已经放到了我自己的hitzhangjie/Conf/vim/的repo中，实际上我打包了所有常用的vim配置在里面，感兴趣的可以自行取用。&lt;/p&gt;</description></item></channel></rss>

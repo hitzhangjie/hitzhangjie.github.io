@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>So_linger on</title><link>/tags/so_linger/</link><description>Recent content in So_linger on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 19 Jul 2026 01:00:30 +0800</lastBuildDate><atom:link href="/tags/so_linger/index.xml" rel="self" type="application/rss+xml"/><item><title>tcp状态机：SO_LINGER 精确控制 close 发送 FIN/RST</title><link>/blog/2026-07-19-tcpip_so_linger/</link><pubDate>Sun, 19 Jul 2026 01:00:30 +0800</pubDate><guid>/blog/2026-07-19-tcpip_so_linger/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在 [TCP 连接终止场景分析] 里，我们梳理过几类「关连接到底发 FIN 还是 RST」的情况：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;进程被 &lt;code&gt;kill -9&lt;/code&gt; 后，内核代为关掉 socket：和主动/被动打开无关，默认往往走 &lt;strong&gt;FIN&lt;/strong&gt;；&lt;/li&gt;
+&lt;li&gt;关闭瞬间&lt;strong&gt;接收缓冲区还有未读数据&lt;/strong&gt;时，内核倾向于发 &lt;strong&gt;RST&lt;/strong&gt;，因为这些数据注定被丢弃；&lt;/li&gt;
+&lt;li&gt;应用层 &lt;code&gt;Write()&lt;/code&gt; 成功，也不代表对端一定还活着。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;文中还顺带提到另一种会触发 RST 的路径：&lt;code&gt;SO_LINGER&lt;/code&gt; 设为「开启且等待时间为 0」。&lt;br&gt;
+这和「缓冲里有脏数据」不同——它是&lt;strong&gt;应用主动选择&lt;/strong&gt;的关闭策略。本文单独把 &lt;code&gt;SO_LINGER&lt;/code&gt; 说清楚：它管的是什么、三种配置分别怎样、什么时候值得用、又会踩什么坑。&lt;/p&gt;
+&lt;h1 id="正文"&gt;正文 &lt;a href="#%e6%ad%a3%e6%96%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="1-close-默认在干什么"&gt;1. close() 默认在干什么？ &lt;a href="#1-close-%e9%bb%98%e8%ae%a4%e5%9c%a8%e5%b9%b2%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;对 TCP 而言，应用调用 &lt;code&gt;close(fd)&lt;/code&gt;（引用计数归零）后，内核大致会：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;若接收缓冲里&lt;strong&gt;还有未读数据&lt;/strong&gt; → 常直接 &lt;strong&gt;RST&lt;/strong&gt;（与 linger 无关，见前述场景二）；&lt;/li&gt;
+&lt;li&gt;否则进入 &lt;code&gt;tcp_close&lt;/code&gt; 一类路径，尽量把发送缓冲里的数据发完，再发 &lt;strong&gt;FIN&lt;/strong&gt;，进入正常挥手；&lt;/li&gt;
+&lt;li&gt;在默认 linger 语义下，&lt;code&gt;close()&lt;/code&gt; &lt;strong&gt;不必等&lt;/strong&gt; 对端 ACK 完整个挥手过程——未发完的数据可交给内核在后台继续处理（socket 变成孤儿套接字等，细节见 [close 后 socket 是否立刻销毁]）。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;因此默认行为更接近：&lt;strong&gt;尽快把 fd 从进程里摘掉，优雅关闭尽量交给协议栈&lt;/strong&gt;。&lt;br&gt;
+&lt;code&gt;SO_LINGER&lt;/code&gt; 则允许你改写第 2、3 步的语义——包括「要不要阻塞等发送结束」，以及「干脆别 FIN，直接 RST」。&lt;/p&gt;
+&lt;h2 id="2-so_linger-是什么"&gt;2. SO_LINGER 是什么？ &lt;a href="#2-so_linger-%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;SO_LINGER&lt;/code&gt; 是 &lt;code&gt;SOL_SOCKET&lt;/code&gt; 层选项，用一个 &lt;code&gt;linger&lt;/code&gt; 结构描述关闭策略：&lt;/p&gt;</description></item></channel></rss>

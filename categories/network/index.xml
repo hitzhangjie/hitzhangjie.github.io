@@ -1,4 +1,185 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Network on</title><link>/categories/network/</link><description>Recent content in Network on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 12 Dec 2018 14:32:38 +0800</lastBuildDate><atom:link href="/categories/network/index.xml" rel="self" type="application/rss+xml"/><item><title>TCP 流量控制与拥塞控制</title><link>/blog/2018-12-12-tcp%E6%B5%81%E9%87%8F%E6%8E%A7%E5%88%B6%E4%B8%8E%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6/</link><pubDate>Wed, 12 Dec 2018 14:32:38 +0800</pubDate><guid>/blog/2018-12-12-tcp%E6%B5%81%E9%87%8F%E6%8E%A7%E5%88%B6%E4%B8%8E%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6/</guid><description>&lt;h1 id="tcp流量控制拥塞控制算法"&gt;TCP流量控制+拥塞控制算法 &lt;a href="#tcp%e6%b5%81%e9%87%8f%e6%8e%a7%e5%88%b6%e6%8b%a5%e5%a1%9e%e6%8e%a7%e5%88%b6%e7%ae%97%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Network on</title><link>/categories/network/</link><description>Recent content in Network on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 19 Jul 2026 01:00:30 +0800</lastBuildDate><atom:link href="/categories/network/index.xml" rel="self" type="application/rss+xml"/><item><title>tcp状态机：SO_LINGER 精确控制 close 发送 FIN/RST</title><link>/blog/2026-07-19-tcpip_so_linger/</link><pubDate>Sun, 19 Jul 2026 01:00:30 +0800</pubDate><guid>/blog/2026-07-19-tcpip_so_linger/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在 [TCP 连接终止场景分析] 里，我们梳理过几类「关连接到底发 FIN 还是 RST」的情况：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;进程被 &lt;code&gt;kill -9&lt;/code&gt; 后，内核代为关掉 socket：和主动/被动打开无关，默认往往走 &lt;strong&gt;FIN&lt;/strong&gt;；&lt;/li&gt;
+&lt;li&gt;关闭瞬间&lt;strong&gt;接收缓冲区还有未读数据&lt;/strong&gt;时，内核倾向于发 &lt;strong&gt;RST&lt;/strong&gt;，因为这些数据注定被丢弃；&lt;/li&gt;
+&lt;li&gt;应用层 &lt;code&gt;Write()&lt;/code&gt; 成功，也不代表对端一定还活着。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;文中还顺带提到另一种会触发 RST 的路径：&lt;code&gt;SO_LINGER&lt;/code&gt; 设为「开启且等待时间为 0」。&lt;br&gt;
+这和「缓冲里有脏数据」不同——它是&lt;strong&gt;应用主动选择&lt;/strong&gt;的关闭策略。本文单独把 &lt;code&gt;SO_LINGER&lt;/code&gt; 说清楚：它管的是什么、三种配置分别怎样、什么时候值得用、又会踩什么坑。&lt;/p&gt;
+&lt;h1 id="正文"&gt;正文 &lt;a href="#%e6%ad%a3%e6%96%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="1-close-默认在干什么"&gt;1. close() 默认在干什么？ &lt;a href="#1-close-%e9%bb%98%e8%ae%a4%e5%9c%a8%e5%b9%b2%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;对 TCP 而言，应用调用 &lt;code&gt;close(fd)&lt;/code&gt;（引用计数归零）后，内核大致会：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;若接收缓冲里&lt;strong&gt;还有未读数据&lt;/strong&gt; → 常直接 &lt;strong&gt;RST&lt;/strong&gt;（与 linger 无关，见前述场景二）；&lt;/li&gt;
+&lt;li&gt;否则进入 &lt;code&gt;tcp_close&lt;/code&gt; 一类路径，尽量把发送缓冲里的数据发完，再发 &lt;strong&gt;FIN&lt;/strong&gt;，进入正常挥手；&lt;/li&gt;
+&lt;li&gt;在默认 linger 语义下，&lt;code&gt;close()&lt;/code&gt; &lt;strong&gt;不必等&lt;/strong&gt; 对端 ACK 完整个挥手过程——未发完的数据可交给内核在后台继续处理（socket 变成孤儿套接字等，细节见 [close 后 socket 是否立刻销毁]）。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;因此默认行为更接近：&lt;strong&gt;尽快把 fd 从进程里摘掉，优雅关闭尽量交给协议栈&lt;/strong&gt;。&lt;br&gt;
+&lt;code&gt;SO_LINGER&lt;/code&gt; 则允许你改写第 2、3 步的语义——包括「要不要阻塞等发送结束」，以及「干脆别 FIN，直接 RST」。&lt;/p&gt;
+&lt;h2 id="2-so_linger-是什么"&gt;2. SO_LINGER 是什么？ &lt;a href="#2-so_linger-%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;SO_LINGER&lt;/code&gt; 是 &lt;code&gt;SOL_SOCKET&lt;/code&gt; 层选项，用一个 &lt;code&gt;linger&lt;/code&gt; 结构描述关闭策略：&lt;/p&gt;</description></item><item><title>tcp状态机：TCP 连接终止场景分析</title><link>/blog/2026-07-19-tcpip_connection_termination/</link><pubDate>Sun, 19 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/2026-07-19-tcpip_connection_termination/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;TCP 连接终止看似简单（四次挥手），但在实际系统中，连接的关闭方式受到多种因素影响：进程是正常退出还是被 &lt;code&gt;kill -9&lt;/code&gt; 杀掉？主动、被动建连接一侧行为是否一致？socket buffer 中有无数据行为是否一致？写半连接关闭/连接关闭期间收到数据？原来管理连接的进程是否存在行为是否一致？…… 这几个场景都是网络编程期间会观察到的一些令人困惑的现象，实际上它们结论很简单，大一统。但是对于网络编程新手，经常会偶尔踩到其中1条或几条，但是有没有深入探究，最后可能会模糊认为这些场景下有各种特殊case。&lt;/p&gt;
+&lt;p&gt;本文针对这几个典型场景，分别给出一些介绍、分析，最后收到一个一致的Linux内核处理行为上去。后续，希望碰到这类问题时，大家能够非常直截了当地做出判断。&lt;/p&gt;
+&lt;h2 id="场景一kill--9-杀进程"&gt;场景一：kill -9 杀进程 &lt;a href="#%e5%9c%ba%e6%99%af%e4%b8%80kill--9-%e6%9d%80%e8%bf%9b%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;kill -9&lt;/code&gt;（&lt;code&gt;SIGKILL&lt;/code&gt;）无法被进程捕获，进程直接退出。内核在回收资源时会关闭其打开的全部 fd，对 TCP 走的是与正常 &lt;code&gt;close()&lt;/code&gt; 同一类路径（&lt;code&gt;sock_close&lt;/code&gt; → &lt;code&gt;tcp_close&lt;/code&gt;）。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;关键点：发 FIN 还是 RST，不取决于「主动打开 / 被动打开」（Client / Server），而取决于该 socket 关闭时的状态。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;常见判定：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;条件&lt;/th&gt;
+&lt;th&gt;结果&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;接收缓冲区&lt;strong&gt;没有&lt;/strong&gt;未读数据，且未设置 &lt;code&gt;SO_LINGER(on, 0)&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;发&lt;strong&gt;FIN&lt;/strong&gt;，正常挥手&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;接收缓冲区&lt;strong&gt;有&lt;/strong&gt;未读数据&lt;/td&gt;
+&lt;td&gt;发&lt;strong&gt;RST&lt;/strong&gt;（未读数据将被丢弃）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;SO_LINGER&lt;/code&gt;：&lt;code&gt;l_onoff=1&lt;/code&gt; 且 &lt;code&gt;l_linger=0&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;发&lt;strong&gt;RST&lt;/strong&gt;，立即掐断&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;code&gt;SO_LINGER&lt;/code&gt; 的语义、三种配置与取舍见专题：&lt;a href="./2026-07-19-tcpip_so_linger.md"&gt;SO_LINGER：close() 时 FIN 还是 RST？&lt;/a&gt;。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;因此：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Client 被 &lt;code&gt;kill -9&lt;/code&gt;：缓冲已读空 → &lt;strong&gt;FIN&lt;/strong&gt;；有未读数据 → &lt;strong&gt;RST&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;Server 被 &lt;code&gt;kill -9&lt;/code&gt;（含 &lt;code&gt;accept()&lt;/code&gt; 出来的已连接 socket）：&lt;strong&gt;同一套规则&lt;/strong&gt;，不是「一杀 server 就 RST」&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;可用同目录下的 &lt;code&gt;kill9_fin_rst_demo.go&lt;/code&gt; 自测：buffer 空时 kill client / server，存活侧 &lt;code&gt;Read&lt;/code&gt; 均为 &lt;code&gt;EOF&lt;/code&gt;（FIN）；任一侧有未读数据再 kill，则为 &lt;code&gt;connection reset by peer&lt;/code&gt;（RST）。&lt;/p&gt;</description></item><item><title>tcp状态机：close(fd)后socket真的销毁了吗</title><link>/blog/2026-07-18-tcpip_close%E5%90%8Esocket%E7%9C%9F%E7%9A%84%E9%94%80%E6%AF%81%E4%BA%86%E5%90%97/</link><pubDate>Sat, 18 Jul 2026 20:00:09 +0800</pubDate><guid>/blog/2026-07-18-tcpip_close%E5%90%8Esocket%E7%9C%9F%E7%9A%84%E9%94%80%E6%AF%81%E4%BA%86%E5%90%97/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在网络编程中，许多人存在一个直觉误区：&lt;strong&gt;认为应用层执行 &lt;code&gt;close(fd)&lt;/code&gt; 且引用计数归零后，内核的 socket 就立即销毁了，此时收到任何数据必然会立刻回复 RST。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;这个理解是错误的。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;应用层销毁 &lt;code&gt;fd&lt;/code&gt;（钥匙）与内核销毁 &lt;code&gt;socket&lt;/code&gt; 状态机（实体）是&lt;strong&gt;异步解耦&lt;/strong&gt;的。调用 &lt;code&gt;close()&lt;/code&gt; 后，该套接字会变成孤儿套接字（Orphan Socket）由内核接管。对于后续到来的数据，内核有一套极其严密的防御和处理机制。&lt;/p&gt;
+&lt;h2 id="前置知识shutdown-与-close-的本质区别"&gt;前置知识：shutdown() 与 close() 的本质区别 &lt;a href="#%e5%89%8d%e7%bd%ae%e7%9f%a5%e8%af%86shutdown-%e4%b8%8e-close-%e7%9a%84%e6%9c%ac%e8%b4%a8%e5%8c%ba%e5%88%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在深入内核行为之前，必须先澄清一个容易混淆的问题：为什么 &lt;code&gt;shutdown()&lt;/code&gt; 不能替代 &lt;code&gt;close()&lt;/code&gt;？两者到底操作的是什么？&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;应用层
+│
+├── fd (文件描述符) ─── close() 操作这一层
+│
+├── struct file ─── 引用计数为0时销毁的是这个，而非最底层的struct sock
+│ ...
+└── struct sock, socket (内核对象) ─── shutdown() 操作这一层 ─── TCP 状态机在这里
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;shutdown()&lt;/code&gt; 无论 &lt;code&gt;how&lt;/code&gt; 取 &lt;code&gt;SHUT_RD&lt;/code&gt;、&lt;code&gt;SHUT_WR&lt;/code&gt; 还是 &lt;code&gt;SHUT_RDWR&lt;/code&gt;，都直接操作 &lt;code&gt;struct sock&lt;/code&gt; 层的半关闭标志，&lt;strong&gt;完全不动 &lt;code&gt;struct file&lt;/code&gt; 的引用计数 (&lt;code&gt;f_count&lt;/code&gt;)&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;close(fd)&lt;/code&gt;时，引用计数-1指的是对struct file引用计数-1。引用计数为0时，销毁的是 &lt;code&gt;struct file&lt;/code&gt;，而不是 &lt;code&gt;struct sock&lt;/code&gt;（socket传输控制块）。释放 &lt;code&gt;struct file&lt;/code&gt; 时通过 &lt;code&gt;file-&amp;gt;f_op-&amp;gt;release()&lt;/code&gt; → &lt;code&gt;sock_close()&lt;/code&gt; → &lt;code&gt;tcp_close()&lt;/code&gt; 驱动 TCP 状态机流转。&lt;code&gt;tcp_close()&lt;/code&gt; 只是驱动 TCP 状态机迁移到 &lt;code&gt;FIN_WAIT_1&lt;/code&gt; / &lt;code&gt;FIN_WAIT_2&lt;/code&gt;，&lt;code&gt;struct sock&lt;/code&gt; 本身并未直接销毁——它作为&amp;quot;孤儿套接字&amp;quot;继续由内核协议栈接管，直到对端关闭或超时。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;调用&lt;/th&gt;
+&lt;th&gt;发 FIN？&lt;/th&gt;
+&lt;th&gt;递减引用计数？&lt;/th&gt;
+&lt;th&gt;fd 还能用？&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;shutdown(fd, SHUT_WR)&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;✅ 是&lt;/td&gt;
+&lt;td&gt;❌ 否&lt;/td&gt;
+&lt;td&gt;✅ 能&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;shutdown(fd, SHUT_RD)&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;❌ 否&lt;/td&gt;
+&lt;td&gt;❌ 否&lt;/td&gt;
+&lt;td&gt;✅ 能&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;shutdown(fd, SHUT_RDWR)&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;✅ 是&lt;/td&gt;
+&lt;td&gt;❌ 否&lt;/td&gt;
+&lt;td&gt;✅ 能&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;close(fd)&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;视情况？见下文&lt;/td&gt;
+&lt;td&gt;✅ 是&lt;/td&gt;
+&lt;td&gt;❌ 不能&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;&lt;img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Tcp_state_diagram_fixed_new.svg/3840px-Tcp_state_diagram_fixed_new.svg.png" alt="tcp state diagram"&gt;&lt;/p&gt;</description></item><item><title>网络编程：tcpconn.Write 未报错，真的意味着对端收到了吗？</title><link>/blog/2026-06-25-%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B_tcp%E5%8F%AF%E9%9D%A0%E6%80%A7%E4%B8%8E%E5%8F%91%E9%80%81%E5%A4%B1%E8%B4%A5%E4%B9%8B%E8%B0%9C/</link><pubDate>Thu, 25 Jun 2026 10:00:00 +0800</pubDate><guid>/blog/2026-06-25-%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B_tcp%E5%8F%AF%E9%9D%A0%E6%80%A7%E4%B8%8E%E5%8F%91%E9%80%81%E5%A4%B1%E8%B4%A5%E4%B9%8B%E8%B0%9C/</guid><description>&lt;p&gt;TCP 连接 send 返回成功，真的意味着对端收到/处理了吗？先说结论，不光可能没处理，甚至收到都不一定收到。很多人说TCP不是可靠的吗？为什么像golang &lt;code&gt;tcpconn.Write&lt;/code&gt; 返回了nil，竟然还有可能发送不成功呢？&lt;/p&gt;
+&lt;p&gt;这是很多开发者的TCP认知误区。现如今很多网络服务器开发都是基于开发框架、RPC桩代码生成，网络通信被简化成了一个桩代码函数调用，开发者的技能也从系统调用、libev库之类的较深的理解慢慢会话为了RPC桩代码call boy :)&lt;/p&gt;
+&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;前几天同事问了我一个问题：我们框架里通过 &lt;code&gt;send&lt;/code&gt; 通知对方服务，如果 &lt;code&gt;send&lt;/code&gt; 没有返回失败，能不能 100% 确定对端收到了这个包？&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;先对齐下概念：这里的send，是RPC时只发req但是不返回rsp给上层调用，在有些框架里也会用选项notify或者sendonly来标识；与send一应的还有一个call，这里的call指的是发送req并且返回rsp给上层调用，有些框架里会用选项sendrcv来标识。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;答案是不能。这个问题其实触及了一个非常经典的认知误区——很多开发者把&amp;quot;系统调用没报错&amp;quot;等同于&amp;quot;对端进程收到了数据&amp;quot;。这个误区之所以普遍，是因为它跨越了多个抽象层次：从应用层 buffer 到内核协议栈，从网卡队列到网络传输，再到对端操作系统和业务进程，每一层都有&amp;quot;你以为成功了但其实还没有&amp;quot;的环节。&lt;/p&gt;
+&lt;p&gt;下面我们从几个层次来拆解这个问题。&lt;/p&gt;
+&lt;h1 id="问题一系统调用成功--数据送达"&gt;问题一：系统调用成功 ≠ 数据送达 &lt;a href="#%e9%97%ae%e9%a2%98%e4%b8%80%e7%b3%bb%e7%bb%9f%e8%b0%83%e7%94%a8%e6%88%90%e5%8a%9f--%e6%95%b0%e6%8d%ae%e9%80%81%e8%be%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="层层缓存everything-is-cache"&gt;层层缓存：everything is cache &lt;a href="#%e5%b1%82%e5%b1%82%e7%bc%93%e5%ad%98everything-is-cache" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当你调用 &lt;code&gt;tcpconn.Write(buf)&lt;/code&gt; 并且没有返回 error 时，这个&amp;quot;成功&amp;quot;到底意味着什么？答案是：&lt;strong&gt;它只意味着数据从应用层的 buffer 拷贝到了内核的 socket buffer&lt;/strong&gt;。后面的路还很长：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;应用层 buffer
+↓ tcpconn.Write (系统调用)
+内核 socket buffer ← 系统调用到这里就返回了
+↓ TCP 协议栈（分段、拥塞控制、重传……）
+网卡 TX queue (NIC buffer)
+↓ 物理层
+网络
+↓
+对端网卡 → 内核 → 应用层
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;系统调用的语义是&amp;quot;数据已提交给内核&amp;quot;，它&lt;strong&gt;不会&lt;/strong&gt;等待数据通过网卡发送出去，更不会等待对端的 TCP ACK。这是有意为之的设计——如果每个 &lt;code&gt;write&lt;/code&gt; 都要等到对端确认，那么一次 RTT 就会阻塞调用线程，性能将完全不可接受（后面还会细说）。&lt;/p&gt;</description></item><item><title>网络编程：tcpconn.Write 未报错，实际发送失败</title><link>/blog/2018-12-20-%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B_write-closed-tcpconn/</link><pubDate>Thu, 20 Dec 2018 23:11:29 +0800</pubDate><guid>/blog/2018-12-20-%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B_write-closed-tcpconn/</guid><description>&lt;h1 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;注意half-closed强调的是tcp全双工通信方向上关闭了其中一个方向的通信，如A、B通信，A调用shutdown(fd, write)不再给B发数据，但是仍然可以从B收数据。有时候，也会听到一些误用的情况，如用来描述一个tcpconn在某个peer侧单方面关闭了这个连接，比如A、B通信，A调用了close(fd)，这不叫half-close connection，这叫close connection。
+有时候，我们必须咬文嚼字，因为只有严格区分每一种case，我们才能真正对齐我们在讨论哪一种技术细节问题。模糊、乱用专业术语，只会让混乱更加混乱，鸡同鸭讲完全不在一个频道上。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;在本文这个要讨论的问题背景下，框架要检测“对端写半连接关闭”以及“对端连接关闭”的情景，从检测方法上而言，方法是统一的，那就是直接通过系统调用进行非阻塞读，然后基于结果进行判断。如果检测到EOF，那连接至少肯定是对端写关闭了，也可能是全关闭了。对于网络框架这种通过同一个连接发送请求、接收响应的情景而言，这样的连接不健康（不能收取响应），需要从连接池剔除掉。&lt;/p&gt;
+&lt;p&gt;在过去写这篇文章的时候，我也对half-close tcpconn这个术语随意使用，有时候强调某个方向关闭，有时候表示socket层面关闭。严格来说是不准确的，这里强调下。在我们的框架中不会调用shutdown，只会调用close。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;tcp client: write to a closed tcp connection!&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这里探讨一下这个问题，Write to a closed tcp connection的问题。在深入讨论这些问题之前，首先要了解tcp state diagram，为此文末特地附上了经典的tcp状态转换图。&lt;/p&gt;
+&lt;p&gt;我们的场景是这样的，tcp server已经启动，然后tcp client主动建立连接请求，连接成功建立后，tcp client并不立即发送数据而是等待一段时间之后才会发送数据（这种在client端的tcp连接池中非常常见），tcp server端为了防止连接被滥用，会每隔30s钟检查一下tcp连接是否空闲，如果两次检查都发现tcp连接空闲则主动将连接关闭。&lt;/p&gt;
+&lt;h1 id="原因分析"&gt;原因分析 &lt;a href="#%e5%8e%9f%e5%9b%a0%e5%88%86%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;此时tcp server端会调用 &lt;code&gt;conn.Close()&lt;/code&gt;方法，该方法最终会导致传输层发送tcp FIN包给对端，tcp client这边的机器收到FIN包后会回一个ACK，然后呢？tcp client不会继续发FIN包给tcp server吗？不会！仅此而已。问题就是这么诞生的，什么问题呢，tcp client仍然可以发包，但是 &lt;code&gt;n, err := tcpconn.Write(...)&lt;/code&gt;这个时候并不会检测到 &lt;code&gt;err != nil&lt;/code&gt;，只有等到 &lt;code&gt;n, err := tcpconn.Read(...)&lt;/code&gt;的时候才会发现err为io.EOF，这个时候才能判断得知tcp server已经把连接销毁了。&lt;/p&gt;
+&lt;p&gt;从RPC框架角度而言，希望为client维护的tcp连接池是高效可用的，所以想对上述情况下的客户端连接进行检测，避免连接池中存在上述被tcp server关闭的连接。&lt;/p&gt;
+&lt;p&gt;再简单总结下tcp server、tcp client两端的不同处理逻辑：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;从tcp server的视角来看，&lt;/p&gt;
+&lt;p&gt;tcp server调用的conn.Close()，对应的是系统调用close，tcp server端认为它已经彻底关闭这个连接了！&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;从tcp client的视角来看，&lt;/p&gt;
+&lt;p&gt;这个连接是我主动建立的，我还没有给你发送FIN包发起关闭序列呢，因此这个连接仍然是可以使用的。tcp client认为tcp server只是关闭了写端，没有关闭读端，因此tcp client仍然是可写的，并且socket被设置成了nonblocking，conn.Write()仍然是成功返回的，返回的err == nil。但是当真正传输层执行数据发送的时候，tcp server端认为这个连接已销毁，因此会返回RST！这个时候上层go代码因为已经返回已经感知不到写的时候存在错误，这个RST会将tcp client端的socket标记为已关闭。下次tcpconn.Read的时候就能感知到io.EOF错误了，如果再发起一次tcpconn.Write也可以立即返回错误。&lt;/p&gt;</description></item><item><title>half-closed：强调的是通信方向关闭，还是通信一方的socket关闭？</title><link>/blog/2026-07-17-tcpip_half_closed_connection/</link><pubDate>Tue, 18 Dec 2018 12:01:00 +0800</pubDate><guid>/blog/2026-07-17-tcpip_half_closed_connection/</guid><description>&lt;p&gt;如果a、b通信，a调用了close(fd)直接关掉连接，此时可能会向对端发送rst or fin，对端还没有收到rst or fin包的时候继续给a发数据，然后会收到rst &amp;hellip; 这种场景，网络编程中比较常见。时常会有开发说出这样的话来，”b写half-closed connection ……”。严格来说这种提法是不准确的，混淆了Socket（接口层） 与 Connection（协议/连接层） 的概念，误将half-closed理解成了peer单方面关掉了这个socket。而half-closed强调的是TCP全双工通信中的某一个方向的通信被关闭了，是强调的connection direction这个层面。&lt;/p&gt;
+&lt;h2 id="1-为什么b写-half-closed是不准确的"&gt;1. 为什么“B写 half-closed”是不准确的？ &lt;a href="#1-%e4%b8%ba%e4%bb%80%e4%b9%88b%e5%86%99-half-closed%e6%98%af%e4%b8%8d%e5%87%86%e7%a1%ae%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 TCP 标准规范中，Half-Closed（半关闭） 是一个严格的连接层状态：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;它特指一端主动关闭了发送通道，但依然保持接收通道开启（通常通过调用 shutdown(fd, SHUT_WR) 实现）。&lt;/li&gt;
+&lt;li&gt;在真正的半关闭状态下，A 虽然不能发数据，但 A 的接收缓冲区和协议栈依然准备着接收 B 的数据。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;而在你描述的场景中：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;A 调用的是 close(fd)。&lt;/li&gt;
+&lt;li&gt;close() 的语义是完全销毁该套接字（Socket）。A 既不发送，也不再接收。&lt;/li&gt;
+&lt;li&gt;此时在 A 看来，这个连接已经彻底不存在了。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;因此，B 此时写入的不是一个“半关闭的连接”，而是一个已经被 A 单方面宣告死亡（释放资源）的连接。&lt;/p&gt;
+&lt;h2 id="2-这种场景在底层究竟发生了什么"&gt;2. 这种场景在底层究竟发生了什么？ &lt;a href="#2-%e8%bf%99%e7%a7%8d%e5%9c%ba%e6%99%af%e5%9c%a8%e5%ba%95%e5%b1%82%e7%a9%b6%e7%ab%9f%e5%8f%91%e7%94%9f%e4%ba%86%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;由于网络存在延迟，B 在不知道 A 已经执行 close() 的情况下继续发送数据，会导致以下结果：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;内核行为（RST 产生）： 当 B 的数据到达 A 时，A 的操作系统发现该 TCP 端口/连接对应的 Socket 早就被释放了（找不到对应的 TCB 控制块）。A 的协议栈会直接回绝，向 B 发送一个 RST（重置） 报文。&lt;/li&gt;
+&lt;li&gt;B 的应用层报错：&lt;/li&gt;
+&lt;li&gt;B 第一次写数据时，由于 RST 还没返回，写入可能在本地成功。
+&lt;ul&gt;
+&lt;li&gt;当 B 收到 A 发来的 RST 后，如果 B 再次尝试写入，操作系统就会直接向 B 的进程发送 SIGPIPE 信号，或者返回 EPIPE（Broken pipe）错误。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="3-精确的专业称呼是什么"&gt;3. 精确的专业称呼是什么？ &lt;a href="#3-%e7%b2%be%e7%a1%ae%e7%9a%84%e4%b8%93%e4%b8%9a%e7%a7%b0%e5%91%bc%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在网络编程和内核讨论中，这种经典场景通常被称为：&lt;/p&gt;</description></item><item><title>网络协议：TCP 流量控制与拥塞控制</title><link>/blog/2018-12-12-tcpip_tcp%E6%B5%81%E9%87%8F%E6%8E%A7%E5%88%B6%E4%B8%8E%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6/</link><pubDate>Wed, 12 Dec 2018 14:32:38 +0800</pubDate><guid>/blog/2018-12-12-tcpip_tcp%E6%B5%81%E9%87%8F%E6%8E%A7%E5%88%B6%E4%B8%8E%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6/</guid><description>&lt;h1 id="tcp流量控制拥塞控制算法"&gt;TCP流量控制+拥塞控制算法 &lt;a href="#tcp%e6%b5%81%e9%87%8f%e6%8e%a7%e5%88%b6%e6%8b%a5%e5%a1%9e%e6%8e%a7%e5%88%b6%e7%ae%97%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;h1 id="part-1-tcp流量控制"&gt;Part 1 TCP流量控制 &lt;a href="#part-1-tcp%e6%b5%81%e9%87%8f%e6%8e%a7%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;h2 id="11-滑动窗口协议"&gt;1.1 滑动窗口协议 &lt;a href="#11-%e6%bb%91%e5%8a%a8%e7%aa%97%e5%8f%a3%e5%8d%8f%e8%ae%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;需要说明一下，如果你不了解TCP的滑动窗口这个事，你等于不了解TCP协议。我们都知道，TCP必需要解决的可靠传输以及包乱序（reordering）的问题，所以，TCP必需要知道网络实际的数据处理带宽或是数据处理速度，这样才不会引起网络拥塞，导致丢包。&lt;/p&gt;
@@ -37,4 +218,34 @@
 &lt;h2 id="13-silly-window-syndrome"&gt;1.3 Silly Window Syndrome &lt;a href="#13-silly-window-syndrome" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;Silly Window Syndrome翻译成中文就是“糊涂窗口综合症”。正如你上面看到的一样，如果我们的接收方太忙了，来不及取走Receive Windows里的数据，那么，就会导致发送方越来越小。到最后，如果接收方腾出几个字节并告诉发送方现在有几个字节的window，而我们的发送方会义无反顾地发送这几个字节。&lt;/p&gt;
 &lt;p&gt;要知道，我们的TCP+IP头有40个字节，为了几个字节，要达上这么大的开销，这太不经济了。&lt;/p&gt;
-&lt;p&gt;另外，你需要知道网络上有个MTU，对于以太网来说，MTU是1500字节，除去TCP+IP头的40个字节，真正的数据传输可以有1460，这就是所谓的MSS（Max Segment Size）注意，TCP的RFC定义这个MSS的默认值是536，这是因为 &lt;a href="http://tools.ietf.org/html/rfc791"&gt;RFC 791&lt;/a&gt;里说了任何一个IP设备都得最少接收576尺寸的大小（实际上来说576是拨号的网络的MTU，而576减去IP头的20个字节就是536）。&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;另外，你需要知道网络上有个MTU，对于以太网来说，MTU是1500字节，除去TCP+IP头的40个字节，真正的数据传输可以有1460，这就是所谓的MSS（Max Segment Size）注意，TCP的RFC定义这个MSS的默认值是536，这是因为 &lt;a href="http://tools.ietf.org/html/rfc791"&gt;RFC 791&lt;/a&gt;里说了任何一个IP设备都得最少接收576尺寸的大小（实际上来说576是拨号的网络的MTU，而576减去IP头的20个字节就是536）。&lt;/p&gt;</description></item><item><title>TCP 流量复制转发：tcpcopy + intercept</title><link>/blog/2019-10-07-tcpip-tcp%E6%B5%81%E9%87%8F%E5%A4%8D%E5%88%B6/</link><pubDate>Sun, 07 Oct 2018 00:00:00 +0800</pubDate><guid>/blog/2019-10-07-tcpip-tcp%E6%B5%81%E9%87%8F%E5%A4%8D%E5%88%B6/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在服务开发和测试过程中，经常需要用真实线上流量来验证新版本的正确性和性能。&lt;code&gt;tcpcopy&lt;/code&gt; 是一个开源的 TCP 流量复制工具，可以将生产环境的 TCP 流量实时复制到测试环境，进行流量回放测试。&lt;/p&gt;
+&lt;h1 id="正文"&gt;正文 &lt;a href="#%e6%ad%a3%e6%96%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="基本用法"&gt;基本用法 &lt;a href="#%e5%9f%ba%e6%9c%ac%e7%94%a8%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="客户端流量发起端"&gt;客户端（流量发起端） &lt;a href="#%e5%ae%a2%e6%88%b7%e7%ab%af%e6%b5%81%e9%87%8f%e5%8f%91%e8%b5%b7%e7%ab%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在需要复制流量的机器上运行 &lt;code&gt;tcpcopy&lt;/code&gt;，将本地 15251 端口的流量向远程 &lt;code&gt;10.213.144.140:18108&lt;/code&gt; 转发：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;./tcpcopy -x 15251-10.213.144.140:18108 -s 10.213.144.140 -c 99.99.99.x -d
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;-x&lt;/code&gt;：指定源端口和目标地址端口映射&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;-s&lt;/code&gt;：指定 intercept 服务端地址&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;-c&lt;/code&gt;：指定伪装客户端的 IP 地址&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;-d&lt;/code&gt;：以 daemon 方式运行&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="服务端流量接收端"&gt;服务端（流量接收端） &lt;a href="#%e6%9c%8d%e5%8a%a1%e7%ab%af%e6%b5%81%e9%87%8f%e6%8e%a5%e6%94%b6%e7%ab%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在目标测试服务器上运行 &lt;code&gt;intercept&lt;/code&gt;，监听 18108 端口：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;./intercept -i eth1 -F &amp;quot;tcp and src port 18108&amp;quot; -d
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;-i&lt;/code&gt;：指定网络接口&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;-F&lt;/code&gt;：指定 BPF 过滤规则&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;-d&lt;/code&gt;：以 daemon 方式运行&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="工作原理"&gt;工作原理 &lt;a href="#%e5%b7%a5%e4%bd%9c%e5%8e%9f%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;tcpcopy&lt;/code&gt; 工作在网络层，它会：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;捕获指定端口上的 TCP 数据包&lt;/li&gt;
+&lt;li&gt;修改目标 IP 和端口，将包发送到测试服务器&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;intercept&lt;/code&gt; 在测试服务器上拦截返回的响应包，避免干扰真实客户端&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;这样测试服务器就能接收到与生产环境完全相同的请求流量。&lt;/p&gt;</description></item></channel></rss>

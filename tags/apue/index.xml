@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>APUE on</title><link>/tags/apue/</link><description>Recent content in APUE on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 10 Dec 2017 00:00:00 +0800</lastBuildDate><atom:link href="/tags/apue/index.xml" rel="self" type="application/rss+xml"/><item><title>理解 Linux 进程的三种 UID：Real、Effective、Saved Set-UID</title><link>/blog/2017-12-10-ruid-euid-suid/</link><pubDate>Sun, 10 Dec 2017 00:00:00 +0800</pubDate><guid>/blog/2017-12-10-ruid-euid-suid/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Linux 的权限模型中，每个进程都拥有三种用户 ID：&lt;strong&gt;real uid&lt;/strong&gt;、&lt;strong&gt;effective uid&lt;/strong&gt; 和 &lt;strong&gt;saved set-user-id&lt;/strong&gt;。它们是 Linux 权限控制和特权管理（特别是 setuid 程序）的基石。&lt;/p&gt;
+&lt;p&gt;本文基于 APUE 中的总结，配合一个 C 语言示例来帮助理解这三者的关系。&lt;/p&gt;
+&lt;h1 id="正文"&gt;正文 &lt;a href="#%e6%ad%a3%e6%96%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="三种-uid-的定义"&gt;三种 UID 的定义 &lt;a href="#%e4%b8%89%e7%a7%8d-uid-%e7%9a%84%e5%ae%9a%e4%b9%89" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;UID 类型&lt;/th&gt;
+&lt;th&gt;含义&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Real UID&lt;/strong&gt; (ruid)&lt;/td&gt;
+&lt;td&gt;实际用户 ID，标识&amp;quot;谁启动了这个进程&amp;quot;。通常是登录用户或父进程的 ruid&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Effective UID&lt;/strong&gt; (euid)&lt;/td&gt;
+&lt;td&gt;有效用户 ID，用于权限检查。内核在判断进程能否能执行某个操作（如读写文件）时看的是这个值&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;Saved Set-UID&lt;/strong&gt; (suid)&lt;/td&gt;
+&lt;td&gt;保存的设置用户 ID，由&lt;code&gt;exec&lt;/code&gt; 从 euid 复制而来。用于让进程在临时切换权限后能恢复回来&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="setuid-位的作用"&gt;setuid 位的作用 &lt;a href="#setuid-%e4%bd%8d%e7%9a%84%e4%bd%9c%e7%94%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;可执行文件上可以设置 &amp;ldquo;set-user-ID&amp;rdquo; 位（&lt;code&gt;chmod u+s&lt;/code&gt;）。当这样的程序被执行时：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;进程的 &lt;strong&gt;effective uid&lt;/strong&gt; 会被设置为&lt;strong&gt;文件属主的 uid&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;进程的 &lt;strong&gt;saved set-uid&lt;/strong&gt; 会被从 euid 复制&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这允许普通用户临时获得文件属主（通常是 root）的权限来执行特定操作。&lt;/p&gt;
+&lt;h2 id="代码示例"&gt;代码示例 &lt;a href="#%e4%bb%a3%e7%a0%81%e7%a4%ba%e4%be%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;下面通过一个完整的示例来观察三种 UID 的变化：&lt;/p&gt;</description></item><item><title>Unix环境高级编程</title><link>/blog/2014-06-01-unix%E7%8E%AF%E5%A2%83%E9%AB%98%E7%BA%A7%E7%BC%96%E7%A8%8B/</link><pubDate>Wed, 11 Jun 2014 08:00:00 +0800</pubDate><guid>/blog/2014-06-01-unix%E7%8E%AF%E5%A2%83%E9%AB%98%E7%BA%A7%E7%BC%96%E7%A8%8B/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是Unix环境高级编程里的一些知识要点。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;# Advanced Programming in Unix Environment
+############################################################################
+Mon Jun 9 09:22:41 CST 2014
+############################################################################
+M1 Unix基础知识
+1. man man
+1)user commands
+2)system calls
+3)c library functions
+4)devices and special files
+5)file formats and conventions
+6)games
+7)miscellanea
+8)system admistration tools and daemons
+2. c return values
+1)return 0, 正常结束
+2)return 1-255，表示错误代码
+3. 工作目录
+char *getcwd(char *buf, size_t size);
+int chdir(char *path);
+4. libc与glibc的关系
+libc是泛指c库，glibc是gnu组织对libc的一种实现，是unix、linux的根基，微软也有自
+己对libc的实现，叫msvcrt。
+5. read system call
+return 0, 表示到达了文件的结尾。
+6. Ctrl+D，默认的文件结束字符
+ctrl+c，中断键
+ctrl+\，退出键
+7. fork，执行一次，返回两次，对父进程返回子进程的进程id，对子进程返回0
+8. 出错处理和出错恢复
+errno
+当unix函数出错时，常常返回一个负值，同时将整形变量errno设置为含有附加信息的一
+个值，例如open调用失败返回-1，对应的有大约15中不同的errno值。
+errno.h中定义了errno以及可以赋予它的各种常量，这些常量都以字母E开头。
+举个例子：
+E2BIG：参数列表太长
+EAGAIN：资源临时不可获取
+EACCESS：权限不够，访问被拒绝
+EBADF：无效文件描述符
+EBUSY：设备忙或资源忙
+ECANCELED：操作被取消
+ECHILD：没有子进程
+EEXIST：文件已经存在
+EFAULT：无效地址
+EFBIG：文件尺寸过大
+EINTR：中断函数调用
+EIO：IO错误
+...
+char *strerror(int errno);
+void perror(char *msg);
+对于资源相关的非致命性错误，一般恢复动作是延迟一些时间，然后再试
+9. 支持线程的环境中，需要使用局部errno，避免线程间的相互干扰
+10. 为什么要将用户名、组名映射为id呢？
+1）如果使用全场ascii登录名和组名，则需要更多的磁盘空间进行存储；
+2）在查验权限期间，比较字符串较之比较整形更消耗时间
+11. 度量一个进程的执行时间：
+时钟时间、用户cpu时间、系统cpu时间，time命令
+12. 系统调用和库函数
+1)从实现者的角度来看，两者的实现有着重大的不同，通常库函数是在系统调用之上建立起
+来的；
+2)从用户的角度来看，两者并没有明显的区别；
+通常，我们可以替换库函数，但是不能或者很难替换系统调用；
+############################################################################
+M2 Unix标准化
+1.
+1)ISO C, (ANSI在ISO中代表美国的利益），按照改标准定义的头文件，将iso c库分成24
+个区
+2)IEEE POSIX，添加来pthreads（POSIX线程）、更多的实时接口、事件跟踪方面的扩展
+3)Single Unix Specification(SUS)，是POSIX的超集，在POSIX基础上，定义来一些附加
+的接口，相应的系统接口全集被称为X/Open系统接口(X/Open System Interface, XSI)
+ISO-&amp;gt;POSIX-&amp;gt;XSI
+只有遵循XSI的实现，才能称为是Unix系统
+2. 限制
+Unix定义了很多幻数和常量，不同的实现定义的值可能不一样，为了增加可移植性，需要
+解决这些问题，为此提供了如下三种限制：
+1)编译时限制（头文件）
+编译时需要确定的幻数和常量的值，可以在头文件中定义；
+2)不与文件或目录相关联的运行时限制，可以通过sysconf函数获取；
+3)与文件或目录相关链的运行时限制，可以通过pathconf或者fpathconf函数获取；
+1）iso c定义的限制都是编译时限制，例如头文件limits.h中定义的常量；
+2）posix和xsi定义的限制既有编译时限制，也有运行时限制；
+############################################################################
+M3 文件I/O
+1. 不带缓冲的IO，指的是每个read、write操作都对应内核中的一次系统调用
+2.将标准输入、输出、错误输出分别用文件描述符1、2、3来引用，是shell的惯例，与内
+核没有关系。
+一个进程可以打开的文件描述符的范围是0～OPEN_MAX。
+3. lseek，返回文件当前的偏移量，可以是负值，所以再测试lseek是否失败的时候，不
+能判断是否小于0，而应判断是否等于-1；lseek定位时指定的偏移量可以大于文件长度，
+这时会在文件中产生空洞;
+产生的空洞读为\0，可以在程序中进行处理，将\0去掉，即将空洞从文件中删除。
+4. IO效率，建议缓冲区长度采用4096字节，此时消耗的系统cpu时间最小，用户cpu时间
+、时钟时间也比较小4.
+5. 内核用于所有IO的数据结构
+1)进程表项中存储着打开的文件描述符列表，每个文件描述符表项包含文件描述符以及指
+向文件表项的指针；
+2)文件表，在文件表中，内核为所有打开的文件增加一个表项。其实进程每调用一次open
+，就会在文件表中增加一个文件表项；dup、dup2只是复制文件描述符，内核不会创建新
+的文件表项；
+每个文件表项，包含文件状态标志、当前文件的偏移量以及指向v节点表项的v节点指针
+3)v节点表，每个打开的文件，内核都在v节点表中创建一个v节点表项，v节点表项包含了
+i节点信息（索引节点信息）以及当前文件长度；
+每个打开的磁盘上的文件，只对应一个v节点表项
+6. 因为对文件的io操作，通常是采用的建议性锁机制，多个进程读写同一个文件时，可
+能在读写时产生冲突， pread、pwrite可以将定位和读写封装为一个原子性操作，可以解
+决这个问题；当然如果对文件操作施加强制性锁，不用pread、pwrite也是可以的
+7. sync，fsync，fdatasync
+平时我们说的不带缓冲的io，指的是每次read、write都是一个系统调用，然后进入内核
+进行操作。这里需要注意的是，并不是说内核在处理io相关的操作的时候，就没有缓冲。
+为了减少磁盘读写次数，内核总是使用了缓冲机制的，只不过用户通过不带缓冲的io进行
+访问时，会进入内核进行操作而已。
+例如通过write写一个文件，写入的数据内核不会立即将其更新到磁盘上，而是将其放入
+一个缓冲区中，等待缓冲区满时，在将其排入输出队列更新到磁盘上，这样做的优点是减
+少了写磁盘的次数，提高了效率；这样做的缺点是，延长了磁盘文件的更新时间，如果发
+生某种意外，可能会造成更新数据的丢失；
+为了使得内核缓冲区中的数据与磁盘上的数据保持一致，提供了三个函数
+sync,fsync,fdatasync，对于普通用户来讲，fsync应该是用的比较多的吧。
+8. fcntl函数，可以更改已打开文件的性质。
+9. 打开文件描述符/dev/fd/N等效于复制文件描述符N
+############################################################################
+M4 文件和目录
+1. stat结构体中的st_mode成员，对其进行测试，判断文件类型，判断的时候使用如下宏：
+S_ISREG(st_mode)：普通文件
+S_ISDIR(st_mode)：目录文件
+S_ISCHR(st_mode)：字符设备文件
+S_ISBLK(st_mode)：块设备文件
+S_ISFIFO(st_mode)：fifo，用于进程间通信，有时也称其为有名管道（mkfifo创建有名
+管道，pipe创建无名管道）
+S_ISLNK(st_mode)：符号链接文件（非符号链接文件的硬链接数至少为1）
+S_ISSOCK(st_mode)：socket文件，用于网络间的进程间通信
+2. shell命令过长，通过符号“\”来段行
+3. stat,fstat,lstat
+stat函数不会观察到符号链接，观察符号链接，应该使用lstat函数
+4. 与一个进程相关联的ID有6个或者更多
+1)实际用户ID/实际组ID：（标识进程实际上是谁创建的）
+2)有效用户ID/有效组ID/附加组ID：（用于进程的文件访问权限检查）
+3)保存的设置用户ID/保存的设置组ID：（exec从有效用户ID复制得到的）
+使用宏S_ISUID和S_ISGID对st_mode进行测试，判断有没有对设置用户ID位/设置组ID位进
+行设置, 例如S_ISUID &amp;amp; st.st_mode。
+```c
+#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;stdlib.h&amp;gt;
+#include &amp;lt;sys/types.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+int main(int argc, char *argv[])
+{
+printf(&amp;quot;euid is: %d\n&amp;quot;, (int)geteuid());
+printf(&amp;quot;uid is: %d\n&amp;quot;, (int)getuid());
+return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;测试uid，euid&lt;/p&gt;</description></item></channel></rss>

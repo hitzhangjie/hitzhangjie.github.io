@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Sftp on</title><link>/tags/sftp/</link><description>Recent content in Sftp on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 19 Mar 2019 00:00:00 +0800</lastBuildDate><atom:link href="/tags/sftp/index.xml" rel="self" type="application/rss+xml"/><item><title>SCP vs SFTP: 选择哪个进行文件传输呢？</title><link>/blog/2019-03-19-scp_vs_sftp/</link><pubDate>Tue, 19 Mar 2019 00:00:00 +0800</pubDate><guid>/blog/2019-03-19-scp_vs_sftp/</guid><description>&lt;h1 id="scp-vs-sftp-选择哪个进行文件传输呢"&gt;&lt;strong&gt;SCP vs SFTP: 选择哪个进行文件传输呢？&lt;/strong&gt; &lt;a href="#scp-vs-sftp-%e9%80%89%e6%8b%a9%e5%93%aa%e4%b8%aa%e8%bf%9b%e8%a1%8c%e6%96%87%e4%bb%b6%e4%bc%a0%e8%be%93%e5%91%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;By &lt;a href="https://www.maketecheasier.com/author/elsiebiage/"&gt;Elsie Biage&lt;/a&gt; – Posted on Mar 13, 2019 in &lt;a href="https://www.maketecheasier.com/category/linux-tips/"&gt;Linux&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/SCP-SFTP-Differences-which-to-use-featured.jpg" alt="img"&gt;&lt;/p&gt;
+&lt;p&gt;SCP (Secure Copy Protocol) 和 SFTP (Secure File Transfer Protocol) 都是 FTP (File Transfer Protocol) 的变体，三者都是用来完成文件拷贝的工作，通过网络将一台主机上的文件拷贝到另外一个主机上。然而, FTP 是以明文的形式发送数据，数据未经过加密, 缺乏安全性，SCP 和 SFTP 则是通过SSH (Secure Shell) 来进行通信，对数据进行了加密处理，更加安全。&lt;/p&gt;
+&lt;h2 id="scp-和-sftp-是什么呢"&gt;&lt;strong&gt;SCP 和 SFTP 是什么呢？&lt;/strong&gt; &lt;a href="#scp-%e5%92%8c-sftp-%e6%98%af%e4%bb%80%e4%b9%88%e5%91%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="scp-secure-copy-protocol"&gt;SCP (Secure Copy Protocol) &lt;a href="#scp-secure-copy-protocol" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;img src="assets/SCP-SFTP-Differences-which-to-use-scp.jpg" alt="scp-sftp-differences-which-to-use-scp"&gt;&lt;/p&gt;
+&lt;p&gt;SCP是一个非交互式的文件传输协议，借助ssh操作来安全地将文件在两台计算机之前进行传输，SCP是之前RCP的安全增强版。FTP呢也将ssh操作引入进来，形成了自己的安全增强版本SFTP。虽然从覆盖的功能来看，SFTP的能力比SCP更多，但是在通过脚本来进行文件传输时，SCP通常是一个更常用的选择。&lt;/p&gt;
+&lt;p&gt;SCP可以将本地主机的文件拷贝到远程主机，也可以从远程主机拷贝文件到本地。SCP其实是将待拷贝文件的数据以字节流的形式写入到ssh隧道中，ssh隧道负责将数据送达远程目的主机或者本地目的主机。而ssh呢还可以负责完成完整性校验、数据压缩等更加负责的处理。&lt;/p&gt;
+&lt;p&gt;SCP传输文件的时候可以使用shell的通配符来匹配多个文件。&lt;/p&gt;
+&lt;p&gt;SCP可以在本地主机和远程主机之间互相拷贝文件，也可以在远程两台主机之间拷贝文件。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Related&lt;/strong&gt;: &lt;a href="https://www.maketecheasier.com/transfer-files-securely-using-scp/"&gt;Transfer Files Securely Using SCP in Linux&lt;/a&gt;&lt;/p&gt;
+&lt;h3 id="sftp-secure-file-transfer-protocol"&gt;SFTP (Secure File Transfer Protocol) &lt;a href="#sftp-secure-file-transfer-protocol" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;img src="assets/SCP-SFTP-Differences-which-to-use-sftp.jpg" alt="scp-sftp-differences-which-to-use-sftp"&gt;&lt;/p&gt;
+&lt;p&gt;**SCP是非交互式的，而SFTP是交互式的，SFTP可以在在一个ssh加密后的控制信道中传输多种操作命令。&lt;/p&gt;</description></item></channel></rss>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Networking on</title><link>/tags/networking/</link><description>Recent content in Networking on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 18 Jul 2026 20:00:09 +0800</lastBuildDate><atom:link href="/tags/networking/index.xml" rel="self" type="application/rss+xml"/><item><title>tcp状态机：close(fd)后socket真的销毁了吗</title><link>/blog/2026-07-18-tcpip_close%E5%90%8Esocket%E7%9C%9F%E7%9A%84%E9%94%80%E6%AF%81%E4%BA%86%E5%90%97/</link><pubDate>Sat, 18 Jul 2026 20:00:09 +0800</pubDate><guid>/blog/2026-07-18-tcpip_close%E5%90%8Esocket%E7%9C%9F%E7%9A%84%E9%94%80%E6%AF%81%E4%BA%86%E5%90%97/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在网络编程中，许多人存在一个直觉误区：&lt;strong&gt;认为应用层执行 &lt;code&gt;close(fd)&lt;/code&gt; 且引用计数归零后，内核的 socket 就立即销毁了，此时收到任何数据必然会立刻回复 RST。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;这个理解是错误的。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;应用层销毁 &lt;code&gt;fd&lt;/code&gt;（钥匙）与内核销毁 &lt;code&gt;socket&lt;/code&gt; 状态机（实体）是&lt;strong&gt;异步解耦&lt;/strong&gt;的。调用 &lt;code&gt;close()&lt;/code&gt; 后，该套接字会变成孤儿套接字（Orphan Socket）由内核接管。对于后续到来的数据，内核有一套极其严密的防御和处理机制。&lt;/p&gt;
+&lt;h2 id="前置知识shutdown-与-close-的本质区别"&gt;前置知识：shutdown() 与 close() 的本质区别 &lt;a href="#%e5%89%8d%e7%bd%ae%e7%9f%a5%e8%af%86shutdown-%e4%b8%8e-close-%e7%9a%84%e6%9c%ac%e8%b4%a8%e5%8c%ba%e5%88%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在深入内核行为之前，必须先澄清一个容易混淆的问题：为什么 &lt;code&gt;shutdown()&lt;/code&gt; 不能替代 &lt;code&gt;close()&lt;/code&gt;？两者到底操作的是什么？&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;应用层
+│
+├── fd (文件描述符) ─── close() 操作这一层
+│
+├── struct file ─── 引用计数为0时销毁的是这个，而非最底层的struct sock
+│ ...
+└── struct sock, socket (内核对象) ─── shutdown() 操作这一层 ─── TCP 状态机在这里
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;shutdown()&lt;/code&gt; 无论 &lt;code&gt;how&lt;/code&gt; 取 &lt;code&gt;SHUT_RD&lt;/code&gt;、&lt;code&gt;SHUT_WR&lt;/code&gt; 还是 &lt;code&gt;SHUT_RDWR&lt;/code&gt;，都直接操作 &lt;code&gt;struct sock&lt;/code&gt; 层的半关闭标志，&lt;strong&gt;完全不动 &lt;code&gt;struct file&lt;/code&gt; 的引用计数 (&lt;code&gt;f_count&lt;/code&gt;)&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;close(fd)&lt;/code&gt;时，引用计数-1指的是对struct file引用计数-1。引用计数为0时，销毁的是 &lt;code&gt;struct file&lt;/code&gt;，而不是 &lt;code&gt;struct sock&lt;/code&gt;（socket传输控制块）。释放 &lt;code&gt;struct file&lt;/code&gt; 时通过 &lt;code&gt;file-&amp;gt;f_op-&amp;gt;release()&lt;/code&gt; → &lt;code&gt;sock_close()&lt;/code&gt; → &lt;code&gt;tcp_close()&lt;/code&gt; 驱动 TCP 状态机流转。&lt;code&gt;tcp_close()&lt;/code&gt; 只是驱动 TCP 状态机迁移到 &lt;code&gt;FIN_WAIT_1&lt;/code&gt; / &lt;code&gt;FIN_WAIT_2&lt;/code&gt;，&lt;code&gt;struct sock&lt;/code&gt; 本身并未直接销毁——它作为&amp;quot;孤儿套接字&amp;quot;继续由内核协议栈接管，直到对端关闭或超时。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;调用&lt;/th&gt;
+&lt;th&gt;发 FIN？&lt;/th&gt;
+&lt;th&gt;递减引用计数？&lt;/th&gt;
+&lt;th&gt;fd 还能用？&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;shutdown(fd, SHUT_WR)&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;✅ 是&lt;/td&gt;
+&lt;td&gt;❌ 否&lt;/td&gt;
+&lt;td&gt;✅ 能&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;shutdown(fd, SHUT_RD)&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;❌ 否&lt;/td&gt;
+&lt;td&gt;❌ 否&lt;/td&gt;
+&lt;td&gt;✅ 能&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;shutdown(fd, SHUT_RDWR)&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;✅ 是&lt;/td&gt;
+&lt;td&gt;❌ 否&lt;/td&gt;
+&lt;td&gt;✅ 能&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;close(fd)&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;视情况？见下文&lt;/td&gt;
+&lt;td&gt;✅ 是&lt;/td&gt;
+&lt;td&gt;❌ 不能&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;&lt;img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Tcp_state_diagram_fixed_new.svg/3840px-Tcp_state_diagram_fixed_new.svg.png" alt="tcp state diagram"&gt;&lt;/p&gt;</description></item></channel></rss>

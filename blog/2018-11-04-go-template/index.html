@@ -1,0 +1,380 @@
+<!doctype html><html lang=en-US><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-regular.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-500.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-700.woff2 type=font/woff2 crossorigin><script>window.__LAYOUT_WIDTH_DEFAULT__="standard"</script><script>(()=>{(function(){var t,n={compact:1,standard:1,wide:1,fullscreen:1},s="layout-width-v",o="3",e=null,i=null;try{e=localStorage.getItem("layout-width"),i=localStorage.getItem(s)}catch{}if(i!==o){e==="standard"?e="compact":e==="compact"?e="standard":e==="normal"?e="compact":e==="reading"&&(e="wide");try{e&&localStorage.setItem("layout-width",e),localStorage.setItem(s,o)}catch{}}t=window.__LAYOUT_WIDTH_DEFAULT__||"standard",n[t]||(t="standard"),e&&!n[e]&&(e=null),document.documentElement.setAttribute("data-layout-width",e||t)})()})()</script><link rel=stylesheet href=/main.9aa5684d2b002d9bd48d08e085ef1aaf384539b58400fb28dffa9efe2301549338a87e27640af00ff481a349461fbc931571455f65e33d95717f55c714f3dd41.css integrity="sha512-mqVoTSsALZvUjQjghe8arzhFObWEAPso3/qe/iMBVJM4qH4nZArwD/SBo0lGH7yTFXFFX2XjPZVxf1XHFPPdQQ==" crossorigin=anonymous><noscript><style>img.lazyload{display:none}</style></noscript><meta name=robots content="index, follow"><meta name=googlebot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><meta name=bingbot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><title>Go template 使用详解 - MySpace</title><meta name=description content="从核心概念、基础语法到实战案例，全面介绍 Go text/template 的用法：控制结构、自定义函数、管道、变量、模板嵌套、代码生成，以及结合 goimports 格式化生成代码的技巧。"><link rel=canonical href=/blog/2018-11-04-go-template/><meta property="og:locale" content="en_US"><meta property="og:type" content="article"><meta property="og:title" content="Go template 使用详解"><meta property="og:description" content="从核心概念、基础语法到实战案例，全面介绍 Go text/template 的用法：控制结构、自定义函数、管道、变量、模板嵌套、代码生成，以及结合 goimports 格式化生成代码的技巧。"><meta property="og:url" content="/blog/2018-11-04-go-template/"><meta property="og:site_name" content="MySpace"><meta property="article:published_time" content="2018-11-04T14:32:38+08:00"><meta property="article:modified_time" content="2026-07-18T12:00:00+08:00"><meta property="og:image" content="/doks.png"><meta property="og:image:alt" content="MySpace"><meta name=twitter:card content="summary_large_image"><meta name=twitter:site content="@hitzhangjie"><meta name=twitter:creator content="@hitzhangjie"><meta name=twitter:title content="Go template 使用详解"><meta name=twitter:description content="从核心概念、基础语法到实战案例，全面介绍 Go text/template 的用法：控制结构、自定义函数、管道、变量、模板嵌套、代码生成，以及结合 goimports 格式化生成代码的技巧。"><meta name=twitter:image content="/doks.png"><meta name=twitter:image:alt content="Go template 使用详解"><script type=application/ld+json>{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/1","name":"","url":"/","sameAs":["https://twitter.com/hitzhangjie","https://www.linkedin.com/in/hitzhangjie/","https://github.com/hitzhangjie"],"image":{"@type":"ImageObject","@id":"/#/schema/image/1","url":"/\u003cnil\u003e","width":null,"height":null,"caption":""}},{"@type":"WebSite","@id":"/#/schema/website/1","url":"/","name":"MySpace","description":"MySpace is a hitzhangjie\u0027s personal space, for blogs, books, journey, thinkings.","publisher":{"@id":"/#/schema/person/1"}},{"@type":"WebPage","@id":"/blog/2018-11-04-go-template/","url":"/blog/2018-11-04-go-template/","name":"Go template 使用详解","description":"从核心概念、基础语法到实战案例，全面介绍 Go text\/template 的用法：控制结构、自定义函数、管道、变量、模板嵌套、代码生成，以及结合 goimports 格式化生成代码的技巧。","isPartOf":{"@id":"/#/schema/website/1"},"about":{"@id":"/#/schema/person/1"},"datePublished":"2018-11-04T14:32:38CET","dateModified":"2026-07-18T12:00:00CET","breadcrumb":{"@id":"/blog/2018-11-04-go-template/#/schema/breadcrumb/1"},"primaryImageOfPage":{"@id":"/blog/2018-11-04-go-template/#/schema/image/2"},"inLanguage":"","potentialAction":[{"@type":"ReadAction","target":["/blog/2018-11-04-go-template/"]}]},{"@type":"BreadcrumbList","@id":"/blog/2018-11-04-go-template/#/schema/breadcrumb/1","name":"Breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"item":{"@type":"WebPage","@id":"/","url":"/","name":"Home"}},{"@type":"ListItem","position":2,"item":{"@id":"/blog2018-11-04-go-template/"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Article","@id":"/#/schema/article/1","headline":"Go template 使用详解","description":"从核心概念、基础语法到实战案例，全面介绍 Go text\/template 的用法：控制结构、自定义函数、管道、变量、模板嵌套、代码生成，以及结合 goimports 格式化生成代码的技巧。","isPartOf":{"@id":"/blog/2018-11-04-go-template/"},"mainEntityOfPage":{"@id":"/blog/2018-11-04-go-template/"},"datePublished":"2018-11-04T14:32:38CET","dateModified":"2026-07-18T12:00:00CET","author":{"@id":"/#/schema/person/2"},"publisher":{"@id":"/#/schema/person/1"},"image":{"@id":"/blog/2018-11-04-go-template/#/schema/image/2"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/2","name":null,"sameAs":[]}]},{"@context":"https://schema.org","@graph":[{"@type":"ImageObject","@id":"/blog/2018-11-04-go-template/#/schema/image/2","url":"/doks.png","contentUrl":"/doks.png","caption":"Go template 使用详解"}]}]}</script><meta name=theme-color content="#fff"><link rel=icon href=/favicon.ico sizes=any><link rel=icon type=image/svg+xml href=/favicon.svg><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest crossorigin=use-credentials href=/site.webmanifest><script type=text/javascript src='https://platform-api.sharethis.com/js/sharethis.js#property=607868a58d7101001829a8df&product=sop' async></script><style>[alt~=sharing]{border:0;box-shadow:none}div#st-1{text-align:unset}div#st-1 .st-btn{height:24px;padding:0 4px}div#st-1 .st-btn>img{top:4.2px}div#st-2 .st-btn{height:24px;padding:0 4px}div#st-2 .st-btn>img{top:4.2px}</style><script async src="https://www.googletagmanager.com/gtag/js?id=UA-168027530-1"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","UA-168027530-1")</script></head><body class="blog single d-flex flex-column min-vh-100"><div class=sticky-top><div class=header-bar></div><header class="navbar navbar-expand-lg navbar-light doks-navbar"><nav class="container-xxl flex-wrap flex-lg-nowrap" aria-label="Main navigation"><a class="navbar-brand order-0" href=/ aria-label=MySpace>MySpace
+</a><button class="btn btn-menu order-2 d-block d-lg-none" type=button data-bs-toggle=offcanvas data-bs-target=#offcanvasDoks aria-controls=offcanvasDoks aria-label="Open main menu">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div class="offcanvas offcanvas-end border-0 py-lg-1" tabindex=-1 id=offcanvasDoks data-bs-backdrop=true aria-labelledby=offcanvasDoksLabel><div class="header-bar d-lg-none"></div><div class="offcanvas-header d-lg-none"><h2 class="h5 offcanvas-title ps-2" id=offcanvasDoksLabel><a class=text-dark href=/>MySpace</a></h2><button type=button class="btn-close text-reset me-2" data-bs-dismiss=offcanvas aria-label="Close main menu"></button></div><div class="offcanvas-body p-4 p-lg-0"><ul class="nav flex-column flex-lg-row align-items-lg-center mt-2 mt-lg-0 ms-lg-2 me-lg-auto"><li class=nav-item><a class="nav-link ps-0 py-1 active" href=/blog/>Blog</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/books/>Books</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/landscape>Landscape</a></li></ul><hr class="text-black-50 my-4 d-lg-none"><form class="doks-search position-relative flex-grow-1 ms-lg-auto me-lg-2"><input id=search class="form-control is-search" type=search placeholder="Search docs..." aria-label="Search docs..." autocomplete=off><div id=suggestions class="shadow bg-white rounded d-none"></div></form><hr class="text-black-50 my-4 d-lg-none"><ul class="nav flex-column flex-lg-row"><li class=nav-item><a class="nav-link social-link" href=https://twitter.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg><small class="ms-2 d-lg-none">Twitter</small></a></li><li class=nav-item><a class="nav-link social-link" href=https://github.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37.0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44.0 0020 4.77 5.07 5.07.0 0019.91 1S18.73.65 16 2.48a13.38 13.38.0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07.0 005 4.77 5.44 5.44.0 003.5 8.55c0 5.42 3.3 6.61 6.44 7A3.37 3.37.0 009 18.13V22"/></svg><small class="ms-2 d-lg-none">GitHub</small></a></li><li class="nav-item layout-width-dropdown"><a class="nav-link layout-width-dropdown-btn" href=# data-bs-toggle=dropdown aria-expanded=false aria-label=切换布局宽度 title=切换布局宽度><span class=lw-icon-standard><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-compact><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-wide><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span><span class=lw-icon-fullscreen><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg></span></a><ul class="dropdown-menu dropdown-menu-end"><li><button class="dropdown-item layout-width-option" data-layout-value=compact>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span>紧凑布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=standard>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>标准布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=wide>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span>宽松布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=fullscreen>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>全屏布局</button></li></ul></li></ul></div></div></nav></header></div><div class="wrap container-xxl" role=document><div class=content><div class="row flex-xl-nowrap" data-layout-width=standard><div class="col-lg-4 col-xl-3 docs-sidebar"><nav class=docs-links aria-label="Main navigation"><h3>Tag List</h3><ol><li><a href=/tags/go/>go</a></li><li><a href=/tags/template/>template</a></li></ol></nav></div><main class="docs-content col-lg-12 col-xl-10"><h1>Go template 使用详解</h1><p><small>Posted 2018-11-04 14:32 +0800 by <a class="stretched-link position-relative" href>ZhangJie</a>&nbsp;&dash;&nbsp;<strong>8&nbsp;min read</strong></small><p><div style=display:flex><div>分享:&nbsp;&nbsp;</div><div><div class=sharethis-inline-share-buttons></div></div></div><hr><p class=lead></p><h1 id=背景>背景 <a href=#%e8%83%8c%e6%99%af class=anchor aria-hidden=true>#</a></h1><p>模板技术在软件开发中有着广泛的应用场景：Web 页面渲染、邮件内容生成、自动化代码生成、CLI 输出定制等等。Go 语言在标准库中内置了强大的模板引擎 <code>text/template</code>（以及安全的 HTML 版本 <code>html/template</code>），无需引入第三方库即可完成模板解析与执行。</p><p>本文先梳理 Go 模板编程的核心概念与基础语法，建立知识框架，再通过层层递进的示例展示实际用法，最后给出一个代码生成实战案例。</p><h1 id=核心概念与基础语法>核心概念与基础语法 <a href=#%e6%a0%b8%e5%bf%83%e6%a6%82%e5%bf%b5%e4%b8%8e%e5%9f%ba%e7%a1%80%e8%af%ad%e6%b3%95 class=anchor aria-hidden=true>#</a></h1><p>在开始写代码之前，先理解 Go 模板的运转模型和几个关键概念。</p><h2 id=运转模型>运转模型 <a href=#%e8%bf%90%e8%bd%ac%e6%a8%a1%e5%9e%8b class=anchor aria-hidden=true>#</a><a href=#运转模型 class=anchor aria-hidden=true>#</a></h2><p>Go 模板的运转过程非常直观：</p><pre><code>模板文本 (string)  ──Parse──▶  *Template  ──Execute(data)──▶  输出 (io.Writer)
+</code></pre><ul><li><strong>模板文本</strong>：一段包含"动作"（actions）的普通文本，动作用于控制输出内容</li><li><strong>解析（Parse）</strong>：将模板文本编译为内部表示，得到 <code>*Template</code> 对象</li><li><strong>执行（Execute）</strong>：将数据绑定到模板，遍历数据结构，把结果写入 <code>io.Writer</code></li></ul><p>模板可以被<strong>重复执行</strong>——解析一次，用不同数据执行多次，无需重新解析。</p><h2 id=动作actions与定界符>动作（Actions）与定界符 <a href=#%e5%8a%a8%e4%bd%9cactions%e4%b8%8e%e5%ae%9a%e7%95%8c%e7%ac%a6 class=anchor aria-hidden=true>#</a><a href=#动作actions与定界符 class=anchor aria-hidden=true>#</a></h2><p>模板中所有动态行为都通过<strong>动作</strong>来表达。动作用 <code>{{</code> 和 <code>}}</code> 括起来，这两个符号称为<strong>定界符</strong>（delimiters）。定界符之外的文本会原样输出。</p><pre><code class=language-text>Hello, {{.Name}}!           →  Hello, Alice!
+{{.Count}} items in stock.   →  42 items in stock.
+</code></pre><p>动作可以分为两大类：</p><table><thead><tr><th>类别</th><th>说明</th><th>示例</th></tr></thead><tbody><tr><td><strong>数据求值</strong></td><td>获取数据的值并输出</td><td><code>{{.Name}}</code>、<code>{{.Age}}</code></td></tr><tr><td><strong>控制结构</strong></td><td>控制模板的执行流程</td><td><code>{{if}}</code>、<code>{{range}}</code>、<code>{{with}}</code>、<code>{{define}}</code>、<code>{{template}}</code>、<code>{{block}}</code></td></tr></tbody></table><h2 id=dot-当前作用域的光标>Dot（<code>.</code>）—— 当前作用域的"光标" <a href=#dot-%e5%bd%93%e5%89%8d%e4%bd%9c%e7%94%a8%e5%9f%9f%e7%9a%84%e5%85%89%e6%a0%87 class=anchor aria-hidden=true>#</a><a href=#dot-当前作用域的光标 class=anchor aria-hidden=true>#</a></h2><p><code>.</code> 是 Go 模板中最重要的概念，称为 <strong>dot</strong>。它代表<strong>当前作用域中正在被操作的数据</strong>，可以理解为游走在数据结构上的"光标"。</p><ul><li>模板刚执行时，<code>.</code> 指向 <code>Execute</code> 传入的<strong>顶层数据</strong></li><li>进入 <code>{{range}}</code> 循环后，<code>.</code> 指向<strong>当前迭代的元素</strong></li><li>进入 <code>{{with}}</code> 块后，<code>.</code> 指向 <code>with</code> 指定的<strong>新值</strong></li></ul><pre><code class=language-text>// 假设传入结构体 {Name: &quot;Alice&quot;, Age: 25}
+{{.Name}}    // 用 . 访问当前作用域下的 Name 字段 → &quot;Alice&quot;
+{{.Age}}     // 用 . 访问当前作用域下的 Age 字段 → 25
+</code></pre><p>理解 <code>.</code> 是理解所有后续语法的前提。简单记住：<strong>&ldquo;点就是我当前在看的数据&rdquo;</strong>。</p><h2 id=参数arguments-动作中数据的写法>参数（Arguments）—— 动作中数据的写法 <a href=#%e5%8f%82%e6%95%b0arguments-%e5%8a%a8%e4%bd%9c%e4%b8%ad%e6%95%b0%e6%8d%ae%e7%9a%84%e5%86%99%e6%b3%95 class=anchor aria-hidden=true>#</a><a href=#参数arguments-动作中数据的写法 class=anchor aria-hidden=true>#</a></h2><p>动作内部引用数据时，使用以下参数形式：</p><table><thead><tr><th>写法</th><th>含义</th><th>示例</th></tr></thead><tbody><tr><td><code>.</code></td><td>当前 dot 的值</td><td><code>{{.}}</code></td></tr><tr><td><code>.Field</code></td><td>访问结构体字段（链式访问 <code>.F1.F2</code>）</td><td><code>{{.Name}}</code></td></tr><tr><td><code>.Key</code></td><td>访问 map 键（不需要大写开头）</td><td><code>{{.count}}</code></td></tr><tr><td><code>.Method</code></td><td>调用无参方法（返回 1 值或 值+error）</td><td><code>{{.String}}</code></td></tr><tr><td><code>$var</code></td><td>已声明的变量</td><td><code>{{$name}}</code></td></tr><tr><td><code>$</code></td><td>顶层数据——无论 dot 被嵌套了多少层，<code>$</code> 始终指向 Execute 传入的原始数据</td><td><code>{{$.Title}}</code></td></tr><tr><td><code>fun arg</code></td><td>调用函数</td><td><code>{{printf "%s" .Name}}</code></td></tr></tbody></table><blockquote><p><strong>自动解引用</strong>：如果值是 pointer、interface，模板引擎会自动 dereference 到基础类型，无需在模板中手动取址。</p></blockquote><h2 id=管道pipeline-链式数据流>管道（Pipeline）—— 链式数据流 <a href=#%e7%ae%a1%e9%81%93pipeline-%e9%93%be%e5%bc%8f%e6%95%b0%e6%8d%ae%e6%b5%81 class=anchor aria-hidden=true>#</a><a href=#管道pipeline-链式数据流 class=anchor aria-hidden=true>#</a></h2><p><strong>管道</strong>是 Go 模板中最强大的表达方式之一。与 Unix shell 类似，用 <code>|</code> 将多个命令串联起来，前一命令的输出变成下一命令的<strong>最后一个参数</strong>：</p><pre><code class=language-text>{{&quot;hello&quot; | printf &quot;%s world&quot; | upper}}
+// 第一步: printf &quot;%s world&quot; &quot;hello&quot;    → &quot;hello world&quot;
+// 第二步: upper &quot;hello world&quot;          → &quot;HELLO WORLD&quot;
+</code></pre><p>管道中的每个命令（<code>|</code> 分隔的片段）名为 <strong>command</strong>，command 的格式为：</p><pre><code class=language-text>Argument [.Method] [Argument...]
+functionName [Argument...]
+</code></pre><p>即一个 command 可以是「参数 + 方法 + 更多参数」，也可以是「函数名 + 参数」。</p><h2 id=控制结构一览>控制结构一览 <a href=#%e6%8e%a7%e5%88%b6%e7%bb%93%e6%9e%84%e4%b8%80%e8%a7%88 class=anchor aria-hidden=true>#</a><a href=#控制结构一览 class=anchor aria-hidden=true>#</a></h2><p>Go 模板提供了类编程语言的控制结构：</p><table><thead><tr><th>动作</th><th>用途</th></tr></thead><tbody><tr><td><code>{{if pipeline}} ... {{end}}</code></td><td>条件判断（非空为真）</td></tr><tr><td><code>{{if pipeline}} ... {{else}} ... {{end}}</code></td><td>带 else 的条件判断</td></tr><tr><td><code>{{if pipeline}} ... {{else if pipeline}} ... {{end}}</code></td><td>else-if 链</td></tr><tr><td><code>{{range pipeline}} ... {{end}}</code></td><td>遍历切片/map/channel</td></tr><tr><td><code>{{range pipeline}} ... {{else}} ... {{end}}</code></td><td>遍历——零长度时走 else 分支</td></tr><tr><td><code>{{with pipeline}} ... {{end}}</code></td><td>切换 dot 到新值并执行</td></tr><tr><td><code>{{with pipeline}} ... {{else}} ... {{end}}</code></td><td>带空值处理的 with</td></tr><tr><td><code>{{break}}</code> / <code>{{continue}}</code></td><td>跳出/跳过当前 range 循环</td></tr><tr><td><code>{{define "name"}} ... {{end}}</code></td><td>定义一个具名子模板</td></tr><tr><td><code>{{template "name" pipeline}}</code></td><td>调用具名子模板（pipeline 成为子树中的 dot）</td></tr><tr><td><code>{{block "name" pipeline}} ... {{end}}</code></td><td><code>define</code> + 立即 <code>template</code> 调用的语法糖——定义默认内容并可被覆盖</td></tr></tbody></table><p><strong>条件中的"空值"判断标准</strong>：<code>false</code>、<code>0</code>、<code>nil</code>、空数组/切片/map/字符串视为空（假），其余为非空（真）。</p><h2 id=变量>变量 <a href=#%e5%8f%98%e9%87%8f class=anchor aria-hidden=true>#</a><a href=#变量 class=anchor aria-hidden=true>#</a></h2><p>模板中可以用 <code>$varname</code> 声明和使用变量：</p><pre><code class=language-text>{{$name := .FirstName}}      // 声明并赋值
+{{$name = .LastName}}         // 重新赋值（注意用 = 而非 :=）
+{{range $idx, $elem := .Items}} ... {{end}}   // range 中声明索引和元素变量
+</code></pre><p>变量作用域从声明处到所在控制结构的 <code>{{end}}</code>，模板调用不继承变量。</p><h2 id=注释>注释 <a href=#%e6%b3%a8%e9%87%8a class=anchor aria-hidden=true>#</a><a href=#注释 class=anchor aria-hidden=true>#</a></h2><pre><code class=language-text>{{/* 这是模板注释，不会出现在输出中 */}}
+</code></pre><p>注释可以跨行，但不能嵌套。</p><h2 id=funcmap--注册自定义函数>FuncMap —— 注册自定义函数 <a href=#funcmap--%e6%b3%a8%e5%86%8c%e8%87%aa%e5%ae%9a%e4%b9%89%e5%87%bd%e6%95%b0 class=anchor aria-hidden=true>#</a><a href=#funcmap--注册自定义函数 class=anchor aria-hidden=true>#</a></h2><p>模板默认只提供一组内置函数（比较、逻辑、格式化等）。要扩展功能，需要通过 <code>FuncMap</code> 注册自定义函数：</p><pre><code class=language-go>funcMap := template.FuncMap{
+    &quot;funcName&quot;: yourFunc,
+}
+tpl := template.New(&quot;name&quot;).Funcs(funcMap).Parse(tplText)
+</code></pre><blockquote><p><code>Funcs()</code> 必须在 <code>Parse()</code> 之前调用，否则解析模板时找不到自定义函数。</p></blockquote><p>每个注册的函数必须返回 <code>(value)</code> 或 <code>(value, error)</code>。如果 error 非 nil，模板执行会终止。</p><h2 id=templatemust--初始化时强制校验>template.Must —— 初始化时强制校验 <a href=#templatemust--%e5%88%9d%e5%a7%8b%e5%8c%96%e6%97%b6%e5%bc%ba%e5%88%b6%e6%a0%a1%e9%aa%8c class=anchor aria-hidden=true>#</a><a href=#templatemust--初始化时强制校验 class=anchor aria-hidden=true>#</a></h2><p><code>template.Must</code> 包装了解析结果：如果 parse 出错就 panic，适合在 <code>var</code> 初始化时使用，确保模板在程序启动阶段就是有效的。</p><pre><code class=language-go>var tpl = template.Must(template.New(&quot;demo&quot;).Parse(&quot;Hello, {{.}}&quot;))
+</code></pre><p>以上就是 Go 模板编程的核心知识骨架。下面通过实际代码来一一演示。</p><h1 id=基础示例>基础示例 <a href=#%e5%9f%ba%e7%a1%80%e7%a4%ba%e4%be%8b class=anchor aria-hidden=true>#</a></h1><p>从一个学生成绩汇总的例子开始，演示模板解析、自定义函数、管道操作与数据绑定。</p><pre><code class=language-go>package main
+
+import (
+	&quot;fmt&quot;
+	&quot;os&quot;
+	&quot;text/template&quot;
+)
+
+// 自定义函数：根据分数评定等级
+// {{.Grade | studentLevel}} 中 | 将 .Grade 作为参数传给 studentLevel
+func studentLevel(grade int) string {
+	switch {
+	case grade &gt; 90:
+		return &quot;A&quot;
+	case grade &gt; 80:
+		return &quot;B&quot;
+	case grade &gt; 70:
+		return &quot;C&quot;
+	case grade &gt; 60:
+		return &quot;D&quot;
+	default:
+		return &quot;E&quot;
+	}
+}
+
+func main() {
+	tplDef := `
+{{.Count}} students:
+{{range .Students}}
+-------------------
+Name : {{.Name}}
+Age  : {{.Age}}
+Grade: {{.Grade}}
+Level: {{.Grade | studentLevel}}
+{{end}}
+`
+
+	// 先注册自定义函数，再解析模板
+	tpl, err := template.New(&quot;students-summary&quot;).
+		Funcs(template.FuncMap{&quot;studentLevel&quot;: studentLevel}).
+		Parse(tplDef)
+	if err != nil {
+		fmt.Printf(&quot;parse template error: %v\n&quot;, err)
+		os.Exit(1)
+	}
+
+	type Student struct {
+		Name  string
+		Age   int
+		Grade int
+	}
+	type Students struct {
+		Count    int
+		Students []Student
+	}
+
+	book := Students{
+		Students: []Student{
+			{&quot;zhang&quot;, 10, 99},
+			{&quot;wang&quot;, 10, 80},
+			{&quot;li&quot;, 10, 70},
+		},
+	}
+	book.Count = len(book.Students)
+
+	if err := tpl.Execute(os.Stdout, book); err != nil {
+		fmt.Printf(&quot;execute template error: %v\n&quot;, err)
+	}
+}
+</code></pre><p>程序输出：</p><pre><code class=language-shell>3 students:
+-------------------
+Name : zhang
+Age  : 10
+Grade: 99
+Level: A
+-------------------
+Name : wang
+Age  : 10
+Grade: 80
+Level: C
+-------------------
+Name : li
+Age  : 10
+Grade: 70
+Level: D
+</code></pre><p>回顾前面提到的概念在这个例子中如何体现：</p><ul><li><strong>dot</strong>：<code>{{.Count}}</code> 访问顶层的 <code>Count</code> 字段；进入 <code>{{range .Students}}</code> 后，<code>.</code> 切换为当前迭代的 <code>Student</code></li><li><strong>管道</strong>：<code>{{.Grade | studentLevel}}</code> 中，<code>.Grade</code> 的值通过管道传给 <code>studentLevel</code> 函数</li><li><strong>Funcs</strong>：在 <code>Parse</code> 之前注册，模板中才能直接使用函数名</li><li><strong>Execute</strong>：将数据 <code>book</code> 绑定到模板，输出到 <code>os.Stdout</code></li></ul><h1 id=活用控制结构>活用控制结构 <a href=#%e6%b4%bb%e7%94%a8%e6%8e%a7%e5%88%b6%e7%bb%93%e6%9e%84 class=anchor aria-hidden=true>#</a></h1><h2 id=条件判断>条件判断 <a href=#%e6%9d%a1%e4%bb%b6%e5%88%a4%e6%96%ad class=anchor aria-hidden=true>#</a><a href=#条件判断 class=anchor aria-hidden=true>#</a></h2><p><code>if</code> 支持 <code>else</code> 和 <code>else if</code> 链，条件为空值则为假：</p><pre><code class=language-go>tplDef := `
+{{if .Score}}
+  {{if eq .Score 100}}
+    Perfect!
+  {{else if ge .Score 60}}
+    Pass
+  {{else}}
+    Fail
+  {{end}}
+{{else}}
+  No score recorded.
+{{end}}
+`
+</code></pre><p>这里用到了内置比较函数 <code>eq</code>（equal）和 <code>ge</code>（greater or equal）。完整的内置比较函数为 <code>eq</code>、<code>ne</code>、<code>lt</code>、<code>le</code>、<code>gt</code>、<code>ge</code>。它们支持多参数：<code>eq a b c</code> 等价于 <code>a==b || a==c</code>。</p><p>另有逻辑函数 <code>and</code>、<code>or</code>、<code>not</code>，均支持短路求值。</p><h2 id=range-进阶>range 进阶 <a href=#range-%e8%bf%9b%e9%98%b6 class=anchor aria-hidden=true>#</a><a href=#range-进阶 class=anchor aria-hidden=true>#</a></h2><p><code>range</code> 遍历数组、切片、map 或 channel：</p><pre><code class=language-go>tplDef := `
+{{range $idx, $item := .Items}}
+  #{{$idx}}: {{$item.Name}} — {{$item.Value}}
+{{else}}
+  (empty list)
+{{end}}
+`
+</code></pre><ul><li><code>$idx</code> 获取索引（数组/切片）或键（map），<code>$item</code> 获取元素值</li><li><strong>注意</strong>：只声明一个变量时（<code>range $x := ...</code>），<code>$x</code> 接收的是<strong>元素值</strong>而非索引，这与 Go 语言 <code>for range</code> 的习惯不同</li><li><code>{{else}}</code> 分支在遍历对象长度为 0 时执行</li></ul><h2 id=with-语句>with 语句 <a href=#with-%e8%af%ad%e5%8f%a5 class=anchor aria-hidden=true>#</a><a href=#with-语句 class=anchor aria-hidden=true>#</a></h2><p><code>with</code> 将 dot 切换到新值，简化深层字段的访问：</p><pre><code class=language-go>tplDef := `
+{{with .Address}}
+  City: {{.City}}
+  Street: {{.Street}}
+{{else}}
+  No address provided.
+{{end}}
+`
+</code></pre><p>进入 <code>with</code> 后，<code>{{.City}}</code> 等价于原 dot 下 <code>.Address.City</code>。如果 <code>Address</code> 为空值，走 <code>else</code> 分支，dot 不受影响。</p><h2 id=break--continue>break / continue <a href=#break--continue class=anchor aria-hidden=true>#</a><a href=#break--continue class=anchor aria-hidden=true>#</a></h2><p>在循环中可按条件提前跳出或跳过：</p><pre><code class=language-go>tplDef := `
+{{range .Items}}
+  {{if eq .Name &quot;&quot;}}{{continue}}{{end}}
+  {{if gt .Value 100}}{{break}}{{end}}
+  {{.Name}}: {{.Value}}
+{{end}}
+`
+</code></pre><h1 id=管道深入与自定义函数>管道深入与自定义函数 <a href=#%e7%ae%a1%e9%81%93%e6%b7%b1%e5%85%a5%e4%b8%8e%e8%87%aa%e5%ae%9a%e4%b9%89%e5%87%bd%e6%95%b0 class=anchor aria-hidden=true>#</a></h1><p>管道 <code>|</code> 是 Go 模板的灵魂。串联多个函数，数据逐级流转：</p><pre><code class=language-go>funcMap := template.FuncMap{
+	&quot;upper&quot;: strings.ToUpper,
+	&quot;trim&quot;:  strings.TrimSpace,
+}
+
+tpl := template.Must(template.New(&quot;pipe&quot;).Funcs(funcMap).Parse(
+	`{{.Name | trim | upper}}`,
+))
+tpl.Execute(os.Stdout, map[string]string{&quot;Name&quot;: &quot;  hello  &quot;})
+// 输出: HELLO
+</code></pre><p>每通过一个 <code>|</code>，左侧的结果被追加为下一个函数的<strong>最后一个参数</strong>。所以 <code>"hello" | printf "%s world"</code> 等价于 <code>printf "%s world" "hello"</code>。</p><p><strong>自定义函数签名要求</strong>：</p><ul><li><code>func(args...) T</code> —— 一个返回值</li><li><code>func(args...) (T, error)</code> —— 返回值和 error。error 非 nil 时模板执行终止并返回该 error</li></ul><p>在代码生成场景中，常用的自定义函数包括：类型映射（<code>string</code> → <code>string</code>，<code>int32</code> → <code>int32</code>）、命名风格转换（snake_case → CamelCase）等。</p><h1 id=模板嵌套与复用>模板嵌套与复用 <a href=#%e6%a8%a1%e6%9d%bf%e5%b5%8c%e5%a5%97%e4%b8%8e%e5%a4%8d%e7%94%a8 class=anchor aria-hidden=true>#</a></h1><p>现实场景中，模板往往需要分层、可复用。Go 模板通过<strong>关联模板</strong>（associated templates）机制支持这一点。</p><h2 id=define--template>define / template <a href=#define--template class=anchor aria-hidden=true>#</a><a href=#define--template class=anchor aria-hidden=true>#</a></h2><p>在同一个模板文本中用 <code>{{define}}</code> 定义具名子模板，用 <code>{{template}}</code> 调用：</p><pre><code class=language-go>const layout = `
+Header
+{{template &quot;body&quot; .}}
+Footer
+`
+
+const bodyDef = `
+{{define &quot;body&quot;}}
+  Content for: {{.}}
+{{end}}
+`
+
+tpl := template.Must(template.New(&quot;layout&quot;).Parse(layout))
+tpl = template.Must(tpl.Parse(bodyDef))  // 将 body 模板关联到同一个 Template 实例
+tpl.Execute(os.Stdout, &quot;MyPage&quot;)
+</code></pre><p>输出：</p><pre><code>Header
+  Content for: MyPage
+Footer
+</code></pre><p>关键点：</p><ul><li><code>{{template "body" .}}</code> 中的 <code>.</code> 是传给子模板的数据（这里将当前 dot 传下去）</li><li>可以传 <code>nil</code>，也可以传具体值</li><li>子模板必须在同一个 <code>*Template</code> 实例中定义（通过多次 <code>Parse</code> 累积，或通过 <code>ParseFiles</code>/<code>ParseGlob</code> 加载）</li></ul><h2 id=block--可覆盖的默认内容>block —— 可覆盖的默认内容 <a href=#block--%e5%8f%af%e8%a6%86%e7%9b%96%e7%9a%84%e9%bb%98%e8%ae%a4%e5%86%85%e5%ae%b9 class=anchor aria-hidden=true>#</a><a href=#block--可覆盖的默认内容 class=anchor aria-hidden=true>#</a></h2><p><code>block</code> 是 <code>define</code> + 立即 <code>template</code> 调用的语法糖，最适合"提供默认实现，允许覆盖"的场景：</p><pre><code class=language-go>const master = `Names:{{block &quot;list&quot; .}}{{&quot;\n&quot;}}{{range .}}{{println &quot;-&quot; .}}{{end}}{{end}}`
+
+// 场景一：使用默认的 block 定义（逐行列出）
+tpl1 := template.Must(template.New(&quot;master&quot;).Parse(master))
+tpl1.Execute(os.Stdout, []string{&quot;Alice&quot;, &quot;Bob&quot;})
+// Names:
+// - Alice
+// - Bob
+
+// 场景二：覆盖 list 模板（用逗号连接），需要注册 join 函数
+tpl2 := template.Must(tpl1.Clone())
+tpl2.Funcs(template.FuncMap{&quot;join&quot;: func(a []string, sep string) string {
+	return strings.Join(a, sep)
+}}).Parse(`{{define &quot;list&quot;}} {{join . &quot;, &quot;}}{{end}}`)
+// 输出: Names: Alice, Bob
+</code></pre><p><code>block</code> 等价于：先 <code>define</code>，如果该名字没有被外部定义过，就用这段默认内容；如果后来用同一个名字再 <code>define</code> 一次，就会覆盖它。</p><h2 id=parsefiles--parseglob>ParseFiles / ParseGlob <a href=#parsefiles--parseglob class=anchor aria-hidden=true>#</a><a href=#parsefiles--parseglob class=anchor aria-hidden=true>#</a></h2><p>生产环境中，模板通常放在 <code>.tmpl</code> 文件中：</p><pre><code class=language-go>// 加载单个文件（模板名 = 文件 base name）
+tpl := template.Must(template.ParseFiles(&quot;layout.tmpl&quot;))
+
+// 加载所有匹配的文件
+tpl := template.Must(template.ParseGlob(&quot;templates/*.tmpl&quot;))
+
+// 指定模板名
+tpl := template.Must(template.New(&quot;myname&quot;).ParseGlob(&quot;templates/*.tmpl&quot;))
+</code></pre><p><code>ParseFiles</code>/<code>ParseGlob</code> 会将文件中的模板定义（<code>{{define "..."}}</code>）全部加载到同一个 Template 实例下，形成关联模板的命名空间。</p><h1 id=实用技巧>实用技巧 <a href=#%e5%ae%9e%e7%94%a8%e6%8a%80%e5%b7%a7 class=anchor aria-hidden=true>#</a></h1><h2 id=空白控制>空白控制 <a href=#%e7%a9%ba%e7%99%bd%e6%8e%a7%e5%88%b6 class=anchor aria-hidden=true>#</a><a href=#空白控制 class=anchor aria-hidden=true>#</a></h2><p><code>{{-</code> 裁掉<strong>前方</strong>空白，<code>-}}</code> 裁掉<strong>后方</strong>空白：</p><pre><code class=language-go>tplDef := `{{23 -}} &lt; {{- 45}}`
+tpl := template.Must(template.New(&quot;ws&quot;).Parse(tplDef))
+tpl.Execute(os.Stdout, nil)
+// 输出: 23&lt;45
+</code></pre><p>这在用模板生成代码时尤其有用——避免输出文件中出现多余的空行和缩进错乱。</p><blockquote><p>注意 <code>{{-3}}</code> 会被解析为数字 -3，空白控制必须写成 <code>{{- 3}}</code>（中间有空格）。</p></blockquote><h2 id=missingkey-选项>missingkey 选项 <a href=#missingkey-%e9%80%89%e9%a1%b9 class=anchor aria-hidden=true>#</a><a href=#missingkey-选项 class=anchor aria-hidden=true>#</a></h2><p>控制访问 map 中不存在的 key 时的行为：</p><pre><code class=language-go>tpl := template.Must(template.New(&quot;test&quot;).
+    Option(&quot;missingkey=error&quot;).  // default | zero | error
+    Parse(&quot;{{.Name}}&quot;))
+</code></pre><table><thead><tr><th>选项</th><th>行为</th></tr></thead><tbody><tr><td><code>missingkey=default</code>（默认）</td><td>输出 <code>&lt;no value></code>，静默继续</td></tr><tr><td><code>missingkey=zero</code></td><td>返回该类型的零值</td></tr><tr><td><code>missingkey=error</code></td><td>立即终止执行并返回 error</td></tr></tbody></table><p>建议在代码生成场景中始终使用 <code>missingkey=error</code>，避免因为拼写错误漏过模板字段。</p><h2 id=must--初始化校验>Must —— 初始化校验 <a href=#must--%e5%88%9d%e5%a7%8b%e5%8c%96%e6%a0%a1%e9%aa%8c class=anchor aria-hidden=true>#</a><a href=#must--初始化校验 class=anchor aria-hidden=true>#</a></h2><pre><code class=language-go>var tpl = template.Must(template.New(&quot;demo&quot;).Parse(&quot;Hello, {{.}}&quot;))
+</code></pre><p><code>Must</code> 在 parse 失败时 panic，适合在包级 <code>var</code> 初始化时使用——程序启动即发现问题，而非运行时出错。</p><h1 id=代码生成实战>代码生成实战 <a href=#%e4%bb%a3%e7%a0%81%e7%94%9f%e6%88%90%e5%ae%9e%e6%88%98 class=anchor aria-hidden=true>#</a></h1><p>Go 模板在<strong>代码生成</strong>场景中极具价值。下面用一个简化版的 protobuf + Go 模板生成服务代码的示例，展示完整的代码生成流水线。</p><h2 id=数据模型>数据模型 <a href=#%e6%95%b0%e6%8d%ae%e6%a8%a1%e5%9e%8b class=anchor aria-hidden=true>#</a><a href=#数据模型 class=anchor aria-hidden=true>#</a></h2><p>首先定义描述服务的数据结构：</p><pre><code class=language-go>type ServiceDesc struct {
+	Package  string
+	Name     string
+	HasHTTP  bool   // 内部使用，驱动条件渲染
+	Methods  []MethodDesc
+}
+
+type MethodDesc struct {
+	Name        string
+	InputType   string
+	OutputType  string
+	HTTPMethod  string
+	HTTPPath    string
+}
+</code></pre><h2 id=自定义函数>自定义函数 <a href=#%e8%87%aa%e5%ae%9a%e4%b9%89%e5%87%bd%e6%95%b0 class=anchor aria-hidden=true>#</a><a href=#自定义函数 class=anchor aria-hidden=true>#</a></h2><pre><code class=language-go>var funcMap = template.FuncMap{
+	&quot;lower&quot;:     strings.ToLower,
+	&quot;toCamel&quot;:   toCamelCase,
+	&quot;goType&quot;:    toGoType,
+}
+
+func toCamelCase(s string) string {
+	parts := strings.Split(s, &quot;_&quot;)
+	for i, p := range parts {
+		parts[i] = strings.Title(p)
+	}
+	return strings.Join(parts, &quot;&quot;)
+}
+
+func toGoType(pt string) string {
+	mapping := map[string]string{
+		&quot;string&quot;: &quot;string&quot;, &quot;int32&quot;: &quot;int32&quot;, &quot;int64&quot;: &quot;int64&quot;,
+		&quot;bool&quot;: &quot;bool&quot;, &quot;float64&quot;: &quot;float64&quot;, &quot;bytes&quot;: &quot;[]byte&quot;,
+	}
+	if t, ok := mapping[pt]; ok {
+		return t
+	}
+	return pt
+}
+</code></pre><h2 id=模板定义>模板定义 <a href=#%e6%a8%a1%e6%9d%bf%e5%ae%9a%e4%b9%89 class=anchor aria-hidden=true>#</a><a href=#模板定义 class=anchor aria-hidden=true>#</a></h2><h3 id=service-接口及-stub>Service 接口及 Stub <a href=#service-%e6%8e%a5%e5%8f%a3%e5%8f%8a-stub class=anchor aria-hidden=true>#</a><a href=#service-接口及-stub class=anchor aria-hidden=true>#</a></h3><pre><code class=language-go>var serviceTmpl = `
+// Code generated by protoc-gen-demo. DO NOT EDIT.
+// source: {{.Name}}.proto
+package {{.Package}}
+
+import (
+	&quot;context&quot;
+	{{if .HasHTTP}}&quot;net/http&quot;{{end}}
+)
+
+// {{.Name}}Service 定义服务接口
+type {{.Name}}Service interface {
+{{range .Methods}}
+	// {{.Name}}
+	{{.Name}}(ctx context.Context, req *{{.InputType | goType}}) (*{{.OutputType | goType}}, error)
+{{end}}
+}
+
+// {{.Name}}ServiceStub 服务端骨架
+type {{.Name}}ServiceStub struct {
+	impl {{.Name}}Service
+}
+
+func New{{.Name}}ServiceStub(impl {{.Name}}Service) *{{.Name}}ServiceStub {
+	return &amp;{{.Name}}ServiceStub{impl: impl}
+}
+
+{{range .Methods}}
+func (s *{{$.Name}}ServiceStub) Handle{{.Name}}(w http.ResponseWriter, r *http.Request) {
+	// TODO: 反序列化请求 → s.impl.{{.Name}}(ctx, req) → 序列化响应
+}
+{{end}}
+`
+</code></pre><p>注意 <code>{{$.Name}}</code> —— 在 <code>range</code> 内部，<code>.</code> 变成了当前 <code>Method</code>，要访问父级的 <code>Name</code> 字段，就用 <code>$</code> 回到顶层数据。</p><h3 id=client-代理>Client 代理 <a href=#client-%e4%bb%a3%e7%90%86 class=anchor aria-hidden=true>#</a><a href=#client-代理 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-go>var clientTmpl = `
+package {{.Package}}
+
+import &quot;context&quot;
+
+// {{.Name}}Client 客户端代理
+type {{.Name}}Client struct {
+	// httpClient *http.Client
+	// baseURL    string
+}
+
+func New{{.Name}}Client(addr string) *{{.Name}}Client {
+	return &amp;{{.Name}}Client{}
+}
+
+{{range .Methods}}
+func (c *{{$.Name}}Client) {{.Name}}(ctx context.Context, req *{{.InputType | goType}}) (*{{.OutputType | goType}}, error) {
+	// TODO: 序列化请求 → HTTP 调用 → 反序列化响应
+	return nil, nil
+}
+{{end}}
+`
+</code></pre><h2 id=生成与格式化>生成与格式化 <a href=#%e7%94%9f%e6%88%90%e4%b8%8e%e6%a0%bc%e5%bc%8f%e5%8c%96 class=anchor aria-hidden=true>#</a><a href=#生成与格式化 class=anchor aria-hidden=true>#</a></h2><pre><code class=language-go>func generate(svc ServiceDesc) error {
+	svc.HasHTTP = true
+
+	// 生成 service 代码
+	var buf bytes.Buffer
+	tpl := template.Must(template.New(&quot;service&quot;).Funcs(funcMap).Parse(serviceTmpl))
+	if err := tpl.Execute(&amp;buf, svc); err != nil {
+		return fmt.Errorf(&quot;execute service template: %w&quot;, err)
+	}
+	// 用 go/format 格式化生成代码
+	formatted, err := format.Source(buf.Bytes())
+	if err != nil {
+		// 格式化失败时仍保留原始文件供排查
+		fmt.Printf(&quot;format warning: %v\n&quot;, err)
+		formatted = buf.Bytes()
+	}
+	if err := os.WriteFile(
+		fmt.Sprintf(&quot;%s_service.go&quot;, strings.ToLower(svc.Name)), formatted, 0644,
+	); err != nil {
+		return err
+	}
+
+	// 生成 client 代码
+	buf.Reset()
+	tpl2 := template.Must(template.New(&quot;client&quot;).Funcs(funcMap).Parse(clientTmpl))
+	if err := tpl2.Execute(&amp;buf, svc); err != nil {
+		return fmt.Errorf(&quot;execute client template: %w&quot;, err)
+	}
+	formatted, err = format.Source(buf.Bytes())
+	if err != nil {
+		fmt.Printf(&quot;format warning: %v\n&quot;, err)
+		formatted = buf.Bytes()
+	}
+	return os.WriteFile(
+		fmt.Sprintf(&quot;%s_client.go&quot;, strings.ToLower(svc.Name)), formatted, 0644,
+	)
+}
+</code></pre><h2 id=格式化方式对比>格式化方式对比 <a href=#%e6%a0%bc%e5%bc%8f%e5%8c%96%e6%96%b9%e5%bc%8f%e5%af%b9%e6%af%94 class=anchor aria-hidden=true>#</a><a href=#格式化方式对比 class=anchor aria-hidden=true>#</a></h2><p>除了 <code>go/format.Source()</code>，实际项目中还有两种常用方式：</p><pre><code class=language-go>import (
+	&quot;bytes&quot;
+	&quot;fmt&quot;
+	&quot;go/format&quot;
+	&quot;os/exec&quot;
+)
+
+// 方式一：go/format.Source —— 纯 Go，不依赖外部命令，适合 library
+func formatSource(src []byte) ([]byte, error) {
+	return format.Source(src)
+}
+
+// 方式二：goimports —— 同时格式化 import 和代码，适合 CLI 工具
+func formatWithGoimports(src []byte) ([]byte, error) {
+	cmd := exec.Command(&quot;goimports&quot;)
+	cmd.Stdin = bytes.NewReader(src)
+	var out bytes.Buffer
+	cmd.Stdout = &amp;out
+	cmd.Stderr = &amp;out
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf(&quot;goimports: %w\n%s&quot;, err, out.String())
+	}
+	return out.Bytes(), nil
+}
+
+// 方式三：gofmt —— 只格式化代码（不处理 import），适合简单场景
+func formatWithGofmt(src []byte) ([]byte, error) {
+	cmd := exec.Command(&quot;gofmt&quot;)
+	cmd.Stdin = bytes.NewReader(src)
+	return cmd.Output()
+}
+</code></pre><p><strong>推荐的代码生成流水线</strong>：</p><pre><code>解析输入 (proto/YAML/DB schema)
+  → 构建数据模型 (structs)
+  → text/template 渲染 (Execute)
+  → format.Source / goimports 格式化
+  → 写入目标文件
+</code></pre><p>这样生成的代码不仅语义正确，格式也完全符合 Go 社区规范，可以直接提交到仓库。</p><h1 id=texttemplate-与-htmltemplate>text/template 与 html/template <a href=#texttemplate-%e4%b8%8e-htmltemplate class=anchor aria-hidden=true>#</a></h1><p>Go 标准库提供了两套模板包，<strong>接口完全一致</strong>：</p><table><thead><tr><th>特性</th><th style=text-align:center><code>text/template</code></th><th style=text-align:center><code>html/template</code></th></tr></thead><tbody><tr><td>用途</td><td style=text-align:center>通用文本输出</td><td style=text-align:center>HTML 页面渲染</td></tr><tr><td>自动转义</td><td style=text-align:center>❌</td><td style=text-align:center>✅（防 XSS）</td></tr><tr><td>适用场景</td><td style=text-align:center>代码生成、邮件、CLI</td><td style=text-align:center>Web 页面</td></tr></tbody></table><p><code>html/template</code> 会根据上下文自动选择转义策略：HTML 标签体按 HTML 转义，<code>&lt;script></code> 内按 JS 转义，<code>href</code> 属性中按 URL 转义，从而有效防止 XSS 攻击。如果生成的是非 HTML 文本，用 <code>text/template</code> 即可，不必引入额外的转义开销。</p><h1 id=总结>总结 <a href=#%e6%80%bb%e7%bb%93 class=anchor aria-hidden=true>#</a></h1><p>本文从概念到实战，系统介绍了 Go 模板编程的方方面面：</p><ul><li><strong>概念基石</strong>：dot（<code>.</code>）是理解一切的关键——它是游走于数据之上的光标；管道 <code>|</code> 让数据在函数间流转，表达力极强</li><li><strong>控制结构</strong>：<code>if/else</code>、<code>range/else</code>、<code>with/else</code>、<code>break</code>、<code>continue</code>——覆盖常见逻辑控制需求</li><li><strong>函数体系</strong>：内置的比较/逻辑/格式化函数，加上 <code>FuncMap</code> 注册自定义函数，扩展灵活</li><li><strong>模板复用</strong>：<code>define</code>/<code>template</code> 定义和调用子模板，<code>block</code> 提供"默认+可覆盖"模式，<code>ParseFiles</code>/<code>ParseGlob</code> 加载外部文件</li><li><strong>工程化</strong>：<code>Must</code> 初始化校验、空白控制、<code>missingkey</code> 选项、<code>Clone</code> 复制模板集</li><li><strong>代码生成</strong>：配合 <code>go/format</code> 或 <code>goimports</code> 对生成代码做格式化，产出可直接提交的规范代码</li></ul><p>如果你之前只用过 ctemplate、velocity 等外部模板引擎，你会发现 Go 的内置模板同样强大，而且零依赖、与 Go 类型系统天然契合。</p><h1 id=参考文章>参考文章 <a href=#%e5%8f%82%e8%80%83%e6%96%87%e7%ab%a0 class=anchor aria-hidden=true>#</a></h1><ul><li><a href=https://blog.gopheracademy.com/advent-2017/using-go-templates/>Using Go Templates — Gopher Academy Blog</a></li><li><a href=https://pkg.go.dev/text/template>text/template — Go Package Documentation</a></li></ul><div class=edit-page><a href=https://github.com/hitzhangjie/myspace/blob/master/content/blog/languages/golang/1-go%e7%bc%96%e7%a8%8b%e5%85%a5%e9%97%a8/stdlib/2018-11-04-go-template.md><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2"><path d="M17 3a2.828 2.828.0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+Edit this page on GitHub</a></div><div class="docs-navigation d-flex justify-content-between"><a href=/blog/2018-11-04-go-protobuf/><div class="card my-1"><div class="card-body py-2">&larr; Go Protobuf 解析与开发环境</div></div></a><a class=ms-auto href=/blog/2018-10-12-%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7_elk/><div class="card my-1"><div class="card-body py-2">ELK Stack 集中式日志管理 &rarr;</div></div></a></div></main><div class="docs-toc d-none d-xl-block col-xl-3"><nav class=docs-toc-inner aria-label="Secondary navigation"><div class=page-links><h3>On this page</h3><nav id=TableOfContents><ul><li><a href=#背景>背景</a></li><li><a href=#核心概念与基础语法>核心概念与基础语法</a><ul><li><a href=#运转模型>运转模型</a></li><li><a href=#动作actions与定界符>动作（Actions）与定界符</a></li><li><a href=#dot-当前作用域的光标>Dot（<code>.</code>）—— 当前作用域的"光标"</a></li><li><a href=#参数arguments-动作中数据的写法>参数（Arguments）—— 动作中数据的写法</a></li><li><a href=#管道pipeline-链式数据流>管道（Pipeline）—— 链式数据流</a></li><li><a href=#控制结构一览>控制结构一览</a></li><li><a href=#变量>变量</a></li><li><a href=#注释>注释</a></li><li><a href=#funcmap--注册自定义函数>FuncMap —— 注册自定义函数</a></li><li><a href=#templatemust--初始化时强制校验>template.Must —— 初始化时强制校验</a></li></ul></li><li><a href=#基础示例>基础示例</a></li><li><a href=#活用控制结构>活用控制结构</a><ul><li><a href=#条件判断>条件判断</a></li><li><a href=#range-进阶>range 进阶</a></li><li><a href=#with-语句>with 语句</a></li><li><a href=#break--continue>break / continue</a></li></ul></li><li><a href=#管道深入与自定义函数>管道深入与自定义函数</a></li><li><a href=#模板嵌套与复用>模板嵌套与复用</a><ul><li><a href=#define--template>define / template</a></li><li><a href=#block--可覆盖的默认内容>block —— 可覆盖的默认内容</a></li><li><a href=#parsefiles--parseglob>ParseFiles / ParseGlob</a></li></ul></li><li><a href=#实用技巧>实用技巧</a><ul><li><a href=#空白控制>空白控制</a></li><li><a href=#missingkey-选项>missingkey 选项</a></li><li><a href=#must--初始化校验>Must —— 初始化校验</a></li></ul></li><li><a href=#代码生成实战>代码生成实战</a><ul><li><a href=#数据模型>数据模型</a></li><li><a href=#自定义函数>自定义函数</a></li><li><a href=#模板定义>模板定义</a><ul><li><a href=#service-接口及-stub>Service 接口及 Stub</a></li><li><a href=#client-代理>Client 代理</a></li></ul></li><li><a href=#生成与格式化>生成与格式化</a></li><li><a href=#格式化方式对比>格式化方式对比</a></li></ul></li><li><a href=#texttemplate-与-htmltemplate>text/template 与 html/template</a></li><li><a href=#总结>总结</a></li><li><a href=#参考文章>参考文章</a></li></ul></nav></div></nav></div></div></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.b49b5c2c44fdca07ee730ad1196420771d2a94176c7d367b414fb2e23f6a0ac3fbae11c2a6263392f17450f222ec2b518586e8ea96e23c361eb3ee8a255e145c.js integrity="sha512-tJtcLET9ygfucwrRGWQgdx0qlBdsfTZ7QU+y4j9qCsP7rhHCpiYzkvF0UPIi7CtRhYbo6pbiPDYes+6KJV4UXA==" crossorigin=anonymous defer></script><script src=/js/highlight.min.1a731f820940167b6fd11a8540a1ae7c4627f4009b13e229c411e9d890612a3f6b618133d96477c2cf238d6faaa28d745cd5141e443aa34f62785510dc873430.js integrity="sha512-GnMfgglAFntv0RqFQKGufEYn9ACbE+IpxBHp2JBhKj9rYYEz2WR3ws8jjW+qoo10XNUUHkQ6o09ieFUQ3Ic0MA==" crossorigin=anonymous defer></script><script src=/main.min.b58b01cf031e169076ec659deefba76e6f28ee7fb673b98a8f8f515705db29d50a62f11be71512f1e11b67fd203f11d5c4a911b43b4580eb9d4ca6b0833a4a4a.js integrity="sha512-tYsBzwMeFpB27GWd7vunbm8o7n+2c7mKj49RVwXbKdUKYvEb5xUS8eEbZ/0gPxHVxKkRtDtFgOudTKawgzpKSg==" crossorigin=anonymous defer></script><script src=/index.min.2ecb4040f34b507399808022b2ed8445451ddf9b4cf52484d118c8f56bc1cab47a9e19f9eb98eec1cfa1914663f3d9a14d096bbd73ba3c3c3e88d4214baec19a.js integrity="sha512-LstAQPNLUHOZgIAisu2ERUUd35tM9SSE0RjI9WvByrR6nhn565juwc+hkUZj89mhTQlrvXO6PDw+iNQhS67Bmg==" crossorigin=anonymous defer></script></body></html>

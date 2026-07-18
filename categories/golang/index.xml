@@ -1,1 +1,42 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>golang on</title><link>/categories/golang/</link><description>Recent content in golang on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><atom:link href="/categories/golang/index.xml" rel="self" type="application/rss+xml"/></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>golang on</title><link>/categories/golang/</link><description>Recent content in golang on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 12 Apr 2025 00:05:08 +0800</lastBuildDate><atom:link href="/categories/golang/index.xml" rel="self" type="application/rss+xml"/><item><title>Go精进之路：从错误中学习</title><link>/blog/2025-04-12-0001-go%E5%AE%B9%E6%98%93%E4%B8%8A%E6%89%8B%E4%BD%86%E4%B8%8D%E4%BB%A3%E8%A1%A8%E8%BD%BB%E6%9D%BE%E5%B0%B1%E8%83%BD%E6%8E%8C%E6%8F%A1/</link><pubDate>Sat, 12 Apr 2025 00:05:08 +0800</pubDate><guid>/blog/2025-04-12-0001-go%E5%AE%B9%E6%98%93%E4%B8%8A%E6%89%8B%E4%BD%86%E4%B8%8D%E4%BB%A3%E8%A1%A8%E8%BD%BB%E6%9D%BE%E5%B0%B1%E8%83%BD%E6%8E%8C%E6%8F%A1/</guid><description>&lt;h1 id="go精进之路从错误中学习"&gt;Go精进之路：从错误中学习 &lt;a href="#go%e7%b2%be%e8%bf%9b%e4%b9%8b%e8%b7%af%e4%bb%8e%e9%94%99%e8%af%af%e4%b8%ad%e5%ad%a6%e4%b9%a0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;img src="https://fastly.jsdelivr.net/gh/bucketio/img12@main/2025/04/11/1744347781802-c70c26c3-2838-4b80-bd98-5a38c29b5ec2.png" alt=""&gt;&lt;/p&gt;
+&lt;p&gt;欢迎来到这个Go语言开发经验分享系列！&lt;/p&gt;
+&lt;p&gt;时光荏苒，转眼间Go语言已经陪伴我们走过了16个春秋。自2009年横空出世，Go语言凭借其简洁高效的特性，迅速在服务器开发、分布式系统、以及各种实用工具链的构建中获得了广泛的应用。它就像一位老朋友，默默地支撑着互联网的基石。&lt;/p&gt;
+&lt;p&gt;Go语言的设计者们吸取了C和Java等语言的经验教训，力求打造一种既易于学习、又高效可靠的编程语言。简洁、易用、高效，这正是Go语言的核心理念，而它也几乎做到了这一点。初学者很容易上手，几行代码就能完成一些简单的任务，这让很多人对Go语言充满了兴趣。&lt;/p&gt;
+&lt;p&gt;然而，Go语言的“容易上手”并不意味着它“很简单”。要真正掌握Go语言，成为一名经验丰富的Go开发者，需要深入理解其底层机制、并发模型、以及最佳实践。就像学习任何一门技术一样，入门只是第一步，真正的挑战在于不断地学习、实践和总结。&lt;/p&gt;
+&lt;p&gt;我是一名拥有近10年开发经验的工程师，其中有近7年专注于Go语言的开发。在这些年中，我带领团队完成了多个大型项目的开发和上线，也积累了大量的经验教训。我经常在项目培训中看到一些项目成员会犯一些常见的Go编程错误，这些错误往往会影响项目的质量和效率。为了避免这些错误，我整理了一份详细的编程规范和最佳实践指南。&lt;/p&gt;
+&lt;p&gt;在整理这些材料的过程中，我偶然发现了《100 Go Mistakes》这本书，书中提到的问题与我在实践中遇到的情况如出一辙，欣喜之余也给此书网站贡献了中文版的目录翻译。正如书中所说：“Go is easy to learn but not that simple to master”。 这句话精准地概括了Go语言的学习曲线。&lt;/p&gt;
+&lt;p&gt;现在，我们的项目已经成功上线并进入了稳定运营阶段，作为团队的Go技术专家，我也终于可以抽出一些时间，将这些年来积累的经验教训分享给大家。希望这些内容能够帮助大家避免一些弯路，提升Go语言开发技能，并为你们的团队带来一些启发。&lt;/p&gt;
+&lt;p&gt;如果您对Go语言开发感兴趣，欢迎关注我，我会持续分享更多实战经验和技术心得。让我们一起探索Go语言的魅力，共同成长！&lt;/p&gt;</description></item><item><title>a += (a++)+(++a) 的值到底是多少？</title><link>/blog/2019-02-13-a--a-a/</link><pubDate>Wed, 13 Feb 2019 00:00:00 +0800</pubDate><guid>/blog/2019-02-13-a--a-a/</guid><description>&lt;p&gt;前一阵子，在某厂笔试题（Java）里面，出现了这样一个考题：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt; int a = 0;
+a += (a++) + (++a);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;上述两条语句执行之后，a的值是多少？&lt;/p&gt;
+&lt;p&gt;这么简单的题目也需要考吗，这太简单了吧？知道怎么算是一回事， 明不明白是另一回事！而且不一定会算吧！&lt;/p&gt;
+&lt;p&gt;【备注】
+如果不是脑子有病，估计不会有人写这样的程序，那解释这道题有什么意义呢？确实，有很多更加值得折腾的东西，比如中间件、智能算法等等，相比起来，去钻研这种编程题太没意思了，出题人脑残还是咋滴，对此，我绝对同意。但是除了这种想法的人外，也确实有一部分人，想人所不想，能人所不能，你总不能说他们求知是个错误吧！今天，刚好有人问起，我就顺便回答了一下，然后整理了整理。
+感兴趣的话就耐心往下看吧，也不长，估计应该能看懂。&lt;/p&gt;
+&lt;p&gt;以前给红黑联盟里一帮小朋友解答过c里面前置增后置增的实现问题，没想到今天又在一个Java高级群里面碰到了群友问相同的问题，区别是java中的实现方式。其实，说白了，这些是编译原理层面的知识，也需要对内存模型有一定的理解，尤其要注意JMM。但是一般情况下我相信是没有几个人是愿意去翻gcc、javac的设计、实现的。那怎么办？
+了解一下基本的内存模型，反汇编，可能还是比较实用的一种办法。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;1）c，编译器gcc&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;int main(int argc, char *argv[]){
+4004f6: 55 push %rbp
+4004f7: 48 89 e5 mov %rsp,%rbp
+4004fa: 89 7d ec mov %edi,-0x14(%rbp)
+4004fd: 48 89 75 e0 mov %rsi,-0x20(%rbp)
+int a = 0;
+400501: c7 45 fc 00 00 00 00 movl $0x0,-0x4(%rbp) // 给a赋值0
+a += (a++)+(++a);
+400508: 8b 45 fc mov -0x4(%rbp),%eax // a++中初始装载变量a到eax
+40050b: 8d 50 01 lea 0x1(%rax),%edx
+40050e: 89 55 fc mov %edx,-0x4(%rbp) // lea将1+rax的值存储回变量a（变量a的值变为1），但是不修改rax的值。
+// 使用的是lea，而非add，为啥？后置增，rax记录着a自增之前的旧值！
+// 后置增，即使用后+1，这里的”使用后“，指的是执行整条语句之后吗？ 不是！
+400511: 83 45 fc 01 addl $0x1,-0x4(%rbp) // ++a操作（变量a的值变为2）
+400515: 8b 55 fc mov -0x4(%rbp),%edx
+400518: 01 d0 add %edx,%eax // 执行 (a++) + (++a)操作，即0+2，并将结果暂存到eax
+40051a: 01 45 fc add %eax,-0x4(%rbp) // 执行a+=...，即2+2并将结果存储到变量a（变量a的值变为4）
+return 0;
+40051d: b8 00 00 00 00 mov $0x0,%eax}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;看完上面的解释后，你应该能总结处这样的规律，(a++) + (++a)中，a++是先于++a执行的，即普通的表达式一般都是从左向右进行运算，另外你也应该记住lea指令的用法，在这里还不失巧妙。&lt;/p&gt;</description></item></channel></rss>

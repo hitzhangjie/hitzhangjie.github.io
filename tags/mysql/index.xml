@@ -521,4 +521,35 @@ where TIME_TO_SEC(timediff(now(),trx_started))&amp;gt;60
 &lt;ul&gt;
 &lt;li&gt;main: https://sourcegraph.com/github.com/mysql/mysql-server/-/blob/sql/main.cc#L23:12&lt;/li&gt;
 &lt;li&gt;mysqld_main: https://sourcegraph.com/github.com/mysql/mysql-server/-/blob/sql/mysqld.cc#L7680:5&lt;/li&gt;
-&lt;/ul&gt;</description></item></channel></rss>
+&lt;/ul&gt;</description></item><item><title>Go database/sql 使用指南</title><link>/blog/2018-12-04-database/</link><pubDate>Tue, 04 Dec 2018 14:32:38 +0800</pubDate><guid>/blog/2018-12-04-database/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Go 标准库 &lt;code&gt;database/sql&lt;/code&gt; 提供了一套通用的 SQL 数据库访问接口。与 Java 生态中 MyBatis、Hibernate 这类重量级 ORM 框架不同，&lt;code&gt;database/sql&lt;/code&gt; 的设计非常克制：它只定义了接口抽象，具体的数据库连接和 SQL 方言由各数据库驱动实现。这种&amp;quot;标准库定义接口 + 第三方提供驱动&amp;quot;的模式，让 Go 的数据库操作保持了简洁统一。&lt;/p&gt;
+&lt;p&gt;本文以 MySQL 为例，介绍 &lt;code&gt;database/sql&lt;/code&gt; 的核心用法。&lt;/p&gt;
+&lt;h2 id="databasesql-的设计"&gt;database/sql 的设计 &lt;a href="#databasesql-%e7%9a%84%e8%ae%be%e8%ae%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;database/sql&lt;/code&gt; 的核心是 &lt;code&gt;sql.DB&lt;/code&gt; 类型，它不是一个单一的数据库连接，而是一个&lt;strong&gt;连接池&lt;/strong&gt;。你只需要创建一个 &lt;code&gt;*sql.DB&lt;/code&gt; 实例，之后所有的 SQL 操作都通过它来完成，连接的管理、复用、回收由标准库自动处理。&lt;/p&gt;
+&lt;p&gt;要访问 MySQL，需要两样东西：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;code&gt;database/sql&lt;/code&gt; — 标准库，定义通用接口&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;go-sql-driver/mysql&lt;/code&gt; — MySQL 驱动，实现接口&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;驱动通过匿名导入（blank import）的方式注册：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;import (
+&amp;quot;database/sql&amp;quot;
+_ &amp;quot;github.com/go-sql-driver/mysql&amp;quot;
+)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;_ &amp;quot;github.com/go-sql-driver/mysql&amp;quot;&lt;/code&gt; 会触发驱动的 &lt;code&gt;init()&lt;/code&gt; 函数，将自身注册到 &lt;code&gt;database/sql&lt;/code&gt; 中。之后你就可以通过 &lt;code&gt;sql.Open(&amp;quot;mysql&amp;quot;, dsn)&lt;/code&gt; 来获取数据库连接了。&lt;/p&gt;
+&lt;p&gt;这种设计的好处是：切换数据库时，业务代码几乎不用变，只需要换驱动和连接字符串。&lt;/p&gt;
+&lt;h2 id="连接数据库"&gt;连接数据库 &lt;a href="#%e8%bf%9e%e6%8e%a5%e6%95%b0%e6%8d%ae%e5%ba%93" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;func openDB(host, database, user, pwd string) (*sql.DB, error) {
+dsn := fmt.Sprintf(&amp;quot;%s:%s@tcp(%s)/%s?charset=utf8mb4&amp;amp;parseTime=true&amp;quot;, user, pwd, host, database)
+db, err := sql.Open(&amp;quot;mysql&amp;quot;, dsn)
+if err != nil {
+return nil, err
+}
+// 建议显式设置连接池参数
+db.SetMaxOpenConns(25)
+db.SetMaxIdleConns(5)
+return db, nil
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;几个注意点：&lt;/p&gt;</description></item></channel></rss>

@@ -29,4 +29,23 @@ func (bc *BaseCommand) PostRun() error {
 return nil
 }
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Command接口定义了一个command应该干什么，然后也可以提供一个基本的Command实现BaseCommand，它提供了一些基本的操作可以供后续复用，后面我们要扩展其他子命令字的时候，通过将该BaseCommand嵌入，可以少实现几个函数，这也是go里面提倡的通过组合来实现继承。&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;Command接口定义了一个command应该干什么，然后也可以提供一个基本的Command实现BaseCommand，它提供了一些基本的操作可以供后续复用，后面我们要扩展其他子命令字的时候，通过将该BaseCommand嵌入，可以少实现几个函数，这也是go里面提倡的通过组合来实现继承。&lt;/p&gt;</description></item><item><title>Go flag 用法札记</title><link>/blog/2019-01-22-go-flags/</link><pubDate>Tue, 22 Jan 2019 14:32:38 +0800</pubDate><guid>/blog/2019-01-22-go-flags/</guid><description>&lt;blockquote&gt;
+&lt;p&gt;本文由 notes &lt;code&gt;__代码大全__&lt;/code&gt; 下 &lt;code&gt;go - flags.md&lt;/code&gt; / &lt;code&gt;go - flags-2.md&lt;/code&gt; / &lt;code&gt;go - flags-3.md&lt;/code&gt; 合并迁移，并整合了 bool 类型特殊处理一节。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id="集中定义-flag-与跨包读取"&gt;集中定义 flag 与跨包读取 &lt;a href="#%e9%9b%86%e4%b8%ad%e5%ae%9a%e4%b9%89-flag-%e4%b8%8e%e8%b7%a8%e5%8c%85%e8%af%bb%e5%8f%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;通常我们会在 main package 里面定义所有的 flag，然后在其他的 package 里面引用，这样有个好处，就是所有的 flag 选项都在同一个地方定义，比分散到多个 package 里面定义要清晰。&lt;/p&gt;
+&lt;p&gt;如：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;var protodir = flag.String(&amp;quot;protodir&amp;quot;, &amp;quot;.&amp;quot;, &amp;quot;protobuf file dir, please config ${GONEAT_TPL_ASSET_DIR}&amp;quot;)
+var protofile = flag.String(&amp;quot;protofile&amp;quot;, &amp;quot;any.proto&amp;quot;, &amp;quot;protobuf filename&amp;quot;)
+var protocol = flag.String(&amp;quot;protocol&amp;quot;, &amp;quot;nrpc&amp;quot;, &amp;quot;nrpc, simplesso, ilive&amp;quot;)
+var assetdir = flag.String(&amp;quot;assetdir&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;template asset dir&amp;quot;)
+var verbose = flag.Bool(&amp;quot;verbose&amp;quot;, false, &amp;quot;verbose logging info&amp;quot;)
+var httpon = flag.Bool(&amp;quot;httpon&amp;quot;, false, &amp;quot;enable http mode&amp;quot;)
+func init() {
+flag.Parse()
+}
+func main() {
+...
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;但是当我想在其他的 package 里面引用上述 flag 的时候该怎么获取呢？也许可以将其定义为 export variable。&lt;/p&gt;</description></item></channel></rss>

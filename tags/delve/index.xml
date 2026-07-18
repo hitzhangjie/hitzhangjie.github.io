@@ -89,4 +89,29 @@
 &lt;/li&gt;
 &lt;/ol&gt;
 &lt;p&gt;其实，还有很多内容要补充，我也不知道最终会变成啥样，可能就是现在这样……曾经试图邀请几个小伙伴来搞下，可能本身没什么吸引力吧，最终还是这样。&lt;/p&gt;
-&lt;p&gt;感兴趣才能坚持下去，每次想到它，都有种立即想投入的冲动，一个人的周末有点有限 :)&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;感兴趣才能坚持下去，每次想到它，都有种立即想投入的冲动，一个人的周末有点有限 :)&lt;/p&gt;</description></item><item><title>Go调试器Delve使用指南</title><link>/blog/2018-09-03-delve/</link><pubDate>Mon, 03 Sep 2018 00:00:00 +0800</pubDate><guid>/blog/2018-09-03-delve/</guid><description>&lt;h1 id="delve简介"&gt;delve简介 &lt;a href="#delve%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;delve（简称dlv）是一款专门面向go语言调试而开发的一款调试器，其本身也是通过go语言进行开发。delve相比gdb等调试工具而言，它对go类型系统的理解、运行时把控更加优秀，建议大家使用delve来对go程序进行调试。&lt;/p&gt;
+&lt;p&gt;调试，是一件比较琐碎的事情，通常我们有一定编程经验之后可能通过error日志就能够定位到问题所在，但是仍然在某些特别刁钻的场景下，我们可能还是要依赖调试器来帮助跟踪定位问题，这里的场景就不列举了，如果想不到这样的场景，那可能也不要调试器，等你意识到打日志难以解决的时候，就更能体会调试器的作用了。&lt;/p&gt;
+&lt;p&gt;下面描述下delve的一些基本、高级使用技巧。&lt;/p&gt;
+&lt;h1 id="基本调试"&gt;基本调试 &lt;a href="#%e5%9f%ba%e6%9c%ac%e8%b0%83%e8%af%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="本地调试"&gt;本地调试 &lt;a href="#%e6%9c%ac%e5%9c%b0%e8%b0%83%e8%af%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="dlv-exec-program"&gt;dlv exec $program &lt;a href="#dlv-exec-program" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在运行调试器调试程序之前，首先需要得到一个包含了DWARF调试信息的可执行程序，DWARF调试信息的生成需要在执行&lt;code&gt;go build&lt;/code&gt;的时候通过选项&lt;code&gt;-N -l&lt;/code&gt;显示指明，其中&lt;code&gt;-N&lt;/code&gt;表示禁止优化，&lt;code&gt;-l&lt;/code&gt;表示禁止内联。新的go版本需要指定&lt;code&gt;-gcflags=&amp;quot;all=-N -l&amp;quot;&lt;/code&gt;，其中all表示将-N和-l选项传递到所有的package编译环节中，之前旧版本应该是不需要的。如果希望强制编译所有已经编译过的包可以指定参数&lt;code&gt;-a&lt;/code&gt;。完整的编译命令即&lt;code&gt;go build -a -gcflags=&amp;quot;all=-N -l&amp;quot;&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;这样编译出程序之后，自带调试符号信息，就可以使用dlv进行调试了，假如程序名是hello，那么运行如下命令即可启动调试：&lt;code&gt;dlv exec ./hello&lt;/code&gt;，如果希望传递参数信息，可以在&lt;code&gt;--&lt;/code&gt;之后追加参数信息，如&lt;code&gt;dlv exec ./hello -- -p1=1 -p2=2&lt;/code&gt;。&lt;/p&gt;
+&lt;h3 id="dlv-debug-pathmaingo"&gt;dlv debug $path/main.go &lt;a href="#dlv-debug-pathmaingo" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;上述操作比较繁琐，需要先自己编译出可执行程序（还需要提供对应的编译选项），然后再启动调试，其实可以一步搞定，直接运行命令：&lt;code&gt;dlv debug main.go -- p1=1 -p2=2&lt;/code&gt;，dlv会自动传递对应的编译选项完成编译后启动调试。建议用这种方式进行调试，比较简单。&lt;/p&gt;
+&lt;h2 id="远程调试"&gt;远程调试 &lt;a href="#%e8%bf%9c%e7%a8%8b%e8%b0%83%e8%af%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;假如我们将编译好的程序放在测试机hostA上进行测试，我们在开发机hostB上对其进行调试，可能你要问为什么要这样，因为hostA是测试机，没有程序的源代码，调试当然要有源代码才可以查看源代码信息。&lt;/p&gt;
+&lt;p&gt;这个时候我们可以在hostA上让dlv以headless模式启动某个待调试程序，然后在开发机上也启动dlv，让其连接到hostA上headless模式的dlv进程上。这样开发机上的dlv接收用户的调试指令，并作出相应的处理，然后与hostA上的dlv进程做同步，我们就可以进行远程调试了。&lt;/p&gt;
+&lt;p&gt;hostA上运行调试：&lt;code&gt;dlv --headless --listen=:8000 exec ./hello -- -p1=1 -p2=2&lt;/code&gt;
+hostB上运行调试：&lt;code&gt;dlv connect hostA:port&lt;/code&gt;&lt;/p&gt;
+&lt;h1 id="调试命令"&gt;调试命令 &lt;a href="#%e8%b0%83%e8%af%95%e5%91%bd%e4%bb%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="打印变量"&gt;打印变量 &lt;a href="#%e6%89%93%e5%8d%b0%e5%8f%98%e9%87%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;打印的变量内容如果过长，dlv &lt;code&gt;print expression&lt;/code&gt;不会将完整的内容打印出来，而是默认只打印前64字节，这个时候有几个办法来解决，可以根据调试场景决定使用哪一种：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;用slice截取的方式打印：print variable[64:]&lt;/li&gt;
+&lt;li&gt;调整打印字符串最大长度：config max-string-len 1000&lt;/li&gt;
+&lt;li&gt;持久化上述配置，将上述配置添加到dlv默认配置文件：~/.dlv/config.yaml&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id="总结"&gt;总结 &lt;a href="#%e6%80%bb%e7%bb%93" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;本文主要对dlv的使用做了一些简单的整理、总结。&lt;/p&gt;</description></item></channel></rss>

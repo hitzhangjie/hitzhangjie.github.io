@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Flamegraph on</title><link>/tags/flamegraph/</link><description>Recent content in Flamegraph on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 18 Jul 2026 10:30:00 +0800</lastBuildDate><atom:link href="/tags/flamegraph/index.xml" rel="self" type="application/rss+xml"/><item><title>pprof 工具完全指南：命令与用法详解（译）</title><link>/blog/2026-07-18-pprof%E5%B7%A5%E5%85%B7%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97-%E5%91%BD%E4%BB%A4%E4%B8%8E%E7%94%A8%E6%B3%95%E8%AF%A6%E8%A7%A3/</link><pubDate>Sat, 18 Jul 2026 10:30:00 +0800</pubDate><guid>/blog/2026-07-18-pprof%E5%B7%A5%E5%85%B7%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97-%E5%91%BD%E4%BB%A4%E4%B8%8E%E7%94%A8%E6%B3%95%E8%AF%A6%E8%A7%A3/</guid><description>&lt;p&gt;原文：&lt;a href="https://github.com/google/pprof/blob/main/doc/README.md"&gt;pprof/doc/README.md&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;pprof 是一个用于&lt;strong&gt;可视化与分析剖析数据&lt;/strong&gt;的工具。它读取 &lt;code&gt;profile.proto&lt;/code&gt; 格式的采样数据，生成文本和图形化报告，底层借助 dot 可视化包来渲染图形。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;profile.proto&lt;/code&gt; 是一种 protobuf 格式，描述了一组调用栈及其符号化信息。通常它承载的是统计性采样的调用栈，也就是我们常说的 profiling 数据。剖析数据可以从本地文件读取，也可以通过 HTTP 远程拉取。多个同类型的 Profile 之间可以进行聚合或对比分析。&lt;/p&gt;
+&lt;p&gt;当采样数据中只包含机器地址时，pprof 可以借助操作系统自带的 binutils 工具（&lt;code&gt;addr2line&lt;/code&gt; 和 &lt;code&gt;nm&lt;/code&gt;）来完成符号化。&lt;/p&gt;
+&lt;h2 id="pprof-中的-profile"&gt;pprof 中的 Profile &lt;a href="#pprof-%e4%b8%ad%e7%9a%84-profile" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;每个 Profile 本质上就是一组符合 &lt;code&gt;profile.proto&lt;/code&gt; 格式的采样（Sample）的合集。每个 Sample 对应位置层级（location hierarchy）中的一个点，并关联一个或多个数值以及一组标签（Label）。最常见的情况是，这些数据来自对某个程序的统计性采样。但 pprof 本身对 Profile 的语义并无硬性要求，所以其他用途也完全可能。&lt;/p&gt;
+&lt;h2 id="三种使用模式"&gt;三种使用模式 &lt;a href="#%e4%b8%89%e7%a7%8d%e4%bd%bf%e7%94%a8%e6%a8%a1%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;pprof 支持三种使用方式：&lt;/p&gt;
+&lt;h3 id="报告生成模式"&gt;报告生成模式 &lt;a href="#%e6%8a%a5%e5%91%8a%e7%94%9f%e6%88%90%e6%a8%a1%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;pprof &amp;lt;format&amp;gt; [options] source
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;pprof 按指定的输出格式生成报告后直接退出。&lt;/p&gt;
+&lt;h3 id="交互终端模式"&gt;交互终端模式 &lt;a href="#%e4%ba%a4%e4%ba%92%e7%bb%88%e7%ab%af%e6%a8%a1%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;pprof [options] source
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;启动一个交互式 shell，用户可以在其中逐条输入命令。输入 &lt;code&gt;help&lt;/code&gt; 获取在线帮助。&lt;/p&gt;
+&lt;h3 id="web-界面模式"&gt;Web 界面模式 &lt;a href="#web-%e7%95%8c%e9%9d%a2%e6%a8%a1%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;pprof -http=[host]:[port] [options] source
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;在指定端口启动一个 HTTP 服务器，在浏览器中访问 &lt;code&gt;http://&amp;lt;host&amp;gt;:&amp;lt;port&amp;gt;/&lt;/code&gt; 即可使用图形界面进行交互式分析。&lt;/p&gt;</description></item></channel></rss>

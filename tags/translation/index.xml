@@ -60,4 +60,8 @@
 shade(ptr)
 *slot = ptr
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;在Golang中，对栈上指针的写入添加写屏障的成本很高，所以Go选择仅对堆上的指针插入增加写屏障，这样就会出现在扫描结束后，栈上仍存在引用白色对象的情况，这时的栈是灰色的，不满足三色不变式，所以需要对栈进行重新扫描使其变黑，完成剩余对象的标记，这个过程需要STW。这期间会将所有goroutine挂起，当有大量应用程序时，时间可能会达到10～100ms。&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;在Golang中，对栈上指针的写入添加写屏障的成本很高，所以Go选择仅对堆上的指针插入增加写屏障，这样就会出现在扫描结束后，栈上仍存在引用白色对象的情况，这时的栈是灰色的，不满足三色不变式，所以需要对栈进行重新扫描使其变黑，完成剩余对象的标记，这个过程需要STW。这期间会将所有goroutine挂起，当有大量应用程序时，时间可能会达到10～100ms。&lt;/p&gt;</description></item><item><title>Go Walkthrough: io package</title><link>/blog/2018-12-04-io/</link><pubDate>Tue, 04 Dec 2018 14:32:38 +0800</pubDate><guid>/blog/2018-12-04-io/</guid><description>&lt;p&gt;这篇文章转自Medium，原文出处 &lt;a href="https://medium.com/go-walkthrough/go-walkthrough-io-package-8ac5e95a9fbd"&gt;Go Walkthrough: io package&lt;/a&gt;。文章较为详细地介绍了golang io package中的相关接口及实现，以及日常开发中常用的一些操作和经验。个人感觉介绍的不错，所以转载收藏！感谢作者&lt;a href="https://twitter.com/benbjohnson"&gt;&lt;em&gt;@benbjohnson&lt;/em&gt;&lt;/a&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h1 id="go-walkthrough-io-package"&gt;Go Walkthrough: io package &lt;a href="#go-walkthrough-io-package" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Go is a programming language built for working with bytes. Whether you have lists of bytes, streams of bytes, or individual bytes, Go makes it easy to process. From these simple primitives we build our abstractions and services.&lt;/p&gt;
+&lt;p&gt;The io package is one of the most fundamental packages within the standard library. It provides a set of interfaces and helpers for working with streams of bytes.&lt;/p&gt;</description></item></channel></rss>

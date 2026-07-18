@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Loader on</title><link>/tags/loader/</link><description>Recent content in Loader on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 23 Feb 2019 12:00:00 +0800</lastBuildDate><atom:link href="/tags/loader/index.xml" rel="self" type="application/rss+xml"/><item><title>cgo共享库的编译与加载</title><link>/blog/2019-02-23-cgo%E5%85%B1%E4%BA%AB%E5%BA%93/</link><pubDate>Sat, 23 Feb 2019 12:00:00 +0800</pubDate><guid>/blog/2019-02-23-cgo%E5%85%B1%E4%BA%AB%E5%BA%93/</guid><description>&lt;p&gt;go语言提供了c、go互相调用的能力。&lt;/p&gt;
+&lt;p&gt;比较常见的是在go中借助c头文件、共享库来调用c代码，通过cgo指令可以指定linkers要连接的共享库的搜索路径。下面是一个示例。&lt;/p&gt;
+&lt;p&gt;file: add.h&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;#ifndef _ADD_H_
+#define _ADD_H_
+int add(int, int);
+#endif
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;file: add.c&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;int add(int n, int m)
+{
+return n + m;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;首先将add.c编译成共享库：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;gcc -c -fpic add.c
+gcc -shared -o libadd.so add.o
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;file: main.go&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;import &amp;quot;fmt&amp;quot;
+/*
+# cgo CFLAGS: -I${SRCDIR}
+# cgo LDFLAGS: -L${SRCDIR} -ladd
+#include &amp;quot;add.h&amp;quot;
+*/
+import &amp;quot;C&amp;quot;
+func main() {
+fmt.Printf(&amp;quot;1 + 2 = %v\n&amp;quot;, C.add(1, 2))
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;import &amp;quot;C&amp;quot;&lt;/code&gt;必须紧跟在cgo相关的指令、说明后面，它们以注释的形式包括起来，cgo编译器会处理这里的信息。如cgo指令 &lt;code&gt;-I${SRCDIR}&lt;/code&gt;会指导从哪里寻找add.h，&lt;code&gt;cgo -L${SRCDIR}&lt;/code&gt;会指导从哪里寻找libadd.so。&lt;/p&gt;</description></item></channel></rss>

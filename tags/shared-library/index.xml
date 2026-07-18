@@ -2,4 +2,34 @@
 &lt;h2 id="introduction"&gt;Introduction &lt;a href="#introduction" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;Recently, while improving the content related to linkers and loaders in my ebook &amp;ldquo;Design and Implementation of a Go Language Debugger,&amp;rdquo; I also read the book &amp;ldquo;Linkers and Loaders&amp;rdquo; and gained a deeper understanding of how linkers and loaders work. I&amp;rsquo;d like to take this opportunity to share and review some interesting points within it.&lt;/p&gt;
 &lt;h2 id="the-big-picture"&gt;The Big Picture &lt;a href="#the-big-picture" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;To improve code reuse, modular design, reduce redundant disk space usage, and optimize memory usage, the concept of shared libraries emerged. They can be strictly divided into two types: Static Shared Library and Dynamic Shared Library. The former uses static linking and static loading, while the latter uses dynamic linking, and can use both static and dynamic loading methods.&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;To improve code reuse, modular design, reduce redundant disk space usage, and optimize memory usage, the concept of shared libraries emerged. They can be strictly divided into two types: Static Shared Library and Dynamic Shared Library. The former uses static linking and static loading, while the latter uses dynamic linking, and can use both static and dynamic loading methods.&lt;/p&gt;</description></item><item><title>cgo共享库的编译与加载</title><link>/blog/2019-02-23-cgo%E5%85%B1%E4%BA%AB%E5%BA%93/</link><pubDate>Sat, 23 Feb 2019 12:00:00 +0800</pubDate><guid>/blog/2019-02-23-cgo%E5%85%B1%E4%BA%AB%E5%BA%93/</guid><description>&lt;p&gt;go语言提供了c、go互相调用的能力。&lt;/p&gt;
+&lt;p&gt;比较常见的是在go中借助c头文件、共享库来调用c代码，通过cgo指令可以指定linkers要连接的共享库的搜索路径。下面是一个示例。&lt;/p&gt;
+&lt;p&gt;file: add.h&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;#ifndef _ADD_H_
+#define _ADD_H_
+int add(int, int);
+#endif
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;file: add.c&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;int add(int n, int m)
+{
+return n + m;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;首先将add.c编译成共享库：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;gcc -c -fpic add.c
+gcc -shared -o libadd.so add.o
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;file: main.go&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;import &amp;quot;fmt&amp;quot;
+/*
+# cgo CFLAGS: -I${SRCDIR}
+# cgo LDFLAGS: -L${SRCDIR} -ladd
+#include &amp;quot;add.h&amp;quot;
+*/
+import &amp;quot;C&amp;quot;
+func main() {
+fmt.Printf(&amp;quot;1 + 2 = %v\n&amp;quot;, C.add(1, 2))
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;import &amp;quot;C&amp;quot;&lt;/code&gt;必须紧跟在cgo相关的指令、说明后面，它们以注释的形式包括起来，cgo编译器会处理这里的信息。如cgo指令 &lt;code&gt;-I${SRCDIR}&lt;/code&gt;会指导从哪里寻找add.h，&lt;code&gt;cgo -L${SRCDIR}&lt;/code&gt;会指导从哪里寻找libadd.so。&lt;/p&gt;</description></item></channel></rss>

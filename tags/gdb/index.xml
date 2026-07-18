@@ -18,7 +18,31 @@ cd build
 --without-guile
 make -j8
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;the built gdb binary is put here: &lt;code&gt;./gdb/gdb&lt;/code&gt;. Because I want to make package management simpler, so I don&amp;rsquo;t want to run &lt;code&gt;make install&lt;/code&gt; to install the gdb and other files.&lt;/p&gt;</description></item><item><title>gdb调试常用操作</title><link>/blog/2022-07-09-gdb%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/</link><pubDate>Sun, 28 May 2017 23:56:48 +0800</pubDate><guid>/blog/2022-07-09-gdb%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是gdb调试的常用操作。&lt;/p&gt;
+&lt;p&gt;the built gdb binary is put here: &lt;code&gt;./gdb/gdb&lt;/code&gt;. Because I want to make package management simpler, so I don&amp;rsquo;t want to run &lt;code&gt;make install&lt;/code&gt; to install the gdb and other files.&lt;/p&gt;</description></item><item><title>Go程序Coredump分析</title><link>/blog/2018-12-29-coredump/</link><pubDate>Sat, 29 Dec 2018 00:00:00 +0800</pubDate><guid>/blog/2018-12-29-coredump/</guid><description>&lt;p&gt;在工作、学习过程中学习到了一些定位、分析bug的技巧，在这里几种进行一下总结，有些技能真的是不常用就忘了，回家呆了两个月，回到公司后发现很多之前积累起来的知识被“遗忘”了，其实还是没有完全掌握，只能算是“初识”该技能，好几性不如烂笔头，还是要多做总结、多回顾，有问题的时候即便记不起来了也可以快速查询。&lt;/p&gt;
+&lt;h1 id="coredump"&gt;coredump &lt;a href="#coredump" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Linux下进程收到下面这5个常见信号时，会终止进程生成core文件。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;SIGQUIT，quit from keyboard；&lt;/li&gt;
+&lt;li&gt;SIGILL，illegal instruction；&lt;/li&gt;
+&lt;li&gt;SIGABRT，abort signal from abort(3)；&lt;/li&gt;
+&lt;li&gt;SIGFPE，floating point exception；&lt;/li&gt;
+&lt;li&gt;SIGSEGV，invalid memory reference；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="core文件大小"&gt;core文件大小 &lt;a href="#core%e6%96%87%e4%bb%b6%e5%a4%a7%e5%b0%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;core文件大小是有限制的，默认都是0，意味着不会生成core文件，可以通过 &lt;code&gt;ulimit -c&lt;/code&gt; 进行查看，也可以通过 &lt;code&gt;ulimit -c $size&lt;/code&gt; 进行修改，但是命令只对当前shell有效，重启一个shell或者重启机器都会恢复为系统默认设置。如果想永久保留此设置可以在 &lt;code&gt;/etc/profile&lt;/code&gt; 或者 &lt;code&gt;/etc/bashrc&lt;/code&gt; 中进行配置。&lt;/p&gt;
+&lt;h2 id="core文件命名"&gt;core文件命名 &lt;a href="#core%e6%96%87%e4%bb%b6%e5%91%bd%e5%90%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;core文件命名模式是可以指定的，在 &lt;code&gt;/etc/sysctl.conf&lt;/code&gt; 中添加如下配置即可在程序coredump时在当前程序目录生成core文件，&lt;code&gt;kernel.core_pattern=core-%e(%s).%p.%t&lt;/code&gt;。对这里的配置选项进行简单说明：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;%e，executable filename (withouth path prefix)；&lt;/li&gt;
+&lt;li&gt;%s，number of signal causing dump；&lt;/li&gt;
+&lt;li&gt;%p，PID of dumped process;&lt;/li&gt;
+&lt;li&gt;%t，time of dump，unix timestamp；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;其他配置选项可以通过man core进行查询。&lt;/p&gt;
+&lt;p&gt;core文件名后面的时间戳不好辨认，可以通过命令将其转成可读的、易理解的字符串，&lt;code&gt;date -d @time&lt;/code&gt;。&lt;/p&gt;
+&lt;h2 id="分析core文件"&gt;分析core文件 &lt;a href="#%e5%88%86%e6%9e%90core%e6%96%87%e4%bb%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;假如当前可执行文件名是prog，生成的core文件是core-prog(11).12345.1490000000，那么执行命令 &lt;code&gt;gdb prog core-prog(11).12345.1490000000&lt;/code&gt;，通过该命令来定位到该进程12345收到信号11 coredump时的内存状态，通过对其调用栈进行分析可以找到进程coredump的原因，这里的kernel.core_pattern中的信号选项%s其实也是很重要的，通过进程收到的信号大体可以猜到接收该信号的原因，便于辅助定位问题，例如信号11表示SIGSEGV，其往往是因为内存访问非法所致，这个时候就可以重点分析内存是否存在越界等。&lt;/p&gt;
+&lt;p&gt;另外为了方便分析coredump，这里的prog可执行程序在构建时最好加入调试符号，编译程序时为gcc指定选项&lt;strong&gt;gcc -g&lt;/strong&gt;。一般gdb prog $core-file分析时最后会打印出程序发生coredump时的堆栈信息便于分析。&lt;/p&gt;</description></item><item><title>gdb调试常用操作</title><link>/blog/2022-07-09-gdb%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/</link><pubDate>Sun, 28 May 2017 23:56:48 +0800</pubDate><guid>/blog/2022-07-09-gdb%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是gdb调试的常用操作。&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;### execute and trace step by step
 help &amp;lt;topic/cmd&amp;gt;
 list

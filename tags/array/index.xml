@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Array on</title><link>/tags/array/</link><description>Recent content in Array on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 13 Feb 2019 08:00:00 +0800</lastBuildDate><atom:link href="/tags/array/index.xml" rel="self" type="application/rss+xml"/><item><title>数组与指针</title><link>/blog/%E6%95%B0%E7%BB%84%E4%B8%8E%E6%8C%87%E9%92%88/</link><pubDate>Wed, 13 Feb 2019 08:00:00 +0800</pubDate><guid>/blog/%E6%95%B0%E7%BB%84%E4%B8%8E%E6%8C%87%E9%92%88/</guid><description>&lt;h1 id="1-二维数组之行列指针"&gt;1 二维数组之行列指针 &lt;a href="#1-%e4%ba%8c%e7%bb%b4%e6%95%b0%e7%bb%84%e4%b9%8b%e8%a1%8c%e5%88%97%e6%8c%87%e9%92%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;//数组名是数组首元素的地址，但是数组是一种类型，不能完全等同于指针，
+//sizeof(指针)=操作系统虚拟内存位数对应的字节数，sizeof(a)=sizeof(int)*2*3=24字节
+int a[2][3] = {1,2,3,4,5,6};
+int size = sizeof(a);
+//行指针, 这里的i之所以称为行指针，是因为它定位的是第i行这个子向量
+*(a+i) 等于 a[i]
+//列指针，这里的j之所以称为列指针，是因为它定位的是第j列这个列向量
+*(*(a+i)+j) 等于 a[i][j]
+//如果需要获取其中的值，需要再次解除引用才可以
+*(a+i)+j 等于 &amp;amp;a[i][j]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id="2-多维数组指针"&gt;2 多维数组指针 &lt;a href="#2-%e5%a4%9a%e7%bb%b4%e6%95%b0%e7%bb%84%e6%8c%87%e9%92%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;分析方法，与二维数组的分析没有什么差别！只是不建议那样使用！为什么要用呢？自寻烦恼嘛！
+倒不是难以分析，而是写起来很啰嗦！&lt;/p&gt;
+&lt;p&gt;多维数组，还是建议使用下标索引来使用要好一些！&lt;/p&gt;
+&lt;h1 id="3-数组名称的特殊性"&gt;3 数组名称的特殊性 &lt;a href="#3-%e6%95%b0%e7%bb%84%e5%90%8d%e7%a7%b0%e7%9a%84%e7%89%b9%e6%ae%8a%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;我们常说数组的名称就是一个指向数组本身的地址，或者说是一个指针，规范一点讲，数组名其实是数组第
+1个元素的地址。如下所示：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;int b[100]; //b 等于 &amp;amp;b[0];
+int a[100][200]; //a 等于 &amp;amp;a[0];
+int c[100][200][300]; //c 等于 &amp;amp;c[0];
+&lt;/code&gt;&lt;/pre&gt;</description></item></channel></rss>

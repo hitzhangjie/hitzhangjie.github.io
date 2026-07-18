@@ -29,7 +29,39 @@ top: -170px;
 sudo update-alternatives --install /usr/bin/java java /opt/jdk-17/bin/java 1 --slave javac ... -- slave javap ...
 sudo update-alternatives --install /usr/bin/java java /opt/jdk-21/bin/java 2 --slave javac ... -- slave javap ...
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;执行版本切换时要异同切换master和slave对应的二进制：&lt;/p&gt;</description></item><item><title>24 Non Blocking Algorithm</title><link>/blog/24-non-blocking-algorithm/</link><pubDate>Tue, 01 Jan 2019 21:45:25 +0800</pubDate><guid>/blog/24-non-blocking-algorithm/</guid><description>&lt;p&gt;并行上下文中的无锁算法，可以让多个线程在访问共享资源的时候，或者同步协作、通信的时候，不需要阻塞线程。为了更好的理解阻塞并行算法、非阻塞并行算法之间的区别，下面依次对其进行解释。&lt;/p&gt;
+&lt;p&gt;执行版本切换时要异同切换master和slave对应的二进制：&lt;/p&gt;</description></item><item><title>a += (a++)+(++a) 的值到底是多少？</title><link>/blog/2019-02-13-a--a-a/</link><pubDate>Wed, 13 Feb 2019 00:00:00 +0800</pubDate><guid>/blog/2019-02-13-a--a-a/</guid><description>&lt;p&gt;前一阵子，在某厂笔试题（Java）里面，出现了这样一个考题：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt; int a = 0;
+a += (a++) + (++a);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;上述两条语句执行之后，a的值是多少？&lt;/p&gt;
+&lt;p&gt;这么简单的题目也需要考吗，这太简单了吧？知道怎么算是一回事， 明不明白是另一回事！而且不一定会算吧！&lt;/p&gt;
+&lt;p&gt;【备注】
+如果不是脑子有病，估计不会有人写这样的程序，那解释这道题有什么意义呢？确实，有很多更加值得折腾的东西，比如中间件、智能算法等等，相比起来，去钻研这种编程题太没意思了，出题人脑残还是咋滴，对此，我绝对同意。但是除了这种想法的人外，也确实有一部分人，想人所不想，能人所不能，你总不能说他们求知是个错误吧！今天，刚好有人问起，我就顺便回答了一下，然后整理了整理。
+感兴趣的话就耐心往下看吧，也不长，估计应该能看懂。&lt;/p&gt;
+&lt;p&gt;以前给红黑联盟里一帮小朋友解答过c里面前置增后置增的实现问题，没想到今天又在一个Java高级群里面碰到了群友问相同的问题，区别是java中的实现方式。其实，说白了，这些是编译原理层面的知识，也需要对内存模型有一定的理解，尤其要注意JMM。但是一般情况下我相信是没有几个人是愿意去翻gcc、javac的设计、实现的。那怎么办？
+了解一下基本的内存模型，反汇编，可能还是比较实用的一种办法。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;1）c，编译器gcc&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;int main(int argc, char *argv[]){
+4004f6: 55 push %rbp
+4004f7: 48 89 e5 mov %rsp,%rbp
+4004fa: 89 7d ec mov %edi,-0x14(%rbp)
+4004fd: 48 89 75 e0 mov %rsi,-0x20(%rbp)
+int a = 0;
+400501: c7 45 fc 00 00 00 00 movl $0x0,-0x4(%rbp) // 给a赋值0
+a += (a++)+(++a);
+400508: 8b 45 fc mov -0x4(%rbp),%eax // a++中初始装载变量a到eax
+40050b: 8d 50 01 lea 0x1(%rax),%edx
+40050e: 89 55 fc mov %edx,-0x4(%rbp) // lea将1+rax的值存储回变量a（变量a的值变为1），但是不修改rax的值。
+// 使用的是lea，而非add，为啥？后置增，rax记录着a自增之前的旧值！
+// 后置增，即使用后+1，这里的”使用后“，指的是执行整条语句之后吗？ 不是！
+400511: 83 45 fc 01 addl $0x1,-0x4(%rbp) // ++a操作（变量a的值变为2）
+400515: 8b 55 fc mov -0x4(%rbp),%edx
+400518: 01 d0 add %edx,%eax // 执行 (a++) + (++a)操作，即0+2，并将结果暂存到eax
+40051a: 01 45 fc add %eax,-0x4(%rbp) // 执行a+=...，即2+2并将结果存储到变量a（变量a的值变为4）
+return 0;
+40051d: b8 00 00 00 00 mov $0x0,%eax}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;看完上面的解释后，你应该能总结处这样的规律，(a++) + (++a)中，a++是先于++a执行的，即普通的表达式一般都是从左向右进行运算，另外你也应该记住lea指令的用法，在这里还不失巧妙。&lt;/p&gt;</description></item><item><title>24 Non Blocking Algorithm</title><link>/blog/24-non-blocking-algorithm/</link><pubDate>Tue, 01 Jan 2019 21:45:25 +0800</pubDate><guid>/blog/24-non-blocking-algorithm/</guid><description>&lt;p&gt;并行上下文中的无锁算法，可以让多个线程在访问共享资源的时候，或者同步协作、通信的时候，不需要阻塞线程。为了更好的理解阻塞并行算法、非阻塞并行算法之间的区别，下面依次对其进行解释。&lt;/p&gt;
 &lt;h1 id="blocking-concurrency-algorithms"&gt;Blocking Concurrency Algorithms &lt;a href="#blocking-concurrency-algorithms" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;一个阻塞算法，指的是这样的算法，算法中可能执行如下2种类型的动作：&lt;/p&gt;
 &lt;p&gt;A：某个线程请求执行一个动作；

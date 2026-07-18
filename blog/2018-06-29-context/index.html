@@ -1,0 +1,127 @@
+<!doctype html><html lang=en-US><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-regular.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-500.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-700.woff2 type=font/woff2 crossorigin><script>window.__LAYOUT_WIDTH_DEFAULT__="standard"</script><script>(()=>{(function(){var t,n={compact:1,standard:1,wide:1,fullscreen:1},s="layout-width-v",o="3",e=null,i=null;try{e=localStorage.getItem("layout-width"),i=localStorage.getItem(s)}catch{}if(i!==o){e==="standard"?e="compact":e==="compact"?e="standard":e==="normal"?e="compact":e==="reading"&&(e="wide");try{e&&localStorage.setItem("layout-width",e),localStorage.setItem(s,o)}catch{}}t=window.__LAYOUT_WIDTH_DEFAULT__||"standard",n[t]||(t="standard"),e&&!n[e]&&(e=null),document.documentElement.setAttribute("data-layout-width",e||t)})()})()</script><link rel=stylesheet href=/main.9aa5684d2b002d9bd48d08e085ef1aaf384539b58400fb28dffa9efe2301549338a87e27640af00ff481a349461fbc931571455f65e33d95717f55c714f3dd41.css integrity="sha512-mqVoTSsALZvUjQjghe8arzhFObWEAPso3/qe/iMBVJM4qH4nZArwD/SBo0lGH7yTFXFFX2XjPZVxf1XHFPPdQQ==" crossorigin=anonymous><noscript><style>img.lazyload{display:none}</style></noscript><meta name=robots content="index, follow"><meta name=googlebot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><meta name=bingbot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><title>Go context 包使用指南 - MySpace</title><meta name=description content="介绍 Go context 包的四种核心用法：WithCancel、WithDeadline、WithTimeout 和 WithValue，以及在实际开发中的最佳实践。"><link rel=canonical href=/blog/2018-06-29-context/><meta property="og:locale" content="en_US"><meta property="og:type" content="article"><meta property="og:title" content="Go context 包使用指南"><meta property="og:description" content="介绍 Go context 包的四种核心用法：WithCancel、WithDeadline、WithTimeout 和 WithValue，以及在实际开发中的最佳实践。"><meta property="og:url" content="/blog/2018-06-29-context/"><meta property="og:site_name" content="MySpace"><meta property="article:published_time" content="2018-06-29T14:32:38+08:00"><meta property="article:modified_time" content="2018-06-29T14:32:38+08:00"><meta property="og:image" content="/doks.png"><meta property="og:image:alt" content="MySpace"><meta name=twitter:card content="summary_large_image"><meta name=twitter:site content="@hitzhangjie"><meta name=twitter:creator content="@hitzhangjie"><meta name=twitter:title content="Go context 包使用指南"><meta name=twitter:description content="介绍 Go context 包的四种核心用法：WithCancel、WithDeadline、WithTimeout 和 WithValue，以及在实际开发中的最佳实践。"><meta name=twitter:image content="/doks.png"><meta name=twitter:image:alt content="Go context 包使用指南"><script type=application/ld+json>{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/1","name":"","url":"/","sameAs":["https://twitter.com/hitzhangjie","https://www.linkedin.com/in/hitzhangjie/","https://github.com/hitzhangjie"],"image":{"@type":"ImageObject","@id":"/#/schema/image/1","url":"/\u003cnil\u003e","width":null,"height":null,"caption":""}},{"@type":"WebSite","@id":"/#/schema/website/1","url":"/","name":"MySpace","description":"MySpace is a hitzhangjie\u0027s personal space, for blogs, books, journey, thinkings.","publisher":{"@id":"/#/schema/person/1"}},{"@type":"WebPage","@id":"/blog/2018-06-29-context/","url":"/blog/2018-06-29-context/","name":"Go context 包使用指南","description":"介绍 Go context 包的四种核心用法：WithCancel、WithDeadline、WithTimeout 和 WithValue，以及在实际开发中的最佳实践。","isPartOf":{"@id":"/#/schema/website/1"},"about":{"@id":"/#/schema/person/1"},"datePublished":"2018-06-29T14:32:38CET","dateModified":"2018-06-29T14:32:38CET","breadcrumb":{"@id":"/blog/2018-06-29-context/#/schema/breadcrumb/1"},"primaryImageOfPage":{"@id":"/blog/2018-06-29-context/#/schema/image/2"},"inLanguage":"","potentialAction":[{"@type":"ReadAction","target":["/blog/2018-06-29-context/"]}]},{"@type":"BreadcrumbList","@id":"/blog/2018-06-29-context/#/schema/breadcrumb/1","name":"Breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"item":{"@type":"WebPage","@id":"/","url":"/","name":"Home"}},{"@type":"ListItem","position":2,"item":{"@id":"/blog2018-06-29-context/"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Article","@id":"/#/schema/article/1","headline":"Go context 包使用指南","description":"介绍 Go context 包的四种核心用法：WithCancel、WithDeadline、WithTimeout 和 WithValue，以及在实际开发中的最佳实践。","isPartOf":{"@id":"/blog/2018-06-29-context/"},"mainEntityOfPage":{"@id":"/blog/2018-06-29-context/"},"datePublished":"2018-06-29T14:32:38CET","dateModified":"2018-06-29T14:32:38CET","author":{"@id":"/#/schema/person/2"},"publisher":{"@id":"/#/schema/person/1"},"image":{"@id":"/blog/2018-06-29-context/#/schema/image/2"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/2","name":null,"sameAs":[]}]},{"@context":"https://schema.org","@graph":[{"@type":"ImageObject","@id":"/blog/2018-06-29-context/#/schema/image/2","url":"/doks.png","contentUrl":"/doks.png","caption":"Go context 包使用指南"}]}]}</script><meta name=theme-color content="#fff"><link rel=icon href=/favicon.ico sizes=any><link rel=icon type=image/svg+xml href=/favicon.svg><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest crossorigin=use-credentials href=/site.webmanifest><script type=text/javascript src='https://platform-api.sharethis.com/js/sharethis.js#property=607868a58d7101001829a8df&product=sop' async></script><style>[alt~=sharing]{border:0;box-shadow:none}div#st-1{text-align:unset}div#st-1 .st-btn{height:24px;padding:0 4px}div#st-1 .st-btn>img{top:4.2px}div#st-2 .st-btn{height:24px;padding:0 4px}div#st-2 .st-btn>img{top:4.2px}</style><script async src="https://www.googletagmanager.com/gtag/js?id=UA-168027530-1"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","UA-168027530-1")</script></head><body class="blog single d-flex flex-column min-vh-100"><div class=sticky-top><div class=header-bar></div><header class="navbar navbar-expand-lg navbar-light doks-navbar"><nav class="container-xxl flex-wrap flex-lg-nowrap" aria-label="Main navigation"><a class="navbar-brand order-0" href=/ aria-label=MySpace>MySpace
+</a><button class="btn btn-menu order-2 d-block d-lg-none" type=button data-bs-toggle=offcanvas data-bs-target=#offcanvasDoks aria-controls=offcanvasDoks aria-label="Open main menu">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div class="offcanvas offcanvas-end border-0 py-lg-1" tabindex=-1 id=offcanvasDoks data-bs-backdrop=true aria-labelledby=offcanvasDoksLabel><div class="header-bar d-lg-none"></div><div class="offcanvas-header d-lg-none"><h2 class="h5 offcanvas-title ps-2" id=offcanvasDoksLabel><a class=text-dark href=/>MySpace</a></h2><button type=button class="btn-close text-reset me-2" data-bs-dismiss=offcanvas aria-label="Close main menu"></button></div><div class="offcanvas-body p-4 p-lg-0"><ul class="nav flex-column flex-lg-row align-items-lg-center mt-2 mt-lg-0 ms-lg-2 me-lg-auto"><li class=nav-item><a class="nav-link ps-0 py-1 active" href=/blog/>Blog</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/books/>Books</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/landscape>Landscape</a></li></ul><hr class="text-black-50 my-4 d-lg-none"><form class="doks-search position-relative flex-grow-1 ms-lg-auto me-lg-2"><input id=search class="form-control is-search" type=search placeholder="Search docs..." aria-label="Search docs..." autocomplete=off><div id=suggestions class="shadow bg-white rounded d-none"></div></form><hr class="text-black-50 my-4 d-lg-none"><ul class="nav flex-column flex-lg-row"><li class=nav-item><a class="nav-link social-link" href=https://twitter.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg><small class="ms-2 d-lg-none">Twitter</small></a></li><li class=nav-item><a class="nav-link social-link" href=https://github.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37.0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44.0 0020 4.77 5.07 5.07.0 0019.91 1S18.73.65 16 2.48a13.38 13.38.0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07.0 005 4.77 5.44 5.44.0 003.5 8.55c0 5.42 3.3 6.61 6.44 7A3.37 3.37.0 009 18.13V22"/></svg><small class="ms-2 d-lg-none">GitHub</small></a></li><li class="nav-item layout-width-dropdown"><a class="nav-link layout-width-dropdown-btn" href=# data-bs-toggle=dropdown aria-expanded=false aria-label=切换布局宽度 title=切换布局宽度><span class=lw-icon-standard><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-compact><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-wide><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span><span class=lw-icon-fullscreen><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg></span></a><ul class="dropdown-menu dropdown-menu-end"><li><button class="dropdown-item layout-width-option" data-layout-value=compact>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span>紧凑布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=standard>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>标准布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=wide>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span>宽松布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=fullscreen>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>全屏布局</button></li></ul></li></ul></div></div></nav></header></div><div class="wrap container-xxl" role=document><div class=content><div class="row flex-xl-nowrap" data-layout-width=standard><div class="col-lg-4 col-xl-3 docs-sidebar"><nav class=docs-links aria-label="Main navigation"><h3>Tag List</h3><ol><li><a href=/tags/go/>go</a></li><li><a href=/tags/context/>context</a></li></ol></nav></div><main class="docs-content col-lg-12 col-xl-10"><h1>Go context 包使用指南</h1><p><small>Posted 2018-06-29 14:32 +0800 by <a class="stretched-link position-relative" href>ZhangJie</a>&nbsp;&dash;&nbsp;<strong>3&nbsp;min read</strong></small><p><div style=display:flex><div>分享:&nbsp;&nbsp;</div><div><div class=sharethis-inline-share-buttons></div></div></div><hr><p class=lead></p><h2 id=背景>背景 <a href=#%e8%83%8c%e6%99%af class=anchor aria-hidden=true>#</a><a href=#背景 class=anchor aria-hidden=true>#</a></h2><p>在 Go 服务端开发中，每个请求通常会跨越多个 goroutine：处理 HTTP 请求、查询数据库、调用下游 RPC 等等。当请求被取消或超时时，我们希望整个调用链上的所有 goroutine 都能及时停止，避免资源浪费。</p><p>Go 标准库 <code>context</code> 包正是为此而生。它在 API 边界和进程间传递 <strong>deadline</strong>、<strong>取消信号</strong> 以及 <strong>请求级别的参数</strong>。</p><h2 id=context-的设计>context 的设计 <a href=#context-%e7%9a%84%e8%ae%be%e8%ae%a1 class=anchor aria-hidden=true>#</a><a href=#context-的设计 class=anchor aria-hidden=true>#</a></h2><p><code>context.Context</code> 是一个接口，核心方法有四个：</p><pre><code class=language-go>type Context interface {
+    Deadline() (deadline time.Time, ok bool)  // 返回截止时间
+    Done() &lt;-chan struct{}                     // 返回一个只读 channel，取消时关闭
+    Err() error                                // 返回取消原因
+    Value(key interface{}) interface{}         // 获取绑定的值
+}
+</code></pre><p><code>context</code> 包提供了四个创建派生 Context 的函数，覆盖了所有使用场景：</p><table><thead><tr><th>函数</th><th>用途</th></tr></thead><tbody><tr><td><code>context.WithCancel(parent)</code></td><td>手动取消</td></tr><tr><td><code>context.WithDeadline(parent, time)</code></td><td>在指定时刻自动取消</td></tr><tr><td><code>context.WithTimeout(parent, duration)</code></td><td>在指定时长后自动取消</td></tr><tr><td><code>context.WithValue(parent, key, value)</code></td><td>携带键值对</td></tr></tbody></table><p>所有函数都接收一个父 Context，返回一个派生 Context。多个 Context 可以形成父子链，父 Context 取消时，所有子 Context 都会被级联取消。</p><h2 id=withcancel主动取消>WithCancel：主动取消 <a href=#withcancel%e4%b8%bb%e5%8a%a8%e5%8f%96%e6%b6%88 class=anchor aria-hidden=true>#</a><a href=#withcancel主动取消 class=anchor aria-hidden=true>#</a></h2><p>当需要手动控制 goroutine 的退出时，使用 <code>WithCancel</code>：</p><pre><code class=language-go>func main() {
+    ctx, cancel := context.WithCancel(context.Background())
+    defer cancel() // 确保最终取消，防止 goroutine 泄漏
+
+    go worker(ctx)
+
+    time.Sleep(5 * time.Second)
+    cancel() // 主动通知 worker 退出
+
+    time.Sleep(1 * time.Second) // 等待 worker 清理
+}
+
+func worker(ctx context.Context) {
+    for {
+        select {
+        case &lt;-ctx.Done():
+            fmt.Println(&quot;worker: received cancel signal, exiting&quot;)
+            return
+        default:
+            fmt.Println(&quot;worker: doing work...&quot;)
+            time.Sleep(1 * time.Second)
+        }
+    }
+}
+</code></pre><blockquote><p><strong>重要</strong>：即使没有主动调用 <code>cancel()</code>，也要用 <code>defer cancel()</code> 确保资源释放，防止 goroutine 泄漏。多次调用 <code>cancel()</code> 是安全的（只有第一次生效），所以 <code>defer cancel()</code> 不会有副作用。</p></blockquote><h2 id=withdeadline按时刻取消>WithDeadline：按时刻取消 <a href=#withdeadline%e6%8c%89%e6%97%b6%e5%88%bb%e5%8f%96%e6%b6%88 class=anchor aria-hidden=true>#</a><a href=#withdeadline按时刻取消 class=anchor aria-hidden=true>#</a></h2><p>当需要指定某个具体时间点自动取消时，使用 <code>WithDeadline</code>：</p><pre><code class=language-go>func main() {
+    // 2 秒后自动取消
+    deadline := time.Now().Add(2 * time.Second)
+    ctx, cancel := context.WithDeadline(context.Background(), deadline)
+    defer cancel()
+
+    req, _ := http.NewRequestWithContext(ctx, &quot;GET&quot;, &quot;https://example.com&quot;, nil)
+    resp, err := http.DefaultClient.Do(req)
+    if err != nil {
+        fmt.Println(&quot;request failed:&quot;, err) // 超时会走到这里
+        return
+    }
+    defer resp.Body.Close()
+    // 处理响应...
+}
+</code></pre><h2 id=withtimeout按时长取消>WithTimeout：按时长取消 <a href=#withtimeout%e6%8c%89%e6%97%b6%e9%95%bf%e5%8f%96%e6%b6%88 class=anchor aria-hidden=true>#</a><a href=#withtimeout按时长取消 class=anchor aria-hidden=true>#</a></h2><p><code>WithTimeout</code> 是 <code>WithDeadline</code> 的便捷封装，底层等价于 <code>WithDeadline(parent, time.Now().Add(timeout))</code>：</p><pre><code class=language-go>func main() {
+    // 2 秒后自动取消
+    ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+    defer cancel()
+
+    req, _ := http.NewRequestWithContext(ctx, &quot;GET&quot;, &quot;https://example.com&quot;, nil)
+    resp, err := http.DefaultClient.Do(req)
+    if err != nil {
+        fmt.Println(&quot;request failed:&quot;, err)
+        return
+    }
+    defer resp.Body.Close()
+    // 处理响应...
+}
+</code></pre><p>实际开发中 <code>WithTimeout</code> 比 <code>WithDeadline</code> 更常用，因为大多数场景下我们关心的是"最多等多久"，而不是具体的截止时刻。</p><h2 id=withvalue传递请求级参数>WithValue：传递请求级参数 <a href=#withvalue%e4%bc%a0%e9%80%92%e8%af%b7%e6%b1%82%e7%ba%a7%e5%8f%82%e6%95%b0 class=anchor aria-hidden=true>#</a><a href=#withvalue传递请求级参数 class=anchor aria-hidden=true>#</a></h2><p><code>WithValue</code> 在 Context 上绑定请求级别的参数，如 trace ID、user ID 等：</p><pre><code class=language-go>type contextKey string
+
+const traceIDKey contextKey = &quot;traceID&quot;
+
+func main() {
+    ctx := context.WithValue(context.Background(), traceIDKey, &quot;abc-123&quot;)
+
+    processRequest(ctx)
+}
+
+func processRequest(ctx context.Context) {
+    traceID := ctx.Value(traceIDKey).(string)
+    fmt.Println(&quot;trace ID:&quot;, traceID)
+}
+</code></pre><blockquote><p><strong>注意</strong>：</p><ul><li>Key 应该使用自定义类型（如 <code>contextKey</code>），而不是 <code>string</code>，避免不同包之间的 key 冲突。</li><li><code>WithValue</code> 应该只用来传递请求级别的数据，不要把函数依赖、配置对象等挂到 Context 上。</li></ul></blockquote><h2 id=完整示例带超时的-http-请求>完整示例：带超时的 HTTP 请求 <a href=#%e5%ae%8c%e6%95%b4%e7%a4%ba%e4%be%8b%e5%b8%a6%e8%b6%85%e6%97%b6%e7%9a%84-http-%e8%af%b7%e6%b1%82 class=anchor aria-hidden=true>#</a><a href=#完整示例带超时的-http-请求 class=anchor aria-hidden=true>#</a></h2><p>下面是一个完整的示例，整合了超时控制和 Context 传值的用法：</p><pre><code class=language-go>package main
+
+import (
+    &quot;context&quot;
+    &quot;fmt&quot;
+    &quot;io/ioutil&quot;
+    &quot;net/http&quot;
+    &quot;time&quot;
+)
+
+type contextKey string
+
+func main() {
+    // 创建带超时的 context，同时携带 traceID
+    ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+    defer cancel()
+
+    ctx = context.WithValue(ctx, contextKey(&quot;traceID&quot;), &quot;req-001&quot;)
+
+    body, err := fetchURL(ctx, &quot;https://httpbin.org/delay/2&quot;)
+    if err != nil {
+        fmt.Println(&quot;fetch failed:&quot;, err)
+        return
+    }
+    fmt.Printf(&quot;response (%s): %s\n&quot;, ctx.Value(contextKey(&quot;traceID&quot;)), string(body)[:100])
+}
+
+func fetchURL(ctx context.Context, url string) ([]byte, error) {
+    req, err := http.NewRequestWithContext(ctx, &quot;GET&quot;, url, nil)
+    if err != nil {
+        return nil, err
+    }
+    resp, err := http.DefaultClient.Do(req)
+    if err != nil {
+        return nil, err
+    }
+    defer resp.Body.Close()
+    return ioutil.ReadAll(resp.Body)
+}
+</code></pre><h2 id=总结>总结 <a href=#%e6%80%bb%e7%bb%93 class=anchor aria-hidden=true>#</a><a href=#总结 class=anchor aria-hidden=true>#</a></h2><p><code>context</code> 包虽然 API 很少，但它是 Go 并发编程中不可或缺的基础设施。几个关键原则：</p><ol><li><strong>Context 是请求级别的</strong>，不要存到 struct 里长期持有，也不要当做全局变量。</li><li><strong>总是传递 Context 作为函数的第一个参数</strong>，惯例命名为 <code>ctx</code>。</li><li><strong><code>defer cancel()</code> 是好习惯</strong>，即使你不需要主动取消，它也能避免 goroutine 泄漏。</li><li><strong><code>WithValue</code> 只传请求级元数据</strong>，不要用 Context 代替依赖注入。</li></ol><div class=edit-page><a href=https://github.com/hitzhangjie/myspace/blob/master/content/blog/languages/golang/1-go%e7%bc%96%e7%a8%8b%e5%85%a5%e9%97%a8/stdlib/2018-06-29-context.md><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2"><path d="M17 3a2.828 2.828.0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+Edit this page on GitHub</a></div><div class="docs-navigation d-flex justify-content-between"><a href=/blog/2018-06-29-container/><div class="card my-1"><div class="card-body py-2">&larr; Go container 包用法示例</div></div></a><a class=ms-auto href=/blog/2018-06-29-archive/><div class="card my-1"><div class="card-body py-2">Go tar/zip 压缩读写 &rarr;</div></div></a></div></main><div class="docs-toc d-none d-xl-block col-xl-3"><nav class=docs-toc-inner aria-label="Secondary navigation"><div class=page-links><h3>On this page</h3><nav id=TableOfContents><ul><li><ul><li><a href=#背景>背景</a></li><li><a href=#context-的设计>context 的设计</a></li><li><a href=#withcancel主动取消>WithCancel：主动取消</a></li><li><a href=#withdeadline按时刻取消>WithDeadline：按时刻取消</a></li><li><a href=#withtimeout按时长取消>WithTimeout：按时长取消</a></li><li><a href=#withvalue传递请求级参数>WithValue：传递请求级参数</a></li><li><a href=#完整示例带超时的-http-请求>完整示例：带超时的 HTTP 请求</a></li><li><a href=#总结>总结</a></li></ul></li></ul></nav></div></nav></div></div></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.b49b5c2c44fdca07ee730ad1196420771d2a94176c7d367b414fb2e23f6a0ac3fbae11c2a6263392f17450f222ec2b518586e8ea96e23c361eb3ee8a255e145c.js integrity="sha512-tJtcLET9ygfucwrRGWQgdx0qlBdsfTZ7QU+y4j9qCsP7rhHCpiYzkvF0UPIi7CtRhYbo6pbiPDYes+6KJV4UXA==" crossorigin=anonymous defer></script><script src=/js/highlight.min.1a731f820940167b6fd11a8540a1ae7c4627f4009b13e229c411e9d890612a3f6b618133d96477c2cf238d6faaa28d745cd5141e443aa34f62785510dc873430.js integrity="sha512-GnMfgglAFntv0RqFQKGufEYn9ACbE+IpxBHp2JBhKj9rYYEz2WR3ws8jjW+qoo10XNUUHkQ6o09ieFUQ3Ic0MA==" crossorigin=anonymous defer></script><script src=/main.min.b58b01cf031e169076ec659deefba76e6f28ee7fb673b98a8f8f515705db29d50a62f11be71512f1e11b67fd203f11d5c4a911b43b4580eb9d4ca6b0833a4a4a.js integrity="sha512-tYsBzwMeFpB27GWd7vunbm8o7n+2c7mKj49RVwXbKdUKYvEb5xUS8eEbZ/0gPxHVxKkRtDtFgOudTKawgzpKSg==" crossorigin=anonymous defer></script><script src=/index.min.2ecb4040f34b507399808022b2ed8445451ddf9b4cf52484d118c8f56bc1cab47a9e19f9eb98eec1cfa1914663f3d9a14d096bbd73ba3c3c3e88d4214baec19a.js integrity="sha512-LstAQPNLUHOZgIAisu2ERUUd35tM9SSE0RjI9WvByrR6nhn565juwc+hkUZj89mhTQlrvXO6PDw+iNQhS67Bmg==" crossorigin=anonymous defer></script></body></html>

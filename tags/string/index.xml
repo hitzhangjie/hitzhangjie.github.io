@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>String on</title><link>/tags/string/</link><description>Recent content in String on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 18 Jul 2026 12:00:00 +0800</lastBuildDate><atom:link href="/tags/string/index.xml" rel="self" type="application/rss+xml"/><item><title>Go string与C string的区别</title><link>/blog/2019-05-23-gostring_vs_cstring/</link><pubDate>Sat, 18 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2019-05-23-gostring_vs_cstring/</guid><description>&lt;p&gt;go string和c string是有区别的：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;c string使用&lt;code&gt;'\0'&lt;/code&gt;作为字符串结尾：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;char *s = “hello\0world&amp;quot;;
+printf(&amp;quot;%s\n&amp;quot;, s);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;只会打印出hello，world是打不出来的，c以\0作为字符串的结束标识。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;go string只是将&lt;code&gt;'\0'&lt;/code&gt;当做普通的不可点字符，而不是字符串结尾：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;b := []byte{'h','e','l','l','o','\000','w','o','r','l','d'}
+println(string(b))
+idx := bytes.IndexByte(b, '\000')
+println(idx)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;会打印出helloworld，而非hello！&lt;/p&gt;
+&lt;p&gt;go string的定义可以参考StringHeader结构体的定义：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type StringHeader struct {
+data unsafe.Pointer
+len int
+cap int
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;另外要注意，golang里面将\0当做是一个八进制数值的开始标识，不管是在字符串中，还是再byte中，如果定义一个字符串&lt;code&gt;s := “hello\0world”&lt;/code&gt;会报错：non-octal character in escape sequence，因为\0wo不是一个有效的八进制数值。&lt;/p&gt;
+&lt;p&gt;\0结尾是c spec规定的，go不认，go里面就是StringHeader {data, cap, len}，go里面不可见字符就是不可见字符，没赋予它截断字符串的特殊含义，这么想，感觉go比c设计的要好一点。&lt;/p&gt;</description></item></channel></rss>

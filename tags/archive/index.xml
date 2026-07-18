@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Archive on</title><link>/tags/archive/</link><description>Recent content in Archive on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 29 Jun 2018 14:32:38 +0800</lastBuildDate><atom:link href="/tags/archive/index.xml" rel="self" type="application/rss+xml"/><item><title>Go tar/zip 压缩读写</title><link>/blog/2018-06-29-archive/</link><pubDate>Fri, 29 Jun 2018 14:32:38 +0800</pubDate><guid>/blog/2018-06-29-archive/</guid><description>&lt;p&gt;压缩文件的创建、读取操作，golang 标准库中也提供了相应的库来实现，因为不同的压缩格式对应着不同的压缩算法，有不同的 package 来支持，这里不可能一一列举，就将平时我比较常用的 tar 和 zip 格式为例，来演示下如何在 golang 中支持压缩文件的创建、读取操作。&lt;/p&gt;
+&lt;h1 id="tar-文件创建读取"&gt;tar 文件创建、读取 &lt;a href="#tar-%e6%96%87%e4%bb%b6%e5%88%9b%e5%bb%ba%e8%af%bb%e5%8f%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="tar-文件创建"&gt;tar 文件创建 &lt;a href="#tar-%e6%96%87%e4%bb%b6%e5%88%9b%e5%bb%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;func writeTarball(tarball string, fnames []string) {
+fmt.Println(&amp;quot;files to compress:&amp;quot;, len(os.Args[2:]))
+// - 创建tar writer
+var buf_tar bytes.Buffer
+tw := tar.NewWriter(&amp;amp;buf_tar)
+// - 读取所有待压缩文件
+files := readFiles(fnames)
+// - 将待压缩的数据以tar header/body的形式进行登记
+for _, file := range files {
+hdr := &amp;amp;tar.Header{
+Name: file.Name,
+Mode: 0600,
+Size: int64(len(file.Body)),
+}
+if err := tw.WriteHeader(hdr); err != nil {
+log.Fatal(err)
+}
+if _, err := tw.Write([]byte(file.Body)); err != nil {
+log.Fatal(err)
+}
+}
+// - call tw.Close() flush压缩数据到[]byte中存储
+if err := tw.Close(); err != nil {
+log.Fatal(err)
+}
+// - 将压缩后数据写入磁盘
+tfile, err := os.Create(os.Args[1])
+if err != nil {
+fmt.Fprintf(os.Stderr, &amp;quot;%s\n&amp;quot;, err)
+os.Exit(1)
+}
+tfile.Write(buf_tar.Bytes())
+fmt.Println(&amp;quot;archive files done&amp;quot;)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="tar-文件读取"&gt;tar 文件读取 &lt;a href="#tar-%e6%96%87%e4%bb%b6%e8%af%bb%e5%8f%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;func readTarball(tarball string) {
+// 读取tarball数据到buf
+ifo, ok := checkFileExisted(tarball)
+if !ok {
+fmt.Fprintf(os.Stderr, &amp;quot;error: tarball %s not existed\n&amp;quot;)
+os.Exit(1)
+}
+buf := make([]byte, ifo.Size())
+file, err := os.Open(tarball)
+if err != nil {
+fmt.Fprintf(os.Stderr, &amp;quot;%s\n&amp;quot;, err)
+os.Exit(1)
+}
+_, err = file.Read(buf)
+if err != nil {
+fmt.Fprintf(os.Stderr, &amp;quot;%s\n&amp;quot;, err)
+os.Exit(1)
+}
+// 创建tar reader并解析文件数据
+buf_tar := bytes.NewBuffer(buf)
+tr := tar.NewReader(buf_tar)
+// tar reader对压缩包中的tar header\body进行读取
+for {
+hdr, err := tr.Next()
+if err == io.EOF {
+break
+}
+if err != nil {
+log.Fatal(err)
+break
+}
+name := hdr.Name
+sz := hdr.Size
+buf := bytes.NewBuffer(make([]byte, sz))
+io.Copy(buf, tr)
+fmt.Fprintf(os.Stdout, &amp;quot;read tarball: [%s]-&amp;gt;[%d]bytes-&amp;gt;[%s]\n&amp;quot;,
+name, sz, strings.TrimRight(buf.String(), &amp;quot;\n&amp;quot;))
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id="zip-文件创建读取"&gt;zip 文件创建、读取 &lt;a href="#zip-%e6%96%87%e4%bb%b6%e5%88%9b%e5%bb%ba%e8%af%bb%e5%8f%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="zip-文件创建"&gt;zip 文件创建 &lt;a href="#zip-%e6%96%87%e4%bb%b6%e5%88%9b%e5%bb%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;import (
+zip2 &amp;quot;archive/zip&amp;quot;
+&amp;quot;os&amp;quot;
+&amp;quot;fmt&amp;quot;
+)
+func writeZip(zip string, fnames []string) {
+var buf_zip bytes.Buffer
+zw := zip2.NewWriter(&amp;amp;buf_zip)
+for _, f := range fnames {
+ifo, err := os.Stat(f)
+checkError(err, true)
+buf := make([]byte, ifo.Size())
+file, err := os.Open(f)
+checkError(err, true)
+_, err = file.Read(buf)
+checkError(err, true)
+w, err := zw.Create(f)
+checkError(err, true)
+w.Write(buf)
+}
+zw.Close()
+file, err := os.Create(zip)
+checkError(err, true)
+file.Write(buf_zip.Bytes())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="zip-文件读取"&gt;zip 文件读取 &lt;a href="#zip-%e6%96%87%e4%bb%b6%e8%af%bb%e5%8f%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;import (
+zip2 &amp;quot;archive/zip&amp;quot;
+&amp;quot;os&amp;quot;
+&amp;quot;fmt&amp;quot;
+)
+func readZip(zip string) {
+ifo, err := os.Stat(zip)
+checkError(err, true)
+file, err := os.Open(zip)
+checkError(err, true)
+zr, e := zip2.NewReader(file, ifo.Size())
+checkError(e, true)
+for _, f := range zr.File {
+name := f.Name
+data := make([]byte, f.UncompressedSize64)
+rc, _ := f.Open()
+rc.Read(data)
+fmt.Fprintf(os.Stdout, &amp;quot;filename:%s size:%dbytes data:%s\n&amp;quot;,
+name, len(data), data)
+}
+}
+&lt;/code&gt;&lt;/pre&gt;</description></item></channel></rss>

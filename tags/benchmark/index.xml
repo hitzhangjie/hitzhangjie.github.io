@@ -81,4 +81,27 @@ return nil, err
 // ...
 }
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;同样的道理适用于数据库连接、HTTP 客户端、缓存等。&lt;strong&gt;凡是会变的东西，都应该作为依赖传入，而非在函数内部直接构造。&lt;/strong&gt;&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;同样的道理适用于数据库连接、HTTP 客户端、缓存等。&lt;strong&gt;凡是会变的东西，都应该作为依赖传入，而非在函数内部直接构造。&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>Go map / sync.Map / concurrent_map benchmark</title><link>/blog/2019-08-22-go-map/</link><pubDate>Thu, 22 Aug 2019 14:32:38 +0800</pubDate><guid>/blog/2019-08-22-go-map/</guid><description>&lt;p&gt;&lt;strong&gt;对 map、sync.Map、&lt;a href="https://github.com/orcaman/concurrent-map"&gt;concurrent_map&lt;/a&gt; 进行了 benchmark，结果如下：&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;BenchmarkDeleteEmptyMap-8 20000000 86.9 ns/op
+BenchmarkDeleteEmptySyncMap-8 300000000 5.16 ns/op
+BenchmarkDeleteEmptyCMap-8 50000000 34.8 ns/op
+BenchmarkDeleteMap-8 10000000 131 ns/op
+BenchmarkDeleteSyncMap-8 10000000 135 ns/op
+BenchmarkDeleteCMap-8 30000000 37.0 ns/op
+BenchmarkLoadEmptyMap-8 20000000 87.9 ns/op
+BenchmarkLoadEmptySyncMap-8 300000000 5.03 ns/op
+BenchmarkLoadEmptyCMap-8 100000000 17.1 ns/op
+BenchmarkLoadMap-8 20000000 111 ns/op
+BenchmarkLoadSyncMap-8 100000000 12.8 ns/op
+BenchmarkLoadCMap-8 100000000 22.5 ns/op
+BenchmarkSetMap-8 10000000 187 ns/op
+BenchmarkSetSyncMap-8 5000000 396 ns/op
+BenchmarkSetCMap-8 20000000 84.9 ns/op
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;benchmark 结果表明：&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;map+rwmutex 这种方式，锁粒度比较大，增删改查操作耗时相对来说都是比较明显的&lt;/li&gt;
+&lt;li&gt;sync.Map 这种方式，写少读多的情况是非常合适的，效率比较明显，优于 map、concurrent_map&lt;/li&gt;
+&lt;li&gt;concurrent_map，考虑了并发写比较频繁的情况，特别是删除，多 shard 执行删除操作时效率非常明显&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;使用场景：&lt;/strong&gt;&lt;/p&gt;</description></item></channel></rss>

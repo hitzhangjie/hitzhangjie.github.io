@@ -28,4 +28,47 @@ cout &amp;lt;&amp;lt; &amp;quot;1.1 + 2.2 = &amp;quot; &amp;lt;&amp;lt; sum_flt 
 return 0;
 }
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;这里其实是创建了两个不同的类，&lt;code&gt;objdump -dS&lt;/code&gt;可以很清晰地看到至少创建了两个不同的方法&lt;code&gt;Add(T, T)&lt;/code&gt;，可能会有人认为这是&lt;code&gt;函数重载中的name mangling&lt;/code&gt;，其实不是，确实是生成了两个不同的类型，这个可以通过DWARF相关信息看出来，首先&lt;code&gt;g++ -s main.cpp&lt;/code&gt;得到汇编后文件main.s，然后查看该文件内容并搜索Calc，下面两个分别表示&lt;code&gt;Calc&amp;lt;float&amp;gt;模板实例&lt;/code&gt;以及&lt;code&gt;Calc&amp;lt;int&amp;gt;模板实例&lt;/code&gt;，二者确实属于两个不同的类型，一个是用Ltypes95来标识，一个是用Ltypes47来标识。&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;这里其实是创建了两个不同的类，&lt;code&gt;objdump -dS&lt;/code&gt;可以很清晰地看到至少创建了两个不同的方法&lt;code&gt;Add(T, T)&lt;/code&gt;，可能会有人认为这是&lt;code&gt;函数重载中的name mangling&lt;/code&gt;，其实不是，确实是生成了两个不同的类型，这个可以通过DWARF相关信息看出来，首先&lt;code&gt;g++ -s main.cpp&lt;/code&gt;得到汇编后文件main.s，然后查看该文件内容并搜索Calc，下面两个分别表示&lt;code&gt;Calc&amp;lt;float&amp;gt;模板实例&lt;/code&gt;以及&lt;code&gt;Calc&amp;lt;int&amp;gt;模板实例&lt;/code&gt;，二者确实属于两个不同的类型，一个是用Ltypes95来标识，一个是用Ltypes47来标识。&lt;/p&gt;</description></item><item><title>Go template 使用详解</title><link>/blog/2018-11-04-go-template/</link><pubDate>Sun, 04 Nov 2018 14:32:38 +0800</pubDate><guid>/blog/2018-11-04-go-template/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;模板技术在软件开发中有着广泛的应用场景：Web 页面渲染、邮件内容生成、自动化代码生成、CLI 输出定制等等。Go 语言在标准库中内置了强大的模板引擎 &lt;code&gt;text/template&lt;/code&gt;（以及安全的 HTML 版本 &lt;code&gt;html/template&lt;/code&gt;），无需引入第三方库即可完成模板解析与执行。&lt;/p&gt;
+&lt;p&gt;本文先梳理 Go 模板编程的核心概念与基础语法，建立知识框架，再通过层层递进的示例展示实际用法，最后给出一个代码生成实战案例。&lt;/p&gt;
+&lt;h1 id="核心概念与基础语法"&gt;核心概念与基础语法 &lt;a href="#%e6%a0%b8%e5%bf%83%e6%a6%82%e5%bf%b5%e4%b8%8e%e5%9f%ba%e7%a1%80%e8%af%ad%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在开始写代码之前，先理解 Go 模板的运转模型和几个关键概念。&lt;/p&gt;
+&lt;h2 id="运转模型"&gt;运转模型 &lt;a href="#%e8%bf%90%e8%bd%ac%e6%a8%a1%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Go 模板的运转过程非常直观：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;模板文本 (string) ──Parse──▶ *Template ──Execute(data)──▶ 输出 (io.Writer)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;模板文本&lt;/strong&gt;：一段包含&amp;quot;动作&amp;quot;（actions）的普通文本，动作用于控制输出内容&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;解析（Parse）&lt;/strong&gt;：将模板文本编译为内部表示，得到 &lt;code&gt;*Template&lt;/code&gt; 对象&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;执行（Execute）&lt;/strong&gt;：将数据绑定到模板，遍历数据结构，把结果写入 &lt;code&gt;io.Writer&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;模板可以被&lt;strong&gt;重复执行&lt;/strong&gt;——解析一次，用不同数据执行多次，无需重新解析。&lt;/p&gt;
+&lt;h2 id="动作actions与定界符"&gt;动作（Actions）与定界符 &lt;a href="#%e5%8a%a8%e4%bd%9cactions%e4%b8%8e%e5%ae%9a%e7%95%8c%e7%ac%a6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;模板中所有动态行为都通过&lt;strong&gt;动作&lt;/strong&gt;来表达。动作用 &lt;code&gt;{{&lt;/code&gt; 和 &lt;code&gt;}}&lt;/code&gt; 括起来，这两个符号称为&lt;strong&gt;定界符&lt;/strong&gt;（delimiters）。定界符之外的文本会原样输出。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;Hello, {{.Name}}! → Hello, Alice!
+{{.Count}} items in stock. → 42 items in stock.
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;动作可以分为两大类：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;类别&lt;/th&gt;
+&lt;th&gt;说明&lt;/th&gt;
+&lt;th&gt;示例&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;数据求值&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;获取数据的值并输出&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;{{.Name}}&lt;/code&gt;、&lt;code&gt;{{.Age}}&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;控制结构&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;控制模板的执行流程&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;{{if}}&lt;/code&gt;、&lt;code&gt;{{range}}&lt;/code&gt;、&lt;code&gt;{{with}}&lt;/code&gt;、&lt;code&gt;{{define}}&lt;/code&gt;、&lt;code&gt;{{template}}&lt;/code&gt;、&lt;code&gt;{{block}}&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="dot-当前作用域的光标"&gt;Dot（&lt;code&gt;.&lt;/code&gt;）—— 当前作用域的&amp;quot;光标&amp;quot; &lt;a href="#dot-%e5%bd%93%e5%89%8d%e4%bd%9c%e7%94%a8%e5%9f%9f%e7%9a%84%e5%85%89%e6%a0%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;.&lt;/code&gt; 是 Go 模板中最重要的概念，称为 &lt;strong&gt;dot&lt;/strong&gt;。它代表&lt;strong&gt;当前作用域中正在被操作的数据&lt;/strong&gt;，可以理解为游走在数据结构上的&amp;quot;光标&amp;quot;。&lt;/p&gt;</description></item></channel></rss>

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Bytes on</title><link>/tags/bytes/</link><description>Recent content in Bytes on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 29 Jun 2018 14:32:38 +0800</lastBuildDate><atom:link href="/tags/bytes/index.xml" rel="self" type="application/rss+xml"/><item><title>Go bytes 包用法示例</title><link>/blog/2018-06-29-bytes/</link><pubDate>Fri, 29 Jun 2018 14:32:38 +0800</pubDate><guid>/blog/2018-06-29-bytes/</guid><description>&lt;h1 id="4-bytes"&gt;4 bytes &lt;a href="#4-bytes" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;package &lt;strong&gt;bytes&lt;/strong&gt; provides many utility functions for byte slice, it is analogous to package &lt;strong&gt;strings&lt;/strong&gt;, which provides many utility functions for string.&lt;/p&gt;
+&lt;p&gt;as following, split package bytes&amp;rsquo; functions into several categories:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;compare&lt;/li&gt;
+&lt;li&gt;count &amp;amp; contains &amp;amp; index&lt;/li&gt;
+&lt;li&gt;trim &amp;amp; replace&lt;/li&gt;
+&lt;li&gt;join &amp;amp; split&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;here is the example:&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;package main
+import (
+&amp;quot;bytes&amp;quot;
+&amp;quot;fmt&amp;quot;
+)
+func main() {
+b1 := []byte{1, 2, 3, 4, 5}
+b2 := []byte{1, 2, 3, 2, 3, 2}
+b3 := []byte(&amp;quot;hello world&amp;quot;)
+// compare
+fmt.Println(bytes.Compare(b1, b2))
+fmt.Println(bytes.Equal(b1, b2))
+// count &amp;amp; contains &amp;amp; index
+// - count
+fmt.Println(bytes.Count(b2, []byte{2, 3, 2})) // 2, 3, 2, 3, 2, Counts doesn't take overlapping into consideration
+// - contains
+fmt.Println(bytes.Contains(b1, []byte{2, 3}))
+// - index
+fmt.Println(bytes.Index(b1, []byte{3, 4}))
+fmt.Println(bytes.LastIndex(b1, []byte{3, 4}))
+// trim &amp;amp; replace
+fmt.Println(string(bytes.Trim(b3, &amp;quot;hd&amp;quot;)))
+fmt.Println(string(bytes.TrimLeft(b3, &amp;quot;hd&amp;quot;)))
+fmt.Println(string(bytes.TrimRight(b3, &amp;quot;hd&amp;quot;)))
+fmt.Println(bytes.TrimPrefix(b1, []byte{1, 2}))
+fmt.Println(bytes.TrimSuffix(b1, []byte{4, 5}))
+fmt.Println(bytes.Replace(b1, []byte{3, 4}, []byte{7, 8}, -1))
+// join &amp;amp; split
+// - join
+ss := [][]byte{b1, b2}
+sep := []byte{0, 0}
+fmt.Println(bytes.Join(ss, sep))
+// -split
+fmt.Println(bytes.Split(b1, []byte{3}))
+fmt.Println(bytes.SplitAfter(b1, []byte{3}))
+fmt.Println(bytes.SplitN(b2, []byte{2}, 2))
+fmt.Println(bytes.SplitAfterN(b2, []byte{2}, 3))
+fmt.Println(bytes.SplitAfterN(b2, []byte{2}, 2))
+}
+&lt;/code&gt;&lt;/pre&gt;</description></item></channel></rss>

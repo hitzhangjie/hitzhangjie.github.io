@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Faq on</title><link>/tags/faq/</link><description>Recent content in Faq on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 03 Mar 2019 12:00:00 +0800</lastBuildDate><atom:link href="/tags/faq/index.xml" rel="self" type="application/rss+xml"/><item><title>Go 社区问答与设计考量</title><link>/blog/2019-03-03-community-qa/</link><pubDate>Sun, 03 Mar 2019 12:00:00 +0800</pubDate><guid>/blog/2019-03-03-community-qa/</guid><description>&lt;p&gt;本文整理了 Go 语言官方 FAQ 及社区讨论中反复出现的问题，涵盖语言设计、类型系统、内存模型、并发模型等方面的常见疑问及其背后的设计考量。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h1 id="go-泛型支持"&gt;Go 泛型支持 &lt;a href="#go-%e6%b3%9b%e5%9e%8b%e6%94%af%e6%8c%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Go 只有有限的泛型支持，只有内置的某些函数支持泛型（如 &lt;code&gt;fmt.Println&lt;/code&gt;），用户自定义的函数不支持泛型。&lt;/p&gt;
+&lt;p&gt;泛型是 Go 开发者被询问最多的问题之一。Go 团队表示，Go 的核心是 simplicity and powerful，在实际开发中，代码写得越多越觉得没有必要支持泛型。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Q: Do you have plans to implement generics?&lt;/p&gt;
+&lt;p&gt;A: Many proposals for generics-like features have been mooted both publicly and internally, but as yet we haven&amp;rsquo;t found a proposal that is consistent with the rest of the language. We think that one of Go&amp;rsquo;s key strengths is its simplicity, so we are wary of introducing new features that might make the language more difficult to understand. Additionally, the more Go code we write (and thus the better we learn how to write Go code ourselves), the less we feel the need for such a language feature.&lt;/p&gt;</description></item></channel></rss>

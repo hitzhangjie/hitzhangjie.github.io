@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>“Stdlib” on</title><link>/tags/stdlib/</link><description>Recent content in “Stdlib” on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 29 Sep 2018 12:00:00 +0800</lastBuildDate><atom:link href="/tags/stdlib/index.xml" rel="self" type="application/rss+xml"/><item><title>“Go时间解析layout的特殊设计”</title><link>/blog/2018-09-29-time-layout/</link><pubDate>Sat, 29 Sep 2018 12:00:00 +0800</pubDate><guid>/blog/2018-09-29-time-layout/</guid><description>&lt;p&gt;go里面的package time可以对日期时间进行操作，如将一个字符串形式的日期时间转换成time.Time，可以采用方法&lt;code&gt;time.Parse(layout, value string) (Time, error)&lt;/code&gt;这里go的实现非常有趣，它为了纪念go的诞生，这里的layout必须采用”&lt;strong&gt;2006-01-02 15:04:05&lt;/strong&gt;”或者”&lt;strong&gt;2006-01-02 03:04:05&lt;/strong&gt;”，否则会导致解析失败。&lt;/p&gt;
+&lt;p&gt;首先来看一个解析的示例代码：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;func TestDateParse(t *testing.T) {
+t1 := time.Date(2018, time.April, 26, 12, 16, 50, 0, time.UTC)
+fmt.Println(t1)
+layout := &amp;quot;2006-01-02 15:04:05&amp;quot;
+t2, _ := time.Parse(layout, t1.Format(layout))
+fmt.Println(t2)
+xxxxx := &amp;quot;2006-03-02 01:04:05&amp;quot;
+t2, _ = time.Parse(xxxxx, t2.Format(layout))
+fmt.Println(t2)
+yyyyy := &amp;quot;2006-05-02 03:04:01&amp;quot;
+t2, err := time.Parse(yyyyy, t2.Format(layout))
+fmt.Println(err)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;执行命令: &lt;code&gt;go test -run DateParse&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;执行结果:&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-sh"&gt;2018-04-26 12:16:50 +0000 UTC
+2018-04-26 12:16:50 +0000 UTC
+2018-12-26 04:16:50 +0000 UTC
+parsing time &amp;quot;2018-12-26 04:16:50&amp;quot;: month out of range
+PASS
+ok _/E_/Gogland/LearnGo 0.203s
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;为什么会出现这样的问题呢？实现&lt;code&gt;time.Parse&lt;/code&gt;的时候埋了一个“彩蛋”，如果layout没有定义成指定的格式，或者将06、01、02、03（也可以用15）、04、05交换顺序，则解析出来的时间是错误的，甚至会出现上述示例中“&lt;em&gt;&lt;strong&gt;month out of range&lt;/strong&gt;&lt;/em&gt;”的错误，是不是很奇怪？&lt;/p&gt;</description></item></channel></rss>

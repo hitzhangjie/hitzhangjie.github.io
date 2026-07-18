@@ -1,4 +1,31 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Cgo on</title><link>/tags/cgo/</link><description>Recent content in Cgo on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 14 Apr 2021 18:00:00 +0800</lastBuildDate><atom:link href="/tags/cgo/index.xml" rel="self" type="application/rss+xml"/><item><title>Go程序内存泄露问题快速定位</title><link>/blog/2021-04-14-go%E7%A8%8B%E5%BA%8F%E5%86%85%E5%AD%98%E6%B3%84%E9%9C%B2%E9%97%AE%E9%A2%98%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D/</link><pubDate>Wed, 14 Apr 2021 18:00:00 +0800</pubDate><guid>/blog/2021-04-14-go%E7%A8%8B%E5%BA%8F%E5%86%85%E5%AD%98%E6%B3%84%E9%9C%B2%E9%97%AE%E9%A2%98%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D/</guid><description>&lt;style&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Cgo on</title><link>/tags/cgo/</link><description>Recent content in Cgo on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 18 Jul 2026 12:00:00 +0800</lastBuildDate><atom:link href="/tags/cgo/index.xml" rel="self" type="application/rss+xml"/><item><title>Go string与C string的区别</title><link>/blog/2019-05-23-gostring_vs_cstring/</link><pubDate>Sat, 18 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2019-05-23-gostring_vs_cstring/</guid><description>&lt;p&gt;go string和c string是有区别的：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;c string使用&lt;code&gt;'\0'&lt;/code&gt;作为字符串结尾：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;char *s = “hello\0world&amp;quot;;
+printf(&amp;quot;%s\n&amp;quot;, s);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;只会打印出hello，world是打不出来的，c以\0作为字符串的结束标识。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;go string只是将&lt;code&gt;'\0'&lt;/code&gt;当做普通的不可点字符，而不是字符串结尾：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;b := []byte{'h','e','l','l','o','\000','w','o','r','l','d'}
+println(string(b))
+idx := bytes.IndexByte(b, '\000')
+println(idx)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;会打印出helloworld，而非hello！&lt;/p&gt;
+&lt;p&gt;go string的定义可以参考StringHeader结构体的定义：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type StringHeader struct {
+data unsafe.Pointer
+len int
+cap int
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;另外要注意，golang里面将\0当做是一个八进制数值的开始标识，不管是在字符串中，还是再byte中，如果定义一个字符串&lt;code&gt;s := “hello\0world”&lt;/code&gt;会报错：non-octal character in escape sequence，因为\0wo不是一个有效的八进制数值。&lt;/p&gt;
+&lt;p&gt;\0结尾是c spec规定的，go不认，go里面就是StringHeader {data, cap, len}，go里面不可见字符就是不可见字符，没赋予它截断字符串的特殊含义，这么想，感觉go比c设计的要好一点。&lt;/p&gt;</description></item><item><title>Go程序内存泄露问题快速定位</title><link>/blog/2021-04-14-go%E7%A8%8B%E5%BA%8F%E5%86%85%E5%AD%98%E6%B3%84%E9%9C%B2%E9%97%AE%E9%A2%98%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D/</link><pubDate>Wed, 14 Apr 2021 18:00:00 +0800</pubDate><guid>/blog/2021-04-14-go%E7%A8%8B%E5%BA%8F%E5%86%85%E5%AD%98%E6%B3%84%E9%9C%B2%E9%97%AE%E9%A2%98%E5%BF%AB%E9%80%9F%E5%AE%9A%E4%BD%8D/</guid><description>&lt;style&gt;
 .myimg {
 width: 680px;
 padding-bottom: 1rem;
@@ -32,4 +59,34 @@ padding-bottom: 1rem;
 &lt;li&gt;&lt;a href="https://www.ardanlabs.com/blog/2019/05/garbage-collection-in-go-part2-gctraces.html"&gt;Garbage Collection In Go : Part II - GC Traces&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href="https://www.ardanlabs.com/blog/2019/07/garbage-collection-in-go-part3-gcpacing.html"&gt;Garbage Collection In Go : Part III - GC Pacing&lt;/a&gt;&lt;/li&gt;
 &lt;/ol&gt;
-&lt;p&gt;Go语言支持自动内存管理，那还存在内存泄漏问题吗？&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;Go语言支持自动内存管理，那还存在内存泄漏问题吗？&lt;/p&gt;</description></item><item><title>cgo共享库的编译与加载</title><link>/blog/2019-02-23-cgo%E5%85%B1%E4%BA%AB%E5%BA%93/</link><pubDate>Sat, 23 Feb 2019 12:00:00 +0800</pubDate><guid>/blog/2019-02-23-cgo%E5%85%B1%E4%BA%AB%E5%BA%93/</guid><description>&lt;p&gt;go语言提供了c、go互相调用的能力。&lt;/p&gt;
+&lt;p&gt;比较常见的是在go中借助c头文件、共享库来调用c代码，通过cgo指令可以指定linkers要连接的共享库的搜索路径。下面是一个示例。&lt;/p&gt;
+&lt;p&gt;file: add.h&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;#ifndef _ADD_H_
+#define _ADD_H_
+int add(int, int);
+#endif
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;file: add.c&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;int add(int n, int m)
+{
+return n + m;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;首先将add.c编译成共享库：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;gcc -c -fpic add.c
+gcc -shared -o libadd.so add.o
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;file: main.go&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;import &amp;quot;fmt&amp;quot;
+/*
+# cgo CFLAGS: -I${SRCDIR}
+# cgo LDFLAGS: -L${SRCDIR} -ladd
+#include &amp;quot;add.h&amp;quot;
+*/
+import &amp;quot;C&amp;quot;
+func main() {
+fmt.Printf(&amp;quot;1 + 2 = %v\n&amp;quot;, C.add(1, 2))
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;import &amp;quot;C&amp;quot;&lt;/code&gt;必须紧跟在cgo相关的指令、说明后面，它们以注释的形式包括起来，cgo编译器会处理这里的信息。如cgo指令 &lt;code&gt;-I${SRCDIR}&lt;/code&gt;会指导从哪里寻找add.h，&lt;code&gt;cgo -L${SRCDIR}&lt;/code&gt;会指导从哪里寻找libadd.so。&lt;/p&gt;</description></item></channel></rss>

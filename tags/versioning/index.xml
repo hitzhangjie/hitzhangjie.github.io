@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Versioning on</title><link>/tags/versioning/</link><description>Recent content in Versioning on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 18 Jul 2026 13:09:03 +0800</lastBuildDate><atom:link href="/tags/versioning/index.xml" rel="self" type="application/rss+xml"/><item><title>Go Module：依赖管理与语义化版本控制</title><link>/blog/2019-07-31-go-module/</link><pubDate>Sat, 18 Jul 2026 13:09:03 +0800</pubDate><guid>/blog/2019-07-31-go-module/</guid><description>&lt;h1 id="go-module依赖管理与语义化版本控制"&gt;Go Module：依赖管理与语义化版本控制 &lt;a href="#go-module%e4%be%9d%e8%b5%96%e7%ae%a1%e7%90%86%e4%b8%8e%e8%af%ad%e4%b9%89%e5%8c%96%e7%89%88%e6%9c%ac%e6%8e%a7%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="gopath与gomodule兼容性"&gt;GOPATH与GoModule兼容性 &lt;a href="#gopath%e4%b8%8egomodule%e5%85%bc%e5%ae%b9%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;GoModule目前在GO1.11和Go1.12还是一个处于体验的过渡阶段，Go1.13中将作为默认选项，代替GOPATH。&lt;/p&gt;
+&lt;p&gt;表现在：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果当前工程位于GOPATH路径下，即便工程或者父路径中存在go.mod，启用GOPATH而非GoModule；&lt;/li&gt;
+&lt;li&gt;如果当前工程不在GOPATH路径下，且工程或父路径中存在go.mod，此时启用GoModule；&lt;/li&gt;
+&lt;li&gt;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;不存在go.mod，此时启用GOPATH；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;关于第一点，GO1.13中的表现会有所不同，默认启用GoModule而非GOPATH。&lt;/p&gt;
+&lt;h2 id="创建一个module"&gt;创建一个Module &lt;a href="#%e5%88%9b%e5%bb%ba%e4%b8%80%e4%b8%aamodule" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;go mod init github.cmo/hitzhangjie/hello
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;一般执行 &lt;code&gt;go test&lt;/code&gt; 的时候，会显示一个临时生成的module名，这个名字是以 &amp;ldquo;路径名+时间戳+commit版本号” 命名的，但是当像上面这样初始化之后，module名就是 ”github.com/hitzhangjie/hello” 了，如果hello路径下又创建子目录world，那么world对应的module名就是 “github.com/hitzhangjie/hello/world&amp;rdquo;。&lt;/p&gt;
+&lt;p&gt;此时会生成两个文件：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;go.mod，第一行是当前模块的名字，后面是依赖的module及其版本信息&lt;/li&gt;
+&lt;li&gt;go.sum，依赖的module对应版本的校验和信息&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="添加一个dependency"&gt;添加一个Dependency &lt;a href="#%e6%b7%bb%e5%8a%a0%e4%b8%80%e4%b8%aadependency" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;写代码的时候，如果import了其他module，那么在import、编译、测试的时候会自动更新go.mod、go.sum。&lt;/p&gt;
+&lt;p&gt;比如：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;cd hello
+go test
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;会自动拉取hello这个module代码中import的其他module，并更新go.mod和go.sum。&lt;/p&gt;
+&lt;h2 id="列出依赖的dependencies"&gt;列出依赖的Dependencies &lt;a href="#%e5%88%97%e5%87%ba%e4%be%9d%e8%b5%96%e7%9a%84dependencies" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;有时需要查看当前module依赖的所有module及其版本详情：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;go list -m all
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;有时可能想查看某个dependency的所有可用tagged版本，以便更新、废弃某些版本：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;go list -m -versions rsc.io/sampler
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="更新一个dependency"&gt;更新一个Dependency &lt;a href="#%e6%9b%b4%e6%96%b0%e4%b8%80%e4%b8%aadependency" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当希望更新一个dependency的时候，可以通过 &lt;code&gt;go get&lt;/code&gt; 来完成。这里版本构成遵循major.minor.patch这样的格式。&lt;/p&gt;
+&lt;h3 id="更新dependeny到一个新的major版本"&gt;更新Dependeny到一个新的Major版本 &lt;a href="#%e6%9b%b4%e6%96%b0dependeny%e5%88%b0%e4%b8%80%e4%b8%aa%e6%96%b0%e7%9a%84major%e7%89%88%e6%9c%ac" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;以更新 “rsc.io/sampler” 为例，假定当前版本是v1，对应 ”import “rsc.io/sampler”，假定有可用版本v3：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;go list -m -versions rsc.io/sampler
+v1.0.0 v2.0.0 v3.0.0
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;更新到v3.0.0，go get会自动更新到最新版本：&lt;/p&gt;</description></item></channel></rss>

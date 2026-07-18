@@ -1,4 +1,43 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Context on</title><link>/tags/context/</link><description>Recent content in Context on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 27 Mar 2017 21:31:13 +0800</lastBuildDate><atom:link href="/tags/context/index.xml" rel="self" type="application/rss+xml"/><item><title>协程编程模型：jmp_buf助你更好理解"任务上下文"</title><link>/blog/2017-03-27-jmp_bufsetjmplongjmp/</link><pubDate>Mon, 27 Mar 2017 21:31:13 +0800</pubDate><guid>/blog/2017-03-27-jmp_bufsetjmplongjmp/</guid><description>&lt;p&gt;最近在看spp &amp;amp; libco源码，他们实现协程上下文切换的过程中，都或多或少借鉴了jmp_buf的设计，用以保存协程执行时的现场。协程切换的时候保存当前协程的现场，然后恢复待调度协程的现场。理解是很容易理解，但是总感觉还是有点浅尝辄止了，于是就抽点时间看了下jmp_buf、setjmp、longjmp相关的代码，大体理了下思路。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Context on</title><link>/tags/context/</link><description>Recent content in Context on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 29 Jun 2018 14:32:38 +0800</lastBuildDate><atom:link href="/tags/context/index.xml" rel="self" type="application/rss+xml"/><item><title>Go context 包使用指南</title><link>/blog/2018-06-29-context/</link><pubDate>Fri, 29 Jun 2018 14:32:38 +0800</pubDate><guid>/blog/2018-06-29-context/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 Go 服务端开发中，每个请求通常会跨越多个 goroutine：处理 HTTP 请求、查询数据库、调用下游 RPC 等等。当请求被取消或超时时，我们希望整个调用链上的所有 goroutine 都能及时停止，避免资源浪费。&lt;/p&gt;
+&lt;p&gt;Go 标准库 &lt;code&gt;context&lt;/code&gt; 包正是为此而生。它在 API 边界和进程间传递 &lt;strong&gt;deadline&lt;/strong&gt;、&lt;strong&gt;取消信号&lt;/strong&gt; 以及 &lt;strong&gt;请求级别的参数&lt;/strong&gt;。&lt;/p&gt;
+&lt;h2 id="context-的设计"&gt;context 的设计 &lt;a href="#context-%e7%9a%84%e8%ae%be%e8%ae%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;context.Context&lt;/code&gt; 是一个接口，核心方法有四个：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type Context interface {
+Deadline() (deadline time.Time, ok bool) // 返回截止时间
+Done() &amp;lt;-chan struct{} // 返回一个只读 channel，取消时关闭
+Err() error // 返回取消原因
+Value(key interface{}) interface{} // 获取绑定的值
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;context&lt;/code&gt; 包提供了四个创建派生 Context 的函数，覆盖了所有使用场景：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;函数&lt;/th&gt;
+&lt;th&gt;用途&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;context.WithCancel(parent)&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;手动取消&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;context.WithDeadline(parent, time)&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;在指定时刻自动取消&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;context.WithTimeout(parent, duration)&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;在指定时长后自动取消&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;context.WithValue(parent, key, value)&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;携带键值对&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;所有函数都接收一个父 Context，返回一个派生 Context。多个 Context 可以形成父子链，父 Context 取消时，所有子 Context 都会被级联取消。&lt;/p&gt;</description></item><item><title>协程编程模型：jmp_buf助你更好理解"任务上下文"</title><link>/blog/2017-03-27-jmp_bufsetjmplongjmp/</link><pubDate>Mon, 27 Mar 2017 21:31:13 +0800</pubDate><guid>/blog/2017-03-27-jmp_bufsetjmplongjmp/</guid><description>&lt;p&gt;最近在看spp &amp;amp; libco源码，他们实现协程上下文切换的过程中，都或多或少借鉴了jmp_buf的设计，用以保存协程执行时的现场。协程切换的时候保存当前协程的现场，然后恢复待调度协程的现场。理解是很容易理解，但是总感觉还是有点浅尝辄止了，于是就抽点时间看了下jmp_buf、setjmp、longjmp相关的代码，大体理了下思路。&lt;/p&gt;
 &lt;p&gt;学习整理了一下关于jmp_buf &amp;amp; setjmp &amp;amp; longjmp的内容。&lt;/p&gt;
 &lt;p&gt;linux 4.0内核中jmp_buf这个结构体用于记录硬件上下文信息，可以用于函数内、函数外跳转，goto只能实现函数内跳转。先来看下这个结构体的定义吧，i386架构的处理器与x86_64架构的处理器，对应的jmp_buf结构体定义稍微有些不同，这个很容易理解，寄存器位宽、数量等都有些不同。&lt;/p&gt;
 &lt;p&gt;i386架构：&lt;/p&gt;

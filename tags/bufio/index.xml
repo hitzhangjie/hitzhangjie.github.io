@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Bufio on</title><link>/tags/bufio/</link><description>Recent content in Bufio on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 29 Jun 2018 14:32:38 +0800</lastBuildDate><atom:link href="/tags/bufio/index.xml" rel="self" type="application/rss+xml"/><item><title>Go bufio 包用法示例</title><link>/blog/2018-06-29-bufio/</link><pubDate>Fri, 29 Jun 2018 14:32:38 +0800</pubDate><guid>/blog/2018-06-29-bufio/</guid><description>&lt;h1 id="3-bufio"&gt;3 bufio &lt;a href="#3-bufio" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;bufio implements &lt;strong&gt;buffered io&lt;/strong&gt;, bufio &lt;strong&gt;wrappes interface io.Reader and io.Writer&lt;/strong&gt;, it uses underlying buffer to store the data that is already read or to be written, and &lt;strong&gt;based on this, bufio implements reading byte, word, line, slice and writing byte, rune, string&lt;/strong&gt;.&lt;/p&gt;
+&lt;h2 id="31-reader"&gt;3.1 reader &lt;a href="#31-reader" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;following is a bufio.Reader example, this example show how to byte, rune, bytes, slice and line.&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;func testReader() {
+buf := bytes.NewBuffer([]byte(&amp;quot;hello, world&amp;quot;))
+rd := bufio.NewReader(buf)
+b, _ := rd.ReadByte()
+fmt.Println(&amp;quot;read byte:&amp;quot;, string(b))
+r, _, _ := rd.ReadRune()
+fmt.Println(&amp;quot;read rune:&amp;quot;, string(r))
+s, _ := rd.ReadBytes(',')
+//s, _ := rd.ReadSlice(',')
+fmt.Println(&amp;quot;read bytes:&amp;quot;, string(s))
+rd.Reset(bufio.NewReader(os.Stdin))
+for {
+l, p, _ := rd.ReadLine()
+fmt.Println(&amp;quot;read line:&amp;quot;, string(l), p)
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="32-scanner"&gt;3.2 scanner &lt;a href="#32-scanner" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;following is a bufio.Scanner example, this example shows how to scan byte, word and line. &lt;strong&gt;Before starting the scan operation, SplitMode must be specified&lt;/strong&gt;, bufio.ScanLine is the default SplitMode.&lt;/p&gt;</description></item></channel></rss>

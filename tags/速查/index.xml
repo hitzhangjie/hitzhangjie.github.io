@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>速查 on</title><link>/tags/%E9%80%9F%E6%9F%A5/</link><description>Recent content in 速查 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 30 Jan 2019 00:00:00 +0800</lastBuildDate><atom:link href="/tags/%E9%80%9F%E6%9F%A5/index.xml" rel="self" type="application/rss+xml"/><item><title>Git 常用操作速查</title><link>/blog/git-%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C%E9%80%9F%E6%9F%A5/</link><pubDate>Wed, 30 Jan 2019 00:00:00 +0800</pubDate><guid>/blog/git-%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C%E9%80%9F%E6%9F%A5/</guid><description>&lt;h1 id="git-常用操作速查"&gt;Git 常用操作速查 &lt;a href="#git-%e5%b8%b8%e7%94%a8%e6%93%8d%e4%bd%9c%e9%80%9f%e6%9f%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;本文整合了日常开发中高频使用的 Git 命令，按使用场景分类，供快速查阅。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h2 id="一基础概念"&gt;一、基础概念 &lt;a href="#%e4%b8%80%e5%9f%ba%e7%a1%80%e6%a6%82%e5%bf%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="三种文件状态"&gt;三种文件状态 &lt;a href="#%e4%b8%89%e7%a7%8d%e6%96%87%e4%bb%b6%e7%8a%b6%e6%80%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;状态&lt;/th&gt;
+&lt;th&gt;说明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;committed&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;已提交到本地&lt;code&gt;.git&lt;/code&gt; 仓库，安全存储&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;modified&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;已修改但未 stage（暂存）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;staged&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;已暂存，等待 commit&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;ul&gt;
+&lt;li&gt;Staged 状态存储在 &lt;code&gt;.git/index&lt;/code&gt; 文件中&lt;/li&gt;
+&lt;li&gt;日常使用中可以直接跳过 staged 状态（&lt;code&gt;git commit -a&lt;/code&gt;）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="两种追踪状态"&gt;两种追踪状态 &lt;a href="#%e4%b8%a4%e7%a7%8d%e8%bf%bd%e8%b8%aa%e7%8a%b6%e6%80%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;tracked&lt;/strong&gt;：已被 commit 或 stage 的文件&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;untracked&lt;/strong&gt;：新创建、未被 Git 追踪的文件&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="git-与其他-vcs-的核心差异"&gt;Git 与其他 VCS 的核心差异 &lt;a href="#git-%e4%b8%8e%e5%85%b6%e4%bb%96-vcs-%e7%9a%84%e6%a0%b8%e5%bf%83%e5%b7%ae%e5%bc%82" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;快照而非差异&lt;/strong&gt;：Git 将仓库视为小型文件系统，以快照形式记录变化。未改变的文件直接引用之前的版本。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;离线工作&lt;/strong&gt;：clone 后包含完整历史，查看日志、提交、创建分支等均可离线操作。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;数据完整性&lt;/strong&gt;：底层通过校验和（SHA-1）保证数据不被篡改或传输错误。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;操作可恢复&lt;/strong&gt;：Git 的操作几乎都是添加操作，提交过的内容很难丢失。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="二配置git-config"&gt;二、配置（git config） &lt;a href="#%e4%ba%8c%e9%85%8d%e7%bd%aegit-config" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="配置文件层级优先级从高到低"&gt;配置文件层级（优先级从高到低） &lt;a href="#%e9%85%8d%e7%bd%ae%e6%96%87%e4%bb%b6%e5%b1%82%e7%ba%a7%e4%bc%98%e5%85%88%e7%ba%a7%e4%bb%8e%e9%ab%98%e5%88%b0%e4%bd%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;仓库级：&lt;code&gt;.git/config&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;用户级：&lt;code&gt;~/.gitconfig&lt;/code&gt; 或 &lt;code&gt;~/.config/git/config&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;系统级：&lt;code&gt;/etc/gitconfig&lt;/code&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id="常用配置"&gt;常用配置 &lt;a href="#%e5%b8%b8%e7%94%a8%e9%85%8d%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;# 用户信息（必须设置）
+git config user.name &amp;quot;Your Name&amp;quot;
+git config user.email &amp;quot;your@email.com&amp;quot;
+# 编辑器
+git config core.editor /usr/bin/vim
+# 查看所有配置
+git config --list
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="别名alias"&gt;别名（alias） &lt;a href="#%e5%88%ab%e5%90%8dalias" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;git config --global alias.co checkout
+git config --global alias.br branch
+git config --global alias.ci commit
+git config --global alias.st status
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;也可以直接编辑 &lt;code&gt;~/.gitconfig&lt;/code&gt;：&lt;/p&gt;</description></item></channel></rss>

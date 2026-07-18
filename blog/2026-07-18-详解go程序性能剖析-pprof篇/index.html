@@ -1,0 +1,237 @@
+<!doctype html><html lang=en-US><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-regular.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-500.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-700.woff2 type=font/woff2 crossorigin><script>window.__LAYOUT_WIDTH_DEFAULT__="standard"</script><script>(()=>{(function(){var t,n={compact:1,standard:1,wide:1,fullscreen:1},s="layout-width-v",o="3",e=null,i=null;try{e=localStorage.getItem("layout-width"),i=localStorage.getItem(s)}catch{}if(i!==o){e==="standard"?e="compact":e==="compact"?e="standard":e==="normal"?e="compact":e==="reading"&&(e="wide");try{e&&localStorage.setItem("layout-width",e),localStorage.setItem(s,o)}catch{}}t=window.__LAYOUT_WIDTH_DEFAULT__||"standard",n[t]||(t="standard"),e&&!n[e]&&(e=null),document.documentElement.setAttribute("data-layout-width",e||t)})()})()</script><link rel=stylesheet href=/main.9aa5684d2b002d9bd48d08e085ef1aaf384539b58400fb28dffa9efe2301549338a87e27640af00ff481a349461fbc931571455f65e33d95717f55c714f3dd41.css integrity="sha512-mqVoTSsALZvUjQjghe8arzhFObWEAPso3/qe/iMBVJM4qH4nZArwD/SBo0lGH7yTFXFFX2XjPZVxf1XHFPPdQQ==" crossorigin=anonymous><noscript><style>img.lazyload{display:none}</style></noscript><meta name=robots content="index, follow"><meta name=googlebot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><meta name=bingbot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><title>详解Go程序性能剖析：pprof篇（译） - MySpace</title><meta name=description content="Russ Cox 经典博文翻译：通过一个真实案例，从 25 秒到 2.29 秒，完整演示如何用 go tool pprof 对 Go 程序进行 CPU 和内存剖析，找出瓶颈并逐步优化。"><link rel=canonical href=/blog/2026-07-18-%E8%AF%A6%E8%A7%A3go%E7%A8%8B%E5%BA%8F%E6%80%A7%E8%83%BD%E5%89%96%E6%9E%90-pprof%E7%AF%87/><meta property="og:locale" content="en_US"><meta property="og:type" content="article"><meta property="og:title" content="详解Go程序性能剖析：pprof篇（译）"><meta property="og:description" content="Russ Cox 经典博文翻译：通过一个真实案例，从 25 秒到 2.29 秒，完整演示如何用 go tool pprof 对 Go 程序进行 CPU 和内存剖析，找出瓶颈并逐步优化。"><meta property="og:url" content="/blog/2026-07-18-%E8%AF%A6%E8%A7%A3go%E7%A8%8B%E5%BA%8F%E6%80%A7%E8%83%BD%E5%89%96%E6%9E%90-pprof%E7%AF%87/"><meta property="og:site_name" content="MySpace"><meta property="article:published_time" content="2026-07-18T10:30:00+08:00"><meta property="article:modified_time" content="2026-07-18T10:30:00+08:00"><meta property="og:image" content="/doks.png"><meta property="og:image:alt" content="MySpace"><meta name=twitter:card content="summary_large_image"><meta name=twitter:site content="@hitzhangjie"><meta name=twitter:creator content="@hitzhangjie"><meta name=twitter:title content="详解Go程序性能剖析：pprof篇（译）"><meta name=twitter:description content="Russ Cox 经典博文翻译：通过一个真实案例，从 25 秒到 2.29 秒，完整演示如何用 go tool pprof 对 Go 程序进行 CPU 和内存剖析，找出瓶颈并逐步优化。"><meta name=twitter:image content="/doks.png"><meta name=twitter:image:alt content="详解Go程序性能剖析：pprof篇（译）"><script type=application/ld+json>{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/1","name":"","url":"/","sameAs":["https://twitter.com/hitzhangjie","https://www.linkedin.com/in/hitzhangjie/","https://github.com/hitzhangjie"],"image":{"@type":"ImageObject","@id":"/#/schema/image/1","url":"/\u003cnil\u003e","width":null,"height":null,"caption":""}},{"@type":"WebSite","@id":"/#/schema/website/1","url":"/","name":"MySpace","description":"MySpace is a hitzhangjie\u0027s personal space, for blogs, books, journey, thinkings.","publisher":{"@id":"/#/schema/person/1"}},{"@type":"WebPage","@id":"/blog/2026-07-18-%E8%AF%A6%E8%A7%A3go%E7%A8%8B%E5%BA%8F%E6%80%A7%E8%83%BD%E5%89%96%E6%9E%90-pprof%E7%AF%87/","url":"/blog/2026-07-18-%E8%AF%A6%E8%A7%A3go%E7%A8%8B%E5%BA%8F%E6%80%A7%E8%83%BD%E5%89%96%E6%9E%90-pprof%E7%AF%87/","name":"详解Go程序性能剖析：pprof篇（译）","description":"Russ Cox 经典博文翻译：通过一个真实案例，从 25 秒到 2.29 秒，完整演示如何用 go tool pprof 对 Go 程序进行 CPU 和内存剖析，找出瓶颈并逐步优化。","isPartOf":{"@id":"/#/schema/website/1"},"about":{"@id":"/#/schema/person/1"},"datePublished":"2026-07-18T10:30:00CET","dateModified":"2026-07-18T10:30:00CET","breadcrumb":{"@id":"/blog/2026-07-18-%E8%AF%A6%E8%A7%A3go%E7%A8%8B%E5%BA%8F%E6%80%A7%E8%83%BD%E5%89%96%E6%9E%90-pprof%E7%AF%87/#/schema/breadcrumb/1"},"primaryImageOfPage":{"@id":"/blog/2026-07-18-%E8%AF%A6%E8%A7%A3go%E7%A8%8B%E5%BA%8F%E6%80%A7%E8%83%BD%E5%89%96%E6%9E%90-pprof%E7%AF%87/#/schema/image/2"},"inLanguage":"","potentialAction":[{"@type":"ReadAction","target":["/blog/2026-07-18-%E8%AF%A6%E8%A7%A3go%E7%A8%8B%E5%BA%8F%E6%80%A7%E8%83%BD%E5%89%96%E6%9E%90-pprof%E7%AF%87/"]}]},{"@type":"BreadcrumbList","@id":"/blog/2026-07-18-%E8%AF%A6%E8%A7%A3go%E7%A8%8B%E5%BA%8F%E6%80%A7%E8%83%BD%E5%89%96%E6%9E%90-pprof%E7%AF%87/#/schema/breadcrumb/1","name":"Breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"item":{"@type":"WebPage","@id":"/","url":"/","name":"Home"}},{"@type":"ListItem","position":2,"item":{"@id":"/blog2026-07-18-%E8%AF%A6%E8%A7%A3go%E7%A8%8B%E5%BA%8F%E6%80%A7%E8%83%BD%E5%89%96%E6%9E%90-pprof%E7%AF%87/"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Article","@id":"/#/schema/article/1","headline":"详解Go程序性能剖析：pprof篇（译）","description":"Russ Cox 经典博文翻译：通过一个真实案例，从 25 秒到 2.29 秒，完整演示如何用 go tool pprof 对 Go 程序进行 CPU 和内存剖析，找出瓶颈并逐步优化。","isPartOf":{"@id":"/blog/2026-07-18-%E8%AF%A6%E8%A7%A3go%E7%A8%8B%E5%BA%8F%E6%80%A7%E8%83%BD%E5%89%96%E6%9E%90-pprof%E7%AF%87/"},"mainEntityOfPage":{"@id":"/blog/2026-07-18-%E8%AF%A6%E8%A7%A3go%E7%A8%8B%E5%BA%8F%E6%80%A7%E8%83%BD%E5%89%96%E6%9E%90-pprof%E7%AF%87/"},"datePublished":"2026-07-18T10:30:00CET","dateModified":"2026-07-18T10:30:00CET","author":{"@id":"/#/schema/person/2"},"publisher":{"@id":"/#/schema/person/1"},"image":{"@id":"/blog/2026-07-18-%E8%AF%A6%E8%A7%A3go%E7%A8%8B%E5%BA%8F%E6%80%A7%E8%83%BD%E5%89%96%E6%9E%90-pprof%E7%AF%87/#/schema/image/2"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/2","name":null,"sameAs":[]}]},{"@context":"https://schema.org","@graph":[{"@type":"ImageObject","@id":"/blog/2026-07-18-%E8%AF%A6%E8%A7%A3go%E7%A8%8B%E5%BA%8F%E6%80%A7%E8%83%BD%E5%89%96%E6%9E%90-pprof%E7%AF%87/#/schema/image/2","url":"/doks.png","contentUrl":"/doks.png","caption":"详解Go程序性能剖析：pprof篇（译）"}]}]}</script><meta name=theme-color content="#fff"><link rel=icon href=/favicon.ico sizes=any><link rel=icon type=image/svg+xml href=/favicon.svg><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest crossorigin=use-credentials href=/site.webmanifest><script type=text/javascript src='https://platform-api.sharethis.com/js/sharethis.js#property=607868a58d7101001829a8df&product=sop' async></script><style>[alt~=sharing]{border:0;box-shadow:none}div#st-1{text-align:unset}div#st-1 .st-btn{height:24px;padding:0 4px}div#st-1 .st-btn>img{top:4.2px}div#st-2 .st-btn{height:24px;padding:0 4px}div#st-2 .st-btn>img{top:4.2px}</style><script async src="https://www.googletagmanager.com/gtag/js?id=UA-168027530-1"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","UA-168027530-1")</script></head><body class="blog single d-flex flex-column min-vh-100"><div class=sticky-top><div class=header-bar></div><header class="navbar navbar-expand-lg navbar-light doks-navbar"><nav class="container-xxl flex-wrap flex-lg-nowrap" aria-label="Main navigation"><a class="navbar-brand order-0" href=/ aria-label=MySpace>MySpace
+</a><button class="btn btn-menu order-2 d-block d-lg-none" type=button data-bs-toggle=offcanvas data-bs-target=#offcanvasDoks aria-controls=offcanvasDoks aria-label="Open main menu">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div class="offcanvas offcanvas-end border-0 py-lg-1" tabindex=-1 id=offcanvasDoks data-bs-backdrop=true aria-labelledby=offcanvasDoksLabel><div class="header-bar d-lg-none"></div><div class="offcanvas-header d-lg-none"><h2 class="h5 offcanvas-title ps-2" id=offcanvasDoksLabel><a class=text-dark href=/>MySpace</a></h2><button type=button class="btn-close text-reset me-2" data-bs-dismiss=offcanvas aria-label="Close main menu"></button></div><div class="offcanvas-body p-4 p-lg-0"><ul class="nav flex-column flex-lg-row align-items-lg-center mt-2 mt-lg-0 ms-lg-2 me-lg-auto"><li class=nav-item><a class="nav-link ps-0 py-1 active" href=/blog/>Blog</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/books/>Books</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/landscape>Landscape</a></li></ul><hr class="text-black-50 my-4 d-lg-none"><form class="doks-search position-relative flex-grow-1 ms-lg-auto me-lg-2"><input id=search class="form-control is-search" type=search placeholder="Search docs..." aria-label="Search docs..." autocomplete=off><div id=suggestions class="shadow bg-white rounded d-none"></div></form><hr class="text-black-50 my-4 d-lg-none"><ul class="nav flex-column flex-lg-row"><li class=nav-item><a class="nav-link social-link" href=https://twitter.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg><small class="ms-2 d-lg-none">Twitter</small></a></li><li class=nav-item><a class="nav-link social-link" href=https://github.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37.0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44.0 0020 4.77 5.07 5.07.0 0019.91 1S18.73.65 16 2.48a13.38 13.38.0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07.0 005 4.77 5.44 5.44.0 003.5 8.55c0 5.42 3.3 6.61 6.44 7A3.37 3.37.0 009 18.13V22"/></svg><small class="ms-2 d-lg-none">GitHub</small></a></li><li class="nav-item layout-width-dropdown"><a class="nav-link layout-width-dropdown-btn" href=# data-bs-toggle=dropdown aria-expanded=false aria-label=切换布局宽度 title=切换布局宽度><span class=lw-icon-standard><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-compact><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-wide><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span><span class=lw-icon-fullscreen><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg></span></a><ul class="dropdown-menu dropdown-menu-end"><li><button class="dropdown-item layout-width-option" data-layout-value=compact>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span>紧凑布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=standard>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>标准布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=wide>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span>宽松布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=fullscreen>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>全屏布局</button></li></ul></li></ul></div></div></nav></header></div><div class="wrap container-xxl" role=document><div class=content><div class="row flex-xl-nowrap" data-layout-width=standard><div class="col-lg-4 col-xl-3 docs-sidebar"><nav class=docs-links aria-label="Main navigation"><h3>Tag List</h3><ol><li><a href=/tags/go/>go</a></li><li><a href=/tags/pprof/>pprof</a></li><li><a href=/tags/profiling/>profiling</a></li><li><a href=/tags/performance/>performance</a></li><li><a href=/tags/optimization/>optimization</a></li></ol></nav></div><main class="docs-content col-lg-12 col-xl-10"><h1>详解Go程序性能剖析：pprof篇（译）</h1><p><small>Posted 2026-07-18 10:30 +0800 by <a class="stretched-link position-relative" href>ZhangJie</a>&nbsp;&dash;&nbsp;<strong>8&nbsp;min read</strong></small><p><div style=display:flex><div>分享:&nbsp;&nbsp;</div><div><div class=sharethis-inline-share-buttons></div></div></div><hr><p class=lead></p><p>原文：<a href=https://go.dev/blog/pprof>Profiling Go Programs</a> — Russ Cox, 2011 年 6 月；马盛浩更新于 2013 年 5 月</p><hr><p>2011 年的 Scala Days 上，Robert Hundt 发表了一篇题为 <a href=http://research.google.com/pubs/pub37122.html>Loop Recognition in C++/Java/Go/Scala</a> 的论文。文中用 C++、Go、Java、Scala 四种语言实现了同一个循环查找算法——编译器流分析中常见的那种——然后用这些程序的运行数据来讨论各语言的典型性能特征。其中 Go 的那个版本运行相当慢，这恰好给了我们一个绝佳的机会，来展示如何借助 Go 的剖析工具，把一个慢程序一步步变快。</p><p><em>借助 Go 的剖析工具识别并修正具体的性能瓶颈，我们可以让这个循环查找程序快上一个数量级，同时将内存消耗降至原来的 1/6。</em>（更新：由于 <code>gcc</code> 的 <code>libstdc++</code> 近期做了优化，内存降幅调整为 1/3.7。）</p><p>Hundt 的论文没有注明各语言编译器及工具链的具体版本。本文中，我们使用 <code>6g</code> Go 编译器的最新 weekly 快照版本，以及 Ubuntu Natty 发行版附带的 <code>g++</code> 版本。（我们不会涉及 Java 和 Scala，因为我们对这两种语言的高效编程并不精通，放在一起比较有失公允。既然论文中 C++ 是跑得最快的，这里拿 C++ 来对比就够了。）更新：本文更新版使用 Go 编译器在 amd64 上的最新开发快照，以及 2013 年 3 月发布的 <code>g++</code> 4.8.0。</p><pre><code>$ go version
+go version devel +08d20469cc20 Tue Mar 26 08:27:18 2013 +0100 linux/amd64
+$ g++ --version
+g++ (GCC) 4.8.0
+Copyright (C) 2013 Free Software Foundation, Inc.
+</code></pre><p>测试机配置：3.4GHz Core i7-2600 CPU，16 GB RAM，Gentoo Linux 3.8.4-gentoo 内核，已禁用 CPU 频率调节。</p><p>我们取了 <a href=https://github.com/hundt98847/multi-language-bench>Hundt 的基准测试程序</a>的 C++ 和 Go 版本，将每个版本合并为单个源文件，并只保留了一行输出。使用 Linux 的 <code>time</code> 工具计时，输出格式包括用户时间、系统时间、实际时间和最大内存占用。</p><pre><code>$ make havlak1cc
+g++ -O3 -o havlak1cc havlak1.cc
+$ ./xtime ./havlak1cc
+# of loops: 76002 (total 3800100)
+loop-0, nest: 0, depth: 0
+17.70u 0.05s 17.80r 715472kB ./havlak1cc
+
+$ make havlak1
+go build havlak1.go
+$ ./xtime ./havlak1
+# of loops: 76000 (including 1 artificial root node)
+25.05u 0.11s 25.20r 1334032kB ./havlak1
+</code></pre><p>C++ 程序跑了 17.80 秒，占用了 700 MB 内存。Go 程序跑了 25.20 秒，占用了 1302 MB 内存。（这些数据与论文原文难以直接对齐，但本文的主旨是演示 <code>go tool pprof</code> 的用法，而不是复现论文数据。）</p><h2 id=启用剖析>启用剖析 <a href=#%e5%90%af%e7%94%a8%e5%89%96%e6%9e%90 class=anchor aria-hidden=true>#</a><a href=#启用剖析 class=anchor aria-hidden=true>#</a></h2><p>要开始调优 Go 程序，首先得把剖析打开。如果你的代码使用了 <a href=/pkg/testing/>Go testing 包</a>的基准测试支持，那直接用 <code>go test</code> 的 <code>-cpuprofile</code> 和 <code>-memprofile</code> 参数就行了。但在像这样一个独立运行的程序中，就需要手动引入 <code>runtime/pprof</code> 并加上几行代码：</p><pre><code class=language-go>var cpuprofile = flag.String(&quot;cpuprofile&quot;, &quot;&quot;, &quot;write cpu profile to file&quot;)
+
+func main() {
+    flag.Parse()
+    if *cpuprofile != &quot;&quot; {
+        f, err := os.Create(*cpuprofile)
+        if err != nil {
+            log.Fatal(err)
+        }
+        pprof.StartCPUProfile(f)
+        defer pprof.StopCPUProfile()
+    }
+    // ...
+}
+</code></pre><p>新增的代码定义了一个 <code>cpuprofile</code> 命令行参数，调用 <a href=/pkg/flag/>Go flag 库</a>解析命令行，如果用户指定了 <code>-cpuprofile</code>，就启动 CPU 剖析并将数据重定向到指定文件。剖析器要求在程序退出前调用一次 <a href=/pkg/runtime/pprof/#StopCPUProfile><code>StopCPUProfile</code></a>，以保证所有待写数据都被刷入文件；这里通过 <code>defer</code> 确保它在 <code>main</code> 返回时执行。</p><p>加上以上代码后，我们就可以带 <code>-cpuprofile</code> 参数运行程序，然后用 <code>go tool pprof</code> 来解读剖析结果了。</p><pre><code>$ make havlak1.prof
+./havlak1 -cpuprofile=havlak1.prof
+# of loops: 76000 (including 1 artificial root node)
+$ go tool pprof havlak1 havlak1.prof
+Welcome to pprof!  For help, type 'help'.
+(pprof)
+</code></pre><p><code>go tool pprof</code> 本质上是 <a href=https://github.com/gperftools/gperftools>Google 的 <code>pprof</code> C++ 剖析器</a>的一个变体。最重要的命令是 <code>topN</code>，它展示剖析数据中占比最高的前 N 个采样点：</p><pre><code>(pprof) top10
+Total: 2525 samples
+     298  11.8%  11.8%      345  13.7% runtime.mapaccess1_fast64
+     268  10.6%  22.4%     2124  84.1% main.FindLoops
+     251   9.9%  32.4%      451  17.9% scanblock
+     178   7.0%  39.4%      351  13.9% hash_insert
+     131   5.2%  44.6%      158   6.3% sweepspan
+     119   4.7%  49.3%      350  13.9% main.DFS
+      96   3.8%  53.1%       98   3.9% flushptrbuf
+      95   3.8%  56.9%       95   3.8% runtime.aeshash64
+      95   3.8%  60.6%      101   4.0% runtime.settype_flush
+      88   3.5%  64.1%      988  39.1% runtime.mallocgc
+</code></pre><p>CPU 剖析开启后，Go 程序每秒大约暂停 100 次，每次都记录当前 goroutine 栈上的程序计数器，形成一个采样点。这份剖析数据共 2525 个采样点，所以程序大约运行了 25 秒出头。在 <code>go tool pprof</code> 的输出中，每个出现在采样中的函数各占一行。前两列分别表示该函数<strong>正在执行</strong>（而非等待被调用函数返回）的采样点数量，以及该数量占总采样点的百分比。<code>runtime.mapaccess1_fast64</code> 在执行期间被采到了 298 次，占 11.8%。<code>top10</code> 的输出按这个计数降序排列。第三列是列表中的累计占比：前三行加起来已经覆盖了 32.4% 的采样点。第四、第五列则表示该函数<strong>出现在调用栈中</strong>（无论是正在执行还是在等待被调用函数返回）的采样点数量和占比。<code>main.FindLoops</code> 有 10.6% 的采样点命中了它自身的执行，但它在 84.1% 的采样点中都以某种方式出现在了调用栈上——要么是它自己在跑，要么是它调用的函数在跑。</p><p>如果想按第四、第五列排序，加上 <code>-cum</code>（cumulative，累计）参数即可：</p><pre><code>(pprof) top5 -cum
+Total: 2525 samples
+       0   0.0%   0.0%     2144  84.9% gosched0
+       0   0.0%   0.0%     2144  84.9% main.main
+       0   0.0%   0.0%     2144  84.9% runtime.main
+       0   0.0%   0.0%     2124  84.1% main.FindHavlakLoops
+     268  10.6%  10.6%     2124  84.1% main.FindLoops
+</code></pre><p>实际上 <code>main.FindLoops</code> 和 <code>main.main</code> 的累计占比加起来应该是 100%，但每个栈采样只会记录栈底的 100 帧。大约有四分之一的采样中，递归函数 <code>main.DFS</code> 比 <code>main.main</code> 深了超过 100 帧，导致完整栈迹被截断了。</p><p>栈采样数据包含了比文本列表更丰富的函数调用关系信息。<code>web</code> 命令会将剖析数据以 SVG 格式绘制成图并在浏览器中打开。</p><pre><code>(pprof) web
+</code></pre><p>图中的每个方框对应一个函数，方框大小正比于该函数<strong>正在执行</strong>的采样点数量。从 X 到 Y 的边表示 X 调用了 Y，边上的数字表示该调用在采样中出现的次数。如果一次采样中同一条调用路径出现多次——比如递归调用——每次出现都会被计入边的权重。这就是为什么 <code>main.DFS</code> 到自身的回边上会标着 21342。</p><p>仅凭一张宏观图我们就能看出，程序把大把时间花在了哈希操作上，而这正是 Go 的 <code>map</code> 带来的。我们还可以让 <code>web</code> 只显示涉及某个特定函数的采样，比如 <code>runtime.mapaccess1_fast64</code>，从而滤除掉图中的大量噪音。</p><p>如果再细看，你会发现对 <code>runtime.mapaccess1_fast64</code> 的调用大多来自 <code>main.FindLoops</code> 和 <code>main.DFS</code>。</p><p>现在我们有了大局观，是时候聚焦到某个具体函数了。先看 <code>main.DFS</code>，因为它体量相对较小：</p><pre><code>(pprof) list DFS
+Total: 2525 samples
+ROUTINE ====================== main.DFS in havlak1.go
+   119    697 Total samples (flat / cumulative)
+     3      3  240: func DFS(currentNode *BasicBlock, nodes []*UnionFindNode, number map[*BasicBlock]int, last []int, current int) int {
+     1      1  241:     nodes[current].Init(currentNode, current)
+     1     37  242:     number[currentNode] = current
+     .      .  243:
+     1      1  244:     lastid := current
+    89     89  245:     for _, target := range currentNode.OutEdges {
+     9    152  246:             if number[target] == unvisited {
+     7    354  247:                     lastid = DFS(target, nodes, number, last, lastid+1)
+     .      .  248:             }
+     .      .  249:     }
+     7     59  250:     last[number[currentNode]] = lastid
+     1      1  251:     return lastid
+</code></pre><p>这个列表展示了 <code>DFS</code> 函数（以及所有匹配 <code>DFS</code> 正则表达式的函数）的源码。前三列分别是在该行上采到的样本数、在该行及其调用的代码中采到的样本数、以及行号。相关命令 <code>disasm</code> 输出函数的反汇编而非源码列表；当采样足够密集时，这能帮你看出究竟哪些指令在吃 CPU。<code>weblist</code> 则将两种模式融合：展示源码列表，点击某一行就能展开对应的反汇编。</p><p>既然我们已经知道时间都耗在哈希运行时实现的 map 查找上了，那最值得关注的自然就是第二列。大量的时间耗在了 <code>DFS</code> 的递归调用上（第 247 行），这对于一个递归遍历来说理所当然。刨去递归本身，耗时主要集中在对 <code>number</code> 这个 map 的几次访问上——第 242、246、250 行。对于这种场景来说，map 并非最高效的选择。就像在编译器中一样，基本块结构都被分配了唯一的序号。与其用 <code>map[*BasicBlock]int</code>，不如用一个 <code>[]int</code> 切片，用块序号做索引。能用数组或切片解决的事情，就不要动用 map。</p><p>将 <code>number</code> 从 map 换成切片，只需改动程序的七行代码，运行时间近乎减半：</p><pre><code>$ make havlak2
+go build havlak2.go
+$ ./xtime ./havlak2
+# of loops: 76000 (including 1 artificial root node)
+16.55u 0.11s 16.69r 1321008kB ./havlak2
+</code></pre><p>我们再跑一次剖析来确认 <code>main.DFS</code> 已经不再是瓶颈：</p><pre><code>$ make havlak2.prof
+$ go tool pprof havlak2 havlak2.prof
+(pprof) top5
+Total: 1652 samples
+     197  11.9%  11.9%      382  23.1% scanblock
+     189  11.4%  23.4%     1549  93.8% main.FindLoops
+     130   7.9%  31.2%      152   9.2% sweepspan
+     104   6.3%  37.5%      896  54.2% runtime.mallocgc
+      98   5.9%  43.5%      100   6.1% flushptrbuf
+</code></pre><p><code>main.DFS</code> 已经从 profile 中消失了，程序的整体运行时间也降了下来。现在程序大部分时间都耗在了内存分配和垃圾回收上——<code>runtime.mallocgc</code>（这个函数既负责分配又负责周期性 GC）吃掉了 54.2% 的时间。要弄清为什么 GC 如此繁忙，我们需要找出到底是谁在大量分配内存。一个办法是给程序加上内存剖析。</p><p>我们在程序中加入：如果用户指定了 <code>-memprofile</code> 参数，程序就在完成一轮循环查找后停下来，把内存剖析数据写入文件然后退出：</p><pre><code class=language-go>var memprofile = flag.String(&quot;memprofile&quot;, &quot;&quot;, &quot;write memory profile to this file&quot;)
+
+    FindHavlakLoops(cfgraph, lsgraph)
+    if *memprofile != &quot;&quot; {
+        f, err := os.Create(*memprofile)
+        if err != nil {
+            log.Fatal(err)
+        }
+        pprof.WriteHeapProfile(f)
+        f.Close()
+        return
+    }
+</code></pre><p>然后带 <code>-memprofile</code> 运行程序来生成剖析文件：</p><pre><code>$ make havlak3.mprof
+go build havlak3.go
+./havlak3 -memprofile=havlak3.mprof
+</code></pre><p>我们用完全一样的方式运行 <code>go tool pprof</code>。只不过这次分析的不再是时钟采样，而是内存分配。</p><pre><code>$ go tool pprof havlak3 havlak3.mprof
+Adjusting heap profiles for 1-in-524288 sampling rate
+Welcome to pprof!  For help, type 'help'.
+(pprof) top5
+Total: 82.4 MB
+    56.3  68.4%  68.4%     56.3  68.4% main.FindLoops
+    17.6  21.3%  89.7%     17.6  21.3% main.(*CFG).CreateNode
+     8.0   9.7%  99.4%     25.6  31.0% main.NewBasicBlockEdge
+     0.5   0.6% 100.0%      0.5   0.6% itab
+     0.0   0.0% 100.0%      0.5   0.6% fmt.init
+</code></pre><p><code>go tool pprof</code> 告诉我们，<code>FindLoops</code> 分配了 82.4 MB 内存中的大约 56.3 MB，<code>CreateNode</code> 又占了 17.6 MB。为了降低开销，内存剖析器大约每分配 0.5 MB 才记录一次（即"1/524288 采样率"），所以这些数字是真实值的近似。</p><p>我们来列出这些函数的分配详情：</p><pre><code>(pprof) list FindLoops
+Total: 82.4 MB
+ROUTINE ====================== main.FindLoops in havlak3.go
+  56.3   56.3 Total MB (flat / cumulative)
+...
+   1.9    1.9  268:     nonBackPreds := make([]map[int]bool, size)
+   5.8    5.8  269:     backPreds := make([][]int, size)
+   1.9    1.9  271:     number := make([]int, size)
+   1.9    1.9  272:     header := make([]int, size, size)
+   1.9    1.9  273:     types := make([]int, size, size)
+   1.9    1.9  274:     last := make([]int, size, size)
+   1.9    1.9  275:     nodes := make([]*UnionFindNode, size, size)
+   9.5    9.5  278:             nodes[i] = new(UnionFindNode)
+  29.5   29.5  288:             nonBackPreds[i] = make(map[int]bool)
+...
+</code></pre><p>显然，当前瓶颈和前一次如出一辙：在简单数据结构就够用的场景下使用了 map。光是 <code>FindLoops</code> 就为 map 分配了大约 29.5 MB。</p><p>顺便提一句，如果用 <code>--inuse_objects</code> 参数运行 <code>go tool pprof</code>，它会报告分配对象的<strong>个数</strong>而非大小：</p><pre><code>$ go tool pprof --inuse_objects havlak3 havlak3.mprof
+(pprof) list FindLoops
+Total: 1763108 objects
+...
+311296 311296  278:             nodes[i] = new(UnionFindNode)
+409600 409600  288:             nonBackPreds[i] = make(map[int]bool)
+...
+</code></pre><p>大约 20 万个 map 占了 29.5 MB，算下来每个 map 的初始分配大约是 150 字节。如果 map 确实用来存键值对，这个开销说得过去；但在这里，map 只是被当作一个简单的集合来用——这就很不划算了。</p><p>与其用 map，不如用一个简单的切片来存元素列表。在几乎所有用到 map 的地方，算法都不可能插入重复元素。唯一一个可能出现重复的场景，我们写了一个 <code>appendUnique</code> 的小函数来应对：</p><pre><code class=language-go>func appendUnique(a []int, x int) []int {
+    for _, y := range a {
+        if x == y {
+            return a
+        }
+    }
+    return append(a, x)
+}
+</code></pre><p>把这些 map 换成切片，只需改动寥寥几行代码：</p><pre><code>$ make havlak4
+go build havlak4.go
+$ ./xtime ./havlak4
+# of loops: 76000 (including 1 artificial root node)
+11.84u 0.08s 11.94r 810416kB ./havlak4
+</code></pre><p>我们已经比初始版本快了 2.11 倍。再看一下 CPU profile：</p><pre><code>$ make havlak4.prof
+$ go tool pprof havlak4 havlak4.prof
+(pprof) top10
+Total: 1173 samples
+     205  17.5%  17.5%     1083  92.3% main.FindLoops
+     138  11.8%  29.2%      215  18.3% scanblock
+      88   7.5%  36.7%       96   8.2% sweepspan
+      76   6.5%  43.2%      597  50.9% runtime.mallocgc
+      75   6.4%  49.6%       78   6.6% runtime.settype_flush
+      74   6.3%  55.9%       75   6.4% flushptrbuf
+      64   5.5%  61.4%       64   5.5% runtime.memmove
+      63   5.4%  66.8%      524  44.7% runtime.growslice
+      51   4.3%  71.1%       51   4.3% main.DFS
+      50   4.3%  75.4%      146  12.4% runtime.MCache_Alloc
+</code></pre><p>内存分配以及伴随而来的垃圾回收（<code>runtime.mallocgc</code>）现在占到了 50.9%。我们可以用 <code>web mallocgc</code> 来看看究竟是谁在驱动这些分配。图中节点太多，小样本的节点遮蔽了大头，这时可以用 <code>--nodefraction=0.1</code> 过滤掉占比不到 10% 的节点：</p><pre><code>$ go tool pprof --nodefraction=0.1 havlak4 havlak4.prof
+(pprof) web mallocgc
+</code></pre><p>现在粗箭头一目了然：<code>FindLoops</code> 是绝大部分 GC 压力的源头。列表查看一下这个函数，发现大量的分配集中在函数开头：</p><pre><code>(pprof) list FindLoops
+...
+     .    145  277:     nonBackPreds := make([][]int, size)
+     .      9  278:     backPreds := make([][]int, size)
+     .      1  280:     number := make([]int, size)
+     .     17  281:     header := make([]int, size, size)
+     .      .  284:     nodes := make([]*UnionFindNode, size, size)
+     2     79  287:             nodes[i] = new(UnionFindNode)
+...
+</code></pre><p>每次调用 <code>FindLoops</code> 都会分配一大坨记账用的数据结构。因为基准测试调用了 <code>FindLoops</code> 多达 50 次，这些分配累加起来产生了大量的垃圾，进而给 GC 带来了沉重的负担。</p><p>有垃圾回收的语言不意味着你可以无视内存分配。在这个场景中，最直接的方案是引入一个缓存，让每次 <code>FindLoops</code> 调用尽可能复用上一轮已经分配好的存储空间。（事实上，Hundt 在他的论文中提到 Java 版本正是做了这个改动才获得了可接受的性能，但他并未对其他有 GC 的语言实现做同样的优化。）</p><p>我们添加一个全局的 <code>cache</code> 结构体来持有这些可复用的存储空间，然后让 <code>FindLoops</code> 在分配之前先去 cache 里查找。当然，全局变量从软件工程角度看是坏实践——它意味着对 <code>FindLoops</code> 的并发调用不再安全。但在这里，我们只做最小的改动来验证什么对性能至关重要；最终版本会用一个独立的 <code>LoopFinder</code> 实例来管理这些内存，恢复并发安全。</p><pre><code>$ make havlak5
+go build havlak5.go
+$ ./xtime ./havlak5
+# of loops: 76000 (including 1 artificial root node)
+8.03u 0.06s 8.11r 770352kB ./havlak5
+</code></pre><p>还有一些可以进一步清理和优化的地方，但所用的剖析技巧都已经在前面演示过了。内层循环的工作列表可以在迭代间乃至 <code>FindLoops</code> 的多次调用间复用，还可以与当轮生成的"节点池"合并。类似地，循环图的存储也可以在每轮迭代中复用而非重新分配。<a href=https://github.com/rsc/benchgraffiti/blob/master/havlak/havlak6.go>最终版本</a>采用了地道的 Go 风格编写，使用了数据结构和方法的组合。风格改动对运行时间的影响微乎其微：算法和约束保持不变。</p><p>最终版本 2.29 秒跑完，内存占用 351 MB：</p><pre><code>$ make havlak6
+go build havlak6.go
+$ ./xtime ./havlak6
+# of loops: 76000 (including 1 artificial root node)
+2.26u 0.02s 2.29r 360224kB ./havlak6
+</code></pre><p>这比我们最初出发时的版本快了 <strong>11 倍</strong>。即便禁用循环图缓存（只复用记账用的那部分内存），程序也比原始版本快 6.7 倍，且内存反而省了 1.5 倍。</p><pre><code>$ ./xtime ./havlak6 -reuseloopgraph=false
+# of loops: 76000 (including 1 artificial root node)
+3.69u 0.06s 3.76r 797120kB ./havlak6
+</code></pre><p>当然，此时再把 Go 程序和原始的 C++ 程序放在一起比较已经不太公平了——原版 C++ 也用了一堆 <code>set</code>，而更合适的选择显然是 <code>vector</code>。为了做个理智检验，我们把最终版的 Go 程序翻译成了<a href=https://github.com/rsc/benchgraffiti/blob/master/havlak/havlak6.cc>等效的 C++ 代码</a>，其运行时间与 Go 版非常接近：</p><pre><code>$ make havlak6cc
+g++ -O3 -o havlak6cc havlak6.cc
+$ ./xtime ./havlak6cc
+# of loops: 76000 (including 1 artificial root node)
+1.99u 0.19s 2.19r 387936kB ./havlak6cc
+</code></pre><p>Go 程序跑得几乎和 C++ 一样快。由于 C++ 用的是自动析构和分配而非显式缓存，C++ 代码稍短、写起来也稍微省心一些，但差别远没有到夸张的程度：</p><pre><code>$ wc havlak6.cc; wc havlak6.go
+ 401 1220 9040 havlak6.cc
+ 461 1441 9467 havlak6.go
+</code></pre><p>基准测试的价值和其所度量的程序质量同等重要。我们通过 <code>go tool pprof</code> 审视了一个低效的 Go 程序，然后将其性能提升了一个数量级，内存消耗降到原来的 1/3.7。随后与同等优化过的 C++ 程序的对比表明，只要程序员用心控制内层循环产生的垃圾量，Go 完全可以和 C++ 在性能上一较高下。</p><p>本文中用到的程序源码、Linux x86-64 二进制及剖析文件，均可在 GitHub 上的 <a href=https://github.com/rsc/benchgraffiti/>benchgraffiti 项目</a>找到。</p><p>如前所述，<a href=/cmd/go/#Test_packages><code>go test</code></a> 已经内置了这些剖析参数：只要定义好<a href=/pkg/testing/>基准测试函数</a>，一切就绪。此外，还有一个标准的 HTTP 接口对外暴露剖析数据。在一个 HTTP 服务器中，只需添加：</p><pre><code class=language-go>import _ &quot;net/http/pprof&quot;
+</code></pre><p>就会自动在 <code>/debug/pprof/</code> 下注册若干个 handler。然后你可以直接用 <code>go tool pprof</code> 加上服务器 URL 来下载并分析一份实时剖析数据：</p><pre><code class=language-bash>go tool pprof http://localhost:6060/debug/pprof/profile   # 30 秒 CPU profile
+go tool pprof http://localhost:6060/debug/pprof/heap      # 堆内存 profile
+go tool pprof http://localhost:6060/debug/pprof/block     # goroutine 阻塞 profile
+</code></pre><p>goroutine 阻塞 profile 将留待后续文章讲解。敬请期待。</p><hr><h3 id=补充更轻量的诊断工具-gops>补充：更轻量的诊断工具 gops <a href=#%e8%a1%a5%e5%85%85%e6%9b%b4%e8%bd%bb%e9%87%8f%e7%9a%84%e8%af%8a%e6%96%ad%e5%b7%a5%e5%85%b7-gops class=anchor aria-hidden=true>#</a><a href=#补充更轻量的诊断工具-gops class=anchor aria-hidden=true>#</a></h3><p>如果你觉得手动编写 <code>runtime/pprof</code> 的采样代码有些繁琐，或者希望在不修改代码的情况下快速查看系统中运行的 Go 程序的状态，Google 开源的 <a href=https://github.com/google/gops>gops</a> 是一个很好的选择。</p><p>gops 是一个简化版的 Go 程序诊断工具，它由一个命令行工具 <code>gops</code> 和一个可嵌入 Go 程序的轻量库组成。程序只需引入 gops 库，就能在本地启动一个 agent，然后你可以通过 <code>gops</code> 命令行工具与之交互：</p><pre><code class=language-go>import &quot;github.com/google/gops/agent&quot;
+
+func main() {
+    // 启动 gops agent，监听本地环回地址
+    if err := agent.Listen(agent.Options{}); err != nil {
+        log.Fatal(err)
+    }
+    // ... 你的业务逻辑
+}
+</code></pre><p>然后通过命令行：</p><pre><code class=language-bash># 列出系统中所有集成了 gops 的 Go 进程
+$ gops
+98324   go1.18  /usr/local/bin/myapp
+98325   go1.21  /usr/local/bin/another
+
+# 查看进程的调用栈（类似 pprof goroutine）
+$ gops stack 98324
+
+# 查看内存统计
+$ gops memstats 98324
+
+# 直接生成 CPU profile（无需提前在代码中添加采样逻辑）
+$ gops pprof-cpu 98324
+
+# 查看当前运行的 Go 版本
+$ gops stats 98324
+</code></pre><p>gops 的核心优势在于<strong>零配置诊断</strong>——只要程序集成了 gops agent，无需在代码中预先添加 <code>runtime/pprof</code> 的采样开关，也不需要暴露 HTTP pprof 端点，就可以随时通过命令行对运行中的程序进行诊断。这对于长期运行的后台服务、不方便重启的生产环境排查尤其有用。</p><blockquote><p>gops 本质上是对 <code>runtime/pprof</code> 和 <code>net/http/pprof</code> 的轻量封装，它的 agent 监听在本地 TCP 端口上（默认未公开），通过简单的文本协议通信，比 HTTP pprof 端点更轻量，也不需要引入 <code>net/http</code> 依赖。</p></blockquote><div class=edit-page><a href=https://github.com/hitzhangjie/myspace/blob/master/content/blog/languages/golang/4-go%e6%80%a7%e8%83%bd%e4%bc%98%e5%8c%96/2026-07-18-%e8%af%a6%e8%a7%a3Go%e7%a8%8b%e5%ba%8f%e6%80%a7%e8%83%bd%e5%89%96%e6%9e%90-pprof%e7%af%87.md><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2"><path d="M17 3a2.828 2.828.0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+Edit this page on GitHub</a></div><div class="docs-navigation d-flex justify-content-between"><a href=/blog/2026-07-18-pprof%E5%B7%A5%E5%85%B7%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97-%E5%91%BD%E4%BB%A4%E4%B8%8E%E7%94%A8%E6%B3%95%E8%AF%A6%E8%A7%A3/><div class="card my-1"><div class="card-body py-2">&larr; pprof 工具完全指南：命令与用法详解（译）</div></div></a><a class=ms-auto href=/blog/2026-07-16-barrier-instructions-reference/><div class="card my-1"><div class="card-body py-2">内存屏障指令参考：从 x86 到 ARM 的完整对照 &rarr;</div></div></a></div></main><div class="docs-toc d-none d-xl-block col-xl-3"><nav class=docs-toc-inner aria-label="Secondary navigation"><div class=page-links><h3>On this page</h3><nav id=TableOfContents><ul><li><ul><li><a href=#启用剖析>启用剖析</a><ul><li><a href=#补充更轻量的诊断工具-gops>补充：更轻量的诊断工具 gops</a></li></ul></li></ul></li></ul></nav></div></nav></div></div></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.b49b5c2c44fdca07ee730ad1196420771d2a94176c7d367b414fb2e23f6a0ac3fbae11c2a6263392f17450f222ec2b518586e8ea96e23c361eb3ee8a255e145c.js integrity="sha512-tJtcLET9ygfucwrRGWQgdx0qlBdsfTZ7QU+y4j9qCsP7rhHCpiYzkvF0UPIi7CtRhYbo6pbiPDYes+6KJV4UXA==" crossorigin=anonymous defer></script><script src=/js/highlight.min.1a731f820940167b6fd11a8540a1ae7c4627f4009b13e229c411e9d890612a3f6b618133d96477c2cf238d6faaa28d745cd5141e443aa34f62785510dc873430.js integrity="sha512-GnMfgglAFntv0RqFQKGufEYn9ACbE+IpxBHp2JBhKj9rYYEz2WR3ws8jjW+qoo10XNUUHkQ6o09ieFUQ3Ic0MA==" crossorigin=anonymous defer></script><script src=/main.min.b58b01cf031e169076ec659deefba76e6f28ee7fb673b98a8f8f515705db29d50a62f11be71512f1e11b67fd203f11d5c4a911b43b4580eb9d4ca6b0833a4a4a.js integrity="sha512-tYsBzwMeFpB27GWd7vunbm8o7n+2c7mKj49RVwXbKdUKYvEb5xUS8eEbZ/0gPxHVxKkRtDtFgOudTKawgzpKSg==" crossorigin=anonymous defer></script><script src=/index.min.2ecb4040f34b507399808022b2ed8445451ddf9b4cf52484d118c8f56bc1cab47a9e19f9eb98eec1cfa1914663f3d9a14d096bbd73ba3c3c3e88d4214baec19a.js integrity="sha512-LstAQPNLUHOZgIAisu2ERUUd35tM9SSE0RjI9WvByrR6nhn565juwc+hkUZj89mhTQlrvXO6PDw+iNQhS67Bmg==" crossorigin=anonymous defer></script></body></html>

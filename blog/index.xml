@@ -1,4 +1,102 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blog on</title><link>/blog/</link><description>Recent content in Blog on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:49:55 +0000</lastBuildDate><atom:link href="/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>内存屏障指令参考：从 x86 到 ARM 的完整对照</title><link>/blog/2026-07-16-barrier-instructions-reference/</link><pubDate>Thu, 16 Jul 2026 22:00:00 +0800</pubDate><guid>/blog/2026-07-16-barrier-instructions-reference/</guid><description>&lt;p&gt;前面的文章分别从 &lt;a href="2026-07-16-store-buffer-and-memory-barrier.md"&gt;Store Buffer 与 Invalidate Queue&lt;/a&gt;、&lt;a href="2026-07-16-instruction-reordering.md"&gt;指令重排序&lt;/a&gt;、&lt;a href="2026-07-16-intel-lock-instruction-prefix.md"&gt;LOCK 前缀&lt;/a&gt; 等角度讨论了内存屏障&amp;quot;为什么存在&amp;quot;和&amp;quot;解决什么问题&amp;quot;。但当你打开 Linux 内核源码、Go runtime 汇编，或者用 &lt;code&gt;objdump&lt;/code&gt; 反汇编一段并发代码时，真正映入眼帘的是一条条具体的&lt;strong&gt;汇编指令&lt;/strong&gt;。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blog on</title><link>/blog/</link><description>Recent content in Blog on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:49:55 +0000</lastBuildDate><atom:link href="/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>Go Module：依赖管理与语义化版本控制</title><link>/blog/2019-07-31-go-module/</link><pubDate>Sat, 18 Jul 2026 13:09:03 +0800</pubDate><guid>/blog/2019-07-31-go-module/</guid><description>&lt;h1 id="go-module依赖管理与语义化版本控制"&gt;Go Module：依赖管理与语义化版本控制 &lt;a href="#go-module%e4%be%9d%e8%b5%96%e7%ae%a1%e7%90%86%e4%b8%8e%e8%af%ad%e4%b9%89%e5%8c%96%e7%89%88%e6%9c%ac%e6%8e%a7%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="gopath与gomodule兼容性"&gt;GOPATH与GoModule兼容性 &lt;a href="#gopath%e4%b8%8egomodule%e5%85%bc%e5%ae%b9%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;GoModule目前在GO1.11和Go1.12还是一个处于体验的过渡阶段，Go1.13中将作为默认选项，代替GOPATH。&lt;/p&gt;
+&lt;p&gt;表现在：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果当前工程位于GOPATH路径下，即便工程或者父路径中存在go.mod，启用GOPATH而非GoModule；&lt;/li&gt;
+&lt;li&gt;如果当前工程不在GOPATH路径下，且工程或父路径中存在go.mod，此时启用GoModule；&lt;/li&gt;
+&lt;li&gt;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;&amp;hellip;不存在go.mod，此时启用GOPATH；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;关于第一点，GO1.13中的表现会有所不同，默认启用GoModule而非GOPATH。&lt;/p&gt;
+&lt;h2 id="创建一个module"&gt;创建一个Module &lt;a href="#%e5%88%9b%e5%bb%ba%e4%b8%80%e4%b8%aamodule" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;go mod init github.cmo/hitzhangjie/hello
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;一般执行 &lt;code&gt;go test&lt;/code&gt; 的时候，会显示一个临时生成的module名，这个名字是以 &amp;ldquo;路径名+时间戳+commit版本号” 命名的，但是当像上面这样初始化之后，module名就是 ”github.com/hitzhangjie/hello” 了，如果hello路径下又创建子目录world，那么world对应的module名就是 “github.com/hitzhangjie/hello/world&amp;rdquo;。&lt;/p&gt;
+&lt;p&gt;此时会生成两个文件：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;go.mod，第一行是当前模块的名字，后面是依赖的module及其版本信息&lt;/li&gt;
+&lt;li&gt;go.sum，依赖的module对应版本的校验和信息&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="添加一个dependency"&gt;添加一个Dependency &lt;a href="#%e6%b7%bb%e5%8a%a0%e4%b8%80%e4%b8%aadependency" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;写代码的时候，如果import了其他module，那么在import、编译、测试的时候会自动更新go.mod、go.sum。&lt;/p&gt;
+&lt;p&gt;比如：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;cd hello
+go test
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;会自动拉取hello这个module代码中import的其他module，并更新go.mod和go.sum。&lt;/p&gt;
+&lt;h2 id="列出依赖的dependencies"&gt;列出依赖的Dependencies &lt;a href="#%e5%88%97%e5%87%ba%e4%be%9d%e8%b5%96%e7%9a%84dependencies" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;有时需要查看当前module依赖的所有module及其版本详情：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;go list -m all
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;有时可能想查看某个dependency的所有可用tagged版本，以便更新、废弃某些版本：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;go list -m -versions rsc.io/sampler
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="更新一个dependency"&gt;更新一个Dependency &lt;a href="#%e6%9b%b4%e6%96%b0%e4%b8%80%e4%b8%aadependency" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当希望更新一个dependency的时候，可以通过 &lt;code&gt;go get&lt;/code&gt; 来完成。这里版本构成遵循major.minor.patch这样的格式。&lt;/p&gt;
+&lt;h3 id="更新dependeny到一个新的major版本"&gt;更新Dependeny到一个新的Major版本 &lt;a href="#%e6%9b%b4%e6%96%b0dependeny%e5%88%b0%e4%b8%80%e4%b8%aa%e6%96%b0%e7%9a%84major%e7%89%88%e6%9c%ac" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;以更新 “rsc.io/sampler” 为例，假定当前版本是v1，对应 ”import “rsc.io/sampler”，假定有可用版本v3：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;go list -m -versions rsc.io/sampler
+v1.0.0 v2.0.0 v3.0.0
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;更新到v3.0.0，go get会自动更新到最新版本：&lt;/p&gt;</description></item><item><title>Go string与C string的区别</title><link>/blog/2019-05-23-gostring_vs_cstring/</link><pubDate>Sat, 18 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2019-05-23-gostring_vs_cstring/</guid><description>&lt;p&gt;go string和c string是有区别的：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;c string使用&lt;code&gt;'\0'&lt;/code&gt;作为字符串结尾：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;char *s = “hello\0world&amp;quot;;
+printf(&amp;quot;%s\n&amp;quot;, s);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;只会打印出hello，world是打不出来的，c以\0作为字符串的结束标识。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;go string只是将&lt;code&gt;'\0'&lt;/code&gt;当做普通的不可点字符，而不是字符串结尾：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;b := []byte{'h','e','l','l','o','\000','w','o','r','l','d'}
+println(string(b))
+idx := bytes.IndexByte(b, '\000')
+println(idx)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;会打印出helloworld，而非hello！&lt;/p&gt;
+&lt;p&gt;go string的定义可以参考StringHeader结构体的定义：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type StringHeader struct {
+data unsafe.Pointer
+len int
+cap int
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;另外要注意，golang里面将\0当做是一个八进制数值的开始标识，不管是在字符串中，还是再byte中，如果定义一个字符串&lt;code&gt;s := “hello\0world”&lt;/code&gt;会报错：non-octal character in escape sequence，因为\0wo不是一个有效的八进制数值。&lt;/p&gt;
+&lt;p&gt;\0结尾是c spec规定的，go不认，go里面就是StringHeader {data, cap, len}，go里面不可见字符就是不可见字符，没赋予它截断字符串的特殊含义，这么想，感觉go比c设计的要好一点。&lt;/p&gt;</description></item><item><title>pprof 工具完全指南：命令与用法详解（译）</title><link>/blog/2026-07-18-pprof%E5%B7%A5%E5%85%B7%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97-%E5%91%BD%E4%BB%A4%E4%B8%8E%E7%94%A8%E6%B3%95%E8%AF%A6%E8%A7%A3/</link><pubDate>Sat, 18 Jul 2026 10:30:00 +0800</pubDate><guid>/blog/2026-07-18-pprof%E5%B7%A5%E5%85%B7%E5%AE%8C%E5%85%A8%E6%8C%87%E5%8D%97-%E5%91%BD%E4%BB%A4%E4%B8%8E%E7%94%A8%E6%B3%95%E8%AF%A6%E8%A7%A3/</guid><description>&lt;p&gt;原文：&lt;a href="https://github.com/google/pprof/blob/main/doc/README.md"&gt;pprof/doc/README.md&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;pprof 是一个用于&lt;strong&gt;可视化与分析剖析数据&lt;/strong&gt;的工具。它读取 &lt;code&gt;profile.proto&lt;/code&gt; 格式的采样数据，生成文本和图形化报告，底层借助 dot 可视化包来渲染图形。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;profile.proto&lt;/code&gt; 是一种 protobuf 格式，描述了一组调用栈及其符号化信息。通常它承载的是统计性采样的调用栈，也就是我们常说的 profiling 数据。剖析数据可以从本地文件读取，也可以通过 HTTP 远程拉取。多个同类型的 Profile 之间可以进行聚合或对比分析。&lt;/p&gt;
+&lt;p&gt;当采样数据中只包含机器地址时，pprof 可以借助操作系统自带的 binutils 工具（&lt;code&gt;addr2line&lt;/code&gt; 和 &lt;code&gt;nm&lt;/code&gt;）来完成符号化。&lt;/p&gt;
+&lt;h2 id="pprof-中的-profile"&gt;pprof 中的 Profile &lt;a href="#pprof-%e4%b8%ad%e7%9a%84-profile" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;每个 Profile 本质上就是一组符合 &lt;code&gt;profile.proto&lt;/code&gt; 格式的采样（Sample）的合集。每个 Sample 对应位置层级（location hierarchy）中的一个点，并关联一个或多个数值以及一组标签（Label）。最常见的情况是，这些数据来自对某个程序的统计性采样。但 pprof 本身对 Profile 的语义并无硬性要求，所以其他用途也完全可能。&lt;/p&gt;
+&lt;h2 id="三种使用模式"&gt;三种使用模式 &lt;a href="#%e4%b8%89%e7%a7%8d%e4%bd%bf%e7%94%a8%e6%a8%a1%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;pprof 支持三种使用方式：&lt;/p&gt;
+&lt;h3 id="报告生成模式"&gt;报告生成模式 &lt;a href="#%e6%8a%a5%e5%91%8a%e7%94%9f%e6%88%90%e6%a8%a1%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;pprof &amp;lt;format&amp;gt; [options] source
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;pprof 按指定的输出格式生成报告后直接退出。&lt;/p&gt;
+&lt;h3 id="交互终端模式"&gt;交互终端模式 &lt;a href="#%e4%ba%a4%e4%ba%92%e7%bb%88%e7%ab%af%e6%a8%a1%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;pprof [options] source
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;启动一个交互式 shell，用户可以在其中逐条输入命令。输入 &lt;code&gt;help&lt;/code&gt; 获取在线帮助。&lt;/p&gt;
+&lt;h3 id="web-界面模式"&gt;Web 界面模式 &lt;a href="#web-%e7%95%8c%e9%9d%a2%e6%a8%a1%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;pprof -http=[host]:[port] [options] source
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;在指定端口启动一个 HTTP 服务器，在浏览器中访问 &lt;code&gt;http://&amp;lt;host&amp;gt;:&amp;lt;port&amp;gt;/&lt;/code&gt; 即可使用图形界面进行交互式分析。&lt;/p&gt;</description></item><item><title>详解Go程序性能剖析：pprof篇（译）</title><link>/blog/2026-07-18-%E8%AF%A6%E8%A7%A3go%E7%A8%8B%E5%BA%8F%E6%80%A7%E8%83%BD%E5%89%96%E6%9E%90-pprof%E7%AF%87/</link><pubDate>Sat, 18 Jul 2026 10:30:00 +0800</pubDate><guid>/blog/2026-07-18-%E8%AF%A6%E8%A7%A3go%E7%A8%8B%E5%BA%8F%E6%80%A7%E8%83%BD%E5%89%96%E6%9E%90-pprof%E7%AF%87/</guid><description>&lt;p&gt;原文：&lt;a href="https://go.dev/blog/pprof"&gt;Profiling Go Programs&lt;/a&gt; — Russ Cox, 2011 年 6 月；马盛浩更新于 2013 年 5 月&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;2011 年的 Scala Days 上，Robert Hundt 发表了一篇题为 &lt;a href="http://research.google.com/pubs/pub37122.html"&gt;Loop Recognition in C++/Java/Go/Scala&lt;/a&gt; 的论文。文中用 C++、Go、Java、Scala 四种语言实现了同一个循环查找算法——编译器流分析中常见的那种——然后用这些程序的运行数据来讨论各语言的典型性能特征。其中 Go 的那个版本运行相当慢，这恰好给了我们一个绝佳的机会，来展示如何借助 Go 的剖析工具，把一个慢程序一步步变快。&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;借助 Go 的剖析工具识别并修正具体的性能瓶颈，我们可以让这个循环查找程序快上一个数量级，同时将内存消耗降至原来的 1/6。&lt;/em&gt;（更新：由于 &lt;code&gt;gcc&lt;/code&gt; 的 &lt;code&gt;libstdc++&lt;/code&gt; 近期做了优化，内存降幅调整为 1/3.7。）&lt;/p&gt;
+&lt;p&gt;Hundt 的论文没有注明各语言编译器及工具链的具体版本。本文中，我们使用 &lt;code&gt;6g&lt;/code&gt; Go 编译器的最新 weekly 快照版本，以及 Ubuntu Natty 发行版附带的 &lt;code&gt;g++&lt;/code&gt; 版本。（我们不会涉及 Java 和 Scala，因为我们对这两种语言的高效编程并不精通，放在一起比较有失公允。既然论文中 C++ 是跑得最快的，这里拿 C++ 来对比就够了。）更新：本文更新版使用 Go 编译器在 amd64 上的最新开发快照，以及 2013 年 3 月发布的 &lt;code&gt;g++&lt;/code&gt; 4.8.0。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ go version
+go version devel +08d20469cc20 Tue Mar 26 08:27:18 2013 +0100 linux/amd64
+$ g++ --version
+g++ (GCC) 4.8.0
+Copyright (C) 2013 Free Software Foundation, Inc.
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;测试机配置：3.4GHz Core i7-2600 CPU，16 GB RAM，Gentoo Linux 3.8.4-gentoo 内核，已禁用 CPU 频率调节。&lt;/p&gt;</description></item><item><title>内存屏障指令参考：从 x86 到 ARM 的完整对照</title><link>/blog/2026-07-16-barrier-instructions-reference/</link><pubDate>Thu, 16 Jul 2026 22:00:00 +0800</pubDate><guid>/blog/2026-07-16-barrier-instructions-reference/</guid><description>&lt;p&gt;前面的文章分别从 &lt;a href="2026-07-16-store-buffer-and-memory-barrier.md"&gt;Store Buffer 与 Invalidate Queue&lt;/a&gt;、&lt;a href="2026-07-16-instruction-reordering.md"&gt;指令重排序&lt;/a&gt;、&lt;a href="2026-07-16-intel-lock-instruction-prefix.md"&gt;LOCK 前缀&lt;/a&gt; 等角度讨论了内存屏障&amp;quot;为什么存在&amp;quot;和&amp;quot;解决什么问题&amp;quot;。但当你打开 Linux 内核源码、Go runtime 汇编，或者用 &lt;code&gt;objdump&lt;/code&gt; 反汇编一段并发代码时，真正映入眼帘的是一条条具体的&lt;strong&gt;汇编指令&lt;/strong&gt;。&lt;/p&gt;
 &lt;p&gt;这些指令就是本文的主角。下面按架构逐一梳理——每条指令长什么样、做什么事、在什么场景下用。&lt;/p&gt;
 &lt;h2 id="x86--x86-64"&gt;x86 / x86-64 &lt;a href="#x86--x86-64" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;x86 提供三条专用的屏障指令，外加一个&amp;quot;全能选手&amp;quot; LOCK 前缀。&lt;/p&gt;
@@ -1281,7 +1379,16 @@ top: -170px;
 &lt;p&gt;但是：
 1）其他任务可能会涉及到阻塞、唤醒，也会涉及到奖励、惩罚导致的动态优先级、动态时间片调整。
 2）我们创建的线程也是系统的一部分，它的时间片也会因为其他进程动态优先级变化而变化。
-3）而且即使我们确定了任务的执行时间片，抢占检测时，只要有vruntime比它小一个时间片的，就可以被抢占，不一定执行完自己的时间片。&lt;/p&gt;</description></item><item><title>QRCode/二维码是如何工作的</title><link>/blog/2025-04-11-how_qrcode_works/</link><pubDate>Fri, 11 Apr 2025 12:00:00 +0800</pubDate><guid>/blog/2025-04-11-how_qrcode_works/</guid><description>&lt;h1 id="二维码是如何工作的"&gt;二维码是如何工作的 &lt;a href="#%e4%ba%8c%e7%bb%b4%e7%a0%81%e6%98%af%e5%a6%82%e4%bd%95%e5%b7%a5%e4%bd%9c%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+3）而且即使我们确定了任务的执行时间片，抢占检测时，只要有vruntime比它小一个时间片的，就可以被抢占，不一定执行完自己的时间片。&lt;/p&gt;</description></item><item><title>Go精进之路：从错误中学习</title><link>/blog/2025-04-12-0001-go%E5%AE%B9%E6%98%93%E4%B8%8A%E6%89%8B%E4%BD%86%E4%B8%8D%E4%BB%A3%E8%A1%A8%E8%BD%BB%E6%9D%BE%E5%B0%B1%E8%83%BD%E6%8E%8C%E6%8F%A1/</link><pubDate>Sat, 12 Apr 2025 00:05:08 +0800</pubDate><guid>/blog/2025-04-12-0001-go%E5%AE%B9%E6%98%93%E4%B8%8A%E6%89%8B%E4%BD%86%E4%B8%8D%E4%BB%A3%E8%A1%A8%E8%BD%BB%E6%9D%BE%E5%B0%B1%E8%83%BD%E6%8E%8C%E6%8F%A1/</guid><description>&lt;h1 id="go精进之路从错误中学习"&gt;Go精进之路：从错误中学习 &lt;a href="#go%e7%b2%be%e8%bf%9b%e4%b9%8b%e8%b7%af%e4%bb%8e%e9%94%99%e8%af%af%e4%b8%ad%e5%ad%a6%e4%b9%a0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;img src="https://fastly.jsdelivr.net/gh/bucketio/img12@main/2025/04/11/1744347781802-c70c26c3-2838-4b80-bd98-5a38c29b5ec2.png" alt=""&gt;&lt;/p&gt;
+&lt;p&gt;欢迎来到这个Go语言开发经验分享系列！&lt;/p&gt;
+&lt;p&gt;时光荏苒，转眼间Go语言已经陪伴我们走过了16个春秋。自2009年横空出世，Go语言凭借其简洁高效的特性，迅速在服务器开发、分布式系统、以及各种实用工具链的构建中获得了广泛的应用。它就像一位老朋友，默默地支撑着互联网的基石。&lt;/p&gt;
+&lt;p&gt;Go语言的设计者们吸取了C和Java等语言的经验教训，力求打造一种既易于学习、又高效可靠的编程语言。简洁、易用、高效，这正是Go语言的核心理念，而它也几乎做到了这一点。初学者很容易上手，几行代码就能完成一些简单的任务，这让很多人对Go语言充满了兴趣。&lt;/p&gt;
+&lt;p&gt;然而，Go语言的“容易上手”并不意味着它“很简单”。要真正掌握Go语言，成为一名经验丰富的Go开发者，需要深入理解其底层机制、并发模型、以及最佳实践。就像学习任何一门技术一样，入门只是第一步，真正的挑战在于不断地学习、实践和总结。&lt;/p&gt;
+&lt;p&gt;我是一名拥有近10年开发经验的工程师，其中有近7年专注于Go语言的开发。在这些年中，我带领团队完成了多个大型项目的开发和上线，也积累了大量的经验教训。我经常在项目培训中看到一些项目成员会犯一些常见的Go编程错误，这些错误往往会影响项目的质量和效率。为了避免这些错误，我整理了一份详细的编程规范和最佳实践指南。&lt;/p&gt;
+&lt;p&gt;在整理这些材料的过程中，我偶然发现了《100 Go Mistakes》这本书，书中提到的问题与我在实践中遇到的情况如出一辙，欣喜之余也给此书网站贡献了中文版的目录翻译。正如书中所说：“Go is easy to learn but not that simple to master”。 这句话精准地概括了Go语言的学习曲线。&lt;/p&gt;
+&lt;p&gt;现在，我们的项目已经成功上线并进入了稳定运营阶段，作为团队的Go技术专家，我也终于可以抽出一些时间，将这些年来积累的经验教训分享给大家。希望这些内容能够帮助大家避免一些弯路，提升Go语言开发技能，并为你们的团队带来一些启发。&lt;/p&gt;
+&lt;p&gt;如果您对Go语言开发感兴趣，欢迎关注我，我会持续分享更多实战经验和技术心得。让我们一起探索Go语言的魅力，共同成长！&lt;/p&gt;</description></item><item><title>QRCode/二维码是如何工作的</title><link>/blog/2025-04-11-how_qrcode_works/</link><pubDate>Fri, 11 Apr 2025 12:00:00 +0800</pubDate><guid>/blog/2025-04-11-how_qrcode_works/</guid><description>&lt;h1 id="二维码是如何工作的"&gt;二维码是如何工作的 &lt;a href="#%e4%ba%8c%e7%bb%b4%e7%a0%81%e6%98%af%e5%a6%82%e4%bd%95%e5%b7%a5%e4%bd%9c%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;1994年日本的株式会社电波东洋（Denso Wave）设计了二维码用来追踪产品组装，那时候使用场景还很单一。到了2010年移动互联网时代二维码开始大放异彩，比如微信扫码加好友、扫码点餐、扫码支付等等，这些已经变成了大家日常衣食住行的一部分。日常生活中虽然经常使用，但是很多人并不理解二维码，因为不理解也多了一些担心，尤其是老年人。本文对二维码的构成比如数据编码、解码方式，以及二维码可以存储哪些信息，二维码的类型，以及在移动设备、PC上如何扫码，以及扫码时的安全性问题进行简单描述。&lt;/p&gt;
 &lt;h2 id="揭秘二维码从工业追踪到移动支付安全与便捷背后的原理"&gt;揭秘二维码：从工业追踪到移动支付，安全与便捷背后的原理 &lt;a href="#%e6%8f%ad%e7%a7%98%e4%ba%8c%e7%bb%b4%e7%a0%81%e4%bb%8e%e5%b7%a5%e4%b8%9a%e8%bf%bd%e8%b8%aa%e5%88%b0%e7%a7%bb%e5%8a%a8%e6%94%af%e4%bb%98%e5%ae%89%e5%85%a8%e4%b8%8e%e4%be%bf%e6%8d%b7%e8%83%8c%e5%90%8e%e7%9a%84%e5%8e%9f%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;二维码，这个看似简单的黑白方块，已经深深融入了我们的日常生活。从微信扫码、点餐支付，到各类活动的入场验证，它无处不在。然而，很多人虽然经常使用，却对其背后的原理和安全性存在疑问。本文将带你深入了解二维码的历史、应用、构成、类型、扫码方式以及安全性问题，让你对这个神奇的工具有更全面的认识。&lt;/p&gt;
@@ -6329,7 +6436,30 @@ rm unpin:
 &lt;li&gt;Documentation：修改代码的同时，是否同步更新了相关文档&lt;/li&gt;
 &lt;/ul&gt;
 &lt;h2 id="picking-the-best-reviewers"&gt;Picking the Best Reviewers &lt;a href="#picking-the-best-reviewers" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;一般，Code review之前，我们应该确定谁才是最好的、最合适的reviewer，这个reviewer应该**“有能力在比较合理的时间内对代码修改是否OK做出透彻、全面的判断”**。通常reviewer应该是编写被修改代码的owner，可能他是相关项目、相关源文件、相关代码行的创建者或者修改者，意味着我们发起Code review时，同一个项目可能需要涉及到多个reviewer进行Code review，让不同的、最合适的reviewer来review CL中涉及到的不同部分。&lt;/p&gt;</description></item><item><title>Dave Cheney - 7 ways to Profile Go Applications</title><link>/blog/2019-07-06-7-ways-to-profile-go-applications/</link><pubDate>Sat, 06 Jul 2019 12:00:00 +0800</pubDate><guid>/blog/2019-07-06-7-ways-to-profile-go-applications/</guid><description>&lt;p&gt;&lt;a href="https://www.youtube.com/watch?v=2h_NFBFrciI"&gt;Golang UK Conference 2016 - Dave Cheney - Seven ways to Profile Go Applications&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;一般，Code review之前，我们应该确定谁才是最好的、最合适的reviewer，这个reviewer应该**“有能力在比较合理的时间内对代码修改是否OK做出透彻、全面的判断”**。通常reviewer应该是编写被修改代码的owner，可能他是相关项目、相关源文件、相关代码行的创建者或者修改者，意味着我们发起Code review时，同一个项目可能需要涉及到多个reviewer进行Code review，让不同的、最合适的reviewer来review CL中涉及到的不同部分。&lt;/p&gt;</description></item><item><title>Go map / sync.Map / concurrent_map benchmark</title><link>/blog/2019-08-22-go-map/</link><pubDate>Thu, 22 Aug 2019 14:32:38 +0800</pubDate><guid>/blog/2019-08-22-go-map/</guid><description>&lt;p&gt;&lt;strong&gt;对 map、sync.Map、&lt;a href="https://github.com/orcaman/concurrent-map"&gt;concurrent_map&lt;/a&gt; 进行了 benchmark，结果如下：&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;BenchmarkDeleteEmptyMap-8 20000000 86.9 ns/op
+BenchmarkDeleteEmptySyncMap-8 300000000 5.16 ns/op
+BenchmarkDeleteEmptyCMap-8 50000000 34.8 ns/op
+BenchmarkDeleteMap-8 10000000 131 ns/op
+BenchmarkDeleteSyncMap-8 10000000 135 ns/op
+BenchmarkDeleteCMap-8 30000000 37.0 ns/op
+BenchmarkLoadEmptyMap-8 20000000 87.9 ns/op
+BenchmarkLoadEmptySyncMap-8 300000000 5.03 ns/op
+BenchmarkLoadEmptyCMap-8 100000000 17.1 ns/op
+BenchmarkLoadMap-8 20000000 111 ns/op
+BenchmarkLoadSyncMap-8 100000000 12.8 ns/op
+BenchmarkLoadCMap-8 100000000 22.5 ns/op
+BenchmarkSetMap-8 10000000 187 ns/op
+BenchmarkSetSyncMap-8 5000000 396 ns/op
+BenchmarkSetCMap-8 20000000 84.9 ns/op
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;benchmark 结果表明：&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;map+rwmutex 这种方式，锁粒度比较大，增删改查操作耗时相对来说都是比较明显的&lt;/li&gt;
+&lt;li&gt;sync.Map 这种方式，写少读多的情况是非常合适的，效率比较明显，优于 map、concurrent_map&lt;/li&gt;
+&lt;li&gt;concurrent_map，考虑了并发写比较频繁的情况，特别是删除，多 shard 执行删除操作时效率非常明显&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;使用场景：&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>Dave Cheney - 7 ways to Profile Go Applications</title><link>/blog/2019-07-06-7-ways-to-profile-go-applications/</link><pubDate>Sat, 06 Jul 2019 12:00:00 +0800</pubDate><guid>/blog/2019-07-06-7-ways-to-profile-go-applications/</guid><description>&lt;p&gt;&lt;a href="https://www.youtube.com/watch?v=2h_NFBFrciI"&gt;Golang UK Conference 2016 - Dave Cheney - Seven ways to Profile Go Applications&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;此文源于Dave之前的分享，看完这些方法确实学习到了很多东西，包括profile的工作原理、实践经验。分享中提及的工具有点旧了，有些已经不再维护、更新，如uber官方也已经将go-torch标记为deprecated。&lt;/p&gt;
 &lt;p&gt;建议后续profile的时候使用google官方提供的工具&lt;code&gt;pprof&lt;/code&gt;，它除了cpu、memory、block等基础的profile能力外，也提供了flamegraph等能力，也提供了方便易用的web界面，非常好用，使用方式pprof和&lt;code&gt;go tool pprof&lt;/code&gt;也是一致的。&lt;/p&gt;
 &lt;pre&gt;&lt;code class="language-bash"&gt;go get -u -v github.com/google/pprof
@@ -6341,7 +6471,50 @@ rm unpin:
 &lt;p&gt;需要注意的是，CPU profile便于观察throughput方面的问题，但是latency方面的问题，还是要看trace！可以参考：&lt;a href="https://www.youtube.com/watch?v=Lxt8Vqn4JiQ"&gt;Golang UK Conference 2017 | Filippo Valsorda - Fighting latency: the CPU profiler is not your ally&lt;/a&gt;.&lt;/p&gt;
 &lt;h1 id="no1-time"&gt;No.1 time &lt;a href="#no1-time" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;The first method of profiling any program is &lt;code&gt;time&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;time is a shell builtin. The format is specified by POSIX.2&lt;/p&gt;</description></item><item><title>Map实现：别用float作为map的key</title><link>/blog/2019-05-23-%E5%88%AB%E7%94%A8float%E4%BD%9C%E4%B8%BAmap%E7%9A%84key/</link><pubDate>Thu, 23 May 2019 00:16:36 +0800</pubDate><guid>/blog/2019-05-23-%E5%88%AB%E7%94%A8float%E4%BD%9C%E4%B8%BAmap%E7%9A%84key/</guid><description>&lt;p&gt;遇到个好玩的问题，使用float类型作为go map的key，示例代码如下：
+&lt;p&gt;time is a shell builtin. The format is specified by POSIX.2&lt;/p&gt;</description></item><item><title>不能用float作为map的key</title><link>/blog/2019-05-23-float%E4%B8%8D%E5%8F%AF%E4%BB%A5%E4%BD%9C%E4%B8%BAmapkey/</link><pubDate>Thu, 23 May 2019 12:00:00 +0800</pubDate><guid>/blog/2019-05-23-float%E4%B8%8D%E5%8F%AF%E4%BB%A5%E4%BD%9C%E4%B8%BAmapkey/</guid><description>&lt;p&gt;今天遇到个问题，本来是golang里面使用float64作为map key的问题，后面遇到问题发现两个不相同的浮点数作为map的key，竟然只写入了一个，而且值后面的把前面的覆盖了，两个float类型的key明显不同啊，这是为什么呢？&lt;/p&gt;
+&lt;p&gt;示例代码如下：&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/dont-use-float-as-map-key/use-float64-as-map-key.png" alt="use-float64-as-map-key"&gt;&lt;/p&gt;
+&lt;p&gt;这里要涉及到几个问题：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;golang如何针对key计算hash的，阅读源码后发现就是有个key *_type，h.key.alg.hash(key)来计算得到hash，问题就出在这里的hash计算过程，可以阅读下alg.go，里面针对不同的key类型定义了计算hash的方法：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;var algarray = [alg_max]typeAlg{
+alg_NOEQ: {nil, nil},
+alg_MEM0: {memhash0, memequal0},
+alg_MEM8: {memhash8, memequal8},
+alg_MEM16: {memhash16, memequal16},
+alg_MEM32: {memhash32, memequal32},
+alg_MEM64: {memhash64, memequal64},
+alg_MEM128: {memhash128, memequal128},
+alg_STRING: {strhash, strequal},
+alg_INTER: {interhash, interequal},
+alg_NILINTER: {nilinterhash, nilinterequal},
+alg_FLOAT32: {f32hash, f32equal},
+alg_FLOAT64: {f64hash, f64equal},
+alg_CPLX64: {c64hash, c64equal},
+alg_CPLX128: {c128hash, c128equal},
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;float64就是要使用&lt;code&gt;f64hash&lt;/code&gt;这个方法来计算hash值。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;golang里面利用计算得到的hash值的后5位作为hmap的bucket index，先定位到bucket，然后再根据hash的前8位作为与bucket内部&amp;lt;k,v&amp;gt; entries的hash进行比较找到对应的entry。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;下面我们看下f64hash的实现：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;func f64hash(p unsafe.Pointer, h uintptr) uintptr {
+f := *(*float64)(p)
+switch {
+case f == 0:
+return c1 * (c0 ^ h) // +0, -0
+case f != f:
+return c1 * (c0 ^ h ^ uintptr(fastrand())) // any kind of NaN
+default:
+return memhash(p, h, 8)
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;f==0或者f!=f是两种极端情况，不考虑直接看f64hash里面调用方法memhash(p, h, 8)，memhash实现，省略无关代码：&lt;/p&gt;</description></item><item><title>Map实现：别用float作为map的key</title><link>/blog/2019-05-23-%E5%88%AB%E7%94%A8float%E4%BD%9C%E4%B8%BAmap%E7%9A%84key/</link><pubDate>Thu, 23 May 2019 00:16:36 +0800</pubDate><guid>/blog/2019-05-23-%E5%88%AB%E7%94%A8float%E4%BD%9C%E4%B8%BAmap%E7%9A%84key/</guid><description>&lt;p&gt;遇到个好玩的问题，使用float类型作为go map的key，示例代码如下：
 &lt;img src="assets/gomap/1558586114_21.png" alt="use-float64-as-map-key"&gt;&lt;/p&gt;
 &lt;p&gt;其实就是浮点数精度的问题，随手翻了下go map的源码，备忘下。这里要涉及到几个问题：&lt;/p&gt;
 &lt;ul&gt;
@@ -6383,7 +6556,95 @@ return memhash(p, h, 8)
 }
 }
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;f==0或者f!=f是两种极端情况，不考虑直接看f64hash里面调用方法memhash(p, h, 8)，memhash实现，省略无关代码：&lt;/p&gt;</description></item><item><title>Go 网络 IO 与 SIGPIPE：closed connection 为何不会把进程打挂</title><link>/blog/2019-04-18-go-network-sigpipe/</link><pubDate>Thu, 18 Apr 2019 12:00:00 +0800</pubDate><guid>/blog/2019-04-18-go-network-sigpipe/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;f==0或者f!=f是两种极端情况，不考虑直接看f64hash里面调用方法memhash(p, h, 8)，memhash实现，省略无关代码：&lt;/p&gt;</description></item><item><title>Go 路径与文件存在性工具</title><link>/blog/2019-04-26-filepath/</link><pubDate>Fri, 26 Apr 2019 14:32:38 +0800</pubDate><guid>/blog/2019-04-26-filepath/</guid><description>&lt;p&gt;golang 目录相关操作：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;获取当前可执行程序路径；&lt;/li&gt;
+&lt;li&gt;获取当前可执行程序父路径；&lt;/li&gt;
+&lt;li&gt;检查文件是否已经存在；&lt;/li&gt;
+&lt;li&gt;相对路径转为绝对路径；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;// Copyright 2019 Go-Neat
+//
+// Licensed under the Apache License, Version 2.0 (the &amp;quot;License&amp;quot;);
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an &amp;quot;AS IS&amp;quot; BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+package common
+import (
+&amp;quot;os&amp;quot;
+&amp;quot;os/user&amp;quot;
+&amp;quot;path&amp;quot;
+&amp;quot;path/filepath&amp;quot;
+&amp;quot;strings&amp;quot;
+)
+// Get current directory of executable file,
+// if fails returns empty filepath and error
+func GetCurrentDirectory() (string, error) {
+dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+if err != nil {
+return &amp;quot;&amp;quot;, err
+}
+return dir, nil
+}
+// returns substring of s, i.e., s[pos:pos+length]
+func substr(s string, pos, length int) string {
+runes := []rune(s)
+l := pos + length
+if l &amp;gt; len(runes) {
+l = len(runes)
+}
+return string(runes[pos:l])
+}
+// Get parental directory of executable file,
+// if fails returns empty filepath and error
+func GetParentDirectory() (string, error) {
+dirctory, err := GetCurrentDirectory()
+if err != nil {
+return &amp;quot;&amp;quot;, err
+}
+parentPath := substr(dirctory, 0, strings.LastIndex(dirctory, string(filepath.Separator)))
+return parentPath, nil
+}
+// Check whether file is existed,
+// if existed returns true, otherwise returns false
+func CheckFileIsExist(filename string) bool {
+if _, err := os.Stat(filename); os.IsNotExist(err) {
+return false
+}
+return true
+}
+// AbsoluteFilePath 绝对路径转相对路径
+func AbsoluteFilePath(p string) (string, error) {
+if path.IsAbs(p) {
+return p, nil
+}
+// convert ~ to home directory of current user
+var home string
+if usr, err := user.Current(); err != nil {
+return &amp;quot;&amp;quot;, err
+} else {
+home = usr.HomeDir
+}
+if p == &amp;quot;~&amp;quot; {
+// In case of &amp;quot;~&amp;quot;, which won't be caught by the &amp;quot;else if&amp;quot;
+p = home
+return p, nil
+} else if strings.HasPrefix(p, &amp;quot;~/&amp;quot;) {
+// Use strings.HasPrefix so we don't match paths like &amp;quot;/something/~/something/&amp;quot;
+p = filepath.Join(home, p[2:])
+return p, nil
+}
+// convert to absolute path providing it's indeed a valid filepath
+return filepath.Abs(p)
+}
+&lt;/code&gt;&lt;/pre&gt;</description></item><item><title>Go 网络 IO 与 SIGPIPE：closed connection 为何不会把进程打挂</title><link>/blog/2019-04-18-go-network-sigpipe/</link><pubDate>Thu, 18 Apr 2019 12:00:00 +0800</pubDate><guid>/blog/2019-04-18-go-network-sigpipe/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;SIGPIPE 的默认行为是让进程 crash。进程需要通过 &lt;code&gt;sigaction&lt;/code&gt; 显式忽略或自行处理该信号；如果语言运行时接管了信号处理，行为就会不同。&lt;/p&gt;
 &lt;p&gt;本文从网络 IO 场景出发，看 Go 如何优雅处理写 closed TCP 连接时的 SIGPIPE 问题，避免服务进程因此挂掉——也能再次体会 Go 在工程细节上的用心。&lt;/p&gt;
 &lt;h2 id="问题场景"&gt;问题场景 &lt;a href="#%e9%97%ae%e9%a2%98%e5%9c%ba%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
@@ -6575,7 +6836,14 @@ ii: 6
 ii: 7
 ii: 8
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;为什么多次运行后的结果，结果都是一样的呢？按常理，多个goroutine被调度的顺序应该不是完全固定的，为什么执行顺序总是&lt;code&gt;9, 0, 1, 2, 3, …, 8&lt;/code&gt;呢，好吧，可能是因为我们限制了&lt;code&gt;runtime.GOMAXPROCS(1)&lt;/code&gt;的缘故，那么为什么总是先输出&lt;code&gt;9&lt;/code&gt;呢，而后面的又是按照固定顺序&lt;code&gt;0, 1, 2, 3, …, 8&lt;/code&gt;呢？&lt;/p&gt;</description></item><item><title>Practical Go: Real world advice for writing maintainable Go programs</title><link>/blog/2019-02-24-go-best-practices/</link><pubDate>Sun, 24 Feb 2019 12:00:00 +0800</pubDate><guid>/blog/2019-02-24-go-best-practices/</guid><description>&lt;h1 id="practical-go-real-world-advice-for-writing-maintainable-go-programs"&gt;Practical Go: Real world advice for writing maintainable Go programs &lt;a href="#practical-go-real-world-advice-for-writing-maintainable-go-programs" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;为什么多次运行后的结果，结果都是一样的呢？按常理，多个goroutine被调度的顺序应该不是完全固定的，为什么执行顺序总是&lt;code&gt;9, 0, 1, 2, 3, …, 8&lt;/code&gt;呢，好吧，可能是因为我们限制了&lt;code&gt;runtime.GOMAXPROCS(1)&lt;/code&gt;的缘故，那么为什么总是先输出&lt;code&gt;9&lt;/code&gt;呢，而后面的又是按照固定顺序&lt;code&gt;0, 1, 2, 3, …, 8&lt;/code&gt;呢？&lt;/p&gt;</description></item><item><title>Go 社区问答与设计考量</title><link>/blog/2019-03-03-community-qa/</link><pubDate>Sun, 03 Mar 2019 12:00:00 +0800</pubDate><guid>/blog/2019-03-03-community-qa/</guid><description>&lt;p&gt;本文整理了 Go 语言官方 FAQ 及社区讨论中反复出现的问题，涵盖语言设计、类型系统、内存模型、并发模型等方面的常见疑问及其背后的设计考量。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h1 id="go-泛型支持"&gt;Go 泛型支持 &lt;a href="#go-%e6%b3%9b%e5%9e%8b%e6%94%af%e6%8c%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Go 只有有限的泛型支持，只有内置的某些函数支持泛型（如 &lt;code&gt;fmt.Println&lt;/code&gt;），用户自定义的函数不支持泛型。&lt;/p&gt;
+&lt;p&gt;泛型是 Go 开发者被询问最多的问题之一。Go 团队表示，Go 的核心是 simplicity and powerful，在实际开发中，代码写得越多越觉得没有必要支持泛型。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Q: Do you have plans to implement generics?&lt;/p&gt;
+&lt;p&gt;A: Many proposals for generics-like features have been mooted both publicly and internally, but as yet we haven&amp;rsquo;t found a proposal that is consistent with the rest of the language. We think that one of Go&amp;rsquo;s key strengths is its simplicity, so we are wary of introducing new features that might make the language more difficult to understand. Additionally, the more Go code we write (and thus the better we learn how to write Go code ourselves), the less we feel the need for such a language feature.&lt;/p&gt;</description></item><item><title>Practical Go: Real world advice for writing maintainable Go programs</title><link>/blog/2019-02-24-go-best-practices/</link><pubDate>Sun, 24 Feb 2019 12:00:00 +0800</pubDate><guid>/blog/2019-02-24-go-best-practices/</guid><description>&lt;h1 id="practical-go-real-world-advice-for-writing-maintainable-go-programs"&gt;Practical Go: Real world advice for writing maintainable Go programs &lt;a href="#practical-go-real-world-advice-for-writing-maintainable-go-programs" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;Dave Cheney&lt;a href="mailto:dave@cheney.net"&gt;dave@cheney.net&lt;/a&gt;Version Fba376-Dirty,2019-02-24&lt;/p&gt;
 &lt;h2 id="0-introduction"&gt;&lt;a href="https://dave.cheney.net/practical-go/presentations/qcon-china.html#_introduction"&gt;0 Introduction&lt;/a&gt; &lt;a href="#0-introduction" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;Hello,&lt;/p&gt;
@@ -6596,7 +6864,37 @@ ii: 8
 &lt;/tbody&gt;
 &lt;/table&gt;
 &lt;h2 id="1-guiding-principles"&gt;&lt;a href="https://dave.cheney.net/practical-go/presentations/qcon-china.html#_guiding_principles"&gt;1. Guiding principles&lt;/a&gt; &lt;a href="#1-guiding-principles" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;If I’m going to talk about best practices in any programming language I need some way to define what I mean by &lt;em&gt;best&lt;/em&gt;. If you came to my keynote yesterday you would have seen this quote from the Go team lead, Russ Cox:&lt;/p&gt;</description></item><item><title>macOS实现高效todolist</title><link>/blog/2019-02-23-alfred_macos%E5%AE%9E%E7%8E%B0%E9%AB%98%E6%95%88todolist/</link><pubDate>Sat, 23 Feb 2019 00:13:00 +0800</pubDate><guid>/blog/2019-02-23-alfred_macos%E5%AE%9E%E7%8E%B0%E9%AB%98%E6%95%88todolist/</guid><description>&lt;style&gt;
+&lt;p&gt;If I’m going to talk about best practices in any programming language I need some way to define what I mean by &lt;em&gt;best&lt;/em&gt;. If you came to my keynote yesterday you would have seen this quote from the Go team lead, Russ Cox:&lt;/p&gt;</description></item><item><title>cgo共享库的编译与加载</title><link>/blog/2019-02-23-cgo%E5%85%B1%E4%BA%AB%E5%BA%93/</link><pubDate>Sat, 23 Feb 2019 12:00:00 +0800</pubDate><guid>/blog/2019-02-23-cgo%E5%85%B1%E4%BA%AB%E5%BA%93/</guid><description>&lt;p&gt;go语言提供了c、go互相调用的能力。&lt;/p&gt;
+&lt;p&gt;比较常见的是在go中借助c头文件、共享库来调用c代码，通过cgo指令可以指定linkers要连接的共享库的搜索路径。下面是一个示例。&lt;/p&gt;
+&lt;p&gt;file: add.h&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;#ifndef _ADD_H_
+#define _ADD_H_
+int add(int, int);
+#endif
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;file: add.c&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;int add(int n, int m)
+{
+return n + m;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;首先将add.c编译成共享库：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;gcc -c -fpic add.c
+gcc -shared -o libadd.so add.o
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;file: main.go&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;import &amp;quot;fmt&amp;quot;
+/*
+# cgo CFLAGS: -I${SRCDIR}
+# cgo LDFLAGS: -L${SRCDIR} -ladd
+#include &amp;quot;add.h&amp;quot;
+*/
+import &amp;quot;C&amp;quot;
+func main() {
+fmt.Printf(&amp;quot;1 + 2 = %v\n&amp;quot;, C.add(1, 2))
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;import &amp;quot;C&amp;quot;&lt;/code&gt;必须紧跟在cgo相关的指令、说明后面，它们以注释的形式包括起来，cgo编译器会处理这里的信息。如cgo指令 &lt;code&gt;-I${SRCDIR}&lt;/code&gt;会指导从哪里寻找add.h，&lt;code&gt;cgo -L${SRCDIR}&lt;/code&gt;会指导从哪里寻找libadd.so。&lt;/p&gt;</description></item><item><title>macOS实现高效todolist</title><link>/blog/2019-02-23-alfred_macos%E5%AE%9E%E7%8E%B0%E9%AB%98%E6%95%88todolist/</link><pubDate>Sat, 23 Feb 2019 00:13:00 +0800</pubDate><guid>/blog/2019-02-23-alfred_macos%E5%AE%9E%E7%8E%B0%E9%AB%98%E6%95%88todolist/</guid><description>&lt;style&gt;
 img {
 width: 680px;
 padding-bottom: 1rem;
@@ -6665,7 +6963,61 @@ end tell
 return theQuery
 end run
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;AppleScript不太熟，东拼西凑攒出来这个小工具，还攒了一些其他小工具&amp;hellip; 希望对大家有帮助！&lt;/p&gt;</description></item><item><title>Linux 内核参数</title><link>/blog/2019-02-12-kernel-%E5%86%85%E6%A0%B8%E5%8F%82%E6%95%B0/</link><pubDate>Tue, 12 Feb 2019 10:49:01 +0800</pubDate><guid>/blog/2019-02-12-kernel-%E5%86%85%E6%A0%B8%E5%8F%82%E6%95%B0/</guid><description>&lt;h1 id="1-tcpip内核参数"&gt;1 tcpip内核参数 &lt;a href="#1-tcpip%e5%86%85%e6%a0%b8%e5%8f%82%e6%95%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;AppleScript不太熟，东拼西凑攒出来这个小工具，还攒了一些其他小工具&amp;hellip; 希望对大家有帮助！&lt;/p&gt;</description></item><item><title>数组与指针</title><link>/blog/%E6%95%B0%E7%BB%84%E4%B8%8E%E6%8C%87%E9%92%88/</link><pubDate>Wed, 13 Feb 2019 08:00:00 +0800</pubDate><guid>/blog/%E6%95%B0%E7%BB%84%E4%B8%8E%E6%8C%87%E9%92%88/</guid><description>&lt;h1 id="1-二维数组之行列指针"&gt;1 二维数组之行列指针 &lt;a href="#1-%e4%ba%8c%e7%bb%b4%e6%95%b0%e7%bb%84%e4%b9%8b%e8%a1%8c%e5%88%97%e6%8c%87%e9%92%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;//数组名是数组首元素的地址，但是数组是一种类型，不能完全等同于指针，
+//sizeof(指针)=操作系统虚拟内存位数对应的字节数，sizeof(a)=sizeof(int)*2*3=24字节
+int a[2][3] = {1,2,3,4,5,6};
+int size = sizeof(a);
+//行指针, 这里的i之所以称为行指针，是因为它定位的是第i行这个子向量
+*(a+i) 等于 a[i]
+//列指针，这里的j之所以称为列指针，是因为它定位的是第j列这个列向量
+*(*(a+i)+j) 等于 a[i][j]
+//如果需要获取其中的值，需要再次解除引用才可以
+*(a+i)+j 等于 &amp;amp;a[i][j]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id="2-多维数组指针"&gt;2 多维数组指针 &lt;a href="#2-%e5%a4%9a%e7%bb%b4%e6%95%b0%e7%bb%84%e6%8c%87%e9%92%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;分析方法，与二维数组的分析没有什么差别！只是不建议那样使用！为什么要用呢？自寻烦恼嘛！
+倒不是难以分析，而是写起来很啰嗦！&lt;/p&gt;
+&lt;p&gt;多维数组，还是建议使用下标索引来使用要好一些！&lt;/p&gt;
+&lt;h1 id="3-数组名称的特殊性"&gt;3 数组名称的特殊性 &lt;a href="#3-%e6%95%b0%e7%bb%84%e5%90%8d%e7%a7%b0%e7%9a%84%e7%89%b9%e6%ae%8a%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;我们常说数组的名称就是一个指向数组本身的地址，或者说是一个指针，规范一点讲，数组名其实是数组第
+1个元素的地址。如下所示：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;int b[100]; //b 等于 &amp;amp;b[0];
+int a[100][200]; //a 等于 &amp;amp;a[0];
+int c[100][200][300]; //c 等于 &amp;amp;c[0];
+&lt;/code&gt;&lt;/pre&gt;</description></item><item><title>a += (a++)+(++a) 的值到底是多少？</title><link>/blog/2019-02-13-a--a-a/</link><pubDate>Wed, 13 Feb 2019 00:00:00 +0800</pubDate><guid>/blog/2019-02-13-a--a-a/</guid><description>&lt;p&gt;前一阵子，在某厂笔试题（Java）里面，出现了这样一个考题：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt; int a = 0;
+a += (a++) + (++a);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;上述两条语句执行之后，a的值是多少？&lt;/p&gt;
+&lt;p&gt;这么简单的题目也需要考吗，这太简单了吧？知道怎么算是一回事， 明不明白是另一回事！而且不一定会算吧！&lt;/p&gt;
+&lt;p&gt;【备注】
+如果不是脑子有病，估计不会有人写这样的程序，那解释这道题有什么意义呢？确实，有很多更加值得折腾的东西，比如中间件、智能算法等等，相比起来，去钻研这种编程题太没意思了，出题人脑残还是咋滴，对此，我绝对同意。但是除了这种想法的人外，也确实有一部分人，想人所不想，能人所不能，你总不能说他们求知是个错误吧！今天，刚好有人问起，我就顺便回答了一下，然后整理了整理。
+感兴趣的话就耐心往下看吧，也不长，估计应该能看懂。&lt;/p&gt;
+&lt;p&gt;以前给红黑联盟里一帮小朋友解答过c里面前置增后置增的实现问题，没想到今天又在一个Java高级群里面碰到了群友问相同的问题，区别是java中的实现方式。其实，说白了，这些是编译原理层面的知识，也需要对内存模型有一定的理解，尤其要注意JMM。但是一般情况下我相信是没有几个人是愿意去翻gcc、javac的设计、实现的。那怎么办？
+了解一下基本的内存模型，反汇编，可能还是比较实用的一种办法。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;1）c，编译器gcc&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;int main(int argc, char *argv[]){
+4004f6: 55 push %rbp
+4004f7: 48 89 e5 mov %rsp,%rbp
+4004fa: 89 7d ec mov %edi,-0x14(%rbp)
+4004fd: 48 89 75 e0 mov %rsi,-0x20(%rbp)
+int a = 0;
+400501: c7 45 fc 00 00 00 00 movl $0x0,-0x4(%rbp) // 给a赋值0
+a += (a++)+(++a);
+400508: 8b 45 fc mov -0x4(%rbp),%eax // a++中初始装载变量a到eax
+40050b: 8d 50 01 lea 0x1(%rax),%edx
+40050e: 89 55 fc mov %edx,-0x4(%rbp) // lea将1+rax的值存储回变量a（变量a的值变为1），但是不修改rax的值。
+// 使用的是lea，而非add，为啥？后置增，rax记录着a自增之前的旧值！
+// 后置增，即使用后+1，这里的”使用后“，指的是执行整条语句之后吗？ 不是！
+400511: 83 45 fc 01 addl $0x1,-0x4(%rbp) // ++a操作（变量a的值变为2）
+400515: 8b 55 fc mov -0x4(%rbp),%edx
+400518: 01 d0 add %edx,%eax // 执行 (a++) + (++a)操作，即0+2，并将结果暂存到eax
+40051a: 01 45 fc add %eax,-0x4(%rbp) // 执行a+=...，即2+2并将结果存储到变量a（变量a的值变为4）
+return 0;
+40051d: b8 00 00 00 00 mov $0x0,%eax}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;看完上面的解释后，你应该能总结处这样的规律，(a++) + (++a)中，a++是先于++a执行的，即普通的表达式一般都是从左向右进行运算，另外你也应该记住lea指令的用法，在这里还不失巧妙。&lt;/p&gt;</description></item><item><title>Linux 内核参数</title><link>/blog/2019-02-12-kernel-%E5%86%85%E6%A0%B8%E5%8F%82%E6%95%B0/</link><pubDate>Tue, 12 Feb 2019 10:49:01 +0800</pubDate><guid>/blog/2019-02-12-kernel-%E5%86%85%E6%A0%B8%E5%8F%82%E6%95%B0/</guid><description>&lt;h1 id="1-tcpip内核参数"&gt;1 tcpip内核参数 &lt;a href="#1-tcpip%e5%86%85%e6%a0%b8%e5%8f%82%e6%95%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;所有的TCP/IP调优参数都位于/proc/sys/net/目录，下面是最重要、常用的tcp/ip调优参数：&lt;/p&gt;
 &lt;table&gt;
 &lt;thead&gt;
@@ -6879,7 +7231,94 @@ end run
 | /proc/sys/vm/pagecache | 该文件与 /proc/sys/vm/buffermem 的工作内容一样，但它是针对文件的内存映射和一般高速缓存。 | |&lt;/li&gt;
 &lt;/ul&gt;
 &lt;h1 id="3-临时修改配置"&gt;3 临时修改配置 &lt;a href="#3-%e4%b8%b4%e6%97%b6%e4%bf%ae%e6%94%b9%e9%85%8d%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
-&lt;p&gt;/proc是虚拟文件系统，它是操作系统对上层暴露的与内核通信的一个接口，该目录下的所有内容都是临时性的，重新启动系统后任何修改都会丢失。因此如果是想临时性的调整内核参数，可以直接通过命令&lt;code&gt;echo&lt;/code&gt;来修改/proc下的对应项目内容。&lt;/p&gt;</description></item><item><title>Cache 一致性协议</title><link>/blog/2019-01-04-kernel-cache%E4%B8%80%E8%87%B4%E6%80%A7%E5%8D%8F%E8%AE%AE/</link><pubDate>Fri, 04 Jan 2019 12:18:24 +0800</pubDate><guid>/blog/2019-01-04-kernel-cache%E4%B8%80%E8%87%B4%E6%80%A7%E5%8D%8F%E8%AE%AE/</guid><description>&lt;p&gt;cache一致性实现机制，主要包括基于snooping和基于directory两种机制，一致性机制解决的是如何观测cpu read/write操作事件，两种各有优缺点：&lt;/p&gt;
+&lt;p&gt;/proc是虚拟文件系统，它是操作系统对上层暴露的与内核通信的一个接口，该目录下的所有内容都是临时性的，重新启动系统后任何修改都会丢失。因此如果是想临时性的调整内核参数，可以直接通过命令&lt;code&gt;echo&lt;/code&gt;来修改/proc下的对应项目内容。&lt;/p&gt;</description></item><item><title>Git 常用操作速查</title><link>/blog/git-%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C%E9%80%9F%E6%9F%A5/</link><pubDate>Wed, 30 Jan 2019 00:00:00 +0800</pubDate><guid>/blog/git-%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C%E9%80%9F%E6%9F%A5/</guid><description>&lt;h1 id="git-常用操作速查"&gt;Git 常用操作速查 &lt;a href="#git-%e5%b8%b8%e7%94%a8%e6%93%8d%e4%bd%9c%e9%80%9f%e6%9f%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;本文整合了日常开发中高频使用的 Git 命令，按使用场景分类，供快速查阅。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h2 id="一基础概念"&gt;一、基础概念 &lt;a href="#%e4%b8%80%e5%9f%ba%e7%a1%80%e6%a6%82%e5%bf%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="三种文件状态"&gt;三种文件状态 &lt;a href="#%e4%b8%89%e7%a7%8d%e6%96%87%e4%bb%b6%e7%8a%b6%e6%80%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;状态&lt;/th&gt;
+&lt;th&gt;说明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;committed&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;已提交到本地&lt;code&gt;.git&lt;/code&gt; 仓库，安全存储&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;modified&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;已修改但未 stage（暂存）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;staged&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;已暂存，等待 commit&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;ul&gt;
+&lt;li&gt;Staged 状态存储在 &lt;code&gt;.git/index&lt;/code&gt; 文件中&lt;/li&gt;
+&lt;li&gt;日常使用中可以直接跳过 staged 状态（&lt;code&gt;git commit -a&lt;/code&gt;）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="两种追踪状态"&gt;两种追踪状态 &lt;a href="#%e4%b8%a4%e7%a7%8d%e8%bf%bd%e8%b8%aa%e7%8a%b6%e6%80%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;tracked&lt;/strong&gt;：已被 commit 或 stage 的文件&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;untracked&lt;/strong&gt;：新创建、未被 Git 追踪的文件&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="git-与其他-vcs-的核心差异"&gt;Git 与其他 VCS 的核心差异 &lt;a href="#git-%e4%b8%8e%e5%85%b6%e4%bb%96-vcs-%e7%9a%84%e6%a0%b8%e5%bf%83%e5%b7%ae%e5%bc%82" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;快照而非差异&lt;/strong&gt;：Git 将仓库视为小型文件系统，以快照形式记录变化。未改变的文件直接引用之前的版本。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;离线工作&lt;/strong&gt;：clone 后包含完整历史，查看日志、提交、创建分支等均可离线操作。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;数据完整性&lt;/strong&gt;：底层通过校验和（SHA-1）保证数据不被篡改或传输错误。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;操作可恢复&lt;/strong&gt;：Git 的操作几乎都是添加操作，提交过的内容很难丢失。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="二配置git-config"&gt;二、配置（git config） &lt;a href="#%e4%ba%8c%e9%85%8d%e7%bd%aegit-config" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="配置文件层级优先级从高到低"&gt;配置文件层级（优先级从高到低） &lt;a href="#%e9%85%8d%e7%bd%ae%e6%96%87%e4%bb%b6%e5%b1%82%e7%ba%a7%e4%bc%98%e5%85%88%e7%ba%a7%e4%bb%8e%e9%ab%98%e5%88%b0%e4%bd%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;仓库级：&lt;code&gt;.git/config&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;用户级：&lt;code&gt;~/.gitconfig&lt;/code&gt; 或 &lt;code&gt;~/.config/git/config&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;系统级：&lt;code&gt;/etc/gitconfig&lt;/code&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id="常用配置"&gt;常用配置 &lt;a href="#%e5%b8%b8%e7%94%a8%e9%85%8d%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;# 用户信息（必须设置）
+git config user.name &amp;quot;Your Name&amp;quot;
+git config user.email &amp;quot;your@email.com&amp;quot;
+# 编辑器
+git config core.editor /usr/bin/vim
+# 查看所有配置
+git config --list
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="别名alias"&gt;别名（alias） &lt;a href="#%e5%88%ab%e5%90%8dalias" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;git config --global alias.co checkout
+git config --global alias.br branch
+git config --global alias.ci commit
+git config --global alias.st status
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;也可以直接编辑 &lt;code&gt;~/.gitconfig&lt;/code&gt;：&lt;/p&gt;</description></item><item><title>Go flag 用法札记</title><link>/blog/2019-01-22-go-flags/</link><pubDate>Tue, 22 Jan 2019 14:32:38 +0800</pubDate><guid>/blog/2019-01-22-go-flags/</guid><description>&lt;blockquote&gt;
+&lt;p&gt;本文由 notes &lt;code&gt;__代码大全__&lt;/code&gt; 下 &lt;code&gt;go - flags.md&lt;/code&gt; / &lt;code&gt;go - flags-2.md&lt;/code&gt; / &lt;code&gt;go - flags-3.md&lt;/code&gt; 合并迁移，并整合了 bool 类型特殊处理一节。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id="集中定义-flag-与跨包读取"&gt;集中定义 flag 与跨包读取 &lt;a href="#%e9%9b%86%e4%b8%ad%e5%ae%9a%e4%b9%89-flag-%e4%b8%8e%e8%b7%a8%e5%8c%85%e8%af%bb%e5%8f%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;通常我们会在 main package 里面定义所有的 flag，然后在其他的 package 里面引用，这样有个好处，就是所有的 flag 选项都在同一个地方定义，比分散到多个 package 里面定义要清晰。&lt;/p&gt;
+&lt;p&gt;如：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;var protodir = flag.String(&amp;quot;protodir&amp;quot;, &amp;quot;.&amp;quot;, &amp;quot;protobuf file dir, please config ${GONEAT_TPL_ASSET_DIR}&amp;quot;)
+var protofile = flag.String(&amp;quot;protofile&amp;quot;, &amp;quot;any.proto&amp;quot;, &amp;quot;protobuf filename&amp;quot;)
+var protocol = flag.String(&amp;quot;protocol&amp;quot;, &amp;quot;nrpc&amp;quot;, &amp;quot;nrpc, simplesso, ilive&amp;quot;)
+var assetdir = flag.String(&amp;quot;assetdir&amp;quot;, &amp;quot;&amp;quot;, &amp;quot;template asset dir&amp;quot;)
+var verbose = flag.Bool(&amp;quot;verbose&amp;quot;, false, &amp;quot;verbose logging info&amp;quot;)
+var httpon = flag.Bool(&amp;quot;httpon&amp;quot;, false, &amp;quot;enable http mode&amp;quot;)
+func init() {
+flag.Parse()
+}
+func main() {
+...
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;但是当我想在其他的 package 里面引用上述 flag 的时候该怎么获取呢？也许可以将其定义为 export variable。&lt;/p&gt;</description></item><item><title>Cache 一致性协议</title><link>/blog/2019-01-04-kernel-cache%E4%B8%80%E8%87%B4%E6%80%A7%E5%8D%8F%E8%AE%AE/</link><pubDate>Fri, 04 Jan 2019 12:18:24 +0800</pubDate><guid>/blog/2019-01-04-kernel-cache%E4%B8%80%E8%87%B4%E6%80%A7%E5%8D%8F%E8%AE%AE/</guid><description>&lt;p&gt;cache一致性实现机制，主要包括基于snooping和基于directory两种机制，一致性机制解决的是如何观测cpu read/write操作事件，两种各有优缺点：&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;snooping，在cpu数量、core数量比较少的情况下，snooping可以减少req/rsp的数量，是基于广播的，效率比较高，但是在cpu、core数量比较多的情况下难以水平扩展，为了满足广播需要增加依赖的总线带宽；&lt;/li&gt;
 &lt;li&gt;directory，在cpu数量、core数量比较多的情况下，更加适用，可以平行扩展cpu、core数量，不需要增加总线带宽，但是由于是计算cpu或者core之间的点对点请求，没有广播，req/rsp次数会比较多，会增加一定的延时；&lt;/li&gt;
@@ -7435,7 +7874,31 @@ this.monitorObject.notify();
 &lt;/li&gt;
 &lt;/ul&gt;
 &lt;h1 id="causes-of-starvation-in-java"&gt;Causes of Starvation in Java &lt;a href="#causes-of-starvation-in-java" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
-&lt;p&gt;The following &lt;strong&gt;three common causes&lt;/strong&gt; can lead to starvation of threads in Java:&lt;/p&gt;</description></item><item><title>12 DeadLock</title><link>/blog/12-deadlock/</link><pubDate>Thu, 27 Dec 2018 17:14:32 +0800</pubDate><guid>/blog/12-deadlock/</guid><description>&lt;p&gt;本文先总结了常见的几种导致deadlock的使用场景，然后进一步描述了阻止死锁的方法。&lt;/p&gt;
+&lt;p&gt;The following &lt;strong&gt;three common causes&lt;/strong&gt; can lead to starvation of threads in Java:&lt;/p&gt;</description></item><item><title>Go程序Coredump分析</title><link>/blog/2018-12-29-coredump/</link><pubDate>Sat, 29 Dec 2018 00:00:00 +0800</pubDate><guid>/blog/2018-12-29-coredump/</guid><description>&lt;p&gt;在工作、学习过程中学习到了一些定位、分析bug的技巧，在这里几种进行一下总结，有些技能真的是不常用就忘了，回家呆了两个月，回到公司后发现很多之前积累起来的知识被“遗忘”了，其实还是没有完全掌握，只能算是“初识”该技能，好几性不如烂笔头，还是要多做总结、多回顾，有问题的时候即便记不起来了也可以快速查询。&lt;/p&gt;
+&lt;h1 id="coredump"&gt;coredump &lt;a href="#coredump" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Linux下进程收到下面这5个常见信号时，会终止进程生成core文件。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;SIGQUIT，quit from keyboard；&lt;/li&gt;
+&lt;li&gt;SIGILL，illegal instruction；&lt;/li&gt;
+&lt;li&gt;SIGABRT，abort signal from abort(3)；&lt;/li&gt;
+&lt;li&gt;SIGFPE，floating point exception；&lt;/li&gt;
+&lt;li&gt;SIGSEGV，invalid memory reference；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="core文件大小"&gt;core文件大小 &lt;a href="#core%e6%96%87%e4%bb%b6%e5%a4%a7%e5%b0%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;core文件大小是有限制的，默认都是0，意味着不会生成core文件，可以通过 &lt;code&gt;ulimit -c&lt;/code&gt; 进行查看，也可以通过 &lt;code&gt;ulimit -c $size&lt;/code&gt; 进行修改，但是命令只对当前shell有效，重启一个shell或者重启机器都会恢复为系统默认设置。如果想永久保留此设置可以在 &lt;code&gt;/etc/profile&lt;/code&gt; 或者 &lt;code&gt;/etc/bashrc&lt;/code&gt; 中进行配置。&lt;/p&gt;
+&lt;h2 id="core文件命名"&gt;core文件命名 &lt;a href="#core%e6%96%87%e4%bb%b6%e5%91%bd%e5%90%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;core文件命名模式是可以指定的，在 &lt;code&gt;/etc/sysctl.conf&lt;/code&gt; 中添加如下配置即可在程序coredump时在当前程序目录生成core文件，&lt;code&gt;kernel.core_pattern=core-%e(%s).%p.%t&lt;/code&gt;。对这里的配置选项进行简单说明：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;%e，executable filename (withouth path prefix)；&lt;/li&gt;
+&lt;li&gt;%s，number of signal causing dump；&lt;/li&gt;
+&lt;li&gt;%p，PID of dumped process;&lt;/li&gt;
+&lt;li&gt;%t，time of dump，unix timestamp；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;其他配置选项可以通过man core进行查询。&lt;/p&gt;
+&lt;p&gt;core文件名后面的时间戳不好辨认，可以通过命令将其转成可读的、易理解的字符串，&lt;code&gt;date -d @time&lt;/code&gt;。&lt;/p&gt;
+&lt;h2 id="分析core文件"&gt;分析core文件 &lt;a href="#%e5%88%86%e6%9e%90core%e6%96%87%e4%bb%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;假如当前可执行文件名是prog，生成的core文件是core-prog(11).12345.1490000000，那么执行命令 &lt;code&gt;gdb prog core-prog(11).12345.1490000000&lt;/code&gt;，通过该命令来定位到该进程12345收到信号11 coredump时的内存状态，通过对其调用栈进行分析可以找到进程coredump的原因，这里的kernel.core_pattern中的信号选项%s其实也是很重要的，通过进程收到的信号大体可以猜到接收该信号的原因，便于辅助定位问题，例如信号11表示SIGSEGV，其往往是因为内存访问非法所致，这个时候就可以重点分析内存是否存在越界等。&lt;/p&gt;
+&lt;p&gt;另外为了方便分析coredump，这里的prog可执行程序在构建时最好加入调试符号，编译程序时为gcc指定选项&lt;strong&gt;gcc -g&lt;/strong&gt;。一般gdb prog $core-file分析时最后会打印出程序发生coredump时的堆栈信息便于分析。&lt;/p&gt;</description></item><item><title>12 DeadLock</title><link>/blog/12-deadlock/</link><pubDate>Thu, 27 Dec 2018 17:14:32 +0800</pubDate><guid>/blog/12-deadlock/</guid><description>&lt;p&gt;本文先总结了常见的几种导致deadlock的使用场景，然后进一步描述了阻止死锁的方法。&lt;/p&gt;
 &lt;h1 id="deadlock-cases"&gt;DeadLock Cases &lt;a href="#deadlock-cases" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;这里描述了死锁的案例：
 1）两个线程申请同样的锁，但是&lt;strong&gt;加锁顺序相反&lt;/strong&gt;，引发死锁；
@@ -7828,7 +8291,42 @@ Clever people always read source！看教程，读源码！&lt;/p&gt;
 &lt;h2 id="13-silly-window-syndrome"&gt;1.3 Silly Window Syndrome &lt;a href="#13-silly-window-syndrome" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;Silly Window Syndrome翻译成中文就是“糊涂窗口综合症”。正如你上面看到的一样，如果我们的接收方太忙了，来不及取走Receive Windows里的数据，那么，就会导致发送方越来越小。到最后，如果接收方腾出几个字节并告诉发送方现在有几个字节的window，而我们的发送方会义无反顾地发送这几个字节。&lt;/p&gt;
 &lt;p&gt;要知道，我们的TCP+IP头有40个字节，为了几个字节，要达上这么大的开销，这太不经济了。&lt;/p&gt;
-&lt;p&gt;另外，你需要知道网络上有个MTU，对于以太网来说，MTU是1500字节，除去TCP+IP头的40个字节，真正的数据传输可以有1460，这就是所谓的MSS（Max Segment Size）注意，TCP的RFC定义这个MSS的默认值是536，这是因为 &lt;a href="http://tools.ietf.org/html/rfc791"&gt;RFC 791&lt;/a&gt;里说了任何一个IP设备都得最少接收576尺寸的大小（实际上来说576是拨号的网络的MTU，而576减去IP头的20个字节就是536）。&lt;/p&gt;</description></item><item><title>REUSEPORT vs REUSEADDR</title><link>/blog/2018-11-24-kernel-reuseport-vs-reuseaddr/</link><pubDate>Sat, 24 Nov 2018 10:17:22 +0800</pubDate><guid>/blog/2018-11-24-kernel-reuseport-vs-reuseaddr/</guid><description>&lt;p&gt;&lt;strong&gt;REUSEPORT vs REUSEADDR&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;另外，你需要知道网络上有个MTU，对于以太网来说，MTU是1500字节，除去TCP+IP头的40个字节，真正的数据传输可以有1460，这就是所谓的MSS（Max Segment Size）注意，TCP的RFC定义这个MSS的默认值是536，这是因为 &lt;a href="http://tools.ietf.org/html/rfc791"&gt;RFC 791&lt;/a&gt;里说了任何一个IP设备都得最少接收576尺寸的大小（实际上来说576是拨号的网络的MTU，而576减去IP头的20个字节就是536）。&lt;/p&gt;</description></item><item><title>Go database/sql 使用指南</title><link>/blog/2018-12-04-database/</link><pubDate>Tue, 04 Dec 2018 14:32:38 +0800</pubDate><guid>/blog/2018-12-04-database/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Go 标准库 &lt;code&gt;database/sql&lt;/code&gt; 提供了一套通用的 SQL 数据库访问接口。与 Java 生态中 MyBatis、Hibernate 这类重量级 ORM 框架不同，&lt;code&gt;database/sql&lt;/code&gt; 的设计非常克制：它只定义了接口抽象，具体的数据库连接和 SQL 方言由各数据库驱动实现。这种&amp;quot;标准库定义接口 + 第三方提供驱动&amp;quot;的模式，让 Go 的数据库操作保持了简洁统一。&lt;/p&gt;
+&lt;p&gt;本文以 MySQL 为例，介绍 &lt;code&gt;database/sql&lt;/code&gt; 的核心用法。&lt;/p&gt;
+&lt;h2 id="databasesql-的设计"&gt;database/sql 的设计 &lt;a href="#databasesql-%e7%9a%84%e8%ae%be%e8%ae%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;database/sql&lt;/code&gt; 的核心是 &lt;code&gt;sql.DB&lt;/code&gt; 类型，它不是一个单一的数据库连接，而是一个&lt;strong&gt;连接池&lt;/strong&gt;。你只需要创建一个 &lt;code&gt;*sql.DB&lt;/code&gt; 实例，之后所有的 SQL 操作都通过它来完成，连接的管理、复用、回收由标准库自动处理。&lt;/p&gt;
+&lt;p&gt;要访问 MySQL，需要两样东西：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;code&gt;database/sql&lt;/code&gt; — 标准库，定义通用接口&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;go-sql-driver/mysql&lt;/code&gt; — MySQL 驱动，实现接口&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;驱动通过匿名导入（blank import）的方式注册：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;import (
+&amp;quot;database/sql&amp;quot;
+_ &amp;quot;github.com/go-sql-driver/mysql&amp;quot;
+)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;_ &amp;quot;github.com/go-sql-driver/mysql&amp;quot;&lt;/code&gt; 会触发驱动的 &lt;code&gt;init()&lt;/code&gt; 函数，将自身注册到 &lt;code&gt;database/sql&lt;/code&gt; 中。之后你就可以通过 &lt;code&gt;sql.Open(&amp;quot;mysql&amp;quot;, dsn)&lt;/code&gt; 来获取数据库连接了。&lt;/p&gt;
+&lt;p&gt;这种设计的好处是：切换数据库时，业务代码几乎不用变，只需要换驱动和连接字符串。&lt;/p&gt;
+&lt;h2 id="连接数据库"&gt;连接数据库 &lt;a href="#%e8%bf%9e%e6%8e%a5%e6%95%b0%e6%8d%ae%e5%ba%93" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;func openDB(host, database, user, pwd string) (*sql.DB, error) {
+dsn := fmt.Sprintf(&amp;quot;%s:%s@tcp(%s)/%s?charset=utf8mb4&amp;amp;parseTime=true&amp;quot;, user, pwd, host, database)
+db, err := sql.Open(&amp;quot;mysql&amp;quot;, dsn)
+if err != nil {
+return nil, err
+}
+// 建议显式设置连接池参数
+db.SetMaxOpenConns(25)
+db.SetMaxIdleConns(5)
+return db, nil
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;几个注意点：&lt;/p&gt;</description></item><item><title>Go Walkthrough: io package</title><link>/blog/2018-12-04-io/</link><pubDate>Tue, 04 Dec 2018 14:32:38 +0800</pubDate><guid>/blog/2018-12-04-io/</guid><description>&lt;p&gt;这篇文章转自Medium，原文出处 &lt;a href="https://medium.com/go-walkthrough/go-walkthrough-io-package-8ac5e95a9fbd"&gt;Go Walkthrough: io package&lt;/a&gt;。文章较为详细地介绍了golang io package中的相关接口及实现，以及日常开发中常用的一些操作和经验。个人感觉介绍的不错，所以转载收藏！感谢作者&lt;a href="https://twitter.com/benbjohnson"&gt;&lt;em&gt;@benbjohnson&lt;/em&gt;&lt;/a&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h1 id="go-walkthrough-io-package"&gt;Go Walkthrough: io package &lt;a href="#go-walkthrough-io-package" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Go is a programming language built for working with bytes. Whether you have lists of bytes, streams of bytes, or individual bytes, Go makes it easy to process. From these simple primitives we build our abstractions and services.&lt;/p&gt;
+&lt;p&gt;The io package is one of the most fundamental packages within the standard library. It provides a set of interfaces and helpers for working with streams of bytes.&lt;/p&gt;</description></item><item><title>REUSEPORT vs REUSEADDR</title><link>/blog/2018-11-24-kernel-reuseport-vs-reuseaddr/</link><pubDate>Sat, 24 Nov 2018 10:17:22 +0800</pubDate><guid>/blog/2018-11-24-kernel-reuseport-vs-reuseaddr/</guid><description>&lt;p&gt;&lt;strong&gt;REUSEPORT vs REUSEADDR&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;这是我见过的最REUSEPORT和REUSEADDR最全面的解释和回答了，在stackover上1360赞同（包含我的一票）👍，简单总结下，详情还是建议想读以下内容，特别是不同操作系统的区别：&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;TCP/UDP连接（UDP无连接但可以connect），由五元组表示：&amp;lt;协议类型，源ip，源端口，目的ip，目的端口&amp;gt;；&lt;/li&gt;
@@ -7932,7 +8430,138 @@ cout &amp;lt;&amp;lt; &amp;quot;1.1 + 2.2 = &amp;quot; &amp;lt;&amp;lt; sum_flt 
 return 0;
 }
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;这里其实是创建了两个不同的类，&lt;code&gt;objdump -dS&lt;/code&gt;可以很清晰地看到至少创建了两个不同的方法&lt;code&gt;Add(T, T)&lt;/code&gt;，可能会有人认为这是&lt;code&gt;函数重载中的name mangling&lt;/code&gt;，其实不是，确实是生成了两个不同的类型，这个可以通过DWARF相关信息看出来，首先&lt;code&gt;g++ -s main.cpp&lt;/code&gt;得到汇编后文件main.s，然后查看该文件内容并搜索Calc，下面两个分别表示&lt;code&gt;Calc&amp;lt;float&amp;gt;模板实例&lt;/code&gt;以及&lt;code&gt;Calc&amp;lt;int&amp;gt;模板实例&lt;/code&gt;，二者确实属于两个不同的类型，一个是用Ltypes95来标识，一个是用Ltypes47来标识。&lt;/p&gt;</description></item><item><title>ELK Stack 集中式日志管理</title><link>/blog/2018-10-12-%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7_elk/</link><pubDate>Fri, 12 Oct 2018 12:00:00 +0800</pubDate><guid>/blog/2018-10-12-%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7_elk/</guid><description>&lt;h1 id="what-is-elk-stack-"&gt;What is ELK Stack ? &lt;a href="#what-is-elk-stack-" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;这里其实是创建了两个不同的类，&lt;code&gt;objdump -dS&lt;/code&gt;可以很清晰地看到至少创建了两个不同的方法&lt;code&gt;Add(T, T)&lt;/code&gt;，可能会有人认为这是&lt;code&gt;函数重载中的name mangling&lt;/code&gt;，其实不是，确实是生成了两个不同的类型，这个可以通过DWARF相关信息看出来，首先&lt;code&gt;g++ -s main.cpp&lt;/code&gt;得到汇编后文件main.s，然后查看该文件内容并搜索Calc，下面两个分别表示&lt;code&gt;Calc&amp;lt;float&amp;gt;模板实例&lt;/code&gt;以及&lt;code&gt;Calc&amp;lt;int&amp;gt;模板实例&lt;/code&gt;，二者确实属于两个不同的类型，一个是用Ltypes95来标识，一个是用Ltypes47来标识。&lt;/p&gt;</description></item><item><title>改变未来的九大算法</title><link>/blog/2018-11-11-%E6%94%B9%E5%8F%98%E6%9C%AA%E6%9D%A5%E7%9A%84%E4%B9%9D%E5%A4%A7%E7%AE%97%E6%B3%95/</link><pubDate>Sun, 11 Nov 2018 00:00:00 +0800</pubDate><guid>/blog/2018-11-11-%E6%94%B9%E5%8F%98%E6%9C%AA%E6%9D%A5%E7%9A%84%E4%B9%9D%E5%A4%A7%E7%AE%97%E6%B3%95/</guid><description>&lt;h1 id="改变未来的九大算法"&gt;改变未来的九大算法 &lt;a href="#%e6%94%b9%e5%8f%98%e6%9c%aa%e6%9d%a5%e7%9a%84%e4%b9%9d%e5%a4%a7%e7%ae%97%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;《改变未来的九大算法 约翰·麦考密克》，作者好像在一片嘈杂的it书籍中拓荒一样，从用户日常生活中应用最广泛却又发热于无形的众多算法中挑出了一些堪称伟大的经典算法。计算机领域里面不只是搬砖的码农，也不只是有形形色色的编程语言和组件……我比较喜欢了解“发展”的历程，这样就不会因为过多的细节懵逼，也能避免因为精致却琐碎的细节失去兴趣。应该算是本好书，推荐&amp;#x1f44d;&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/%E6%94%B9%E5%8F%98%E6%9C%AA%E6%9D%A5%E7%9A%84%E4%B9%9D%E5%A4%A7%E7%AE%97%E6%B3%95.jpg" alt="改变未来的九大算法"&gt;&lt;/p&gt;
+&lt;p&gt;本书的时候是在“&lt;strong&gt;微信读书&lt;/strong&gt;”中阅读的，阅读过程中做了不少笔记，这里着重对感兴趣的一些点的笔记进行了整理，如果后续发现回忆不起相关的要点，可以回到微信读书中查看相关内容细节。&lt;/p&gt;
+&lt;h1 id="no1-pagerank"&gt;No.1 PageRank &lt;a href="#no1-pagerank" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="11-随机访问者模型"&gt;1.1 随机访问者模型 &lt;a href="#11-%e9%9a%8f%e6%9c%ba%e8%ae%bf%e9%97%ae%e8%80%85%e6%a8%a1%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;pagerank算法的几个关键点，链入链接数量，链入网页的质量（权重，也是基于链入链接数计算），网页是否因为链入链出构成环形依赖，这三点都可以通过随机访问模型来一锅端了，通过随机访问模型来对网页质量进行评分。当多个网页匹配搜索的关键字时，将按照随机访问模型计算的网页评分对网页排序，然后再返回给用户。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;随机访问者模型&lt;/strong&gt;，天生能同时和超链接把戏及权重把戏相配合。
+前文炒蛋例中各网页的访问者权重值。伯特的菜谱网页和欧尼的菜谱网页都只有一个链入链接传入权重，但伯特的网页在网络搜索查询“scrambled eggs”（炒蛋）时排名会更高。
+换句话说，每个网页链入链接的质量和数量都会被纳入考虑范围。网页B就展示了这些：网页B的访问者权重值相对较高（10%），得益于三个链入链接所在的网页拥有适中的访问者权重值，从4%到7%不等。
+随机访问者把戏的美妙之处在于，和权重把戏不同，不管超链接有没有形成循环，随机访问者把戏都能完美地运作。回到早前的炒蛋例子，我们能轻易地运行一次随机访问者模拟。在数百万次访问之后，我的模拟产生了如上图所示的访问者权重值。&lt;/p&gt;
+&lt;p&gt;早前超链接循环例子（此图）的访问者权重值。随机访问者把戏在计算合理的分值上没有问题，尽管存在一个循环（A-B-E-A）
+请留意，和之前使用权重把戏进行的计算一样，伯特的网页访问者权重值要比欧尼的网页高很多（28%VS1%）——尽管这两个网页都只有一个链入链接。因此，伯特的网页在网络搜索查询“scrambled eggs”（炒蛋）中排名更高。
+现在让我们再转向前文中更困难的例子：对于最初的权重把戏而言，由于超链接循环的存在，这张图产生了一个不可解的问题。和前面一样，运行一次随机访问者的计算机模拟很容易，于是产生了如上图所示的访问者权重值。由这一模拟判定的访问者权重值给出了网页的最终排名，这些排名会被搜索引擎在返回结果时使用：网页A排名最高，之后是B和E，C和D的排名同列最后一名。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="12-现实中的pagerank"&gt;1.2 现实中的PageRank &lt;a href="#12-%e7%8e%b0%e5%ae%9e%e4%b8%ad%e7%9a%84pagerank" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;搜索引擎算法也是在不断进化的，将垃圾网页干掉是必须要做的，垃圾就该待在垃圾桶里。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;搜索引擎和网络垃圾制造者在进行一场军备竞赛。搜索引擎不断尝试完善算法，以便返回真实排名。在完善PageRank算法的驱动下，孕育了大量针对其他使用互联网超链接结构进行网页排名的算法的学术和行业研究。这类算法通常被称为基于链接的排名算法（link-based ranking algorithms）。
+另一个复杂因素与PageRank计算的高效性有关。访问者权重值是通过运行随机模拟来计算的，但在整个互联网上运行这类模拟耗时太长，不能进行实际运用。因此，搜索引擎并非通过模拟随机访问者来计算PageRank值：它们使用能像随机访问者模拟一样给出相同答案的数学技巧，但计算成本要低很多。我们研究访问者模拟技术是因为它直观的吸引力，也因为它描述了搜索引擎计算什么，而非如何计算。
+另外，值得一提的还有，商业搜索引擎中用来判定排名的算法，要比PageRank这类基于链接的排名算法多得多。即便是在他们于1998年发表的描述谷歌的原始论文中，谷歌的联合创始人也提到了多种对搜索结果排名有贡献的功能。正如你所想的，这项技术已经进步了：在写作本书时，谷歌官网上声明“有超过200个信号”被用于评估一个网页的重要性。
+除了现代搜索引擎的众多复杂性之外，PageRank核心的优美思想——权威性网页通过超链接向其他网页传输权重——仍然有效。正是这一思想帮助谷歌击败了AltaVista，让谷歌从一家小型创业企业几年后成长为搜索之王。没有PageRank的核心思想，绝大多数搜索引擎查询都将被成千上万命中但不相关的网页海洋所淹没。PageRank的确是一块算法瑰宝，能让针毫不费力地冒到草垛的顶端。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id="no2-公钥加密"&gt;No.2 公钥加密 &lt;a href="#no2-%e5%85%ac%e9%92%a5%e5%8a%a0%e5%af%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;有两种经常使用的密钥体制，分别是公开密钥体制和共享密钥体制，这两种密钥体制各有优缺点，在现实世界中往往需要结合起来使用，后面会介绍如何使用。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;公开密钥体制&lt;/strong&gt;，又称为“&lt;strong&gt;非对称密钥体制&lt;/strong&gt;”，意思是说加密和解密使用的是两个不同的密码。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;共享秘钥体制&lt;/strong&gt;，又称为“&lt;strong&gt;对称加密体制&lt;/strong&gt;”，意思是说加密和解密使用的是相同的密码。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="21-共享密钥体制"&gt;2.1 共享密钥体制 &lt;a href="#21-%e5%85%b1%e4%ba%ab%e5%af%86%e9%92%a5%e4%bd%93%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="211-分组加密"&gt;2.1.1 分组加密 &lt;a href="#211-%e5%88%86%e7%bb%84%e5%8a%a0%e5%af%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;分组加密，将秘钥和原始信息更紧密地混合在一起，减少被统计分析攻破的可能。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;首先，长消息被分解成固定大小（通常是10～15个字母）的小“块”。其次，和简单地将一块消息与钥匙相加不同的是，每个块都会根据一系列固定规则转换数次。这些规则类似于加法，但会让消息和钥匙更紧密地混合在一起。比如，规则可以是“将钥匙的前半部分和这块消息的后半部分相加，倒置结果，再将钥匙的第二部分和这块消息的前半部分相加”——不过在现实中，这些规则要更加复杂一些。现代分块密码基本上会进行10“轮”或更多类似操作，即操作列表会被反复应用。在转换的轮数足够多时，原始消息会真正地混合好，并能抵御统计攻击，但任何知道钥匙的人都能用相反的步骤运行所有操作，以获得最初的解密的消息。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="22-公开密钥体制"&gt;2.2 公开密钥体制 &lt;a href="#22-%e5%85%ac%e5%bc%80%e5%af%86%e9%92%a5%e4%bd%93%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h2 id="23-现实中的公钥加密"&gt;2.3 现实中的公钥加密 &lt;a href="#23-%e7%8e%b0%e5%ae%9e%e4%b8%ad%e7%9a%84%e5%85%ac%e9%92%a5%e5%8a%a0%e5%af%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;非对称加密比对称加密安全，但是运算速度慢。通信数据传输之前需要加密处理，但是并不是直接用非对称加密进行加密处理，它还是通过对称加密进行加密处理，只不过这里的加密用的秘钥是通过非对称加密传输给对端的。使用安全性更高的非对称加密来确保加密秘钥的安全性，然后通过这个可靠的秘钥对数据进行加密。
+非对称加密的高安全性，是建立在使用的数学计算的单向性，至少在信息时效期限内不可能通过现有设备反推出秘钥，从而确保信息的安全。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;没有公钥加密，我们每天使用的绝大部分在线交易都不可能安全地完成。RSA的发明者在20世纪70年代为自己的系统申请了专利，而他们的专利直到2000年年末才失效。在专利失效的那天晚上，美国旧金山市的美国音乐大剧院举行了一次庆祝晚会——也许是为庆祝公钥加密将永久为人们服务这一事实。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id="3-纠错码"&gt;3 纠错码 &lt;a href="#3-%e7%ba%a0%e9%94%99%e7%a0%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="31-定位把戏"&gt;3.1 定位把戏 &lt;a href="#31-%e5%ae%9a%e4%bd%8d%e6%8a%8a%e6%88%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;二维奇偶校验码，形象生动地描述了侦测错误、纠正错误的过程，计算机系统中也有应用，但是这个方法不如其他冗余技术高效，也不是那么广泛使用的，这里讲这个的目的是为了帮助读者更好的理解计算机通信过程中的纠错码技术的重要性。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;二维奇偶校验码在一些真正的计算机系统中也有运用，但并不如其他一些冗余把戏高效。我在这里解释它的原因是，它能很容易地具化并展现在不要求复杂数学的情况下，于当今计算机系统中的流行代码背后发现并纠正错误的风味。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="32-现实世界中的纠错及侦错"&gt;3.2 现实世界中的纠错及侦错 &lt;a href="#32-%e7%8e%b0%e5%ae%9e%e4%b8%96%e7%95%8c%e4%b8%ad%e7%9a%84%e7%ba%a0%e9%94%99%e5%8f%8a%e4%be%a6%e9%94%99" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;额，确实兴趣广泛，真会玩，骑独轮车，轮子还是椭圆的&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;顺便说一下，香农的兴趣非常广泛。作为1956年达特茅斯人工智能大会（将在第六章末谈到）的四位主要组织者之一，他积极参与了另一领域的创立：人工智能。这还没完。他还骑单轮车，并制造了一辆令人难以置信的单轮车。这辆单轮车有一个椭圆轮子，意味着车手随着单轮车前进可以上下移动！&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id="4-图形识别"&gt;4 图形识别 &lt;a href="#4-%e5%9b%be%e5%bd%a2%e8%af%86%e5%88%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="41-不同类型的最近邻"&gt;4.1 不同类型的“最近”邻 &lt;a href="#41-%e4%b8%8d%e5%90%8c%e7%b1%bb%e5%9e%8b%e7%9a%84%e6%9c%80%e8%bf%91%e9%82%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;图像数据如何作为训练样本对分类器进行训练呢，训练分类器的过程可以参考不同的分类器算法，k近邻分类器，决策树，神经网络，贝叶斯网络，或者支持向量机等等，在训练之前都要对数据进行预处理，以便用来作为训练样本对分类器进行训练。往往这些分类器的输入都是向量形式，图像数据怎么预处理呢？简单一点，如何认为两张图像比较接近呢？这里说了一个简单思路，两个图像放缩到相同大小，然后做减法，其实图像本身也是一堆一维的数据，本身可以作为输入向量，这么理解起来就简单了。实际处理过程可能要比这里的复杂些。&lt;/p&gt;</description></item><item><title>Go OpenTracing 笔记</title><link>/blog/2018-11-04-go-opentracing/</link><pubDate>Sun, 04 Nov 2018 14:32:38 +0800</pubDate><guid>/blog/2018-11-04-go-opentracing/</guid><description>&lt;p&gt;调用链，在分布式环境下对请求链路进行全局性的监控，能够及时帮助定位到链路中出现问题的环节。Google 构建了 dapper 调用链系统并发表了相关论文，之后 zipkin、jaeger 基于这篇论文也诞生了，除了这两个比较常见的公共组件，还有 appdash、lightstep 这两个比较小众的。&lt;/p&gt;
+&lt;p&gt;为了能够屏蔽不同调用链公共组件的内部实现细节，以及 api 上的差异，opentracing 提供了统一的 api 来支持对不同调用链 backend 的 trace 数据生成、上报，除了在初始化的时候要考虑不同调用链 backend 的差异之外，其他时候可以通过一致的 api 与之进行交互。&lt;/p&gt;
+&lt;p&gt;下面是一个基于 go 的 opentracing 的教程，总共只有几个章节，学习完基本上就可以在项目中集成调用链相关能力了，&lt;a href="https://github.com/yurishkuro/opentracing-tutorial/tree/master/go"&gt;查看教程&lt;/a&gt;，也可以参考在 GoNeat 中调用链集成部分。&lt;/p&gt;</description></item><item><title>Go Protobuf 解析与开发环境</title><link>/blog/2018-11-04-go-protobuf/</link><pubDate>Sun, 04 Nov 2018 14:32:38 +0800</pubDate><guid>/blog/2018-11-04-go-protobuf/</guid><description>&lt;blockquote&gt;
+&lt;p&gt;本文由 notes &lt;code&gt;__代码大全__&lt;/code&gt; 下 &lt;code&gt;go - proto.md&lt;/code&gt; 与 &lt;code&gt;pb - 开发环境搭建.md&lt;/code&gt; 合并迁移。myspace 已有若干 protobuf/protoc 专题文，本稿偏解析库用法，主题相邻待决。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id="开发环境搭建"&gt;开发环境搭建 &lt;a href="#%e5%bc%80%e5%8f%91%e7%8e%af%e5%a2%83%e6%90%ad%e5%bb%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;protobuf 开发环境搭建，主要包括两部分内容：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;protobuf compiler 的安装&lt;/li&gt;
+&lt;li&gt;对应编程语言的插件安装，如 golang 依赖的 protoc-gen-go 插件&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;protobuf 及 protoc-gen-go 安装：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;https://github.com/protocolbuffers/protobuf
+&lt;ul&gt;
+&lt;li&gt;v3.6.0+ 以上版本支持 map 解析，syntax=2、3 消息序列化后是二进制兼容的&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;git checkout v3.6.1.3&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;./autogen.sh&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;./configure&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;make -j8&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;make install&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;git clone https://github.com/golang/protobuf golang-protobuf&lt;/code&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;cd golang-protobuf&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;make install&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;默认安装到 &lt;code&gt;$GOPATH/bin&lt;/code&gt; 下面，记得将该路径加到 &lt;code&gt;$PATH&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h1 id="protobuf-解析与自动化工具"&gt;Protobuf 解析与自动化工具 &lt;a href="#protobuf-%e8%a7%a3%e6%9e%90%e4%b8%8e%e8%87%aa%e5%8a%a8%e5%8c%96%e5%b7%a5%e5%85%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Google Proto Buffer 是一种常用的编解码格式，简称 protobuf 或者 pb。pb 是一种自描述的语言，其包含的信息非常丰富，可以用来完整描述一个服务，包括服务名称、rpc 接口、接口请求、接口响应等等。&lt;/p&gt;</description></item><item><title>Go template 使用详解</title><link>/blog/2018-11-04-go-template/</link><pubDate>Sun, 04 Nov 2018 14:32:38 +0800</pubDate><guid>/blog/2018-11-04-go-template/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;模板技术在软件开发中有着广泛的应用场景：Web 页面渲染、邮件内容生成、自动化代码生成、CLI 输出定制等等。Go 语言在标准库中内置了强大的模板引擎 &lt;code&gt;text/template&lt;/code&gt;（以及安全的 HTML 版本 &lt;code&gt;html/template&lt;/code&gt;），无需引入第三方库即可完成模板解析与执行。&lt;/p&gt;
+&lt;p&gt;本文先梳理 Go 模板编程的核心概念与基础语法，建立知识框架，再通过层层递进的示例展示实际用法，最后给出一个代码生成实战案例。&lt;/p&gt;
+&lt;h1 id="核心概念与基础语法"&gt;核心概念与基础语法 &lt;a href="#%e6%a0%b8%e5%bf%83%e6%a6%82%e5%bf%b5%e4%b8%8e%e5%9f%ba%e7%a1%80%e8%af%ad%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在开始写代码之前，先理解 Go 模板的运转模型和几个关键概念。&lt;/p&gt;
+&lt;h2 id="运转模型"&gt;运转模型 &lt;a href="#%e8%bf%90%e8%bd%ac%e6%a8%a1%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Go 模板的运转过程非常直观：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;模板文本 (string) ──Parse──▶ *Template ──Execute(data)──▶ 输出 (io.Writer)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;模板文本&lt;/strong&gt;：一段包含&amp;quot;动作&amp;quot;（actions）的普通文本，动作用于控制输出内容&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;解析（Parse）&lt;/strong&gt;：将模板文本编译为内部表示，得到 &lt;code&gt;*Template&lt;/code&gt; 对象&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;执行（Execute）&lt;/strong&gt;：将数据绑定到模板，遍历数据结构，把结果写入 &lt;code&gt;io.Writer&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;模板可以被&lt;strong&gt;重复执行&lt;/strong&gt;——解析一次，用不同数据执行多次，无需重新解析。&lt;/p&gt;
+&lt;h2 id="动作actions与定界符"&gt;动作（Actions）与定界符 &lt;a href="#%e5%8a%a8%e4%bd%9cactions%e4%b8%8e%e5%ae%9a%e7%95%8c%e7%ac%a6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;模板中所有动态行为都通过&lt;strong&gt;动作&lt;/strong&gt;来表达。动作用 &lt;code&gt;{{&lt;/code&gt; 和 &lt;code&gt;}}&lt;/code&gt; 括起来，这两个符号称为&lt;strong&gt;定界符&lt;/strong&gt;（delimiters）。定界符之外的文本会原样输出。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;Hello, {{.Name}}! → Hello, Alice!
+{{.Count}} items in stock. → 42 items in stock.
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;动作可以分为两大类：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;类别&lt;/th&gt;
+&lt;th&gt;说明&lt;/th&gt;
+&lt;th&gt;示例&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;数据求值&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;获取数据的值并输出&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;{{.Name}}&lt;/code&gt;、&lt;code&gt;{{.Age}}&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;控制结构&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;控制模板的执行流程&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;{{if}}&lt;/code&gt;、&lt;code&gt;{{range}}&lt;/code&gt;、&lt;code&gt;{{with}}&lt;/code&gt;、&lt;code&gt;{{define}}&lt;/code&gt;、&lt;code&gt;{{template}}&lt;/code&gt;、&lt;code&gt;{{block}}&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="dot-当前作用域的光标"&gt;Dot（&lt;code&gt;.&lt;/code&gt;）—— 当前作用域的&amp;quot;光标&amp;quot; &lt;a href="#dot-%e5%bd%93%e5%89%8d%e4%bd%9c%e7%94%a8%e5%9f%9f%e7%9a%84%e5%85%89%e6%a0%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;.&lt;/code&gt; 是 Go 模板中最重要的概念，称为 &lt;strong&gt;dot&lt;/strong&gt;。它代表&lt;strong&gt;当前作用域中正在被操作的数据&lt;/strong&gt;，可以理解为游走在数据结构上的&amp;quot;光标&amp;quot;。&lt;/p&gt;</description></item><item><title>ELK Stack 集中式日志管理</title><link>/blog/2018-10-12-%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7_elk/</link><pubDate>Fri, 12 Oct 2018 12:00:00 +0800</pubDate><guid>/blog/2018-10-12-%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7_elk/</guid><description>&lt;h1 id="what-is-elk-stack-"&gt;What is ELK Stack ? &lt;a href="#what-is-elk-stack-" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;ELK Stack，包括了ElasticSearch(E)、LogStash(L)、Kibana(K)。这三个产品都是由Elastic开发、维护的，其中：&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;ElasticSearch是一个基于Lucence搜索引擎构建的NoSQL数据库；&lt;/li&gt;
@@ -8033,7 +8662,57 @@ padding-bottom: 1rem;
 double bpe = -(log(error) / denom);
 int hashes = (int)ceil(0.693147180559945 * bpe); // ln(2)
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;假如希望存储entries个元素的话，在满足上述误差率的情况下，布隆过滤器需要分配内存空间为&lt;code&gt;int bits = (int)(bpe * entries)&lt;/code&gt;。&lt;/p&gt;</description></item><item><title>Go 基础速览：Go核心特性 &amp; 与C/C++关键差异</title><link>/blog/2018-09-02-go-basic-tutorial-review/</link><pubDate>Sun, 02 Sep 2018 12:00:00 +0800</pubDate><guid>/blog/2018-09-02-go-basic-tutorial-review/</guid><description>&lt;blockquote&gt;
+&lt;p&gt;假如希望存储entries个元素的话，在满足上述误差率的情况下，布隆过滤器需要分配内存空间为&lt;code&gt;int bits = (int)(bpe * entries)&lt;/code&gt;。&lt;/p&gt;</description></item><item><title>“Go时间解析layout的特殊设计”</title><link>/blog/2018-09-29-time-layout/</link><pubDate>Sat, 29 Sep 2018 12:00:00 +0800</pubDate><guid>/blog/2018-09-29-time-layout/</guid><description>&lt;p&gt;go里面的package time可以对日期时间进行操作，如将一个字符串形式的日期时间转换成time.Time，可以采用方法&lt;code&gt;time.Parse(layout, value string) (Time, error)&lt;/code&gt;这里go的实现非常有趣，它为了纪念go的诞生，这里的layout必须采用”&lt;strong&gt;2006-01-02 15:04:05&lt;/strong&gt;”或者”&lt;strong&gt;2006-01-02 03:04:05&lt;/strong&gt;”，否则会导致解析失败。&lt;/p&gt;
+&lt;p&gt;首先来看一个解析的示例代码：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;func TestDateParse(t *testing.T) {
+t1 := time.Date(2018, time.April, 26, 12, 16, 50, 0, time.UTC)
+fmt.Println(t1)
+layout := &amp;quot;2006-01-02 15:04:05&amp;quot;
+t2, _ := time.Parse(layout, t1.Format(layout))
+fmt.Println(t2)
+xxxxx := &amp;quot;2006-03-02 01:04:05&amp;quot;
+t2, _ = time.Parse(xxxxx, t2.Format(layout))
+fmt.Println(t2)
+yyyyy := &amp;quot;2006-05-02 03:04:01&amp;quot;
+t2, err := time.Parse(yyyyy, t2.Format(layout))
+fmt.Println(err)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;执行命令: &lt;code&gt;go test -run DateParse&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;执行结果:&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-sh"&gt;2018-04-26 12:16:50 +0000 UTC
+2018-04-26 12:16:50 +0000 UTC
+2018-12-26 04:16:50 +0000 UTC
+parsing time &amp;quot;2018-12-26 04:16:50&amp;quot;: month out of range
+PASS
+ok _/E_/Gogland/LearnGo 0.203s
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;为什么会出现这样的问题呢？实现&lt;code&gt;time.Parse&lt;/code&gt;的时候埋了一个“彩蛋”，如果layout没有定义成指定的格式，或者将06、01、02、03（也可以用15）、04、05交换顺序，则解析出来的时间是错误的，甚至会出现上述示例中“&lt;em&gt;&lt;strong&gt;month out of range&lt;/strong&gt;&lt;/em&gt;”的错误，是不是很奇怪？&lt;/p&gt;</description></item><item><title>Go调试器Delve使用指南</title><link>/blog/2018-09-03-delve/</link><pubDate>Mon, 03 Sep 2018 00:00:00 +0800</pubDate><guid>/blog/2018-09-03-delve/</guid><description>&lt;h1 id="delve简介"&gt;delve简介 &lt;a href="#delve%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;delve（简称dlv）是一款专门面向go语言调试而开发的一款调试器，其本身也是通过go语言进行开发。delve相比gdb等调试工具而言，它对go类型系统的理解、运行时把控更加优秀，建议大家使用delve来对go程序进行调试。&lt;/p&gt;
+&lt;p&gt;调试，是一件比较琐碎的事情，通常我们有一定编程经验之后可能通过error日志就能够定位到问题所在，但是仍然在某些特别刁钻的场景下，我们可能还是要依赖调试器来帮助跟踪定位问题，这里的场景就不列举了，如果想不到这样的场景，那可能也不要调试器，等你意识到打日志难以解决的时候，就更能体会调试器的作用了。&lt;/p&gt;
+&lt;p&gt;下面描述下delve的一些基本、高级使用技巧。&lt;/p&gt;
+&lt;h1 id="基本调试"&gt;基本调试 &lt;a href="#%e5%9f%ba%e6%9c%ac%e8%b0%83%e8%af%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="本地调试"&gt;本地调试 &lt;a href="#%e6%9c%ac%e5%9c%b0%e8%b0%83%e8%af%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="dlv-exec-program"&gt;dlv exec $program &lt;a href="#dlv-exec-program" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在运行调试器调试程序之前，首先需要得到一个包含了DWARF调试信息的可执行程序，DWARF调试信息的生成需要在执行&lt;code&gt;go build&lt;/code&gt;的时候通过选项&lt;code&gt;-N -l&lt;/code&gt;显示指明，其中&lt;code&gt;-N&lt;/code&gt;表示禁止优化，&lt;code&gt;-l&lt;/code&gt;表示禁止内联。新的go版本需要指定&lt;code&gt;-gcflags=&amp;quot;all=-N -l&amp;quot;&lt;/code&gt;，其中all表示将-N和-l选项传递到所有的package编译环节中，之前旧版本应该是不需要的。如果希望强制编译所有已经编译过的包可以指定参数&lt;code&gt;-a&lt;/code&gt;。完整的编译命令即&lt;code&gt;go build -a -gcflags=&amp;quot;all=-N -l&amp;quot;&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;这样编译出程序之后，自带调试符号信息，就可以使用dlv进行调试了，假如程序名是hello，那么运行如下命令即可启动调试：&lt;code&gt;dlv exec ./hello&lt;/code&gt;，如果希望传递参数信息，可以在&lt;code&gt;--&lt;/code&gt;之后追加参数信息，如&lt;code&gt;dlv exec ./hello -- -p1=1 -p2=2&lt;/code&gt;。&lt;/p&gt;
+&lt;h3 id="dlv-debug-pathmaingo"&gt;dlv debug $path/main.go &lt;a href="#dlv-debug-pathmaingo" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;上述操作比较繁琐，需要先自己编译出可执行程序（还需要提供对应的编译选项），然后再启动调试，其实可以一步搞定，直接运行命令：&lt;code&gt;dlv debug main.go -- p1=1 -p2=2&lt;/code&gt;，dlv会自动传递对应的编译选项完成编译后启动调试。建议用这种方式进行调试，比较简单。&lt;/p&gt;
+&lt;h2 id="远程调试"&gt;远程调试 &lt;a href="#%e8%bf%9c%e7%a8%8b%e8%b0%83%e8%af%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;假如我们将编译好的程序放在测试机hostA上进行测试，我们在开发机hostB上对其进行调试，可能你要问为什么要这样，因为hostA是测试机，没有程序的源代码，调试当然要有源代码才可以查看源代码信息。&lt;/p&gt;
+&lt;p&gt;这个时候我们可以在hostA上让dlv以headless模式启动某个待调试程序，然后在开发机上也启动dlv，让其连接到hostA上headless模式的dlv进程上。这样开发机上的dlv接收用户的调试指令，并作出相应的处理，然后与hostA上的dlv进程做同步，我们就可以进行远程调试了。&lt;/p&gt;
+&lt;p&gt;hostA上运行调试：&lt;code&gt;dlv --headless --listen=:8000 exec ./hello -- -p1=1 -p2=2&lt;/code&gt;
+hostB上运行调试：&lt;code&gt;dlv connect hostA:port&lt;/code&gt;&lt;/p&gt;
+&lt;h1 id="调试命令"&gt;调试命令 &lt;a href="#%e8%b0%83%e8%af%95%e5%91%bd%e4%bb%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="打印变量"&gt;打印变量 &lt;a href="#%e6%89%93%e5%8d%b0%e5%8f%98%e9%87%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;打印的变量内容如果过长，dlv &lt;code&gt;print expression&lt;/code&gt;不会将完整的内容打印出来，而是默认只打印前64字节，这个时候有几个办法来解决，可以根据调试场景决定使用哪一种：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;用slice截取的方式打印：print variable[64:]&lt;/li&gt;
+&lt;li&gt;调整打印字符串最大长度：config max-string-len 1000&lt;/li&gt;
+&lt;li&gt;持久化上述配置，将上述配置添加到dlv默认配置文件：~/.dlv/config.yaml&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id="总结"&gt;总结 &lt;a href="#%e6%80%bb%e7%bb%93" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;本文主要对dlv的使用做了一些简单的整理、总结。&lt;/p&gt;</description></item><item><title>Tutorialspoint：Go核心特性 &amp; 与C/C++关键差异</title><link>/blog/2018-09-02-go-basic-tutorial-review/</link><pubDate>Sun, 02 Sep 2018 12:00:00 +0800</pubDate><guid>/blog/2018-09-02-go-basic-tutorial-review/</guid><description>&lt;blockquote&gt;
 &lt;p&gt;说明：早年刚接触 Go 时，曾对照 &lt;a href="https://www.tutorialspoint.com/go/index.htm"&gt;Tutorialspoint Go Tutorial&lt;/a&gt; 整理过一批学习笔记。原材料偏照搬、且已过时不全。本文不再逐页复制，而是按该站最新整理的内容进行更系统性总结：每节用尽量短的文字概括要点，并附 &lt;strong&gt;与 C/C++ 的对比&lt;/strong&gt;，方便有 C/C++ 背景时快速捡起细节。&lt;/p&gt;
 &lt;p&gt;整理基准时间可视为 &lt;strong&gt;2018-09-02&lt;/strong&gt; 前后的学习阶段，但实际包含了后续年份版本的内容，算是为了纪念当时的学习历程；文中个别处会标注后续语言演进（如 Generics）。&lt;/p&gt;
 &lt;/blockquote&gt;
@@ -8113,7 +8792,283 @@ func LoadIniCfg(filepath string) (*IniCfg, error) {
 func LoadPropCfg(filepath string) (*PropCfg, error) {
 }
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;运行&lt;code&gt;godoc -http=:6060&lt;/code&gt;找到对应的package kisslulu/conf即可预览文档中对package、type、func的介绍。&lt;/p&gt;</description></item><item><title>golang method receiver-type的梗</title><link>/blog/2018-05-21-golang-method-receiver-type%E7%9A%84%E6%A2%97/</link><pubDate>Mon, 21 May 2018 12:33:23 +0800</pubDate><guid>/blog/2018-05-21-golang-method-receiver-type%E7%9A%84%E6%A2%97/</guid><description>&lt;p&gt;这里来聊聊method receiver type为什么不能是pointer和interface类型。&lt;/p&gt;
+&lt;p&gt;运行&lt;code&gt;godoc -http=:6060&lt;/code&gt;找到对应的package kisslulu/conf即可预览文档中对package、type、func的介绍。&lt;/p&gt;</description></item><item><title>转盘算法</title><link>/blog/2018-06-29-%E8%BD%AC%E7%9B%98%E7%AE%97%E6%B3%95/</link><pubDate>Fri, 29 Jun 2018 22:00:00 +0800</pubDate><guid>/blog/2018-06-29-%E8%BD%AC%E7%9B%98%E7%AE%97%E6%B3%95/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在实际开发中，我们经常会遇到一类问题：从一组候选项中按权重随机选出一个。典型场景包括：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;抽奖活动&lt;/strong&gt;：奖池中有多个奖品，一等奖中奖概率 1%，二等奖 5%，三等奖 20%，谢谢参与 74%，需要保证每次抽奖的结果符合预设的概率分布。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;流量分发&lt;/strong&gt;：A/B 测试中需要将流量按比例分配到不同的实验组，比如对照组 50%、实验组 A 30%、实验组 B 20%。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;负载均衡&lt;/strong&gt;：加权轮询（Weighted Round Robin）中，需要按服务器权重分配请求。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;遗传算法&lt;/strong&gt;：在选择算子（Selection）阶段，根据个体适应度（fitness）按比例选择进入下一代的个体。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些场景的共同特征是：&lt;strong&gt;每个候选项有一个权重，权重越高被选中的概率越大，且每次选择的结果需要不失随机性&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;转盘算法（Roulette Wheel Selection）就是解决这类问题的经典方案。&lt;/p&gt;
+&lt;h1 id="算法原理"&gt;算法原理 &lt;a href="#%e7%ae%97%e6%b3%95%e5%8e%9f%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="数学描述"&gt;数学描述 &lt;a href="#%e6%95%b0%e5%ad%a6%e6%8f%8f%e8%bf%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;设有 $n$ 个候选项，每个候选项 $i$ 的权重为 $w_i$（$w_i &amp;gt; 0$），记总权重 $S = \sum_{i=1}^{n} w_i$。&lt;/p&gt;
+&lt;p&gt;那么候选项 $i$ 在一次独立抽样中被选中的概率为：&lt;/p&gt;
+&lt;p&gt;$$P(i) = \frac{w_i}{S}$$&lt;/p&gt;
+&lt;p&gt;这个公式的含义很直观：&lt;strong&gt;每个候选项被选中的概率，等于它的权重占所有候选项权重之和的比例&lt;/strong&gt;。&lt;/p&gt;
+&lt;h2 id="转盘模型"&gt;转盘模型 &lt;a href="#%e8%bd%ac%e7%9b%98%e6%a8%a1%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;这个数学模型可以很形象地类比为一个转盘：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;将总权重 $S$ 看作转盘的周长。&lt;/li&gt;
+&lt;li&gt;每个候选项 $i$ 在转盘上占据一段弧长为 $w_i$ 的扇形区域。&lt;/li&gt;
+&lt;li&gt;转动指针，指针停在哪里，对应的候选项就被选中。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;因为指针落在每个扇形区域的概率与该区域的弧长（即 $w_i$）成正比，所以恰好满足 $P(i) = w_i / S$。&lt;/p&gt;
+&lt;h2 id="算法步骤"&gt;算法步骤 &lt;a href="#%e7%ae%97%e6%b3%95%e6%ad%a5%e9%aa%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;计算所有候选项的权重之和 $S$。&lt;/li&gt;
+&lt;li&gt;在 $[0, S)$ 区间内生成一个均匀分布的随机数 $r$。&lt;/li&gt;
+&lt;li&gt;遍历候选项，维护一个累加和 $sum$，每遍历到一个候选项 $i$，执行 $sum \mathrel{+}= w_i$。&lt;/li&gt;
+&lt;li&gt;当 $sum &amp;gt; r$ 时，当前候选项 $i$ 即为选中的结果。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;这个步骤等价于：在转盘上随机投下一个点，看它落在哪个扇形区域中。&lt;/p&gt;</description></item><item><title>Go bufio 包用法示例</title><link>/blog/2018-06-29-bufio/</link><pubDate>Fri, 29 Jun 2018 14:32:38 +0800</pubDate><guid>/blog/2018-06-29-bufio/</guid><description>&lt;h1 id="3-bufio"&gt;3 bufio &lt;a href="#3-bufio" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;bufio implements &lt;strong&gt;buffered io&lt;/strong&gt;, bufio &lt;strong&gt;wrappes interface io.Reader and io.Writer&lt;/strong&gt;, it uses underlying buffer to store the data that is already read or to be written, and &lt;strong&gt;based on this, bufio implements reading byte, word, line, slice and writing byte, rune, string&lt;/strong&gt;.&lt;/p&gt;
+&lt;h2 id="31-reader"&gt;3.1 reader &lt;a href="#31-reader" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;following is a bufio.Reader example, this example show how to byte, rune, bytes, slice and line.&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;func testReader() {
+buf := bytes.NewBuffer([]byte(&amp;quot;hello, world&amp;quot;))
+rd := bufio.NewReader(buf)
+b, _ := rd.ReadByte()
+fmt.Println(&amp;quot;read byte:&amp;quot;, string(b))
+r, _, _ := rd.ReadRune()
+fmt.Println(&amp;quot;read rune:&amp;quot;, string(r))
+s, _ := rd.ReadBytes(',')
+//s, _ := rd.ReadSlice(',')
+fmt.Println(&amp;quot;read bytes:&amp;quot;, string(s))
+rd.Reset(bufio.NewReader(os.Stdin))
+for {
+l, p, _ := rd.ReadLine()
+fmt.Println(&amp;quot;read line:&amp;quot;, string(l), p)
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="32-scanner"&gt;3.2 scanner &lt;a href="#32-scanner" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;following is a bufio.Scanner example, this example shows how to scan byte, word and line. &lt;strong&gt;Before starting the scan operation, SplitMode must be specified&lt;/strong&gt;, bufio.ScanLine is the default SplitMode.&lt;/p&gt;</description></item><item><title>Go bytes 包用法示例</title><link>/blog/2018-06-29-bytes/</link><pubDate>Fri, 29 Jun 2018 14:32:38 +0800</pubDate><guid>/blog/2018-06-29-bytes/</guid><description>&lt;h1 id="4-bytes"&gt;4 bytes &lt;a href="#4-bytes" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;package &lt;strong&gt;bytes&lt;/strong&gt; provides many utility functions for byte slice, it is analogous to package &lt;strong&gt;strings&lt;/strong&gt;, which provides many utility functions for string.&lt;/p&gt;
+&lt;p&gt;as following, split package bytes&amp;rsquo; functions into several categories:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;compare&lt;/li&gt;
+&lt;li&gt;count &amp;amp; contains &amp;amp; index&lt;/li&gt;
+&lt;li&gt;trim &amp;amp; replace&lt;/li&gt;
+&lt;li&gt;join &amp;amp; split&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;here is the example:&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;package main
+import (
+&amp;quot;bytes&amp;quot;
+&amp;quot;fmt&amp;quot;
+)
+func main() {
+b1 := []byte{1, 2, 3, 4, 5}
+b2 := []byte{1, 2, 3, 2, 3, 2}
+b3 := []byte(&amp;quot;hello world&amp;quot;)
+// compare
+fmt.Println(bytes.Compare(b1, b2))
+fmt.Println(bytes.Equal(b1, b2))
+// count &amp;amp; contains &amp;amp; index
+// - count
+fmt.Println(bytes.Count(b2, []byte{2, 3, 2})) // 2, 3, 2, 3, 2, Counts doesn't take overlapping into consideration
+// - contains
+fmt.Println(bytes.Contains(b1, []byte{2, 3}))
+// - index
+fmt.Println(bytes.Index(b1, []byte{3, 4}))
+fmt.Println(bytes.LastIndex(b1, []byte{3, 4}))
+// trim &amp;amp; replace
+fmt.Println(string(bytes.Trim(b3, &amp;quot;hd&amp;quot;)))
+fmt.Println(string(bytes.TrimLeft(b3, &amp;quot;hd&amp;quot;)))
+fmt.Println(string(bytes.TrimRight(b3, &amp;quot;hd&amp;quot;)))
+fmt.Println(bytes.TrimPrefix(b1, []byte{1, 2}))
+fmt.Println(bytes.TrimSuffix(b1, []byte{4, 5}))
+fmt.Println(bytes.Replace(b1, []byte{3, 4}, []byte{7, 8}, -1))
+// join &amp;amp; split
+// - join
+ss := [][]byte{b1, b2}
+sep := []byte{0, 0}
+fmt.Println(bytes.Join(ss, sep))
+// -split
+fmt.Println(bytes.Split(b1, []byte{3}))
+fmt.Println(bytes.SplitAfter(b1, []byte{3}))
+fmt.Println(bytes.SplitN(b2, []byte{2}, 2))
+fmt.Println(bytes.SplitAfterN(b2, []byte{2}, 3))
+fmt.Println(bytes.SplitAfterN(b2, []byte{2}, 2))
+}
+&lt;/code&gt;&lt;/pre&gt;</description></item><item><title>Go container 包用法示例</title><link>/blog/2018-06-29-container/</link><pubDate>Fri, 29 Jun 2018 14:32:38 +0800</pubDate><guid>/blog/2018-06-29-container/</guid><description>&lt;h1 id="5-container"&gt;5 container &lt;a href="#5-container" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;package container provides 3 common data structures, &lt;strong&gt;list, ring, heap&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;list&lt;/strong&gt;, is a doublely linked list implemention, it can be used as singlely/doublely linked list, stack and queue.
+&lt;strong&gt;ring&lt;/strong&gt;, is a circular doublely linked list, it can be used as list.
+&lt;strong&gt;heap&lt;/strong&gt;, is a minimum heap implemention, but if we change the meaning of &lt;code&gt;Interface.Less(i,j int)&lt;/code&gt; to &lt;code&gt;LargerThan(i,j int)&lt;/code&gt;, then we can build a maximum heap.&lt;/p&gt;
+&lt;h2 id="51-list"&gt;5.1 list &lt;a href="#51-list" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;how to use it as stack?&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>Go context 包使用指南</title><link>/blog/2018-06-29-context/</link><pubDate>Fri, 29 Jun 2018 14:32:38 +0800</pubDate><guid>/blog/2018-06-29-context/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 Go 服务端开发中，每个请求通常会跨越多个 goroutine：处理 HTTP 请求、查询数据库、调用下游 RPC 等等。当请求被取消或超时时，我们希望整个调用链上的所有 goroutine 都能及时停止，避免资源浪费。&lt;/p&gt;
+&lt;p&gt;Go 标准库 &lt;code&gt;context&lt;/code&gt; 包正是为此而生。它在 API 边界和进程间传递 &lt;strong&gt;deadline&lt;/strong&gt;、&lt;strong&gt;取消信号&lt;/strong&gt; 以及 &lt;strong&gt;请求级别的参数&lt;/strong&gt;。&lt;/p&gt;
+&lt;h2 id="context-的设计"&gt;context 的设计 &lt;a href="#context-%e7%9a%84%e8%ae%be%e8%ae%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;context.Context&lt;/code&gt; 是一个接口，核心方法有四个：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type Context interface {
+Deadline() (deadline time.Time, ok bool) // 返回截止时间
+Done() &amp;lt;-chan struct{} // 返回一个只读 channel，取消时关闭
+Err() error // 返回取消原因
+Value(key interface{}) interface{} // 获取绑定的值
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;context&lt;/code&gt; 包提供了四个创建派生 Context 的函数，覆盖了所有使用场景：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;函数&lt;/th&gt;
+&lt;th&gt;用途&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;context.WithCancel(parent)&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;手动取消&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;context.WithDeadline(parent, time)&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;在指定时刻自动取消&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;context.WithTimeout(parent, duration)&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;在指定时长后自动取消&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;context.WithValue(parent, key, value)&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;携带键值对&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;所有函数都接收一个父 Context，返回一个派生 Context。多个 Context 可以形成父子链，父 Context 取消时，所有子 Context 都会被级联取消。&lt;/p&gt;</description></item><item><title>Go tar/zip 压缩读写</title><link>/blog/2018-06-29-archive/</link><pubDate>Fri, 29 Jun 2018 14:32:38 +0800</pubDate><guid>/blog/2018-06-29-archive/</guid><description>&lt;p&gt;压缩文件的创建、读取操作，golang 标准库中也提供了相应的库来实现，因为不同的压缩格式对应着不同的压缩算法，有不同的 package 来支持，这里不可能一一列举，就将平时我比较常用的 tar 和 zip 格式为例，来演示下如何在 golang 中支持压缩文件的创建、读取操作。&lt;/p&gt;
+&lt;h1 id="tar-文件创建读取"&gt;tar 文件创建、读取 &lt;a href="#tar-%e6%96%87%e4%bb%b6%e5%88%9b%e5%bb%ba%e8%af%bb%e5%8f%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="tar-文件创建"&gt;tar 文件创建 &lt;a href="#tar-%e6%96%87%e4%bb%b6%e5%88%9b%e5%bb%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;func writeTarball(tarball string, fnames []string) {
+fmt.Println(&amp;quot;files to compress:&amp;quot;, len(os.Args[2:]))
+// - 创建tar writer
+var buf_tar bytes.Buffer
+tw := tar.NewWriter(&amp;amp;buf_tar)
+// - 读取所有待压缩文件
+files := readFiles(fnames)
+// - 将待压缩的数据以tar header/body的形式进行登记
+for _, file := range files {
+hdr := &amp;amp;tar.Header{
+Name: file.Name,
+Mode: 0600,
+Size: int64(len(file.Body)),
+}
+if err := tw.WriteHeader(hdr); err != nil {
+log.Fatal(err)
+}
+if _, err := tw.Write([]byte(file.Body)); err != nil {
+log.Fatal(err)
+}
+}
+// - call tw.Close() flush压缩数据到[]byte中存储
+if err := tw.Close(); err != nil {
+log.Fatal(err)
+}
+// - 将压缩后数据写入磁盘
+tfile, err := os.Create(os.Args[1])
+if err != nil {
+fmt.Fprintf(os.Stderr, &amp;quot;%s\n&amp;quot;, err)
+os.Exit(1)
+}
+tfile.Write(buf_tar.Bytes())
+fmt.Println(&amp;quot;archive files done&amp;quot;)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="tar-文件读取"&gt;tar 文件读取 &lt;a href="#tar-%e6%96%87%e4%bb%b6%e8%af%bb%e5%8f%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;func readTarball(tarball string) {
+// 读取tarball数据到buf
+ifo, ok := checkFileExisted(tarball)
+if !ok {
+fmt.Fprintf(os.Stderr, &amp;quot;error: tarball %s not existed\n&amp;quot;)
+os.Exit(1)
+}
+buf := make([]byte, ifo.Size())
+file, err := os.Open(tarball)
+if err != nil {
+fmt.Fprintf(os.Stderr, &amp;quot;%s\n&amp;quot;, err)
+os.Exit(1)
+}
+_, err = file.Read(buf)
+if err != nil {
+fmt.Fprintf(os.Stderr, &amp;quot;%s\n&amp;quot;, err)
+os.Exit(1)
+}
+// 创建tar reader并解析文件数据
+buf_tar := bytes.NewBuffer(buf)
+tr := tar.NewReader(buf_tar)
+// tar reader对压缩包中的tar header\body进行读取
+for {
+hdr, err := tr.Next()
+if err == io.EOF {
+break
+}
+if err != nil {
+log.Fatal(err)
+break
+}
+name := hdr.Name
+sz := hdr.Size
+buf := bytes.NewBuffer(make([]byte, sz))
+io.Copy(buf, tr)
+fmt.Fprintf(os.Stdout, &amp;quot;read tarball: [%s]-&amp;gt;[%d]bytes-&amp;gt;[%s]\n&amp;quot;,
+name, sz, strings.TrimRight(buf.String(), &amp;quot;\n&amp;quot;))
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id="zip-文件创建读取"&gt;zip 文件创建、读取 &lt;a href="#zip-%e6%96%87%e4%bb%b6%e5%88%9b%e5%bb%ba%e8%af%bb%e5%8f%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="zip-文件创建"&gt;zip 文件创建 &lt;a href="#zip-%e6%96%87%e4%bb%b6%e5%88%9b%e5%bb%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;import (
+zip2 &amp;quot;archive/zip&amp;quot;
+&amp;quot;os&amp;quot;
+&amp;quot;fmt&amp;quot;
+)
+func writeZip(zip string, fnames []string) {
+var buf_zip bytes.Buffer
+zw := zip2.NewWriter(&amp;amp;buf_zip)
+for _, f := range fnames {
+ifo, err := os.Stat(f)
+checkError(err, true)
+buf := make([]byte, ifo.Size())
+file, err := os.Open(f)
+checkError(err, true)
+_, err = file.Read(buf)
+checkError(err, true)
+w, err := zw.Create(f)
+checkError(err, true)
+w.Write(buf)
+}
+zw.Close()
+file, err := os.Create(zip)
+checkError(err, true)
+file.Write(buf_zip.Bytes())
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="zip-文件读取"&gt;zip 文件读取 &lt;a href="#zip-%e6%96%87%e4%bb%b6%e8%af%bb%e5%8f%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;import (
+zip2 &amp;quot;archive/zip&amp;quot;
+&amp;quot;os&amp;quot;
+&amp;quot;fmt&amp;quot;
+)
+func readZip(zip string) {
+ifo, err := os.Stat(zip)
+checkError(err, true)
+file, err := os.Open(zip)
+checkError(err, true)
+zr, e := zip2.NewReader(file, ifo.Size())
+checkError(e, true)
+for _, f := range zr.File {
+name := f.Name
+data := make([]byte, f.UncompressedSize64)
+rc, _ := f.Open()
+rc.Read(data)
+fmt.Fprintf(os.Stdout, &amp;quot;filename:%s size:%dbytes data:%s\n&amp;quot;,
+name, len(data), data)
+}
+}
+&lt;/code&gt;&lt;/pre&gt;</description></item><item><title>golang method receiver-type的梗</title><link>/blog/2018-05-21-golang-method-receiver-type%E7%9A%84%E6%A2%97/</link><pubDate>Mon, 21 May 2018 12:33:23 +0800</pubDate><guid>/blog/2018-05-21-golang-method-receiver-type%E7%9A%84%E6%A2%97/</guid><description>&lt;p&gt;这里来聊聊method receiver type为什么不能是pointer和interface类型。&lt;/p&gt;
 &lt;h1 id="1-receiver-type必须满足的条件"&gt;1 receiver-type必须满足的条件 &lt;a href="#1-receiver-type%e5%bf%85%e9%a1%bb%e6%bb%a1%e8%b6%b3%e7%9a%84%e6%9d%a1%e4%bb%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;golang里面提供了一定的面向对象支持，比如我们可以为类型T或者*T定义成员方法（类型T称为成员方法的receiver-type），但是这里的类型T必须满足如下几个条件：&lt;/p&gt;
 &lt;ul&gt;
@@ -8170,7 +9125,7 @@ Outnamed bool // 是否是可导出的？
 &lt;p&gt;2）如果chan的recv goroutine queue是空的，并且value buffer不满，这种情况下，send goroutine queue一定是空的，因为value buffer不满发送goroutine可以发送完成不可能会阻塞。该发送goroutine将要发送的数据push到value buffer中然后继续执行。这种情况下，chan send操作是non-blocking操作。&lt;/p&gt;
 &lt;p&gt;3）如果chan的recv goroutine queue是空的，并且value buffer是满的，发送goroutine将被push到send goroutine queue中进入阻塞状态。等到有其他goroutine尝试从chan接收数据的时候才能将其唤醒恢复执行。这种情况下，chan send操作是blocking操作。&lt;/p&gt;
 &lt;h2 id="13-chan操作规则3"&gt;1.3 chan操作规则3 &lt;a href="#13-chan%e6%93%8d%e4%bd%9c%e8%a7%84%e5%88%993" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;当一个goroutine尝试close一个non-nil &amp;amp; non-closed chan的时候，close操作将依次执行如下操作。&lt;/p&gt;</description></item><item><title>Go 101 学习笔记汇总</title><link>/blog/2018-04-18-go-101-notes/</link><pubDate>Wed, 18 Apr 2018 12:00:00 +0800</pubDate><guid>/blog/2018-04-18-go-101-notes/</guid><description>&lt;h2 id="写在前面"&gt;写在前面 &lt;a href="#%e5%86%99%e5%9c%a8%e5%89%8d%e9%9d%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当一个goroutine尝试close一个non-nil &amp;amp; non-closed chan的时候，close操作将依次执行如下操作。&lt;/p&gt;</description></item><item><title>Go 101：学习笔记速览</title><link>/blog/2018-04-18-go-101-notes/</link><pubDate>Wed, 18 Apr 2018 12:00:00 +0800</pubDate><guid>/blog/2018-04-18-go-101-notes/</guid><description>&lt;h2 id="写在前面"&gt;写在前面 &lt;a href="#%e5%86%99%e5%9c%a8%e5%89%8d%e9%9d%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;这部分内容，是我早年学习 Golang 时的进阶材料与批注式笔记的汇总。2026年对这些散落的知识进行一些总结归档 :)&lt;/p&gt;
 &lt;p&gt;一开始接触的是各类初级入门介绍。后来了解到社区贡献的 &lt;a href="https://go101.org/"&gt;Go 101&lt;/a&gt; 项目：内容涵盖 Go fundamentals、generics、optimizations、details &amp;amp; tips、quizzes、bugs、Q&amp;amp;A、apps &amp;amp; libs、blogs 等，从基础到深入覆盖都很扎实，对我帮助很大。当时做了大量笔记，而且多是在网页上通过 Diigo 做的批注。尽管后来 go101 的页面结构有变化，这些笔记仍然带来了很好的记忆锚点——虽然现在看起来略显零散。&lt;/p&gt;
 &lt;p&gt;我强烈建议 Go 初学者把 go101 作为精进理解的备选材料。可以说，我对 Go 的认识早已不是多年前那个初学者所能企及的了。如今再回看这些知识，对今天的我帮助已经不多，但可能对读者仍有价值。因此不再罗列当年那一长串章节笔记，而把这里提及的要点汇总成一篇文章。&lt;/p&gt;
@@ -9925,7 +10880,130 @@ printf(&amp;quot;uid is: %d\n&amp;quot;, (int)getuid());
 return 0;
 }
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;测试uid，euid&lt;/p&gt;</description></item><item><title>TCP/IP网络安全篇</title><link>/blog/2013-09-30-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8tcpipnetworksecurity/</link><pubDate>Mon, 30 Sep 2013 02:08:29 +0800</pubDate><guid>/blog/2013-09-30-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8tcpipnetworksecurity/</guid><description>&lt;p&gt;《TCP/IP 网络安全篇》，作者是日本的寺田真敏 萱岛 信。&lt;/p&gt;
+&lt;p&gt;测试uid，euid&lt;/p&gt;</description></item><item><title>Linux 进程间通信机制</title><link>/blog/2014-06-01-linux-ipc/</link><pubDate>Sun, 01 Jun 2014 08:00:00 +0800</pubDate><guid>/blog/2014-06-01-linux-ipc/</guid><description>&lt;p&gt;linux下面支持很多种进程间通信机制：&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;1. 管道&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;pipe，通过匿名管道；&lt;/li&gt;
+&lt;li&gt;mkfifo，通过有名管道；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;2. System V中提供的3中，linux也支持&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;msgget，通过消息队列；&lt;/li&gt;
+&lt;li&gt;semget，通过信号量；&lt;/li&gt;
+&lt;li&gt;shmget，通过共享内存；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;System V提供的这几种进程间通信方式，都是通过key来关联具体的描述符的，如关联消息队列、信号量、共享内存的描述符（共享内存shmget不是内存映射mmap，别搞混了）。&lt;/p&gt;
+&lt;p&gt;据说，System V中提供的3种进程间通信机制，多路io不支持啊？这三种方式全是本地内存计算也不存在阻塞的问题，要多路io干啥啊！不过对于管道的话，多路io是支持的，可能考虑的是管道是一种类似于面向流的通信手段吧。&lt;/p&gt;</description></item><item><title>pmap 探索线程栈的创建和释放</title><link>/blog/2014-06-01-pmap-thread-stack/</link><pubDate>Sun, 01 Jun 2014 08:00:00 +0800</pubDate><guid>/blog/2014-06-01-pmap-thread-stack/</guid><description>&lt;p&gt;通过pmap测试了一下，发现每次创建一个线程，pmap的输出都会多出一块区域，但是看上去这块区域的地址是在进程的堆和栈之间，这块区域的名字叫anon，搜索了一下anon区域表示的是mmap映射的区域。&lt;/p&gt;
+&lt;p&gt;当某个线程销毁的时候呢，pmap输出就会减少几个anon区域。那么基本可以断定了线程所使用的内存空间（线程栈）是通过mmap映射到进程的虚拟地址空间中的。而anon区域的大小基本上都是8M，我们也知道，linux下面支持的进程栈或线程栈的最大大小就是8M。而malloc(n)申请内存的时候，小于128k的都是从堆里面分配，大于的都是通过mmap来分配。&lt;/p&gt;
+&lt;p&gt;这样的话，就搞明白了。&lt;/p&gt;
+&lt;p&gt;下面线程2回收线程3的时候，其实只是执行了munmap操作，将线程3的栈空间从进程地址空间中移除。&lt;/p&gt;
+&lt;p&gt;本来我还以为是所有线程栈在当前进程主线程栈sp的基础上减去一个值来当做栈空间呢？但是后面想到如果线程3回收了线程2这个处在线程3栈下方的线程怎么办？sp要怎么操作？线程3的栈空间是否要移动，线程是否要停顿？页表是否要重新映射？&lt;/p&gt;
+&lt;p&gt;想到这，就有了上面的探索和思考，现在搞明白了。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;pthread.h&amp;gt;
+#include &amp;lt;stdlib.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+#include &amp;lt;string.h&amp;gt;
+pthread_t tids[3];
+void pmap() {
+char cmd[1024];
+memset(cmd, 0, 1024);
+sprintf(cmd, &amp;quot;/usr/bin/pmap %d&amp;quot;, getpid());
+system(cmd);
+}
+void *work(void *param) {
+int i = 0;
+while(i++&amp;lt;10)
+;
+}
+void *work2(void *param) {
+sleep(10);
+pthread_join(tids[2], NULL);
+pmap();
+}
+void *work3(void *param) {
+sleep(5);
+}
+int main(int argc, char *argv[])
+{
+pmap();
+pthread_create(&amp;amp;tids[0], NULL, work, NULL);
+sleep(1);
+pmap();
+pthread_create(&amp;amp;tids[1], NULL, work2, NULL);
+sleep(1);
+pmap();
+pthread_create(&amp;amp;tids[2], NULL, work3, NULL);
+sleep(1);
+pmap();
+pthread_exit(0);
+}
+&lt;/code&gt;&lt;/pre&gt;</description></item><item><title>pthread 线程库笔记</title><link>/blog/2014-06-01-pthread-notes/</link><pubDate>Sun, 01 Jun 2014 08:00:00 +0800</pubDate><guid>/blog/2014-06-01-pthread-notes/</guid><description>&lt;p&gt;&lt;strong&gt;1.常用数据类型&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;pthread_mutex_t
+pthread_cond_t
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;2.信号&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;进程之间可以互相发送信号，通过kill函数；&lt;/li&gt;
+&lt;li&gt;线程之间也可以互相发送信号，通过pthread_kill函数。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;3.使用mutex、cond实现线程同步（这两个结合起来，其实就相当于信号量）&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;加入pthread_cond_wait(&amp;amp;cond, &amp;amp;mutex)将当前线程放置到cond对应的等待队列上之后，假如后面有个线程调用pthread_cond_signal将该线程唤醒了，那么线程被唤醒的时候，将重新获得锁mutex，获得了该锁之后继续从pthread_cond_wait之后的语句执行。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;pthread.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+static int a = 1;
+static pthread_mutex_t mutex;
+static pthread_cond_t cond;
+void *func_inc(void * arg) {
+while(1) {
+pthread_mutex_lock(&amp;amp;mutex);
+printf(&amp;quot;threadid:%d\t in inc thread\n&amp;quot;, pthread_self());
+printf(&amp;quot;xxxxxxxxxxxxxx\n&amp;quot;);
+while(a!=0) {
+printf(&amp;quot;threadid:%d\t a!=0,waiting\n&amp;quot;, pthread_self());
+pthread_cond_wait(&amp;amp;cond, &amp;amp;mutex);
+// 线程被唤醒之后，获得锁的过程是在pthread线程库中完成的
+// 成功获得锁之后，将从这里继续执行
+// 注意，唤醒后重新获得锁的过程是在pthread线程库代码中完成的，
+// 而不是重新从上面的pthread_mutex_lock(&amp;amp;mutex)处获得锁！！！
+printf(&amp;quot;threadid:%d\t a==0,wakup\n&amp;quot;, pthread_self());
+}
+a++;
+pthread_cond_signal(&amp;amp;cond);
+pthread_mutex_unlock(&amp;amp;mutex);
+}
+return NULL;
+}
+void *func_dec(void * arg) {
+while(1) {
+pthread_mutex_lock(&amp;amp;mutex);
+printf(&amp;quot;threadid:%d\t in dec thread\n&amp;quot;, pthread_self());
+while(a!=1) {
+printf(&amp;quot;threadid:%d\t a!=1,waiting\n&amp;quot;, pthread_self());
+pthread_cond_wait(&amp;amp;cond, &amp;amp;mutex);
+printf(&amp;quot;threadid:%d\t a==1,wakup\n&amp;quot;, pthread_self());
+}
+a--;
+pthread_cond_signal(&amp;amp;cond);
+pthread_mutex_unlock(&amp;amp;mutex);
+}
+return NULL;
+}
+int main(int argc, char *argv[]) {
+pthread_t tids[2];
+pthread_mutex_init(&amp;amp;mutex, NULL);
+pthread_cond_init(&amp;amp;cond, NULL);
+pthread_create(&amp;amp;tids[0], NULL, func_inc, NULL);
+sleep(1);
+pthread_create(&amp;amp;tids[1], NULL, func_dec, NULL);
+pthread_join(tids[0], NULL);
+pthread_join(tids[1], NULL);
+pthread_cond_destroy(&amp;amp;cond);
+pthread_mutex_destroy(&amp;amp;mutex);
+return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;</description></item><item><title>TCP/IP网络安全篇</title><link>/blog/2013-09-30-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8tcpipnetworksecurity/</link><pubDate>Mon, 30 Sep 2013 02:08:29 +0800</pubDate><guid>/blog/2013-09-30-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8tcpipnetworksecurity/</guid><description>&lt;p&gt;《TCP/IP 网络安全篇》，作者是日本的寺田真敏 萱岛 信。&lt;/p&gt;
 &lt;p&gt;感谢作者理论与实践结合的教学方式，简单地介绍了网络安全的方方面面，让
 我学起来也是很有兴趣，真诚地向寺田真敏先生道一声谢谢。&lt;/p&gt;
 &lt;p&gt;下面是我对本书学习过程中的一个总结，难免有理解偏差之处，还需在以后的
@@ -13126,4 +14204,74 @@ output.emit('newContent', md.render(body));
 &lt;hr&gt;
 &lt;h2 id="2-学习资源分级"&gt;2. 学习资源分级 &lt;a href="#2-%e5%ad%a6%e4%b9%a0%e8%b5%84%e6%ba%90%e5%88%86%e7%ba%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;h3 id="21-第一站boom-文档建立-ooo-心智模型"&gt;2.1 第一站：BOOM 文档（建立 OoO 心智模型） &lt;a href="#21-%e7%ac%ac%e4%b8%80%e7%ab%99boom-%e6%96%87%e6%a1%a3%e5%bb%ba%e7%ab%8b-ooo-%e5%bf%83%e6%99%ba%e6%a8%a1%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;精读顺序及重点：&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;精读顺序及重点：&lt;/p&gt;</description></item><item><title/><link>/blog/notes-toolchains/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/blog/notes-toolchains/</guid><description>&lt;h1 id="1-开发基础"&gt;1 开发基础 &lt;a href="#1-%e5%bc%80%e5%8f%91%e5%9f%ba%e7%a1%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="10-构建工具"&gt;1.0 构建工具 &lt;a href="#10-%e6%9e%84%e5%bb%ba%e5%b7%a5%e5%85%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="101-gnu-m4"&gt;1.0.1 GNU M4 &lt;a href="#101-gnu-m4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;GNU M4是一个经典的Unix宏处理器实现，与&lt;a href="https://kb.iu.edu/d/agjs"&gt;SVR4&lt;/a&gt;兼容但同时又增加了一些扩展（比如可以处理超过9个宏参数）。GNU M4也内置了文件包含、运行shell命令、算术运算等功能。&lt;/p&gt;
+&lt;p&gt;GNU M4拷贝输入的宏并处理后进一步展开成编译器可处理的宏，宏是M4内置的也可以是用户自定义的，支持任意参数。除了做&lt;strong&gt;宏展开&lt;/strong&gt;（macro expansion）之外，还可以执行**文件包含、运行shell命令、算术运算、处理文本、递归……**等操作。M4可以用作一个编译器前端也可以单独作为一个宏处理器。&lt;/p&gt;
+&lt;p&gt;M4少为人知，用的人可能也不会直接编写M4脚本，大多数人是因为使用了&lt;a href="https://en.wikipedia.org/wiki/Autoconf"&gt;Autoconf&lt;/a&gt;而Autoconf又依赖M4所以才安装了M4。但是M4确实是非常强大的，甚至让一些程序员欲罢不能。&lt;/p&gt;
+&lt;p&gt;关于M4的更多介绍，请看M4手册：&lt;a href="https://www.gnu.org/savannah-checkouts/gnu/m4/manual/m4-1.4.18/html_node/index.html"&gt;M4 Mannual&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;这里有一篇笔记介绍了M4的工作原理、使用：&lt;a href="http://mbreen.com/m4.html"&gt;Notes on the M4 Macro Language&lt;/a&gt;&lt;/p&gt;
+&lt;h2 id="11-常用的软件开发包"&gt;1.1 常用的软件开发包 &lt;a href="#11-%e5%b8%b8%e7%94%a8%e7%9a%84%e8%bd%af%e4%bb%b6%e5%bc%80%e5%8f%91%e5%8c%85" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在列举常用的软件开发包之前，需先描述下如何高效地设置软件包头文件、库文件的搜索路径。&lt;/p&gt;
+&lt;h3 id="111-如何配置头文件库文件搜索路径"&gt;1.1.1 如何配置头文件、库文件搜索路径 &lt;a href="#111-%e5%a6%82%e4%bd%95%e9%85%8d%e7%bd%ae%e5%a4%b4%e6%96%87%e4%bb%b6%e5%ba%93%e6%96%87%e4%bb%b6%e6%90%9c%e7%b4%a2%e8%b7%af%e5%be%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;使用第三方软件包开发时常需要设置头文件、库文件的搜索路径，如何确定软件包对应的文件路径呢？pkg-config可以简化这一设置工作，如获取glib-2.0的头文件、库文件搜索路径执行如下命令即可：&lt;code&gt;pkg-config --cflags --libs glib-2.0&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;pkg-config是如何得知软件包的头文件、库文件搜索路径的呢？每个软件包在安装的时候就已经包含了这一信息，这些信息保存在 &lt;strong&gt;/usr/lib64/pkg-config/${pkg}.pc&lt;/strong&gt; 描述文件中，pkg-config只是读取该文件中的描述项而已。&lt;/p&gt;
+&lt;p&gt;以glib-2.0这一面向linux c程序开发的集合框架开发包为例：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;pkg-config --cflags --libs glib-.20
+-I/usr/local/Cellar/glib/2.54.2/include/glib-2.0
+-I/usr/local/Cellar/glib/2.54.2/lib/glib-2.0/include
+-I/usr/local/opt/gettext/include
+-I/usr/local/Cellar/pcre/8.41/include
+-L/usr/local/Cellar/glib/2.54.2/lib
+-L/usr/local/opt/gettext/lib
+-lglib-2.0
+-lintl
+-Wl,-framework
+-Wl,CoreFoundation
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;其中不仅包括了glib-2.0自身的头文件、库文件搜索路径，还包括了某些依赖的头文件、库文件搜索路径，可见pkg-config确实能简化头文件、库文件搜索路径的设置工作，开发人员应该充分利用起此工具。&lt;/p&gt;
+&lt;h3 id="112-适用于linux-c程序开发的开发包"&gt;1.1.2 适用于linux c程序开发的开发包 &lt;a href="#112-%e9%80%82%e7%94%a8%e4%ba%8elinux-c%e7%a8%8b%e5%ba%8f%e5%bc%80%e5%8f%91%e7%9a%84%e5%bc%80%e5%8f%91%e5%8c%85" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;h4 id="1121-集合框架类"&gt;1.1.2.1 集合框架类 &lt;a href="#1121-%e9%9b%86%e5%90%88%e6%a1%86%e6%9e%b6%e7%b1%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;在开发过程中经常要用到一些常见的数据结构，比如单链表、双链表、集合、哈希表、多阶哈希、avl树、红黑树、队列、栈等等，C++中提供了STL（标准模板库）简化了开发工作，Java中提供了对应的集合框架JUC包。但是C标准库里面并没有类似工具……Linux平台经过多年发展积累了一些面向C语言的集合框架，比如&lt;strong&gt;gnulib&lt;/strong&gt;、&lt;strong&gt;glib&lt;/strong&gt;等。&lt;/p&gt;
+&lt;p&gt;我们这里只介绍glib，glib从96年开始就已经诞生了，前后20多年时间表明其经得起实践的检验。glib封装的api表意清楚、使用简单，如果是一个比较熟练的C程序开发人员的话，应该很容易就能上手。&lt;/p&gt;
+&lt;p&gt;这里抽时间学习了一下glib-2.0工具包，其提供了如下常用的数据结构：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;单链表 GSList&lt;/li&gt;
+&lt;li&gt;双链表 GList&lt;/li&gt;
+&lt;li&gt;哈希表 GHashTable&lt;/li&gt;
+&lt;li&gt;动态数组 GArray&lt;/li&gt;
+&lt;li&gt;AVL树 GTree&lt;/li&gt;
+&lt;li&gt;队列 GQueue&lt;/li&gt;
+&lt;li&gt;记录 Relation&lt;/li&gt;
+&lt;li&gt;其他&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;有关glib-2.0的教程可以参考：&lt;a href="https://www.ibm.com/developerworks/linux/tutorials/l-glib/"&gt;Manage C data using the GLib collections&lt;/a&gt;&lt;/p&gt;</description></item><item><title/><link>/blog/notes-%E6%8C%87%E4%BB%A4%E9%87%8D%E6%8E%92%E5%BA%8F/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/blog/notes-%E6%8C%87%E4%BB%A4%E9%87%8D%E6%8E%92%E5%BA%8F/</guid><description>&lt;h1 id="1-指令重排序"&gt;1 指令重排序 &lt;a href="#1-%e6%8c%87%e4%bb%a4%e9%87%8d%e6%8e%92%e5%ba%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="11-什么是指令重排序"&gt;1.1 什么是指令重排序？ &lt;a href="#11-%e4%bb%80%e4%b9%88%e6%98%af%e6%8c%87%e4%bb%a4%e9%87%8d%e6%8e%92%e5%ba%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;指令重排序，指的是为了提高程序执行效率，编译器会对生成的执行进行“&lt;strong&gt;编译时重排序&lt;/strong&gt;”优化以提高寄存器利用率，CPU流水线设计也会为了实现更高的吞吐量对待执行的指令进行“&lt;strong&gt;运行时重排序&lt;/strong&gt;”。这里重排序的对象是**相互之间没有数据依赖关系的访存指令（LOAD/STORE指令）。&lt;/p&gt;
+&lt;h2 id="12-编译时指令重排序"&gt;1.2 编译时指令重排序 &lt;a href="#12-%e7%bc%96%e8%af%91%e6%97%b6%e6%8c%87%e4%bb%a4%e9%87%8d%e6%8e%92%e5%ba%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在程序编译的时候，为了&lt;strong&gt;最大化对寄存器的利用率&lt;/strong&gt;，以便提高程序运算速度，编译器会对编译后得到的指令进行重排序，称为编译时重排序。&lt;/p&gt;
+&lt;p&gt;某些情况下，开发人员希望阻止编译时指令重排序来满足某种特殊的需求，这个时候开发人员需要显示插入特殊的代码来告知编译器不要做指令重排的优化。例如，&lt;strong&gt;在内核里面通过barrier()来达到阻止编译时指令重排序的目的，barrier在内核里面其实是通过一个宏定义来实现的,即:&lt;code&gt;#define barrier() asm volatile(&amp;quot;&amp;quot;:::&amp;quot;memory&amp;quot;)&lt;/code&gt;，这里的指令破坏部告知内存数据可能被修改，因此需要对访存逻辑进行严格控制，编译器不要做访存指令重排的优化动作&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;下面举个例子说明下为什么会有阻止编译时指令重排的需求，这里阻止指令重排的手段是通过内联汇编创建内存屏障。&lt;/p&gt;
+&lt;p&gt;这个例子中，假定我们要按照某中特定的顺序访问一块内存，这里的内存区域是通过统一编址方式、Memory Mapped IO来对外设进行访问，而不是一块实实在在的内存。对这个内存区域的访问会被转换成对外设的访问。我们需要告诉编译器不要做指令重排的优化，否则编译器追求效率优化后我们可能会得到错误的结果。
+假定我们要自增这个内存地址&lt;code&gt;d[0]+=1&lt;/code&gt;，然后读取一点信息&lt;code&gt;r = e[0]&lt;/code&gt;，然后再自增一个相邻地址出的值&lt;code&gt;d[1] += 1&lt;/code&gt;，示例代码如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;int c(int *d, int *e) {
+int r;
+d[0] += 1;
+r = e[0];
+d[1] += 1;
+return r;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;默认地，gcc会追求更好的性能而对访存操作进行优化，实际编译、重排后的指令可能是这样的：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;00000000 &amp;lt;c&amp;gt;:
+0: 4603 mov r3, r0
+2: c805 ldmia r0, {r0, r2}
+4: 3001 adds r0, #1
+6: 3201 adds r2, #1
+8: 6018 str r0, [r3, #0]
+a: 6808 ldr r0, [r1, #0]
+c: 605a str r2, [r3, #4]
+e: 4770 bx lr
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;上述d[0]、d[1]的值是同时加载的，虽然这个示例代码中是无害的，但是如果我们要避免这种情况，可以通过内存屏障来告知编译器不要做这种指令重排的优化：&lt;/p&gt;</description></item></channel></rss>

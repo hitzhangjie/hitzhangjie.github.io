@@ -26,4 +26,69 @@
 &lt;p&gt;其他的rwmutex/semaphore/condvar，理论上也可以通过相似的方法来实现。&lt;/p&gt;
 &lt;p&gt;reference:&lt;/p&gt;
 &lt;p&gt;1: 多进程并发同步控制, &lt;a href="https://docs.oracle.com/cd/E19455-01/806-5257/6je9h032v/index.html"&gt;Synchronization Across Process Boundaries&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;2: 支持优先级继承的锁, &lt;a href="https://sourcegraph.com/github.com/torvalds/linux/-/blob/Documentation/locking/rt-mutex.rst"&gt;Priority Inheritance Mutex&lt;/a&gt;&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;2: 支持优先级继承的锁, &lt;a href="https://sourcegraph.com/github.com/torvalds/linux/-/blob/Documentation/locking/rt-mutex.rst"&gt;Priority Inheritance Mutex&lt;/a&gt;&lt;/p&gt;</description></item><item><title>pthread 线程库笔记</title><link>/blog/2014-06-01-pthread-notes/</link><pubDate>Sun, 01 Jun 2014 08:00:00 +0800</pubDate><guid>/blog/2014-06-01-pthread-notes/</guid><description>&lt;p&gt;&lt;strong&gt;1.常用数据类型&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;pthread_mutex_t
+pthread_cond_t
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;2.信号&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;进程之间可以互相发送信号，通过kill函数；&lt;/li&gt;
+&lt;li&gt;线程之间也可以互相发送信号，通过pthread_kill函数。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;3.使用mutex、cond实现线程同步（这两个结合起来，其实就相当于信号量）&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;加入pthread_cond_wait(&amp;amp;cond, &amp;amp;mutex)将当前线程放置到cond对应的等待队列上之后，假如后面有个线程调用pthread_cond_signal将该线程唤醒了，那么线程被唤醒的时候，将重新获得锁mutex，获得了该锁之后继续从pthread_cond_wait之后的语句执行。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;pthread.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+static int a = 1;
+static pthread_mutex_t mutex;
+static pthread_cond_t cond;
+void *func_inc(void * arg) {
+while(1) {
+pthread_mutex_lock(&amp;amp;mutex);
+printf(&amp;quot;threadid:%d\t in inc thread\n&amp;quot;, pthread_self());
+printf(&amp;quot;xxxxxxxxxxxxxx\n&amp;quot;);
+while(a!=0) {
+printf(&amp;quot;threadid:%d\t a!=0,waiting\n&amp;quot;, pthread_self());
+pthread_cond_wait(&amp;amp;cond, &amp;amp;mutex);
+// 线程被唤醒之后，获得锁的过程是在pthread线程库中完成的
+// 成功获得锁之后，将从这里继续执行
+// 注意，唤醒后重新获得锁的过程是在pthread线程库代码中完成的，
+// 而不是重新从上面的pthread_mutex_lock(&amp;amp;mutex)处获得锁！！！
+printf(&amp;quot;threadid:%d\t a==0,wakup\n&amp;quot;, pthread_self());
+}
+a++;
+pthread_cond_signal(&amp;amp;cond);
+pthread_mutex_unlock(&amp;amp;mutex);
+}
+return NULL;
+}
+void *func_dec(void * arg) {
+while(1) {
+pthread_mutex_lock(&amp;amp;mutex);
+printf(&amp;quot;threadid:%d\t in dec thread\n&amp;quot;, pthread_self());
+while(a!=1) {
+printf(&amp;quot;threadid:%d\t a!=1,waiting\n&amp;quot;, pthread_self());
+pthread_cond_wait(&amp;amp;cond, &amp;amp;mutex);
+printf(&amp;quot;threadid:%d\t a==1,wakup\n&amp;quot;, pthread_self());
+}
+a--;
+pthread_cond_signal(&amp;amp;cond);
+pthread_mutex_unlock(&amp;amp;mutex);
+}
+return NULL;
+}
+int main(int argc, char *argv[]) {
+pthread_t tids[2];
+pthread_mutex_init(&amp;amp;mutex, NULL);
+pthread_cond_init(&amp;amp;cond, NULL);
+pthread_create(&amp;amp;tids[0], NULL, func_inc, NULL);
+sleep(1);
+pthread_create(&amp;amp;tids[1], NULL, func_dec, NULL);
+pthread_join(tids[0], NULL);
+pthread_join(tids[1], NULL);
+pthread_cond_destroy(&amp;amp;cond);
+pthread_mutex_destroy(&amp;amp;mutex);
+return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;</description></item></channel></rss>

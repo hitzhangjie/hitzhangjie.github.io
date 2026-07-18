@@ -25,7 +25,73 @@
 &lt;h2 id="并发安全实现"&gt;并发安全实现 &lt;a href="#%e5%b9%b6%e5%8f%91%e5%ae%89%e5%85%a8%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;sync.Map是并发安全的实现，它对某些场景下的并发读写做了性能方面的优化：&lt;/p&gt;
 &lt;blockquote&gt;
-&lt;p&gt;&amp;ldquo;The Map type is optimized for two common use cases: (1) when the entry for a given key is only ever written once but read many times, as in caches that only grow, (2) when multiple goroutines read, write and overwrite entries for disjoint sets of keys. In these two cases, use of a Map may significantly reduce lock contention compared to a Go map paired with a separate Mutex or RWMutex.&amp;rdquo;&lt;/p&gt;</description></item><item><title>Map实现：别用float作为map的key</title><link>/blog/2019-05-23-%E5%88%AB%E7%94%A8float%E4%BD%9C%E4%B8%BAmap%E7%9A%84key/</link><pubDate>Thu, 23 May 2019 00:16:36 +0800</pubDate><guid>/blog/2019-05-23-%E5%88%AB%E7%94%A8float%E4%BD%9C%E4%B8%BAmap%E7%9A%84key/</guid><description>&lt;p&gt;遇到个好玩的问题，使用float类型作为go map的key，示例代码如下：
+&lt;p&gt;&amp;ldquo;The Map type is optimized for two common use cases: (1) when the entry for a given key is only ever written once but read many times, as in caches that only grow, (2) when multiple goroutines read, write and overwrite entries for disjoint sets of keys. In these two cases, use of a Map may significantly reduce lock contention compared to a Go map paired with a separate Mutex or RWMutex.&amp;rdquo;&lt;/p&gt;</description></item><item><title>Go map / sync.Map / concurrent_map benchmark</title><link>/blog/2019-08-22-go-map/</link><pubDate>Thu, 22 Aug 2019 14:32:38 +0800</pubDate><guid>/blog/2019-08-22-go-map/</guid><description>&lt;p&gt;&lt;strong&gt;对 map、sync.Map、&lt;a href="https://github.com/orcaman/concurrent-map"&gt;concurrent_map&lt;/a&gt; 进行了 benchmark，结果如下：&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;BenchmarkDeleteEmptyMap-8 20000000 86.9 ns/op
+BenchmarkDeleteEmptySyncMap-8 300000000 5.16 ns/op
+BenchmarkDeleteEmptyCMap-8 50000000 34.8 ns/op
+BenchmarkDeleteMap-8 10000000 131 ns/op
+BenchmarkDeleteSyncMap-8 10000000 135 ns/op
+BenchmarkDeleteCMap-8 30000000 37.0 ns/op
+BenchmarkLoadEmptyMap-8 20000000 87.9 ns/op
+BenchmarkLoadEmptySyncMap-8 300000000 5.03 ns/op
+BenchmarkLoadEmptyCMap-8 100000000 17.1 ns/op
+BenchmarkLoadMap-8 20000000 111 ns/op
+BenchmarkLoadSyncMap-8 100000000 12.8 ns/op
+BenchmarkLoadCMap-8 100000000 22.5 ns/op
+BenchmarkSetMap-8 10000000 187 ns/op
+BenchmarkSetSyncMap-8 5000000 396 ns/op
+BenchmarkSetCMap-8 20000000 84.9 ns/op
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;benchmark 结果表明：&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;map+rwmutex 这种方式，锁粒度比较大，增删改查操作耗时相对来说都是比较明显的&lt;/li&gt;
+&lt;li&gt;sync.Map 这种方式，写少读多的情况是非常合适的，效率比较明显，优于 map、concurrent_map&lt;/li&gt;
+&lt;li&gt;concurrent_map，考虑了并发写比较频繁的情况，特别是删除，多 shard 执行删除操作时效率非常明显&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;使用场景：&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>不能用float作为map的key</title><link>/blog/2019-05-23-float%E4%B8%8D%E5%8F%AF%E4%BB%A5%E4%BD%9C%E4%B8%BAmapkey/</link><pubDate>Thu, 23 May 2019 12:00:00 +0800</pubDate><guid>/blog/2019-05-23-float%E4%B8%8D%E5%8F%AF%E4%BB%A5%E4%BD%9C%E4%B8%BAmapkey/</guid><description>&lt;p&gt;今天遇到个问题，本来是golang里面使用float64作为map key的问题，后面遇到问题发现两个不相同的浮点数作为map的key，竟然只写入了一个，而且值后面的把前面的覆盖了，两个float类型的key明显不同啊，这是为什么呢？&lt;/p&gt;
+&lt;p&gt;示例代码如下：&lt;/p&gt;
+&lt;p&gt;&lt;img src="assets/dont-use-float-as-map-key/use-float64-as-map-key.png" alt="use-float64-as-map-key"&gt;&lt;/p&gt;
+&lt;p&gt;这里要涉及到几个问题：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;golang如何针对key计算hash的，阅读源码后发现就是有个key *_type，h.key.alg.hash(key)来计算得到hash，问题就出在这里的hash计算过程，可以阅读下alg.go，里面针对不同的key类型定义了计算hash的方法：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;var algarray = [alg_max]typeAlg{
+alg_NOEQ: {nil, nil},
+alg_MEM0: {memhash0, memequal0},
+alg_MEM8: {memhash8, memequal8},
+alg_MEM16: {memhash16, memequal16},
+alg_MEM32: {memhash32, memequal32},
+alg_MEM64: {memhash64, memequal64},
+alg_MEM128: {memhash128, memequal128},
+alg_STRING: {strhash, strequal},
+alg_INTER: {interhash, interequal},
+alg_NILINTER: {nilinterhash, nilinterequal},
+alg_FLOAT32: {f32hash, f32equal},
+alg_FLOAT64: {f64hash, f64equal},
+alg_CPLX64: {c64hash, c64equal},
+alg_CPLX128: {c128hash, c128equal},
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;float64就是要使用&lt;code&gt;f64hash&lt;/code&gt;这个方法来计算hash值。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;golang里面利用计算得到的hash值的后5位作为hmap的bucket index，先定位到bucket，然后再根据hash的前8位作为与bucket内部&amp;lt;k,v&amp;gt; entries的hash进行比较找到对应的entry。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;下面我们看下f64hash的实现：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;func f64hash(p unsafe.Pointer, h uintptr) uintptr {
+f := *(*float64)(p)
+switch {
+case f == 0:
+return c1 * (c0 ^ h) // +0, -0
+case f != f:
+return c1 * (c0 ^ h ^ uintptr(fastrand())) // any kind of NaN
+default:
+return memhash(p, h, 8)
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;f==0或者f!=f是两种极端情况，不考虑直接看f64hash里面调用方法memhash(p, h, 8)，memhash实现，省略无关代码：&lt;/p&gt;</description></item><item><title>Map实现：别用float作为map的key</title><link>/blog/2019-05-23-%E5%88%AB%E7%94%A8float%E4%BD%9C%E4%B8%BAmap%E7%9A%84key/</link><pubDate>Thu, 23 May 2019 00:16:36 +0800</pubDate><guid>/blog/2019-05-23-%E5%88%AB%E7%94%A8float%E4%BD%9C%E4%B8%BAmap%E7%9A%84key/</guid><description>&lt;p&gt;遇到个好玩的问题，使用float类型作为go map的key，示例代码如下：
 &lt;img src="assets/gomap/1558586114_21.png" alt="use-float64-as-map-key"&gt;&lt;/p&gt;
 &lt;p&gt;其实就是浮点数精度的问题，随手翻了下go map的源码，备忘下。这里要涉及到几个问题：&lt;/p&gt;
 &lt;ul&gt;

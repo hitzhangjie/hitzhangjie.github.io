@@ -1183,7 +1183,130 @@ printf(&amp;quot;uid is: %d\n&amp;quot;, (int)getuid());
 return 0;
 }
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;测试uid，euid&lt;/p&gt;</description></item><item><title>TCP/IP网络安全篇</title><link>/blog/2013-09-30-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8tcpipnetworksecurity/</link><pubDate>Mon, 30 Sep 2013 02:08:29 +0800</pubDate><guid>/blog/2013-09-30-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8tcpipnetworksecurity/</guid><description>&lt;p&gt;《TCP/IP 网络安全篇》，作者是日本的寺田真敏 萱岛 信。&lt;/p&gt;
+&lt;p&gt;测试uid，euid&lt;/p&gt;</description></item><item><title>Linux 进程间通信机制</title><link>/blog/2014-06-01-linux-ipc/</link><pubDate>Sun, 01 Jun 2014 08:00:00 +0800</pubDate><guid>/blog/2014-06-01-linux-ipc/</guid><description>&lt;p&gt;linux下面支持很多种进程间通信机制：&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;1. 管道&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;pipe，通过匿名管道；&lt;/li&gt;
+&lt;li&gt;mkfifo，通过有名管道；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;2. System V中提供的3中，linux也支持&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;msgget，通过消息队列；&lt;/li&gt;
+&lt;li&gt;semget，通过信号量；&lt;/li&gt;
+&lt;li&gt;shmget，通过共享内存；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;System V提供的这几种进程间通信方式，都是通过key来关联具体的描述符的，如关联消息队列、信号量、共享内存的描述符（共享内存shmget不是内存映射mmap，别搞混了）。&lt;/p&gt;
+&lt;p&gt;据说，System V中提供的3种进程间通信机制，多路io不支持啊？这三种方式全是本地内存计算也不存在阻塞的问题，要多路io干啥啊！不过对于管道的话，多路io是支持的，可能考虑的是管道是一种类似于面向流的通信手段吧。&lt;/p&gt;</description></item><item><title>pmap 探索线程栈的创建和释放</title><link>/blog/2014-06-01-pmap-thread-stack/</link><pubDate>Sun, 01 Jun 2014 08:00:00 +0800</pubDate><guid>/blog/2014-06-01-pmap-thread-stack/</guid><description>&lt;p&gt;通过pmap测试了一下，发现每次创建一个线程，pmap的输出都会多出一块区域，但是看上去这块区域的地址是在进程的堆和栈之间，这块区域的名字叫anon，搜索了一下anon区域表示的是mmap映射的区域。&lt;/p&gt;
+&lt;p&gt;当某个线程销毁的时候呢，pmap输出就会减少几个anon区域。那么基本可以断定了线程所使用的内存空间（线程栈）是通过mmap映射到进程的虚拟地址空间中的。而anon区域的大小基本上都是8M，我们也知道，linux下面支持的进程栈或线程栈的最大大小就是8M。而malloc(n)申请内存的时候，小于128k的都是从堆里面分配，大于的都是通过mmap来分配。&lt;/p&gt;
+&lt;p&gt;这样的话，就搞明白了。&lt;/p&gt;
+&lt;p&gt;下面线程2回收线程3的时候，其实只是执行了munmap操作，将线程3的栈空间从进程地址空间中移除。&lt;/p&gt;
+&lt;p&gt;本来我还以为是所有线程栈在当前进程主线程栈sp的基础上减去一个值来当做栈空间呢？但是后面想到如果线程3回收了线程2这个处在线程3栈下方的线程怎么办？sp要怎么操作？线程3的栈空间是否要移动，线程是否要停顿？页表是否要重新映射？&lt;/p&gt;
+&lt;p&gt;想到这，就有了上面的探索和思考，现在搞明白了。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;pthread.h&amp;gt;
+#include &amp;lt;stdlib.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+#include &amp;lt;string.h&amp;gt;
+pthread_t tids[3];
+void pmap() {
+char cmd[1024];
+memset(cmd, 0, 1024);
+sprintf(cmd, &amp;quot;/usr/bin/pmap %d&amp;quot;, getpid());
+system(cmd);
+}
+void *work(void *param) {
+int i = 0;
+while(i++&amp;lt;10)
+;
+}
+void *work2(void *param) {
+sleep(10);
+pthread_join(tids[2], NULL);
+pmap();
+}
+void *work3(void *param) {
+sleep(5);
+}
+int main(int argc, char *argv[])
+{
+pmap();
+pthread_create(&amp;amp;tids[0], NULL, work, NULL);
+sleep(1);
+pmap();
+pthread_create(&amp;amp;tids[1], NULL, work2, NULL);
+sleep(1);
+pmap();
+pthread_create(&amp;amp;tids[2], NULL, work3, NULL);
+sleep(1);
+pmap();
+pthread_exit(0);
+}
+&lt;/code&gt;&lt;/pre&gt;</description></item><item><title>pthread 线程库笔记</title><link>/blog/2014-06-01-pthread-notes/</link><pubDate>Sun, 01 Jun 2014 08:00:00 +0800</pubDate><guid>/blog/2014-06-01-pthread-notes/</guid><description>&lt;p&gt;&lt;strong&gt;1.常用数据类型&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;pthread_mutex_t
+pthread_cond_t
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;2.信号&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;进程之间可以互相发送信号，通过kill函数；&lt;/li&gt;
+&lt;li&gt;线程之间也可以互相发送信号，通过pthread_kill函数。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;3.使用mutex、cond实现线程同步（这两个结合起来，其实就相当于信号量）&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;加入pthread_cond_wait(&amp;amp;cond, &amp;amp;mutex)将当前线程放置到cond对应的等待队列上之后，假如后面有个线程调用pthread_cond_signal将该线程唤醒了，那么线程被唤醒的时候，将重新获得锁mutex，获得了该锁之后继续从pthread_cond_wait之后的语句执行。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;#include &amp;lt;stdio.h&amp;gt;
+#include &amp;lt;pthread.h&amp;gt;
+#include &amp;lt;unistd.h&amp;gt;
+static int a = 1;
+static pthread_mutex_t mutex;
+static pthread_cond_t cond;
+void *func_inc(void * arg) {
+while(1) {
+pthread_mutex_lock(&amp;amp;mutex);
+printf(&amp;quot;threadid:%d\t in inc thread\n&amp;quot;, pthread_self());
+printf(&amp;quot;xxxxxxxxxxxxxx\n&amp;quot;);
+while(a!=0) {
+printf(&amp;quot;threadid:%d\t a!=0,waiting\n&amp;quot;, pthread_self());
+pthread_cond_wait(&amp;amp;cond, &amp;amp;mutex);
+// 线程被唤醒之后，获得锁的过程是在pthread线程库中完成的
+// 成功获得锁之后，将从这里继续执行
+// 注意，唤醒后重新获得锁的过程是在pthread线程库代码中完成的，
+// 而不是重新从上面的pthread_mutex_lock(&amp;amp;mutex)处获得锁！！！
+printf(&amp;quot;threadid:%d\t a==0,wakup\n&amp;quot;, pthread_self());
+}
+a++;
+pthread_cond_signal(&amp;amp;cond);
+pthread_mutex_unlock(&amp;amp;mutex);
+}
+return NULL;
+}
+void *func_dec(void * arg) {
+while(1) {
+pthread_mutex_lock(&amp;amp;mutex);
+printf(&amp;quot;threadid:%d\t in dec thread\n&amp;quot;, pthread_self());
+while(a!=1) {
+printf(&amp;quot;threadid:%d\t a!=1,waiting\n&amp;quot;, pthread_self());
+pthread_cond_wait(&amp;amp;cond, &amp;amp;mutex);
+printf(&amp;quot;threadid:%d\t a==1,wakup\n&amp;quot;, pthread_self());
+}
+a--;
+pthread_cond_signal(&amp;amp;cond);
+pthread_mutex_unlock(&amp;amp;mutex);
+}
+return NULL;
+}
+int main(int argc, char *argv[]) {
+pthread_t tids[2];
+pthread_mutex_init(&amp;amp;mutex, NULL);
+pthread_cond_init(&amp;amp;cond, NULL);
+pthread_create(&amp;amp;tids[0], NULL, func_inc, NULL);
+sleep(1);
+pthread_create(&amp;amp;tids[1], NULL, func_dec, NULL);
+pthread_join(tids[0], NULL);
+pthread_join(tids[1], NULL);
+pthread_cond_destroy(&amp;amp;cond);
+pthread_mutex_destroy(&amp;amp;mutex);
+return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;</description></item><item><title>TCP/IP网络安全篇</title><link>/blog/2013-09-30-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8tcpipnetworksecurity/</link><pubDate>Mon, 30 Sep 2013 02:08:29 +0800</pubDate><guid>/blog/2013-09-30-%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8tcpipnetworksecurity/</guid><description>&lt;p&gt;《TCP/IP 网络安全篇》，作者是日本的寺田真敏 萱岛 信。&lt;/p&gt;
 &lt;p&gt;感谢作者理论与实践结合的教学方式，简单地介绍了网络安全的方方面面，让
 我学起来也是很有兴趣，真诚地向寺田真敏先生道一声谢谢。&lt;/p&gt;
 &lt;p&gt;下面是我对本书学习过程中的一个总结，难免有理解偏差之处，还需在以后的

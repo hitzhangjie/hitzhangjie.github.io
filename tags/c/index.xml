@@ -1,4 +1,31 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>C on</title><link>/tags/c/</link><description>Recent content in C on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 28 Jun 2022 23:08:51 +0800</lastBuildDate><atom:link href="/tags/c/index.xml" rel="self" type="application/rss+xml"/><item><title>mac/win下linux c/c++开发</title><link>/blog/2022-06-28-devcontainer_linux-cc-%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E8%AE%BE%E7%BD%AE/</link><pubDate>Tue, 28 Jun 2022 23:08:51 +0800</pubDate><guid>/blog/2022-06-28-devcontainer_linux-cc-%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E8%AE%BE%E7%BD%AE/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>C on</title><link>/tags/c/</link><description>Recent content in C on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 18 Jul 2026 12:00:00 +0800</lastBuildDate><atom:link href="/tags/c/index.xml" rel="self" type="application/rss+xml"/><item><title>Go string与C string的区别</title><link>/blog/2019-05-23-gostring_vs_cstring/</link><pubDate>Sat, 18 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2019-05-23-gostring_vs_cstring/</guid><description>&lt;p&gt;go string和c string是有区别的：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;c string使用&lt;code&gt;'\0'&lt;/code&gt;作为字符串结尾：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;char *s = “hello\0world&amp;quot;;
+printf(&amp;quot;%s\n&amp;quot;, s);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;只会打印出hello，world是打不出来的，c以\0作为字符串的结束标识。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;go string只是将&lt;code&gt;'\0'&lt;/code&gt;当做普通的不可点字符，而不是字符串结尾：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;b := []byte{'h','e','l','l','o','\000','w','o','r','l','d'}
+println(string(b))
+idx := bytes.IndexByte(b, '\000')
+println(idx)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;会打印出helloworld，而非hello！&lt;/p&gt;
+&lt;p&gt;go string的定义可以参考StringHeader结构体的定义：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type StringHeader struct {
+data unsafe.Pointer
+len int
+cap int
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;另外要注意，golang里面将\0当做是一个八进制数值的开始标识，不管是在字符串中，还是再byte中，如果定义一个字符串&lt;code&gt;s := “hello\0world”&lt;/code&gt;会报错：non-octal character in escape sequence，因为\0wo不是一个有效的八进制数值。&lt;/p&gt;
+&lt;p&gt;\0结尾是c spec规定的，go不认，go里面就是StringHeader {data, cap, len}，go里面不可见字符就是不可见字符，没赋予它截断字符串的特殊含义，这么想，感觉go比c设计的要好一点。&lt;/p&gt;</description></item><item><title>mac/win下linux c/c++开发</title><link>/blog/2022-06-28-devcontainer_linux-cc-%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E8%AE%BE%E7%BD%AE/</link><pubDate>Tue, 28 Jun 2022 23:08:51 +0800</pubDate><guid>/blog/2022-06-28-devcontainer_linux-cc-%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E8%AE%BE%E7%BD%AE/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;我们很多人主力操作系统是macOS或者Windows，用Linux作为主力操作系统的少吧，不过之前确实有连续7年多是用Fedora作为主力操作系统 :)&lt;/p&gt;
 &lt;p&gt;现在很多人开发人员使用MacBook Pro作为自己的开发机，大厂标配，我们很多后台呢，开发的程序一般最后还是要跑在Linux系统上的，尤其是c/c++开发涉及到这里的跨平台开发的问题，很多开发人员用着非常原始的方式在开发，开发体验比较差。&lt;/p&gt;
 &lt;p&gt;借这个契机，我调研了下现在比较好的一些开发方式，总结分享下。&lt;/p&gt;
@@ -36,7 +63,61 @@
 这里的基础镜像可以用vscode官方提供的，也可以是自己自定义好push到registry的，也可以是Dockerfile需要vscode代为构建本地镜像的，这几种方式均可！&lt;/p&gt;
 &lt;p&gt;这样不就方便了吗，既不需要额外存储这个基础镜像，还保留了维护基础镜像的必要配置信息，如Dockerfile等。当然了如果基础镜像维护得当，我们引用registry
 中的基础镜像即可，没必要每个工程下都放一份镜像Dockerfile信息。&lt;/p&gt;
-&lt;p&gt;我目前比较喜欢这种方式，因为可以使用自定义基础镜像的同时，没有了额外容器中克隆代码导致的占用磁盘空间问题……不过这样性能会差点。&lt;/p&gt;</description></item><item><title>Go 基础速览：Go核心特性 &amp; 与C/C++关键差异</title><link>/blog/2018-09-02-go-basic-tutorial-review/</link><pubDate>Sun, 02 Sep 2018 12:00:00 +0800</pubDate><guid>/blog/2018-09-02-go-basic-tutorial-review/</guid><description>&lt;blockquote&gt;
+&lt;p&gt;我目前比较喜欢这种方式，因为可以使用自定义基础镜像的同时，没有了额外容器中克隆代码导致的占用磁盘空间问题……不过这样性能会差点。&lt;/p&gt;</description></item><item><title>数组与指针</title><link>/blog/%E6%95%B0%E7%BB%84%E4%B8%8E%E6%8C%87%E9%92%88/</link><pubDate>Wed, 13 Feb 2019 08:00:00 +0800</pubDate><guid>/blog/%E6%95%B0%E7%BB%84%E4%B8%8E%E6%8C%87%E9%92%88/</guid><description>&lt;h1 id="1-二维数组之行列指针"&gt;1 二维数组之行列指针 &lt;a href="#1-%e4%ba%8c%e7%bb%b4%e6%95%b0%e7%bb%84%e4%b9%8b%e8%a1%8c%e5%88%97%e6%8c%87%e9%92%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;//数组名是数组首元素的地址，但是数组是一种类型，不能完全等同于指针，
+//sizeof(指针)=操作系统虚拟内存位数对应的字节数，sizeof(a)=sizeof(int)*2*3=24字节
+int a[2][3] = {1,2,3,4,5,6};
+int size = sizeof(a);
+//行指针, 这里的i之所以称为行指针，是因为它定位的是第i行这个子向量
+*(a+i) 等于 a[i]
+//列指针，这里的j之所以称为列指针，是因为它定位的是第j列这个列向量
+*(*(a+i)+j) 等于 a[i][j]
+//如果需要获取其中的值，需要再次解除引用才可以
+*(a+i)+j 等于 &amp;amp;a[i][j]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id="2-多维数组指针"&gt;2 多维数组指针 &lt;a href="#2-%e5%a4%9a%e7%bb%b4%e6%95%b0%e7%bb%84%e6%8c%87%e9%92%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;分析方法，与二维数组的分析没有什么差别！只是不建议那样使用！为什么要用呢？自寻烦恼嘛！
+倒不是难以分析，而是写起来很啰嗦！&lt;/p&gt;
+&lt;p&gt;多维数组，还是建议使用下标索引来使用要好一些！&lt;/p&gt;
+&lt;h1 id="3-数组名称的特殊性"&gt;3 数组名称的特殊性 &lt;a href="#3-%e6%95%b0%e7%bb%84%e5%90%8d%e7%a7%b0%e7%9a%84%e7%89%b9%e6%ae%8a%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;我们常说数组的名称就是一个指向数组本身的地址，或者说是一个指针，规范一点讲，数组名其实是数组第
+1个元素的地址。如下所示：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;int b[100]; //b 等于 &amp;amp;b[0];
+int a[100][200]; //a 等于 &amp;amp;a[0];
+int c[100][200][300]; //c 等于 &amp;amp;c[0];
+&lt;/code&gt;&lt;/pre&gt;</description></item><item><title>a += (a++)+(++a) 的值到底是多少？</title><link>/blog/2019-02-13-a--a-a/</link><pubDate>Wed, 13 Feb 2019 00:00:00 +0800</pubDate><guid>/blog/2019-02-13-a--a-a/</guid><description>&lt;p&gt;前一阵子，在某厂笔试题（Java）里面，出现了这样一个考题：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt; int a = 0;
+a += (a++) + (++a);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;上述两条语句执行之后，a的值是多少？&lt;/p&gt;
+&lt;p&gt;这么简单的题目也需要考吗，这太简单了吧？知道怎么算是一回事， 明不明白是另一回事！而且不一定会算吧！&lt;/p&gt;
+&lt;p&gt;【备注】
+如果不是脑子有病，估计不会有人写这样的程序，那解释这道题有什么意义呢？确实，有很多更加值得折腾的东西，比如中间件、智能算法等等，相比起来，去钻研这种编程题太没意思了，出题人脑残还是咋滴，对此，我绝对同意。但是除了这种想法的人外，也确实有一部分人，想人所不想，能人所不能，你总不能说他们求知是个错误吧！今天，刚好有人问起，我就顺便回答了一下，然后整理了整理。
+感兴趣的话就耐心往下看吧，也不长，估计应该能看懂。&lt;/p&gt;
+&lt;p&gt;以前给红黑联盟里一帮小朋友解答过c里面前置增后置增的实现问题，没想到今天又在一个Java高级群里面碰到了群友问相同的问题，区别是java中的实现方式。其实，说白了，这些是编译原理层面的知识，也需要对内存模型有一定的理解，尤其要注意JMM。但是一般情况下我相信是没有几个人是愿意去翻gcc、javac的设计、实现的。那怎么办？
+了解一下基本的内存模型，反汇编，可能还是比较实用的一种办法。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;1）c，编译器gcc&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;int main(int argc, char *argv[]){
+4004f6: 55 push %rbp
+4004f7: 48 89 e5 mov %rsp,%rbp
+4004fa: 89 7d ec mov %edi,-0x14(%rbp)
+4004fd: 48 89 75 e0 mov %rsi,-0x20(%rbp)
+int a = 0;
+400501: c7 45 fc 00 00 00 00 movl $0x0,-0x4(%rbp) // 给a赋值0
+a += (a++)+(++a);
+400508: 8b 45 fc mov -0x4(%rbp),%eax // a++中初始装载变量a到eax
+40050b: 8d 50 01 lea 0x1(%rax),%edx
+40050e: 89 55 fc mov %edx,-0x4(%rbp) // lea将1+rax的值存储回变量a（变量a的值变为1），但是不修改rax的值。
+// 使用的是lea，而非add，为啥？后置增，rax记录着a自增之前的旧值！
+// 后置增，即使用后+1，这里的”使用后“，指的是执行整条语句之后吗？ 不是！
+400511: 83 45 fc 01 addl $0x1,-0x4(%rbp) // ++a操作（变量a的值变为2）
+400515: 8b 55 fc mov -0x4(%rbp),%edx
+400518: 01 d0 add %edx,%eax // 执行 (a++) + (++a)操作，即0+2，并将结果暂存到eax
+40051a: 01 45 fc add %eax,-0x4(%rbp) // 执行a+=...，即2+2并将结果存储到变量a（变量a的值变为4）
+return 0;
+40051d: b8 00 00 00 00 mov $0x0,%eax}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;看完上面的解释后，你应该能总结处这样的规律，(a++) + (++a)中，a++是先于++a执行的，即普通的表达式一般都是从左向右进行运算，另外你也应该记住lea指令的用法，在这里还不失巧妙。&lt;/p&gt;</description></item><item><title>Tutorialspoint：Go核心特性 &amp; 与C/C++关键差异</title><link>/blog/2018-09-02-go-basic-tutorial-review/</link><pubDate>Sun, 02 Sep 2018 12:00:00 +0800</pubDate><guid>/blog/2018-09-02-go-basic-tutorial-review/</guid><description>&lt;blockquote&gt;
 &lt;p&gt;说明：早年刚接触 Go 时，曾对照 &lt;a href="https://www.tutorialspoint.com/go/index.htm"&gt;Tutorialspoint Go Tutorial&lt;/a&gt; 整理过一批学习笔记。原材料偏照搬、且已过时不全。本文不再逐页复制，而是按该站最新整理的内容进行更系统性总结：每节用尽量短的文字概括要点，并附 &lt;strong&gt;与 C/C++ 的对比&lt;/strong&gt;，方便有 C/C++ 背景时快速捡起细节。&lt;/p&gt;
 &lt;p&gt;整理基准时间可视为 &lt;strong&gt;2018-09-02&lt;/strong&gt; 前后的学习阶段，但实际包含了后续年份版本的内容，算是为了纪念当时的学习历程；文中个别处会标注后续语言演进（如 Generics）。&lt;/p&gt;
 &lt;/blockquote&gt;

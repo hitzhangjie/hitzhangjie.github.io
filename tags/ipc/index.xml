@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Ipc on</title><link>/tags/ipc/</link><description>Recent content in Ipc on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 01 Jun 2014 08:00:00 +0800</lastBuildDate><atom:link href="/tags/ipc/index.xml" rel="self" type="application/rss+xml"/><item><title>Linux 进程间通信机制</title><link>/blog/2014-06-01-linux-ipc/</link><pubDate>Sun, 01 Jun 2014 08:00:00 +0800</pubDate><guid>/blog/2014-06-01-linux-ipc/</guid><description>&lt;p&gt;linux下面支持很多种进程间通信机制：&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;1. 管道&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;pipe，通过匿名管道；&lt;/li&gt;
+&lt;li&gt;mkfifo，通过有名管道；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;2. System V中提供的3中，linux也支持&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;msgget，通过消息队列；&lt;/li&gt;
+&lt;li&gt;semget，通过信号量；&lt;/li&gt;
+&lt;li&gt;shmget，通过共享内存；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;System V提供的这几种进程间通信方式，都是通过key来关联具体的描述符的，如关联消息队列、信号量、共享内存的描述符（共享内存shmget不是内存映射mmap，别搞混了）。&lt;/p&gt;
+&lt;p&gt;据说，System V中提供的3种进程间通信机制，多路io不支持啊？这三种方式全是本地内存计算也不存在阻塞的问题，要多路io干啥啊！不过对于管道的话，多路io是支持的，可能考虑的是管道是一种类似于面向流的通信手段吧。&lt;/p&gt;</description></item></channel></rss>

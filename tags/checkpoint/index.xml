@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Checkpoint on</title><link>/tags/checkpoint/</link><description>Recent content in Checkpoint on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 17 Jul 2026 09:00:00 +0800</lastBuildDate><atom:link href="/tags/checkpoint/index.xml" rel="self" type="application/rss+xml"/><item><title>Etcd 租约检查点（Lease Checkpoint）分布式同步机制</title><link>/blog/2026-07-17-checkpoint_etcd%E7%A7%9F%E7%BA%A6%E6%A3%80%E6%9F%A5%E7%82%B9%E5%88%86%E5%B8%83%E5%BC%8F%E5%90%8C%E6%AD%A5%E6%9C%BA%E5%88%B6/</link><pubDate>Fri, 17 Jul 2026 09:00:00 +0800</pubDate><guid>/blog/2026-07-17-checkpoint_etcd%E7%A7%9F%E7%BA%A6%E6%A3%80%E6%9F%A5%E7%82%B9%E5%88%86%E5%B8%83%E5%BC%8F%E5%90%8C%E6%AD%A5%E6%9C%BA%E5%88%B6/</guid><description>&lt;h2 id="etcd-租约检查点lease-checkpoint分布式同步机制"&gt;etcd 租约检查点（Lease Checkpoint）分布式同步机制 &lt;a href="#etcd-%e7%a7%9f%e7%ba%a6%e6%a3%80%e6%9f%a5%e7%82%b9lease-checkpoint%e5%88%86%e5%b8%83%e5%bc%8f%e5%90%8c%e6%ad%a5%e6%9c%ba%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="1-痛点背景为什么引入-checkpoint"&gt;1. 痛点背景：为什么引入 Checkpoint？ &lt;a href="#1-%e7%97%9b%e7%82%b9%e8%83%8c%e6%99%af%e4%b8%ba%e4%bb%80%e4%b9%88%e5%bc%95%e5%85%a5-checkpoint" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在早期 etcd 中，&lt;strong&gt;Lease 的剩余时间（Remaining TTL）是不持久化写磁盘的&lt;/strong&gt;（因为每次续期都写盘会导致 I/O 崩溃），只有“初始 TTL”（如 60s）会被持久化。
+若一个租约只剩 5 秒生命，此时集群突然发生 Leader 切换，新 Leader 上任后不知道它还剩多少时间，只能保守地将其恢复到初始的 60 秒。如果集群发生频繁的 Leader 切换，就会导致该 Lease &lt;strong&gt;永远处于“无限自动续期”的状态而无法过期淘汰&lt;/strong&gt;，最终引发底层 boltdb 数据堆积的灾难。&lt;/p&gt;
+&lt;p&gt;为此，etcd 引入了 &lt;strong&gt;Lease Checkpoint 机制&lt;/strong&gt;（自 v3.4 默认启用或增强）。&lt;/p&gt;
+&lt;h3 id="2-lease-checkpoint-的分布式同步流程"&gt;2. Lease Checkpoint 的分布式同步流程 &lt;a href="#2-lease-checkpoint-%e7%9a%84%e5%88%86%e5%b8%83%e5%bc%8f%e5%90%8c%e6%ad%a5%e6%b5%81%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Leader 节点的 Lessor（租约管理器）在启动时会跑一个独立的异步协程 &lt;code&gt;CheckpointScheduledLeases&lt;/code&gt;，其同步机制如下：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;内存定期扫描：&lt;/strong&gt; Leader 默认每隔 &lt;strong&gt;500 毫秒&lt;/strong&gt; 扫描一次内存中的 Lease 最小堆，筛选出那些剩余 TTL 已经减少、且未及时同步的 Lease，计算出它们当前的“精确剩余 TTL”。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;发起 Raft 提案：&lt;/strong&gt; Leader 将这些 &lt;code&gt;[Lease ID -&amp;gt; Remaining TTL]&lt;/code&gt; 键值对打包成一个 &lt;code&gt;LeaseCheckpoint&lt;/code&gt; 类型的 Raft 请求，广播给所有 Follower。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;共识与内存应用（Apply）：&lt;/strong&gt; 该请求跟普通写操作一样走 Raft WAL 日志复制，一旦多数派（Quorum）确认收到并 Commit，所有节点（包括 Leader/Follower）在 Apply 该日志时，会&lt;strong&gt;更新本地内存中的 Lease 数据结构，将其纠正为精确的 Remaining TTL&lt;/strong&gt;。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;blockquote&gt;
+&lt;p&gt;⚠️ &lt;strong&gt;核心性能优化：&lt;/strong&gt;
+虽然 Checkpoint 走了一次 Raft 协议（写了 WAL 日志），但是在 Apply 阶段，它&lt;strong&gt;仅仅修改了所有节点内存里的 Lease 数据结构，绝对不会修改底层的 boltdb 磁盘数据&lt;/strong&gt;。这既保证了高一致性，又避免了频繁磁盘 I/O 带来的性能崩溃。&lt;/p&gt;</description></item></channel></rss>

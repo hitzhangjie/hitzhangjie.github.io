@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>客户端 on</title><link>/tags/%E5%AE%A2%E6%88%B7%E7%AB%AF/</link><description>Recent content in 客户端 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 17 Jul 2026 17:00:00 +0800</lastBuildDate><atom:link href="/tags/%E5%AE%A2%E6%88%B7%E7%AB%AF/index.xml" rel="self" type="application/rss+xml"/><item><title>高可用 Etcd 客户端保活与调优参数规范</title><link>/blog/2026-07-17-%E9%AB%98%E5%8F%AF%E7%94%A8_%E9%AB%98%E5%8F%AF%E7%94%A8etcd%E5%AE%A2%E6%88%B7%E7%AB%AF%E4%BF%9D%E6%B4%BB%E4%B8%8E%E8%B0%83%E4%BC%98%E5%8F%82%E6%95%B0%E8%A7%84%E8%8C%83/</link><pubDate>Fri, 17 Jul 2026 17:00:00 +0800</pubDate><guid>/blog/2026-07-17-%E9%AB%98%E5%8F%AF%E7%94%A8_%E9%AB%98%E5%8F%AF%E7%94%A8etcd%E5%AE%A2%E6%88%B7%E7%AB%AF%E4%BF%9D%E6%B4%BB%E4%B8%8E%E8%B0%83%E4%BC%98%E5%8F%82%E6%95%B0%E8%A7%84%E8%8C%83/</guid><description>&lt;h2 id="高可用-etcd-客户端client保活与调优参数规范"&gt;高可用 etcd 客户端（Client）保活与调优参数规范 &lt;a href="#%e9%ab%98%e5%8f%af%e7%94%a8-etcd-%e5%ae%a2%e6%88%b7%e7%ab%afclient%e4%bf%9d%e6%b4%bb%e4%b8%8e%e8%b0%83%e4%bc%98%e5%8f%82%e6%95%b0%e8%a7%84%e8%8c%83" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="概述"&gt;概述 &lt;a href="#%e6%a6%82%e8%bf%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在分布式系统中，服务端的冗余设计需要客户端的精细配合才能发挥作用。若客户端参数配置不当，在面临突发断电、断网等情况时，仍可能导致长达数分钟的请求卡死。本规范定义了 Go &lt;code&gt;clientv3&lt;/code&gt; 的通用调优基准。&lt;/p&gt;
+&lt;h3 id="核心调优参数配置go-示例"&gt;核心调优参数配置（Go 示例） &lt;a href="#%e6%a0%b8%e5%bf%83%e8%b0%83%e4%bc%98%e5%8f%82%e6%95%b0%e9%85%8d%e7%bd%aego-%e7%a4%ba%e4%be%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;针对上游服务端重启或突发单点故障，客户端必须配置&lt;strong&gt;快速断连感知&lt;/strong&gt;与&lt;strong&gt;合理的超时控制&lt;/strong&gt;：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;import (
+&amp;quot;context&amp;quot;
+&amp;quot;time&amp;quot;
+&amp;quot;go.etcd.io/etcd/client/v3&amp;quot;
+)
+func NewEtcdClient() (*clientv3.Client, error) {
+return clientv3.New(clientv3.Config{
+// 1. 接入层配置：推荐使用 DNS 模式或完整 Endpoint 列表
+Endpoints: []string{&amp;quot;dns:///etcd.internal:2379&amp;quot;},
+// 2. 建连超时：控制首次或重建 TCP 连接的超时时间，不易过长
+DialTimeout: 2 * time.Second,
+// 3. 智能保活机制（核心：规避静默断连）
+// 每隔 10 秒，客户端会主动向服务端发送一个 HTTP/2 PING 帧
+KeepAliveTime: 10 * time.Second,
+// PING 帧发送后，如果服务端在 3 秒内没有任何回应，
+// 客户端会强制判定当前物理 TCP 连接已死，立即触发底层连接重建与路由漂移
+KeepAliveTimeout: 3 * time.Second,
+// 允许在没有任何活跃流（Stream）时也发送保活 PING
+PermitWithoutStream: true,
+})
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="关键参数原理解析"&gt;关键参数原理解析 &lt;a href="#%e5%85%b3%e9%94%ae%e5%8f%82%e6%95%b0%e5%8e%9f%e7%90%86%e8%a7%a3%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;h4 id="为什么必须配置-keepalivetime-与-keepalivetimeout"&gt;为什么必须配置 &lt;code&gt;KeepAliveTime&lt;/code&gt; 与 &lt;code&gt;KeepAliveTimeout&lt;/code&gt;？ &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e5%bf%85%e9%a1%bb%e9%85%8d%e7%bd%ae-keepalivetime-%e4%b8%8e-keepalivetimeout" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;当 etcd 节点因为物理机断电、内核崩溃或网络丢包而突然失联时，往往无法向客户端发出标准的 TCP &lt;code&gt;FIN&lt;/code&gt; 包（即&lt;strong&gt;静默断连&lt;/strong&gt;）。&lt;/p&gt;</description></item><item><title>Etcd Leader 转移期间客户端行为与平滑过渡机制</title><link>/blog/2026-07-17-leader%E8%BD%AC%E7%A7%BB_%E8%BD%AC%E7%A7%BB%E6%9C%9F%E9%97%B4%E5%AE%A2%E6%88%B7%E7%AB%AF%E8%A1%8C%E4%B8%BA%E4%B8%8E%E5%B9%B3%E6%BB%91%E8%BF%87%E6%B8%A1%E6%9C%BA%E5%88%B6/</link><pubDate>Fri, 17 Jul 2026 10:30:00 +0800</pubDate><guid>/blog/2026-07-17-leader%E8%BD%AC%E7%A7%BB_%E8%BD%AC%E7%A7%BB%E6%9C%9F%E9%97%B4%E5%AE%A2%E6%88%B7%E7%AB%AF%E8%A1%8C%E4%B8%BA%E4%B8%8E%E5%B9%B3%E6%BB%91%E8%BF%87%E6%B8%A1%E6%9C%BA%E5%88%B6/</guid><description>&lt;h2 id="leader-转移期间的客户端client行为与平滑过渡机制"&gt;Leader 转移期间的客户端（Client）行为与平滑过渡机制 &lt;a href="#leader-%e8%bd%ac%e7%a7%bb%e6%9c%9f%e9%97%b4%e7%9a%84%e5%ae%a2%e6%88%b7%e7%ab%afclient%e8%a1%8c%e4%b8%ba%e4%b8%8e%e5%b9%b3%e6%bb%91%e8%bf%87%e6%b8%a1%e6%9c%ba%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="1-概述"&gt;1. 概述 &lt;a href="#1-%e6%a6%82%e8%bf%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;由于 etcd v3 客户端与服务端之间保持着基于 gRPC 的长连接（双向流），Leader 的手动切换通过底层的智能代理机制，将对客户端的影响降到了最低，实现了应用层几乎无感知的“热切换”。&lt;/p&gt;
+&lt;h3 id="2-连接与路由过渡机制"&gt;2. 连接与路由过渡机制 &lt;a href="#2-%e8%bf%9e%e6%8e%a5%e4%b8%8e%e8%b7%af%e7%94%b1%e8%bf%87%e6%b8%a1%e6%9c%ba%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;物理连接不断开：&lt;/strong&gt; 客户端（如 Go v3 client）初始化时通常会传入多个 endpoint 地址，并在底层与这些节点建立并维持常驻的 TCP/gRPC 连接。原 Leader 只是交出了领导权，但它依然作为健康集群成员在线，因此 &lt;strong&gt;Client 与原 Leader 之间的物理连接不会中断&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;gRPC Balancer 智能路由：&lt;/strong&gt; etcd v3 客户端内部实现了一个智能的 gRPC 负载均衡器（Balancer）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;转移瞬间：&lt;/strong&gt; 如果客户端在 Leader 切换的极短瞬时发送了写请求，可能会收到 &lt;code&gt;etcdserver: leader changed&lt;/code&gt; 或 &lt;code&gt;grpc: failed to propose&lt;/code&gt; 等短暂的临时错误。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;转移完成后：&lt;/strong&gt; Balancer 察觉到原节点不再是 Leader 后，会自动将后续的写请求路由到新的 Leader 节点。整个过程通过 SDK 内部的自动重试机制解决。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="3-lease租约与-keepalive心跳的无缝迁移"&gt;3. Lease（租约）与 KeepAlive（心跳）的无缝迁移 &lt;a href="#3-lease%e7%a7%9f%e7%ba%a6%e4%b8%8e-keepalive%e5%bf%83%e8%b7%b3%e7%9a%84%e6%97%a0%e7%bc%9d%e8%bf%81%e7%a7%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Lease 续约（KeepAlive）是一项纯内存操作，不递增 Revision，也不走 Raft 共识流程。&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;在手动转移期间，原 Leader 虽然拦截了需要走 Raft 提案的写请求（如 &lt;code&gt;Put&lt;/code&gt;、&lt;code&gt;LeaseGrant&lt;/code&gt;），但客户端用来维持租约的 &lt;code&gt;LeaseKeepAlive&lt;/code&gt; 是一个 gRPC 双向流，原 Leader 收到续约请求后，直接在本地内存把 TTL 刷新并立刻返回响应。&lt;/li&gt;
+&lt;li&gt;当 Leader 切换完成后，客户端的 SDK 会自动将 Lease 监听连接重连到新 Leader 节点上，并继续发送 KeepAlive 心跳，&lt;strong&gt;租约绝对不会因为 Leader 切换而发生意外掉线或锁释放&lt;/strong&gt;。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="4-watch监听流的平滑过渡"&gt;4. Watch（监听）流的平滑过渡 &lt;a href="#4-watch%e7%9b%91%e5%90%ac%e6%b5%81%e7%9a%84%e5%b9%b3%e6%bb%91%e8%bf%87%e6%b8%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;如果客户端建立了 &lt;code&gt;Watch&lt;/code&gt; 机制来监听某些 Key 的变化，当连接因 Leader 漂移而重建时，etcd client 会带上上一次接收到的最新 &lt;code&gt;Revision&lt;/code&gt; 进行重连，新 Leader 会从该 &lt;code&gt;Revision&lt;/code&gt; 继续推送事件，确保&lt;strong&gt;事件不丢不重&lt;/strong&gt;。&lt;/p&gt;</description></item></channel></rss>

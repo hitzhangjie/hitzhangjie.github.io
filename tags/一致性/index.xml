@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>一致性 on</title><link>/tags/%E4%B8%80%E8%87%B4%E6%80%A7/</link><description>Recent content in 一致性 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 19 Jul 2026 11:00:00 +0800</lastBuildDate><atom:link href="/tags/%E4%B8%80%E8%87%B4%E6%80%A7/index.xml" rel="self" type="application/rss+xml"/><item><title>Etcd 线性一致性读与串行化读深度解析</title><link>/blog/2026-07-19-%E8%AF%BB%E5%86%99%E4%B8%80%E8%87%B4%E6%80%A7_etcd%E7%BA%BF%E6%80%A7%E4%B8%80%E8%87%B4%E6%80%A7%E8%AF%BB%E4%B8%8E%E4%B8%B2%E8%A1%8C%E5%8C%96%E8%AF%BB%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/</link><pubDate>Sun, 19 Jul 2026 11:00:00 +0800</pubDate><guid>/blog/2026-07-19-%E8%AF%BB%E5%86%99%E4%B8%80%E8%87%B4%E6%80%A7_etcd%E7%BA%BF%E6%80%A7%E4%B8%80%E8%87%B4%E6%80%A7%E8%AF%BB%E4%B8%8E%E4%B8%B2%E8%A1%8C%E5%8C%96%E8%AF%BB%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在分布式系统中，&amp;ldquo;写进去什么&amp;quot;只是问题的一半，**&amp;ldquo;读出来什么&amp;rdquo;**才是真正的考验。&lt;/p&gt;
+&lt;p&gt;想象一个场景：你往 Etcd 写入了一条配置 &lt;code&gt;cluster_mode: production&lt;/code&gt;，紧接着另一个服务读取这个配置。它读到的是你刚写的新值，还是之前的旧值？这取决于你用的是哪种读模式。&lt;/p&gt;
+&lt;p&gt;Etcd 提供了两种读一致性级别：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;线性一致性读（Linearizable Read）&lt;/strong&gt;：保证返回最新已提交的数据，默认行为。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;串行化读（Serializable Read）&lt;/strong&gt;：可能返回稍旧的数据，但延迟更低、吞吐更高。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;理解两者的区别和适用场景，是在一致性与性能之间做出正确取舍的关键。本文将深入对比这两种读模式的设计原理、Etcd 中的具体实现，以及实战中的选择指南。&lt;/p&gt;
+&lt;h2 id="1-概念辨析"&gt;1. 概念辨析 &lt;a href="#1-%e6%a6%82%e5%bf%b5%e8%be%a8%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="11-什么是线性一致性"&gt;1.1 什么是线性一致性 &lt;a href="#11-%e4%bb%80%e4%b9%88%e6%98%af%e7%ba%bf%e6%80%a7%e4%b8%80%e8%87%b4%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;线性一致性（Linearizability）是最强的单对象一致性模型。它要求：&lt;strong&gt;任何一个读操作，都必须返回该数据上最近一次写操作的结果&lt;/strong&gt;，并且所有操作看起来像是按某个全局时间线原子执行的。&lt;/p&gt;
+&lt;p&gt;换句话说，一旦某个客户端完成了写操作，之后任何客户端发起的读操作，无论连接到哪个节点，都应该看到这次写的结果（或更新的值）。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;全局时间线（线性一致性保证）：
+Client1: ──────────────────W(A=1)──────────
+Client2: ────────────────────────R(A)=1───→ ✅ 必然读到 1
+Client3: ─────────R(A)=0──→ ✅ 读在写之前，读到旧值（符合预期）
+关键：写完成后，任何后续读都必须返回新值（或更新的值）
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;以银行账户为例：转账完成后立即查询余额，必须显示转账后的金额。如果显示了旧余额，用户就会以为钱&amp;quot;丢了&amp;rdquo;——这在任何严肃的场景中都是不可接受的。&lt;/p&gt;
+&lt;h3 id="12-什么是串行化"&gt;1.2 什么是串行化 &lt;a href="#12-%e4%bb%80%e4%b9%88%e6%98%af%e4%b8%b2%e8%a1%8c%e5%8c%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;串行化（Serializable）是一个稍弱的一致性保证。它保证：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;✅ 读操作不会看到&lt;strong&gt;部分写入&lt;/strong&gt;的中间状态（事务隔离）&lt;/li&gt;
+&lt;li&gt;✅ 读操作返回的是&lt;strong&gt;某个时间点的完整快照&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;❌ &lt;strong&gt;不保证&lt;/strong&gt;这个快照是最新的&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;串行化读的可能情况：
+Client1: ──────────────────W(A=1)──────────
+Client2: ────────────────────────R(A)=0──→ ⚠️ 可能读到旧值！
+Client3: ───────────────────────────R(A)=1──→ ✅ 稍后同步后能读到新值
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;以社交媒体热搜为例：你看到的可能是几秒前的榜单，但不会看到&amp;quot;正在编辑中&amp;quot;的混乱文章。数据的滞后是可接受的，但数据的完整性不可妥协。&lt;/p&gt;
+&lt;h3 id="13-一张图看懂区别"&gt;1.3 一张图看懂区别 &lt;a href="#13-%e4%b8%80%e5%bc%a0%e5%9b%be%e7%9c%8b%e6%87%82%e5%8c%ba%e5%88%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt; 时间 ─────────────────────────────→
+Write(A=1) ────┬──── 已提交
+│
+├── Linearizable Read ──→ 保证返回 1
+│ (需要 Leader 向多数节点确认)
+│
+├── Serializable Read ──→ 可能返回 0（旧值）
+│ (Follower 直接本地读，不走网络)
+│
+└── Serializable Read ──→ 延迟一段时间后也会返回 1
+(Follower 最终追上 Leader 的进度)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;&lt;/th&gt;
+&lt;th&gt;线性一致性读&lt;/th&gt;
+&lt;th&gt;串行化读&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;读到最新数据&lt;/td&gt;
+&lt;td&gt;✅ 保证&lt;/td&gt;
+&lt;td&gt;❌ 可能滞后&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;读到中间状态&lt;/td&gt;
+&lt;td&gt;❌ 不可能&lt;/td&gt;
+&lt;td&gt;❌ 不可能&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;跨节点感知&lt;/td&gt;
+&lt;td&gt;✅ 全局一致&lt;/td&gt;
+&lt;td&gt;❌ 节点间可能不同&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="2-etcd-中的实现原理"&gt;2. Etcd 中的实现原理 &lt;a href="#2-etcd-%e4%b8%ad%e7%9a%84%e5%ae%9e%e7%8e%b0%e5%8e%9f%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;理解了概念之后，让我们深入到 Etcd 源码层面，看看这两种读模式分别是如何实现的。&lt;/p&gt;</description></item><item><title>Etcd 读写请求路由与数据转发机制</title><link>/blog/2026-07-17-%E8%AF%B7%E6%B1%82%E8%BD%AC%E5%8F%91_etcd%E8%AF%BB%E5%86%99%E8%AF%B7%E6%B1%82%E8%B7%AF%E7%94%B1%E4%B8%8E%E6%95%B0%E6%8D%AE%E8%BD%AC%E5%8F%91%E6%9C%BA%E5%88%B6/</link><pubDate>Fri, 17 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-17-%E8%AF%B7%E6%B1%82%E8%BD%AC%E5%8F%91_etcd%E8%AF%BB%E5%86%99%E8%AF%B7%E6%B1%82%E8%B7%AF%E7%94%B1%E4%B8%8E%E6%95%B0%E6%8D%AE%E8%BD%AC%E5%8F%91%E6%9C%BA%E5%88%B6/</guid><description>&lt;h2 id="etcd-读写请求路由与数据转发机制"&gt;etcd 读写请求路由与数据转发机制 &lt;a href="#etcd-%e8%af%bb%e5%86%99%e8%af%b7%e6%b1%82%e8%b7%af%e7%94%b1%e4%b8%8e%e6%95%b0%e6%8d%ae%e8%bd%ac%e5%8f%91%e6%9c%ba%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="1-核心结论"&gt;1. 核心结论 &lt;a href="#1-%e6%a0%b8%e5%bf%83%e7%bb%93%e8%ae%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;etcd 客户端在向非 Leader（Follower）节点发起写请求（如 &lt;code&gt;Put&lt;/code&gt;）时，&lt;strong&gt;非 Leader 节点会代为向 Leader 发起请求并原路返回响应&lt;/strong&gt;，而不会向客户端返回重定向（Redirect）通知。整个过程对客户端完全透明。&lt;/p&gt;
+&lt;h3 id="2-服务端数据流向"&gt;2. 服务端数据流向 &lt;a href="#2-%e6%9c%8d%e5%8a%a1%e7%ab%af%e6%95%b0%e6%8d%ae%e6%b5%81%e5%90%91" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;当一个写请求落到 Follower 节点时，内部处理流程如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[ 客户端 ] --- 发起 Put ---&amp;gt; [ Follower 节点 ]
+|
+(内部 Raft 转发)
+v
+[ 客户端 ] &amp;lt;--- 返回成功 --- [ Leader 节点 ]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;接收与识别&lt;/strong&gt;：Follower 接收到 &lt;code&gt;Put&lt;/code&gt; 请求，识别出该操作涉及状态变更（写操作）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;内部转发&lt;/strong&gt;：Follower 通过集群内部的 Raft 协议通道，将该写请求直接转发给当前的 Leader 节点。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;共识达成&lt;/strong&gt;：Leader 收到请求后，将其作为 Raft 提案（Proposal）广播给集群中的其他 Follower。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;提交与响应&lt;/strong&gt;：当半数以上节点确认写入成功（达成共识）后，Leader 提交（Commit）数据，并将成功响应原路返回给接收请求的 Follower。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;返回客户端&lt;/strong&gt;：Follower 将响应返回给客户端。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id="3-go-sdk-clientv3-的默认行为"&gt;3. Go SDK (&lt;code&gt;clientv3&lt;/code&gt;) 的默认行为 &lt;a href="#3-go-sdk-clientv3-%e7%9a%84%e9%bb%98%e8%ae%a4%e8%a1%8c%e4%b8%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;负载均衡&lt;/strong&gt;：SDK 初始化时如果传入了多个 Endpoint（IP 列表），默认会使用 &lt;strong&gt;Round-Robin（轮询）&lt;/strong&gt; 策略发送请求。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;无感知路由&lt;/strong&gt;：SDK 本身在发送 &lt;code&gt;Put&lt;/code&gt; 时并不感知谁是 Leader，请求是随机/轮询分发到各节点的。高可用完全依赖上述服务端的内部转发机制。&lt;/li&gt;
+&lt;/ul&gt;</description></item></channel></rss>

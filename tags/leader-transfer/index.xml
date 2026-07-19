@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Leader Transfer on</title><link>/tags/leader-transfer/</link><description>Recent content in Leader Transfer on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 17 Jul 2026 10:30:00 +0800</lastBuildDate><atom:link href="/tags/leader-transfer/index.xml" rel="self" type="application/rss+xml"/><item><title>Etcd Leader 转移期间客户端行为与平滑过渡机制</title><link>/blog/2026-07-17-leader%E8%BD%AC%E7%A7%BB_%E8%BD%AC%E7%A7%BB%E6%9C%9F%E9%97%B4%E5%AE%A2%E6%88%B7%E7%AB%AF%E8%A1%8C%E4%B8%BA%E4%B8%8E%E5%B9%B3%E6%BB%91%E8%BF%87%E6%B8%A1%E6%9C%BA%E5%88%B6/</link><pubDate>Fri, 17 Jul 2026 10:30:00 +0800</pubDate><guid>/blog/2026-07-17-leader%E8%BD%AC%E7%A7%BB_%E8%BD%AC%E7%A7%BB%E6%9C%9F%E9%97%B4%E5%AE%A2%E6%88%B7%E7%AB%AF%E8%A1%8C%E4%B8%BA%E4%B8%8E%E5%B9%B3%E6%BB%91%E8%BF%87%E6%B8%A1%E6%9C%BA%E5%88%B6/</guid><description>&lt;h2 id="leader-转移期间的客户端client行为与平滑过渡机制"&gt;Leader 转移期间的客户端（Client）行为与平滑过渡机制 &lt;a href="#leader-%e8%bd%ac%e7%a7%bb%e6%9c%9f%e9%97%b4%e7%9a%84%e5%ae%a2%e6%88%b7%e7%ab%afclient%e8%a1%8c%e4%b8%ba%e4%b8%8e%e5%b9%b3%e6%bb%91%e8%bf%87%e6%b8%a1%e6%9c%ba%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="1-概述"&gt;1. 概述 &lt;a href="#1-%e6%a6%82%e8%bf%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;由于 etcd v3 客户端与服务端之间保持着基于 gRPC 的长连接（双向流），Leader 的手动切换通过底层的智能代理机制，将对客户端的影响降到了最低，实现了应用层几乎无感知的“热切换”。&lt;/p&gt;
+&lt;h3 id="2-连接与路由过渡机制"&gt;2. 连接与路由过渡机制 &lt;a href="#2-%e8%bf%9e%e6%8e%a5%e4%b8%8e%e8%b7%af%e7%94%b1%e8%bf%87%e6%b8%a1%e6%9c%ba%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;物理连接不断开：&lt;/strong&gt; 客户端（如 Go v3 client）初始化时通常会传入多个 endpoint 地址，并在底层与这些节点建立并维持常驻的 TCP/gRPC 连接。原 Leader 只是交出了领导权，但它依然作为健康集群成员在线，因此 &lt;strong&gt;Client 与原 Leader 之间的物理连接不会中断&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;gRPC Balancer 智能路由：&lt;/strong&gt; etcd v3 客户端内部实现了一个智能的 gRPC 负载均衡器（Balancer）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;转移瞬间：&lt;/strong&gt; 如果客户端在 Leader 切换的极短瞬时发送了写请求，可能会收到 &lt;code&gt;etcdserver: leader changed&lt;/code&gt; 或 &lt;code&gt;grpc: failed to propose&lt;/code&gt; 等短暂的临时错误。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;转移完成后：&lt;/strong&gt; Balancer 察觉到原节点不再是 Leader 后，会自动将后续的写请求路由到新的 Leader 节点。整个过程通过 SDK 内部的自动重试机制解决。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="3-lease租约与-keepalive心跳的无缝迁移"&gt;3. Lease（租约）与 KeepAlive（心跳）的无缝迁移 &lt;a href="#3-lease%e7%a7%9f%e7%ba%a6%e4%b8%8e-keepalive%e5%bf%83%e8%b7%b3%e7%9a%84%e6%97%a0%e7%bc%9d%e8%bf%81%e7%a7%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Lease 续约（KeepAlive）是一项纯内存操作，不递增 Revision，也不走 Raft 共识流程。&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;在手动转移期间，原 Leader 虽然拦截了需要走 Raft 提案的写请求（如 &lt;code&gt;Put&lt;/code&gt;、&lt;code&gt;LeaseGrant&lt;/code&gt;），但客户端用来维持租约的 &lt;code&gt;LeaseKeepAlive&lt;/code&gt; 是一个 gRPC 双向流，原 Leader 收到续约请求后，直接在本地内存把 TTL 刷新并立刻返回响应。&lt;/li&gt;
+&lt;li&gt;当 Leader 切换完成后，客户端的 SDK 会自动将 Lease 监听连接重连到新 Leader 节点上，并继续发送 KeepAlive 心跳，&lt;strong&gt;租约绝对不会因为 Leader 切换而发生意外掉线或锁释放&lt;/strong&gt;。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="4-watch监听流的平滑过渡"&gt;4. Watch（监听）流的平滑过渡 &lt;a href="#4-watch%e7%9b%91%e5%90%ac%e6%b5%81%e7%9a%84%e5%b9%b3%e6%bb%91%e8%bf%87%e6%b8%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;如果客户端建立了 &lt;code&gt;Watch&lt;/code&gt; 机制来监听某些 Key 的变化，当连接因 Leader 漂移而重建时，etcd client 会带上上一次接收到的最新 &lt;code&gt;Revision&lt;/code&gt; 进行重连，新 Leader 会从该 &lt;code&gt;Revision&lt;/code&gt; 继续推送事件，确保&lt;strong&gt;事件不丢不重&lt;/strong&gt;。&lt;/p&gt;</description></item><item><title>Etcd 手动转移 Leader 底层机制解析</title><link>/blog/2026-07-17-leader%E8%BD%AC%E7%A7%BB_%E6%89%8B%E5%8A%A8%E8%BD%AC%E7%A7%BBleader%E5%BA%95%E5%B1%82%E6%9C%BA%E5%88%B6%E8%A7%A3%E6%9E%90/</link><pubDate>Fri, 17 Jul 2026 10:00:00 +0800</pubDate><guid>/blog/2026-07-17-leader%E8%BD%AC%E7%A7%BB_%E6%89%8B%E5%8A%A8%E8%BD%AC%E7%A7%BBleader%E5%BA%95%E5%B1%82%E6%9C%BA%E5%88%B6%E8%A7%A3%E6%9E%90/</guid><description>&lt;h2 id="etcd-手动转移-leaderleader-transfer底层机制解析"&gt;etcd 手动转移 Leader（Leader Transfer）底层机制解析 &lt;a href="#etcd-%e6%89%8b%e5%8a%a8%e8%bd%ac%e7%a7%bb-leaderleader-transfer%e5%ba%95%e5%b1%82%e6%9c%ba%e5%88%b6%e8%a7%a3%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="1-概述"&gt;1. 概述 &lt;a href="#1-%e6%a6%82%e8%bf%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在分布式共识系统 etcd 中，通过 &lt;code&gt;etcdctl move-leader&lt;/code&gt; 手动将 Leader 节点转移到其他目标节点（Transferee）是一个无缝、无损且不会引起脑裂（Split-brain）的控制流。它不同于传统的“节点宕机引发的自动选主”，在底层依赖于 Raft 的 &lt;strong&gt;Leader Transfer&lt;/strong&gt; 机制。&lt;/p&gt;
+&lt;h3 id="2-集群内部-raft-状态演进"&gt;2. 集群内部 Raft 状态演进 &lt;a href="#2-%e9%9b%86%e7%be%a4%e5%86%85%e9%83%a8-raft-%e7%8a%b6%e6%80%81%e6%bc%94%e8%bf%9b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;手动转移 Leader 并不是通过直接修改内存状态的“后门”实现的，它必须经历一次完整、严谨的 Raft 选主过程，以绝对保证分布式系统的一致性与安全性。其内部核心步骤如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt; [原 Leader] [目标节点 (Transferee)]
+│ │
+├─ 1. 停止接受新提案 (Block Writes) │
+├─ 2. 检查日志，持续复制未同步日志 ───────────&amp;gt;│ (Catch up log)
+│ │
+├─ 3. 发送 MsgTimeoutNow ────────────────────&amp;gt;│
+│ │ 4. 立即增加 Term，发起选举
+│&amp;lt;────────────────────────────────────────────┴─ (不等待 election timeout)
+│
+5. 收到新 Term 投票/心跳
+降级为 Follower
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;停止接收新提案（Block Writes）：&lt;/strong&gt; 原 Leader 接收到转移指令后，会立刻停止接受客户端新的写操作提案（Proposal）。这保证了在转移期间日志不会无限追加，方便目标节点快速追赶。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;日志同步（Log Catch-up）：&lt;/strong&gt; 原 Leader 对比自己与目标节点的日志进度。若目标节点有落后日志，原 Leader 会加速向其发送追加日志（&lt;code&gt;AppendEntries&lt;/code&gt;），直到目标节点的日志与原 Leader 完全一致。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;发送强迫选举信号（&lt;code&gt;MsgTimeoutNow&lt;/code&gt;）：&lt;/strong&gt; 一旦确认目标节点的日志已经完全追平，原 Leader 会向目标节点发送一个特殊的 Raft 消息：&lt;code&gt;MsgTimeoutNow&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;目标节点瞬间发起竞选：&lt;/strong&gt; 目标节点收到该消息后，&lt;strong&gt;不会等待本轮随机的 election timeout 结束&lt;/strong&gt;，而是立即将自己的任期号（Term）加 1，并转为 Candidate 状态，向集群广播拉票（&lt;code&gt;RequestVote&lt;/code&gt;）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;角色轮换（Step Down）：&lt;/strong&gt; 由于目标节点的日志是最新的，它会瞬间获得集群多数派（Quorum）的选票，成功当选新 Leader。原 Leader 收到高任期心跳后，自动降级为 Follower。整个过程通常在 &lt;strong&gt;10 毫秒以内&lt;/strong&gt; 完成。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id="3-特殊机制为什么能全票通过"&gt;3. 特殊机制：为什么能全票通过？ &lt;a href="#3-%e7%89%b9%e6%ae%8a%e6%9c%ba%e5%88%b6%e4%b8%ba%e4%bb%80%e4%b9%88%e8%83%bd%e5%85%a8%e7%a5%a8%e9%80%9a%e8%bf%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在自由竞争的自动选举中，可能因选票被瓜分（Split Vote）而导致选举失败。但在手动转移中，目标节点由于“先发制人”且日志已被原 Leader 强行补齐，其他 Follower 节点在收到具备更高 Term 且拥有最新日志的拉票请求时，根据 Raft 协议必须无条件投赞成票，因此&lt;strong&gt;手动选举绝不会失败&lt;/strong&gt;。&lt;/p&gt;</description></item></channel></rss>

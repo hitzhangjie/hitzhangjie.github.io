@@ -1,4 +1,114 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>分布式系统 on</title><link>/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/</link><description>Recent content in 分布式系统 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 02 Jul 2026 20:00:00 +0800</lastBuildDate><atom:link href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/index.xml" rel="self" type="application/rss+xml"/><item><title>FLP 不可能性：分布式共识的边界、启示与工业突围</title><link>/blog/2026-07-02-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F_flp-impossibility-guide/</link><pubDate>Thu, 02 Jul 2026 20:00:00 +0800</pubDate><guid>/blog/2026-07-02-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F_flp-impossibility-guide/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>分布式系统 on</title><link>/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/</link><description>Recent content in 分布式系统 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 19 Jul 2026 11:00:00 +0800</lastBuildDate><atom:link href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/index.xml" rel="self" type="application/rss+xml"/><item><title>Etcd 线性一致性读与串行化读深度解析</title><link>/blog/2026-07-19-%E8%AF%BB%E5%86%99%E4%B8%80%E8%87%B4%E6%80%A7_etcd%E7%BA%BF%E6%80%A7%E4%B8%80%E8%87%B4%E6%80%A7%E8%AF%BB%E4%B8%8E%E4%B8%B2%E8%A1%8C%E5%8C%96%E8%AF%BB%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/</link><pubDate>Sun, 19 Jul 2026 11:00:00 +0800</pubDate><guid>/blog/2026-07-19-%E8%AF%BB%E5%86%99%E4%B8%80%E8%87%B4%E6%80%A7_etcd%E7%BA%BF%E6%80%A7%E4%B8%80%E8%87%B4%E6%80%A7%E8%AF%BB%E4%B8%8E%E4%B8%B2%E8%A1%8C%E5%8C%96%E8%AF%BB%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在分布式系统中，&amp;ldquo;写进去什么&amp;quot;只是问题的一半，**&amp;ldquo;读出来什么&amp;rdquo;**才是真正的考验。&lt;/p&gt;
+&lt;p&gt;想象一个场景：你往 Etcd 写入了一条配置 &lt;code&gt;cluster_mode: production&lt;/code&gt;，紧接着另一个服务读取这个配置。它读到的是你刚写的新值，还是之前的旧值？这取决于你用的是哪种读模式。&lt;/p&gt;
+&lt;p&gt;Etcd 提供了两种读一致性级别：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;线性一致性读（Linearizable Read）&lt;/strong&gt;：保证返回最新已提交的数据，默认行为。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;串行化读（Serializable Read）&lt;/strong&gt;：可能返回稍旧的数据，但延迟更低、吞吐更高。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;理解两者的区别和适用场景，是在一致性与性能之间做出正确取舍的关键。本文将深入对比这两种读模式的设计原理、Etcd 中的具体实现，以及实战中的选择指南。&lt;/p&gt;
+&lt;h2 id="1-概念辨析"&gt;1. 概念辨析 &lt;a href="#1-%e6%a6%82%e5%bf%b5%e8%be%a8%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="11-什么是线性一致性"&gt;1.1 什么是线性一致性 &lt;a href="#11-%e4%bb%80%e4%b9%88%e6%98%af%e7%ba%bf%e6%80%a7%e4%b8%80%e8%87%b4%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;线性一致性（Linearizability）是最强的单对象一致性模型。它要求：&lt;strong&gt;任何一个读操作，都必须返回该数据上最近一次写操作的结果&lt;/strong&gt;，并且所有操作看起来像是按某个全局时间线原子执行的。&lt;/p&gt;
+&lt;p&gt;换句话说，一旦某个客户端完成了写操作，之后任何客户端发起的读操作，无论连接到哪个节点，都应该看到这次写的结果（或更新的值）。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;全局时间线（线性一致性保证）：
+Client1: ──────────────────W(A=1)──────────
+Client2: ────────────────────────R(A)=1───→ ✅ 必然读到 1
+Client3: ─────────R(A)=0──→ ✅ 读在写之前，读到旧值（符合预期）
+关键：写完成后，任何后续读都必须返回新值（或更新的值）
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;以银行账户为例：转账完成后立即查询余额，必须显示转账后的金额。如果显示了旧余额，用户就会以为钱&amp;quot;丢了&amp;rdquo;——这在任何严肃的场景中都是不可接受的。&lt;/p&gt;
+&lt;h3 id="12-什么是串行化"&gt;1.2 什么是串行化 &lt;a href="#12-%e4%bb%80%e4%b9%88%e6%98%af%e4%b8%b2%e8%a1%8c%e5%8c%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;串行化（Serializable）是一个稍弱的一致性保证。它保证：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;✅ 读操作不会看到&lt;strong&gt;部分写入&lt;/strong&gt;的中间状态（事务隔离）&lt;/li&gt;
+&lt;li&gt;✅ 读操作返回的是&lt;strong&gt;某个时间点的完整快照&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;❌ &lt;strong&gt;不保证&lt;/strong&gt;这个快照是最新的&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;串行化读的可能情况：
+Client1: ──────────────────W(A=1)──────────
+Client2: ────────────────────────R(A)=0──→ ⚠️ 可能读到旧值！
+Client3: ───────────────────────────R(A)=1──→ ✅ 稍后同步后能读到新值
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;以社交媒体热搜为例：你看到的可能是几秒前的榜单，但不会看到&amp;quot;正在编辑中&amp;quot;的混乱文章。数据的滞后是可接受的，但数据的完整性不可妥协。&lt;/p&gt;
+&lt;h3 id="13-一张图看懂区别"&gt;1.3 一张图看懂区别 &lt;a href="#13-%e4%b8%80%e5%bc%a0%e5%9b%be%e7%9c%8b%e6%87%82%e5%8c%ba%e5%88%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt; 时间 ─────────────────────────────→
+Write(A=1) ────┬──── 已提交
+│
+├── Linearizable Read ──→ 保证返回 1
+│ (需要 Leader 向多数节点确认)
+│
+├── Serializable Read ──→ 可能返回 0（旧值）
+│ (Follower 直接本地读，不走网络)
+│
+└── Serializable Read ──→ 延迟一段时间后也会返回 1
+(Follower 最终追上 Leader 的进度)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;&lt;/th&gt;
+&lt;th&gt;线性一致性读&lt;/th&gt;
+&lt;th&gt;串行化读&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;读到最新数据&lt;/td&gt;
+&lt;td&gt;✅ 保证&lt;/td&gt;
+&lt;td&gt;❌ 可能滞后&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;读到中间状态&lt;/td&gt;
+&lt;td&gt;❌ 不可能&lt;/td&gt;
+&lt;td&gt;❌ 不可能&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;跨节点感知&lt;/td&gt;
+&lt;td&gt;✅ 全局一致&lt;/td&gt;
+&lt;td&gt;❌ 节点间可能不同&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="2-etcd-中的实现原理"&gt;2. Etcd 中的实现原理 &lt;a href="#2-etcd-%e4%b8%ad%e7%9a%84%e5%ae%9e%e7%8e%b0%e5%8e%9f%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;理解了概念之后，让我们深入到 Etcd 源码层面，看看这两种读模式分别是如何实现的。&lt;/p&gt;</description></item><item><title>Etcd 架构设计详解</title><link>/blog/etcd/</link><pubDate>Sun, 19 Jul 2026 10:00:00 +0800</pubDate><guid>/blog/etcd/</guid><description>&lt;h2 id="1-etcd-是什么"&gt;1. Etcd 是什么 &lt;a href="#1-etcd-%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Etcd 是一个分布式、强一致的键值存储系统，由 CNCF（云原生计算基金会）托管。它基于 Go 语言开发，使用 Raft 共识算法保证多节点间的数据一致性，即使在节点失效（包括 Leader 失效）的情况下也能可靠地提供服务。&lt;/p&gt;
+&lt;p&gt;从简单的 Web 应用到复杂的 Kubernetes 集群，都可以通过 Etcd 进行服务发现、配置管理和分布式协调。其核心设计围绕 &lt;strong&gt;强一致性&lt;/strong&gt;、&lt;strong&gt;高可用&lt;/strong&gt; 和 &lt;strong&gt;简单可靠&lt;/strong&gt; 展开。&lt;/p&gt;
+&lt;p&gt;项目地址：&lt;a href="https://github.com/etcd-io/etcd"&gt;etcd-io/etcd&lt;/a&gt;&lt;/p&gt;
+&lt;h2 id="2-核心特性"&gt;2. 核心特性 &lt;a href="#2-%e6%a0%b8%e5%bf%83%e7%89%b9%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Etcd 提供以下关键能力：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;强一致性&lt;/strong&gt;：基于 Raft 协议，所有节点看到的数据严格一致，支持线性一致性读（Linearizable Read）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;MVCC 多版本控制&lt;/strong&gt;：每次写入生成新版本，旧版本保留一段可配置的时间，支持历史版本查询。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Watch 监听机制&lt;/strong&gt;：客户端可订阅某个键或前缀的变更事件，通过 gRPC 流实时推送，是 Kubernetes 声明式状态同步的基石。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Lease 租约&lt;/strong&gt;：带 TTL 的轻量级对象，可用于服务心跳保活和自动过期键值对。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;gRPC API&lt;/strong&gt;：v3 API 使用 gRPC + Protobuf，兼顾性能与跨语言支持，同时提供 HTTP/JSON 网关。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;简单可靠&lt;/strong&gt;：单二进制部署，内置监控指标，操作门槛低。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="3-典型应用场景"&gt;3. 典型应用场景 &lt;a href="#3-%e5%85%b8%e5%9e%8b%e5%ba%94%e7%94%a8%e5%9c%ba%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Kubernetes&lt;/strong&gt;：使用 Etcd 存储集群所有资源对象（Pod、Service、ConfigMap 等）的状态。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;CoreDNS&lt;/strong&gt;：支持将 Etcd 作为后端存储，实现动态 DNS 记录管理。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;服务发现&lt;/strong&gt;：微服务注册实例信息，客户端通过 Watch 感知实例上下线。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;分布式协调&lt;/strong&gt;：通过 Lease 实现分布式锁、Leader 选举等原语。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;配置中心&lt;/strong&gt;：集中管理应用配置，客户端监听配置变更并热更新。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="4-整体架构"&gt;4. 整体架构 &lt;a href="#4-%e6%95%b4%e4%bd%93%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Etcd 集群由多个节点组成，每个节点运行完整的 Etcd 实例。架构上分为三层：&lt;strong&gt;API 层&lt;/strong&gt; → &lt;strong&gt;Raft 共识层&lt;/strong&gt; → &lt;strong&gt;存储层&lt;/strong&gt;。&lt;/p&gt;</description></item><item><title>Etcd 租约检查点（Lease Checkpoint）分布式同步机制</title><link>/blog/2026-07-17-checkpoint_etcd%E7%A7%9F%E7%BA%A6%E6%A3%80%E6%9F%A5%E7%82%B9%E5%88%86%E5%B8%83%E5%BC%8F%E5%90%8C%E6%AD%A5%E6%9C%BA%E5%88%B6/</link><pubDate>Fri, 17 Jul 2026 09:00:00 +0800</pubDate><guid>/blog/2026-07-17-checkpoint_etcd%E7%A7%9F%E7%BA%A6%E6%A3%80%E6%9F%A5%E7%82%B9%E5%88%86%E5%B8%83%E5%BC%8F%E5%90%8C%E6%AD%A5%E6%9C%BA%E5%88%B6/</guid><description>&lt;h2 id="etcd-租约检查点lease-checkpoint分布式同步机制"&gt;etcd 租约检查点（Lease Checkpoint）分布式同步机制 &lt;a href="#etcd-%e7%a7%9f%e7%ba%a6%e6%a3%80%e6%9f%a5%e7%82%b9lease-checkpoint%e5%88%86%e5%b8%83%e5%bc%8f%e5%90%8c%e6%ad%a5%e6%9c%ba%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="1-痛点背景为什么引入-checkpoint"&gt;1. 痛点背景：为什么引入 Checkpoint？ &lt;a href="#1-%e7%97%9b%e7%82%b9%e8%83%8c%e6%99%af%e4%b8%ba%e4%bb%80%e4%b9%88%e5%bc%95%e5%85%a5-checkpoint" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在早期 etcd 中，&lt;strong&gt;Lease 的剩余时间（Remaining TTL）是不持久化写磁盘的&lt;/strong&gt;（因为每次续期都写盘会导致 I/O 崩溃），只有“初始 TTL”（如 60s）会被持久化。
+若一个租约只剩 5 秒生命，此时集群突然发生 Leader 切换，新 Leader 上任后不知道它还剩多少时间，只能保守地将其恢复到初始的 60 秒。如果集群发生频繁的 Leader 切换，就会导致该 Lease &lt;strong&gt;永远处于“无限自动续期”的状态而无法过期淘汰&lt;/strong&gt;，最终引发底层 boltdb 数据堆积的灾难。&lt;/p&gt;
+&lt;p&gt;为此，etcd 引入了 &lt;strong&gt;Lease Checkpoint 机制&lt;/strong&gt;（自 v3.4 默认启用或增强）。&lt;/p&gt;
+&lt;h3 id="2-lease-checkpoint-的分布式同步流程"&gt;2. Lease Checkpoint 的分布式同步流程 &lt;a href="#2-lease-checkpoint-%e7%9a%84%e5%88%86%e5%b8%83%e5%bc%8f%e5%90%8c%e6%ad%a5%e6%b5%81%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Leader 节点的 Lessor（租约管理器）在启动时会跑一个独立的异步协程 &lt;code&gt;CheckpointScheduledLeases&lt;/code&gt;，其同步机制如下：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;内存定期扫描：&lt;/strong&gt; Leader 默认每隔 &lt;strong&gt;500 毫秒&lt;/strong&gt; 扫描一次内存中的 Lease 最小堆，筛选出那些剩余 TTL 已经减少、且未及时同步的 Lease，计算出它们当前的“精确剩余 TTL”。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;发起 Raft 提案：&lt;/strong&gt; Leader 将这些 &lt;code&gt;[Lease ID -&amp;gt; Remaining TTL]&lt;/code&gt; 键值对打包成一个 &lt;code&gt;LeaseCheckpoint&lt;/code&gt; 类型的 Raft 请求，广播给所有 Follower。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;共识与内存应用（Apply）：&lt;/strong&gt; 该请求跟普通写操作一样走 Raft WAL 日志复制，一旦多数派（Quorum）确认收到并 Commit，所有节点（包括 Leader/Follower）在 Apply 该日志时，会&lt;strong&gt;更新本地内存中的 Lease 数据结构，将其纠正为精确的 Remaining TTL&lt;/strong&gt;。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;blockquote&gt;
+&lt;p&gt;⚠️ &lt;strong&gt;核心性能优化：&lt;/strong&gt;
+虽然 Checkpoint 走了一次 Raft 协议（写了 WAL 日志），但是在 Apply 阶段，它&lt;strong&gt;仅仅修改了所有节点内存里的 Lease 数据结构，绝对不会修改底层的 boltdb 磁盘数据&lt;/strong&gt;。这既保证了高一致性，又避免了频繁磁盘 I/O 带来的性能崩溃。&lt;/p&gt;</description></item><item><title>FLP 不可能性：分布式共识的边界、启示与工业突围</title><link>/blog/2026-07-02-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F_flp-impossibility-guide/</link><pubDate>Thu, 02 Jul 2026 20:00:00 +0800</pubDate><guid>/blog/2026-07-02-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F_flp-impossibility-guide/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;写这篇文章的原因很简单：我跟同事聊 FLP 的时候，发现自己虽然读过论文，但真让我用大白话解释清楚，还是磕磕绊绊。什么&amp;quot;异步系统&amp;quot;、&amp;ldquo;二价配置&amp;rdquo;、&amp;ldquo;liveness&amp;rdquo;……读到一半就想放弃。&lt;/p&gt;
 &lt;p&gt;所以我决定把这篇文章写给自己，也写给和我一样的分布式系统工程师——我们不是研究员，不需要用形式化符号交流，但我们需要真的搞懂 FLP 到底在说什么、它为什么值得被记住、以及它对我们日常写的分布式系统有什么影响。&lt;/p&gt;
 &lt;p&gt;这篇文章会尽量避免&amp;quot;定义 3.1&amp;quot;、&amp;ldquo;定理 5.2&amp;quot;式的写法。如果某个概念第一次出现，我会先花几句话讲清楚它到底是什么。证明过程放到附录，正文只保留直觉。&lt;/p&gt;

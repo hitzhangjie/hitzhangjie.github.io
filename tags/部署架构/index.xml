@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>部署架构 on</title><link>/tags/%E9%83%A8%E7%BD%B2%E6%9E%B6%E6%9E%84/</link><description>Recent content in 部署架构 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 17 Jul 2026 15:00:00 +0800</lastBuildDate><atom:link href="/tags/%E9%83%A8%E7%BD%B2%E6%9E%B6%E6%9E%84/index.xml" rel="self" type="application/rss+xml"/><item><title>Etcd 生产环境部署架构与选型指南</title><link>/blog/2026-07-17-%E9%AB%98%E5%8F%AF%E7%94%A8_etcd%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E9%83%A8%E7%BD%B2%E6%9E%B6%E6%9E%84%E4%B8%8E%E9%80%89%E5%9E%8B%E6%8C%87%E5%8D%97/</link><pubDate>Fri, 17 Jul 2026 15:00:00 +0800</pubDate><guid>/blog/2026-07-17-%E9%AB%98%E5%8F%AF%E7%94%A8_etcd%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E9%83%A8%E7%BD%B2%E6%9E%B6%E6%9E%84%E4%B8%8E%E9%80%89%E5%9E%8B%E6%8C%87%E5%8D%97/</guid><description>&lt;h2 id="etcd-生产环境部署架构与选型指南"&gt;etcd 生产环境部署架构与选型指南 &lt;a href="#etcd-%e7%94%9f%e4%ba%a7%e7%8e%af%e5%a2%83%e9%83%a8%e7%bd%b2%e6%9e%b6%e6%9e%84%e4%b8%8e%e9%80%89%e5%9e%8b%e6%8c%87%e5%8d%97" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="概述"&gt;概述 &lt;a href="#%e6%a6%82%e8%bf%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;本规范旨在指导生产环境 etcd 集群的拓扑规划与客户端接入架构选型，以规避节点重启、扩缩容等日常维护对上游客户端造成的直接断连影响。&lt;/p&gt;
+&lt;h3 id="1-物理层与拓扑规范"&gt;1. 物理层与拓扑规范 &lt;a href="#1-%e7%89%a9%e7%90%86%e5%b1%82%e4%b8%8e%e6%8b%93%e6%89%91%e8%a7%84%e8%8c%83" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;奇数节点原则：&lt;/strong&gt; 生产环境必须部署奇数个节点（推荐 3 或 5 节点）。偶数节点不仅无法提升容灾能力，反而提高了投票共识（Quorum）门槛。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;磁盘 IO 隔离：&lt;/strong&gt; 必须使用高 IOPS 的 SSD 或 NVMe 磁盘。etcd 对 &lt;code&gt;fsync&lt;/code&gt; 延迟极其敏感，严禁与其他高 I/O 应用共用磁盘。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;网络网络平面隔离：&lt;/strong&gt; 将 etcd Peer（集群内部 Raft 通信，默认 2380 端口）与 Client（客户端流量，默认 2379 端口）通过不同网卡或独立网段隔离，防止客户端大流量查询（如全量 List）导致集群内部失联。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="2-接入架构对比与选型"&gt;2. 接入架构对比与选型 &lt;a href="#2-%e6%8e%a5%e5%85%a5%e6%9e%b6%e6%9e%84%e5%af%b9%e6%af%94%e4%b8%8e%e9%80%89%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;目前业界主流的客户端接入方案有以下三种，推荐根据业务场景进行选型：&lt;/p&gt;
+&lt;h4 id="方案-agrpc-客户端直连多-endpoint官方推荐"&gt;方案 A：gRPC 客户端直连多 Endpoint（官方推荐） &lt;a href="#%e6%96%b9%e6%a1%88-agrpc-%e5%ae%a2%e6%88%b7%e7%ab%af%e7%9b%b4%e8%bf%9e%e5%a4%9a-endpoint%e5%ae%98%e6%96%b9%e6%8e%a8%e8%8d%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;实现方式：&lt;/strong&gt; 将集群所有真实 IP 注入客户端参数（如 &lt;code&gt;kube-apiserver&lt;/code&gt; 的 &lt;code&gt;--etcd-servers=ip1,ip2,ip3&lt;/code&gt;）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;优缺点：&lt;/strong&gt; 架构最轻量，利用 gRPC 智能负载均衡，断连秒级感知，无单点故障；但运维时变更 IP 需要重启上游客户端。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4 id="方案-bgrpc--dns-a-记录轮询云原生推荐-"&gt;方案 B：gRPC + DNS A 记录轮询（云原生推荐 ✨） &lt;a href="#%e6%96%b9%e6%a1%88-bgrpc--dns-a-%e8%ae%b0%e5%bd%95%e8%bd%ae%e8%af%a2%e4%ba%91%e5%8e%9f%e7%94%9f%e6%8e%a8%e8%8d%90-" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;实现方式：&lt;/strong&gt; 注册内部域名（如 &lt;code&gt;etcd.internal&lt;/code&gt;），将所有节点 IP 配置为该域名的 A 记录。客户端配置 &lt;code&gt;dns:///etcd.internal:2379&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;运行机制：&lt;/strong&gt; gRPC 内置的 DNS Resolver 会拉取所有 IP，并在底层与每一个真实节点同时建立物理长连接（SubChannel）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;优缺点：&lt;/strong&gt; 完美兼顾了“高可用”与“解耦”。某个节点重启时，客户端毫秒级自动切到其他已建连的通道，业务零感知，且增删节点只需改 DNS。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h4 id="方案-c四层负载均衡器clbslb模式"&gt;方案 C：四层负载均衡器（CLB/SLB）模式 &lt;a href="#%e6%96%b9%e6%a1%88-c%e5%9b%9b%e5%b1%82%e8%b4%9f%e8%bd%bd%e5%9d%87%e8%a1%a1%e5%99%a8clbslb%e6%a8%a1%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;实现方式：&lt;/strong&gt; 客户端统一连接 CLB VIP，由 CLB 转发给后端 2379 端口。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;死穴：&lt;/strong&gt; &lt;strong&gt;长连接保持与健康检查延迟的天然冲突&lt;/strong&gt;。gRPC 是强长连接，客户端只会与 CLB 建立极少连接并落在一台物理机上。若该节点重启，CLB 被动健康检查有秒级滞后，此期间请求会持续失败；且新连接重建时极易再次路由到正在重启的节点。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;避坑指南：&lt;/strong&gt; 必须使用 L4（TCP 转发），&lt;strong&gt;绝对禁止使用 L7（HTTP 转发）&lt;/strong&gt;；且运维时必须引入主动摘除机制。&lt;/li&gt;
+&lt;/ul&gt;</description></item></channel></rss>

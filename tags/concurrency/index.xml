@@ -1,4 +1,49 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Concurrency on</title><link>/tags/concurrency/</link><description>Recent content in Concurrency on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 16 Jul 2026 19:00:00 +0800</lastBuildDate><atom:link href="/tags/concurrency/index.xml" rel="self" type="application/rss+xml"/><item><title>指令重排序：编译器与 CPU 的"合法作弊"艺术</title><link>/blog/2026-07-16-instruction-reordering/</link><pubDate>Thu, 16 Jul 2026 19:00:00 +0800</pubDate><guid>/blog/2026-07-16-instruction-reordering/</guid><description>&lt;p&gt;现代 CPU 和编译器为了让程序跑得更快，会在背后做一件事：&lt;strong&gt;调整指令的执行顺序&lt;/strong&gt;。只要最终结果看起来和&amp;quot;按代码顺序执行&amp;quot;一样，中间怎么排是它们说了算。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Concurrency on</title><link>/tags/concurrency/</link><description>Recent content in Concurrency on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 19 Jul 2026 17:38:10 +0800</lastBuildDate><atom:link href="/tags/concurrency/index.xml" rel="self" type="application/rss+xml"/><item><title>Java 虚拟线程：Project Loom 与平台级「协程式」并发</title><link>/blog/2026-07-19-%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1_java%E8%99%9A%E6%8B%9F%E7%BA%BF%E7%A8%8Bproject-loom/</link><pubDate>Sun, 19 Jul 2026 17:38:10 +0800</pubDate><guid>/blog/2026-07-19-%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1_java%E8%99%9A%E6%8B%9F%E7%BA%BF%E7%A8%8Bproject-loom/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;「Java 会不会原生支持协程？」这个问题，在 Kilim / Quasar 年代只能答：靠字节码曲线救国。大约十年后，答案变成了：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;会，而且形态是虚拟线程（Virtual Threads），由 Project Loom 带入 JDK，并在 Java 21 转正。&lt;/strong&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;它解决的问题与 Fiber 框架一致：&lt;strong&gt;别让一次阻塞 I/O 白白占死一条昂贵的 OS 线程&lt;/strong&gt;；但实现路径不同——不是让业务给每个方法贴 &lt;code&gt;@Suspendable&lt;/code&gt; 再织入，而是 &lt;strong&gt;JVM 把 &lt;code&gt;Thread&lt;/code&gt; 的一种实现做成可挂起的轻量单元&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;本文说明虚拟线程是什么、怎么跑、和旧方案差在哪，以及使用时要注意什么。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h1 id="一从平台线程到虚拟线程"&gt;一、从平台线程到虚拟线程 &lt;a href="#%e4%b8%80%e4%bb%8e%e5%b9%b3%e5%8f%b0%e7%ba%bf%e7%a8%8b%e5%88%b0%e8%99%9a%e6%8b%9f%e7%ba%bf%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="11-两种-thread"&gt;1.1 两种 &lt;code&gt;Thread&lt;/code&gt; &lt;a href="#11-%e4%b8%a4%e7%a7%8d-thread" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;自 Loom 起，Java 里可以粗分为：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;类型&lt;/th&gt;
+&lt;th&gt;本质&lt;/th&gt;
+&lt;th&gt;数量级直觉&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;平台线程（Platform Thread）&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;对 OS 线程的薄封装，1:1&lt;/td&gt;
+&lt;td&gt;受限于栈内存与调度，通常成百上千&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;虚拟线程（Virtual Thread）&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;JVM 调度的轻量线程，M:N 映射到载体&lt;/td&gt;
+&lt;td&gt;可达百万级任务（视内存与业务）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;创建示例（Java 21+）：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-java"&gt;// 方式一
+Thread.startVirtualThread(() -&amp;gt; {
+// 业务逻辑：可直接写阻塞式 API
+var body = httpClient.send(request, BodyHandlers.ofString()).body();
+process(body);
+});
+// 方式二：Executor
+try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+Future&amp;lt;String&amp;gt; f = executor.submit(() -&amp;gt; fetch());
+// ...
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;关键体验：&lt;strong&gt;代码仍可按同步风格写&lt;/strong&gt;，不必拆成回调地狱，也不必全项目字节码增强。&lt;/p&gt;</description></item><item><title>指令重排序：编译器与 CPU 的"合法作弊"艺术</title><link>/blog/2026-07-16-instruction-reordering/</link><pubDate>Thu, 16 Jul 2026 19:00:00 +0800</pubDate><guid>/blog/2026-07-16-instruction-reordering/</guid><description>&lt;p&gt;现代 CPU 和编译器为了让程序跑得更快，会在背后做一件事：&lt;strong&gt;调整指令的执行顺序&lt;/strong&gt;。只要最终结果看起来和&amp;quot;按代码顺序执行&amp;quot;一样，中间怎么排是它们说了算。&lt;/p&gt;
 &lt;p&gt;这听起来像作弊，但实际上是经过严格数学验证的合法优化。这篇文章就来拆解：谁在做重排序、为什么要做、依据什么规则来做、以及不同的 CPU 架构到底在哪些地方&amp;quot;放了水&amp;quot;。&lt;/p&gt;
 &lt;h2 id="两层重排序编译器--cpu"&gt;两层重排序：编译器 + CPU &lt;a href="#%e4%b8%a4%e5%b1%82%e9%87%8d%e6%8e%92%e5%ba%8f%e7%bc%96%e8%af%91%e5%99%a8--cpu" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;指令重排序发生在两个层面：&lt;/p&gt;

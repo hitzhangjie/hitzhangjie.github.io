@@ -1,4 +1,50 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Golang on</title><link>/tags/golang/</link><description>Recent content in Golang on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 09 Jun 2020 20:25:07 +0800</lastBuildDate><atom:link href="/tags/golang/index.xml" rel="self" type="application/rss+xml"/><item><title>A Golang Debugger Book</title><link>/blog/2020-06-09-a-golang-debugger-book/</link><pubDate>Tue, 09 Jun 2020 20:25:07 +0800</pubDate><guid>/blog/2020-06-09-a-golang-debugger-book/</guid><description>&lt;p&gt;18年开始学习go时，发现了一款调试器delve，陆陆续续地看了些源码、调试标准的东西，发现调试器是一个很好的切入视角来认识计算机系统，就想把这些东西理顺、分享一下。到现在为止，对开发工具链的认识都还有些认识上的不足，关键还是，觉得调试器就好比一个放大镜，放大一倍看清内存变量，放大两倍看清类型系统，放大三倍看清机器物理结构……这是简单的，涉及到运行时、操作系统、硬件等的特性，我是觉得很有意思，尤其是对部分想了解这些知识的人来说，还是有一定的参考意义的。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Golang on</title><link>/tags/golang/</link><description>Recent content in Golang on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 19 Jul 2026 17:40:10 +0800</lastBuildDate><atom:link href="/tags/golang/index.xml" rel="self" type="application/rss+xml"/><item><title>有栈协程与无栈协程：实现异同、优劣与典型代表</title><link>/blog/2026-07-19-%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1_%E6%9C%89%E6%A0%88%E4%B8%8E%E6%97%A0%E6%A0%88%E5%8D%8F%E7%A8%8B%E5%AF%B9%E6%AF%94/</link><pubDate>Sun, 19 Jul 2026 17:40:10 +0800</pubDate><guid>/blog/2026-07-19-%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1_%E6%9C%89%E6%A0%88%E4%B8%8E%E6%97%A0%E6%A0%88%E5%8D%8F%E7%A8%8B%E5%AF%B9%E6%AF%94/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;协程的本质只有一句话：&lt;strong&gt;控制流可以主动让出（yield），并在之后从让出点恢复（resume）&lt;/strong&gt;。&lt;br&gt;
+实现这句话的路径却分成两大流派：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;流派&lt;/th&gt;
+&lt;th&gt;英文&lt;/th&gt;
+&lt;th&gt;典型代表&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;有栈协程&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;stackful&lt;/td&gt;
+&lt;td&gt;Go goroutine、libmill、libco、许多 C 协程库&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;无栈协程&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;stackless&lt;/td&gt;
+&lt;td&gt;C++20 coroutine、C# async/await、Kilim、Quasar、Python generator（某种意义上）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;无栈往往 &lt;strong&gt;更难建立直觉&lt;/strong&gt;——源码仍是顺序函数，运行时却是状态机；有栈则更像「缩小版线程」。本文把两边的实现异同、优缺点和代表技术放到同一张图上，方便选型与读源码。&lt;/p&gt;
+&lt;p&gt;同系列已有 Kilim、Quasar、Java 虚拟线程、C++20 的分篇介绍；本文侧重 &lt;strong&gt;横向对比&lt;/strong&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h1 id="一先对齐栈指什么"&gt;一、先对齐「栈」指什么 &lt;a href="#%e4%b8%80%e5%85%88%e5%af%b9%e9%bd%90%e6%a0%88%e6%8c%87%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;这里的「栈」不是 JVM 操作数栈的细节，而是：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;协程在挂起时，是否拥有（或等价于拥有）一条 &lt;strong&gt;可独立切换的调用栈&lt;/strong&gt;。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;有栈&lt;/strong&gt;：每个协程有自己的栈空间（固定大小、或可增长的分段栈）。切换 ≈ 保存寄存器与栈指针，换到另一套。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;无栈&lt;/strong&gt;：协程 &lt;strong&gt;不&lt;/strong&gt; 长期持有完整私有调用栈；挂起时只把 &lt;strong&gt;恢复所需状态&lt;/strong&gt;（局部变量、程序计数/状态号、后续续体）放到堆上帧里；多个协程 &lt;strong&gt;复用&lt;/strong&gt; 当前线程的宿主栈。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;两者都能实现「让出/恢复」，但 &lt;strong&gt;谁可以 yield、切换多贵、和 C 调用/本地代码怎么相处&lt;/strong&gt; 差别很大。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h1 id="二有栈协程像线程但不经内核"&gt;二、有栈协程：像线程，但不经内核 &lt;a href="#%e4%ba%8c%e6%9c%89%e6%a0%88%e5%8d%8f%e7%a8%8b%e5%83%8f%e7%ba%bf%e7%a8%8b%e4%bd%86%e4%b8%8d%e7%bb%8f%e5%86%85%e6%a0%b8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="21-工作原理示意"&gt;2.1 工作原理（示意） &lt;a href="#21-%e5%b7%a5%e4%bd%9c%e5%8e%9f%e7%90%86%e7%a4%ba%e6%84%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;创建协程：分配栈 + 初始上下文（入口 PC、SP 等）
+运行： 把 CPU 上下文指到该栈，执行用户函数
+yield： 保存当前寄存器/SP/IP 到协程控制块
+恢复调度器或其他协程的上下文
+resume： 对称操作
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;在 Linux/C 里常见积木：&lt;code&gt;ucontext&lt;/code&gt;、汇编切换、&lt;code&gt;setjmp/longjmp&lt;/code&gt; 变体、调整栈指针后「跳进」函数等。&lt;/p&gt;</description></item><item><title>A Golang Debugger Book</title><link>/blog/2020-06-09-a-golang-debugger-book/</link><pubDate>Tue, 09 Jun 2020 20:25:07 +0800</pubDate><guid>/blog/2020-06-09-a-golang-debugger-book/</guid><description>&lt;p&gt;18年开始学习go时，发现了一款调试器delve，陆陆续续地看了些源码、调试标准的东西，发现调试器是一个很好的切入视角来认识计算机系统，就想把这些东西理顺、分享一下。到现在为止，对开发工具链的认识都还有些认识上的不足，关键还是，觉得调试器就好比一个放大镜，放大一倍看清内存变量，放大两倍看清类型系统，放大三倍看清机器物理结构……这是简单的，涉及到运行时、操作系统、硬件等的特性，我是觉得很有意思，尤其是对部分想了解这些知识的人来说，还是有一定的参考意义的。&lt;/p&gt;
 &lt;p&gt;https://github.com/hitzhangjie/golang-debugger-book。&lt;/p&gt;
 &lt;p&gt;后来工作变动没有持续投入了，19年下半年支持trpc也没太多时间投入，19年年底的时候买了ipad花了连续几个周末啃了300页dwarf标准，坚持写完了dwarf相关的部分。后面开始支持epc又没时间了……&lt;/p&gt;
 &lt;p&gt;现在各项工作陆陆陆续续有了眉目，也想把之前放下的东西再捡起来，感兴趣可以简单翻下，如果有小伙伴也有兴趣的话，欢迎业余时间一起继续下去，倒不是觉得是项多么出彩的内容，就是觉得有些值得深究的东西想去探索一下，还有就是一项工作搁置太久会有很浓的挫败感。&lt;/p&gt;

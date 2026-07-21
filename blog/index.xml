@@ -2576,7 +2576,16 @@ Examples:
 &lt;/ul&gt;
 &lt;h3 id="explorer"&gt;Explorer &lt;a href="#explorer" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;mc, 命令行下的文件管理器
-除了对文件的相关操作之外，还可以登录ftp服务器。&lt;/p&gt;</description></item><item><title>Git cherry-pick 时如何将多个 commit 压缩成一个</title><link>/blog/2024-04-17-git-cherrypick-squash/</link><pubDate>Wed, 17 Apr 2024 00:00:00 +0800</pubDate><guid>/blog/2024-04-17-git-cherrypick-squash/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+除了对文件的相关操作之外，还可以登录ftp服务器。&lt;/p&gt;</description></item><item><title>Git rerere：告别重复解决相同冲突的噩梦</title><link>/blog/2024-05-02-git-rerere/</link><pubDate>Thu, 02 May 2024 00:00:00 +0800</pubDate><guid>/blog/2024-05-02-git-rerere/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;你有没有遇到过这种情况：在做一个长周期 feature 分支的开发，期间上游 main 分支也在不断演进。某天你决定把 feature 分支 rebase 到最新的 main 上，跑 &lt;code&gt;git rebase main&lt;/code&gt;，结果哗啦啦出来好几个冲突。你一个一个解决，打完收工。&lt;/p&gt;
+&lt;p&gt;过了一周，main 又往前走了不少，你再次 rebase。同样的冲突又来了——你明明上周已经解决过一次了。&lt;/p&gt;
+&lt;p&gt;又或者更极端的情况：同一次 rebase 过程中，你在 commit #3 遇到了一个冲突，解决了。rebase 继续，到了 commit #7，同一个文件的同一段代码又冲突了。你翻出刚才的解决方案，手动再改一遍。&lt;/p&gt;
+&lt;p&gt;这感觉就像西西弗斯推石头——每次都觉得搞定了，下次又回到原点。&lt;/p&gt;
+&lt;h2 id="为什么会反复出现相同的冲突"&gt;为什么会反复出现相同的冲突？ &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e4%bc%9a%e5%8f%8d%e5%a4%8d%e5%87%ba%e7%8e%b0%e7%9b%b8%e5%90%8c%e7%9a%84%e5%86%b2%e7%aa%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;理解这个问题，要先搞清楚 rebase 的本质。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;git rebase&lt;/code&gt; 的工作方式是：把当前分支上相对于 base 的所有 commit 暂存起来，然后一个一个重新&amp;quot;播放&amp;quot;到新的 base 上。这个播放过程，其实就是对每个 commit 做一次 &lt;code&gt;git cherry-pick&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;而 cherry-pick 本质上是把某个 commit 的 diff patch 应用到一个不同的代码基上。当这个 patch 应用不上去时——比如 patch 要修改的那几行代码，在新的代码基上已经被别人改过了——就会产生冲突。&lt;/p&gt;
+&lt;p&gt;关键问题在于：&lt;strong&gt;Git 不会记住你之前是怎么解决这个冲突的&lt;/strong&gt;。每次 cherry-pick 都是独立操作，每次都是 fresh start。如果同一个 patch hunk 在 commit #3 和 commit #7 中都出现了（比如你在两个 commit 里都改了同一个函数的同一段逻辑），那这两个 cherry-pick 都会在同一处报冲突，你就得对着同一个冲突解决两次。&lt;/p&gt;</description></item><item><title>Git cherry-pick 时如何将多个 commit 压缩成一个</title><link>/blog/2024-04-17-git-cherrypick-squash/</link><pubDate>Wed, 17 Apr 2024 00:00:00 +0800</pubDate><guid>/blog/2024-04-17-git-cherrypick-squash/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;日常开发中，cherry-pick 是一个高频操作——把别的分支上的某个 commit 摘过来，应用到当前分支。Git 默认会原样搬运，每个被 pick 的 commit 在当前分支上单独生成一个新 commit。&lt;/p&gt;
 &lt;p&gt;但有时候我们并不想保留原来的 commit 粒度。比如在 feature 分支上修修补补的 5 个小 commit，合到 release 分支时只想留一个干净的 commit。这时候就需要把多个 commit 压缩（squash）成一个。&lt;/p&gt;
 &lt;h1 id="方法一git-cherry-pick--n"&gt;方法一：&lt;code&gt;git cherry-pick -n&lt;/code&gt; &lt;a href="#%e6%96%b9%e6%b3%95%e4%b8%80git-cherry-pick--n" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;

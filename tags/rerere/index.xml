@@ -7,4 +7,5 @@
 &lt;p&gt;理解这个问题，要先搞清楚 rebase 的本质。&lt;/p&gt;
 &lt;p&gt;&lt;code&gt;git rebase&lt;/code&gt; 的工作方式是：把当前分支上相对于 base 的所有 commit 暂存起来，然后一个一个重新&amp;quot;播放&amp;quot;到新的 base 上。这个播放过程，其实就是对每个 commit 做一次 &lt;code&gt;git cherry-pick&lt;/code&gt;。&lt;/p&gt;
 &lt;p&gt;而 cherry-pick 本质上是把某个 commit 的 diff patch 应用到一个不同的代码基上。当这个 patch 应用不上去时——比如 patch 要修改的那几行代码，在新的代码基上已经被别人改过了——就会产生冲突。&lt;/p&gt;
-&lt;p&gt;关键问题在于：&lt;strong&gt;Git 不会记住你之前是怎么解决这个冲突的&lt;/strong&gt;。每次 cherry-pick 都是独立操作，每次都是 fresh start。如果同一个 patch hunk 在 commit #3 和 commit #7 中都出现了（比如你在两个 commit 里都改了同一个函数的同一段逻辑），那这两个 cherry-pick 都会在同一处报冲突，你就得对着同一个冲突解决两次。&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;关键问题在于：&lt;strong&gt;Git 不会记住你之前是怎么解决这个冲突的&lt;/strong&gt;。每次 cherry-pick 都是独立操作，每次都是 fresh start。&lt;/p&gt;
+&lt;p&gt;举个具体的例子：假设源分支 &lt;code&gt;a&lt;/code&gt; 上有三个 commit——p1、p2、p3，都在改 &lt;code&gt;config/constants.go&lt;/code&gt; 里的同一个 const 块：&lt;/p&gt;</description></item></channel></rss>

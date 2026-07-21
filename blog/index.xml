@@ -2551,7 +2551,20 @@ Examples:
 &lt;/ul&gt;
 &lt;h3 id="explorer"&gt;Explorer &lt;a href="#explorer" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;mc, 命令行下的文件管理器
-除了对文件的相关操作之外，还可以登录ftp服务器。&lt;/p&gt;</description></item><item><title>Git 仓库膨胀到 30GB 之后</title><link>/blog/2024-04-16-git-repo-optimization/</link><pubDate>Tue, 16 Apr 2024 00:00:00 +0800</pubDate><guid>/blog/2024-04-16-git-repo-optimization/</guid><description>&lt;p&gt;团队有一个服务端仓库，差不多 4 年历史，最近发现 &lt;code&gt;git clone&lt;/code&gt; 巨慢，CI 拉代码也卡得要命。一查，&lt;code&gt;.git&lt;/code&gt; 目录 30GB。&lt;/p&gt;
+除了对文件的相关操作之外，还可以登录ftp服务器。&lt;/p&gt;</description></item><item><title>Git cherry-pick 时如何将多个 commit 压缩成一个</title><link>/blog/2024-04-17-git-cherrypick-squash/</link><pubDate>Wed, 17 Apr 2024 00:00:00 +0800</pubDate><guid>/blog/2024-04-17-git-cherrypick-squash/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;日常开发中，cherry-pick 是一个高频操作——把别的分支上的某个 commit 摘过来，应用到当前分支。Git 默认会原样搬运，每个被 pick 的 commit 在当前分支上单独生成一个新 commit。&lt;/p&gt;
+&lt;p&gt;但有时候我们并不想保留原来的 commit 粒度。比如在 feature 分支上修修补补的 5 个小 commit，合到 release 分支时只想留一个干净的 commit。这时候就需要把多个 commit 压缩（squash）成一个。&lt;/p&gt;
+&lt;h1 id="方法一git-cherry-pick--n"&gt;方法一：&lt;code&gt;git cherry-pick -n&lt;/code&gt; &lt;a href="#%e6%96%b9%e6%b3%95%e4%b8%80git-cherry-pick--n" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;最直接的方式是加 &lt;code&gt;-n&lt;/code&gt;（&lt;code&gt;--no-commit&lt;/code&gt;）选项。&lt;/p&gt;
+&lt;p&gt;正常情况下，&lt;code&gt;git cherry-pick&lt;/code&gt; 每摘一个 commit 就会自动生成一个新 commit。加了 &lt;code&gt;-n&lt;/code&gt; 之后，cherry-pick 只把变更应用到工作区和暂存区，不自动提交。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;# 将 abc123 和 def456 两个 commit 的变更合到一起
+git cherry-pick -n abc123 def456
+# 查看暂存区的变更
+git diff --cached --stat
+# 确认无误后，手动提交成一个 commit
+git commit -m &amp;quot;squash: 将 feature 分支的修复合入&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这样就得到了一个干净的 commit，包含了两个（或多个）原 commit 的全部变更。&lt;/p&gt;</description></item><item><title>Git 仓库膨胀到 30GB 之后</title><link>/blog/2024-04-16-git-repo-optimization/</link><pubDate>Tue, 16 Apr 2024 00:00:00 +0800</pubDate><guid>/blog/2024-04-16-git-repo-optimization/</guid><description>&lt;p&gt;团队有一个服务端仓库，差不多 4 年历史，最近发现 &lt;code&gt;git clone&lt;/code&gt; 巨慢，CI 拉代码也卡得要命。一查，&lt;code&gt;.git&lt;/code&gt; 目录 30GB。&lt;/p&gt;
 &lt;h2 id="为什么这么大"&gt;为什么这么大 &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e8%bf%99%e4%b9%88%e5%a4%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;几个原因叠在一起：&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;二进制文件入库。&lt;/strong&gt; git-lfs 一直没启用，大家往仓库里塞了各种东西——编译工具链的 binary、服务构建产物（二进制、.so、.a），甚至有人把测试用的数据文件也传上去了。这些东西本来不该进仓库，应该用 Bazel 之类的构建工具统一管理工具链和依赖，但团队在这方面基础建设比较少，就一直没做。&lt;/p&gt;

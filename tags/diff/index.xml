@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Diff on</title><link>/tags/diff/</link><description>Recent content in Diff on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 13 Jun 2024 00:00:00 +0800</lastBuildDate><atom:link href="/tags/diff/index.xml" rel="self" type="application/rss+xml"/><item><title>Git Delta：在终端里 Side-by-Side 看 diff</title><link>/blog/2024-06-13-git-delta/</link><pubDate>Thu, 13 Jun 2024 00:00:00 +0800</pubDate><guid>/blog/2024-06-13-git-delta/</guid><description>&lt;p&gt;&lt;code&gt;git diff&lt;/code&gt; 的默认输出说实话不太好看。改了几行代码，跑个 &lt;code&gt;git diff&lt;/code&gt;，满屏的 &lt;code&gt;+&lt;/code&gt; &lt;code&gt;-&lt;/code&gt;，行内到底改了什么字，得瞪大眼睛去找。IDE 里 side-by-side 对比确实直观，但命令行用户不想为了看个 diff 就切到 GUI 工具——技能应该可迁移，不能被某个平台或 IDE 绑死。&lt;/p&gt;
+&lt;p&gt;&lt;a href="https://github.com/dandavison/delta"&gt;delta&lt;/a&gt; 就是解决这个问题的。它是一个 Rust 写的二进制程序，接受 &lt;code&gt;git diff&lt;/code&gt; 的输出，然后用更可读的方式渲染出来：side-by-side 对比、word 级别差异高亮、语法高亮、行号等等。&lt;/p&gt;
+&lt;h2 id="安装"&gt;安装 &lt;a href="#%e5%ae%89%e8%a3%85" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;各平台都有包：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;# macOS
+brew install git-delta
+# Debian / Ubuntu
+apt-get install git-delta
+# Fedora
+yum install git-delta
+# 如果发行版比较老，仓库里没有，用 cargo 装
+cargo install git-delta --locked
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;装完之后二进制叫 &lt;code&gt;delta&lt;/code&gt;，确认一下：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;$ delta --version
+delta 0.17.0
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="配置为-git-pager"&gt;配置为 Git Pager &lt;a href="#%e9%85%8d%e7%bd%ae%e4%b8%ba-git-pager" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;delta 最常用的姿势是替代默认的 &lt;code&gt;less&lt;/code&gt; 作为 git 的 pager。在 &lt;code&gt;~/.gitconfig&lt;/code&gt; 里加几行：&lt;/p&gt;</description></item></channel></rss>

@@ -76,7 +76,28 @@ top: -170px;
 &lt;/style&gt;
 &lt;div class="iframe-container"&gt;
 &lt;iframe src="https://docs.qq.com/doc/DYmhCZXNiYXhLVHFK"/&gt;
-&lt;/div&gt;</description></item><item><title>Git 常用操作速查</title><link>/blog/git-%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C%E9%80%9F%E6%9F%A5/</link><pubDate>Wed, 30 Jan 2019 00:00:00 +0800</pubDate><guid>/blog/git-%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C%E9%80%9F%E6%9F%A5/</guid><description>&lt;h1 id="git-常用操作速查"&gt;Git 常用操作速查 &lt;a href="#git-%e5%b8%b8%e7%94%a8%e6%93%8d%e4%bd%9c%e9%80%9f%e6%9f%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;/div&gt;</description></item><item><title>Git 仓库膨胀到 30GB 之后</title><link>/blog/2024-04-16-git-repo-optimization/</link><pubDate>Tue, 16 Apr 2024 00:00:00 +0800</pubDate><guid>/blog/2024-04-16-git-repo-optimization/</guid><description>&lt;p&gt;团队有一个服务端仓库，差不多 4 年历史，最近发现 &lt;code&gt;git clone&lt;/code&gt; 巨慢，CI 拉代码也卡得要命。一查，&lt;code&gt;.git&lt;/code&gt; 目录 30GB。&lt;/p&gt;
+&lt;h2 id="为什么这么大"&gt;为什么这么大 &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e8%bf%99%e4%b9%88%e5%a4%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;几个原因叠在一起：&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;二进制文件入库。&lt;/strong&gt; git-lfs 一直没启用，大家往仓库里塞了各种东西——编译工具链的 binary、服务构建产物（二进制、.so、.a），甚至有人把测试用的数据文件也传上去了。这些东西本来不该进仓库，应该用 Bazel 之类的构建工具统一管理工具链和依赖，但团队在这方面基础建设比较少，就一直没做。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;.gitignore 没配好。&lt;/strong&gt; 项目初期没认真写 &lt;code&gt;.gitignore&lt;/code&gt;，构建中间产物、IDE 临时文件、依赖缓存目录都没忽略。后面想补，但文件已经进了历史，忽略规则只管增量。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;git commit hook 缺位。&lt;/strong&gt; 没有 pre-commit hook 检查大文件或禁止的文件类型，漏进来完全没感知。等发现的时候已经攒了几百个不该在仓库里的文件。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;主干一顿狂怼。&lt;/strong&gt; 团队没有养成分支开发的习惯。即使主干开发，也应该用较短生命周期的分支，整理好再 squash 合入。但实际情况是：一个本该一次性提交的完整功能，被拆成好几个快照式 commit——&amp;ldquo;先传上去看看&amp;quot;&amp;ldquo;再加点&amp;quot;&amp;ldquo;补一下&amp;rdquo;。每个 commit 都是当时代码树的完整快照，二进制文件的每个版本都被记录，&lt;code&gt;.git&lt;/code&gt; 膨胀得飞快。&lt;/p&gt;
+&lt;h2 id="怎么清理"&gt;怎么清理 &lt;a href="#%e6%80%8e%e4%b9%88%e6%b8%85%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;AI 给的思路其实是对的：备份 → 清理大文件 → 可选压缩历史 → 垃圾回收 → 强制推送。但操作历史重写类命令之前，&lt;strong&gt;务必先备份源仓库或源分支&lt;/strong&gt;，不然不可逆。&lt;/p&gt;
+&lt;h3 id="1-备份"&gt;1. 备份 &lt;a href="#1-%e5%a4%87%e4%bb%bd" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;cp -R your-repo your-repo-backup
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;没什么好说的，安全第一。最好连备份也推到远程另一个位置，防止本地误删。&lt;/p&gt;
+&lt;h3 id="2-清理大文件"&gt;2. 清理大文件 &lt;a href="#2-%e6%b8%85%e7%90%86%e5%a4%a7%e6%96%87%e4%bb%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;两个常用工具：&lt;code&gt;git filter-branch&lt;/code&gt; 和 BFG Repo-Cleaner。推荐 BFG，速度快且用法简单：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;# 清理大于 100M 的 blob
+java -jar bfg.jar --strip-blobs-bigger-than 100M your-repo.git
+# 或者按文件名/目录清理
+java -jar bfg.jar --delete-files '*.{jar,war,zip,tar.gz,tgz}' your-repo.git
+java -jar bfg.jar --delete-folders build your-repo.git
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;BFG 默认保护当前 HEAD 上的文件不会被删——这比 &lt;code&gt;git filter-branch&lt;/code&gt; 安全。&lt;/p&gt;</description></item><item><title>Git 常用操作速查</title><link>/blog/git-%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C%E9%80%9F%E6%9F%A5/</link><pubDate>Wed, 30 Jan 2019 00:00:00 +0800</pubDate><guid>/blog/git-%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C%E9%80%9F%E6%9F%A5/</guid><description>&lt;h1 id="git-常用操作速查"&gt;Git 常用操作速查 &lt;a href="#git-%e5%b8%b8%e7%94%a8%e6%93%8d%e4%bd%9c%e9%80%9f%e6%9f%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;blockquote&gt;
 &lt;p&gt;本文整合了日常开发中高频使用的 Git 命令，按使用场景分类，供快速查阅。&lt;/p&gt;
 &lt;/blockquote&gt;

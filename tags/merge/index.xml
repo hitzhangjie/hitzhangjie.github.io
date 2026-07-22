@@ -76,7 +76,30 @@ top: -170px;
 &lt;/style&gt;
 &lt;div class="iframe-container"&gt;
 &lt;iframe src="https://docs.qq.com/doc/DYmhCZXNiYXhLVHFK"/&gt;
-&lt;/div&gt;</description></item><item><title>为什么 git merge 不报冲突？</title><link>/blog/2025-11-04-git-merge-why-no-conflict/</link><pubDate>Tue, 04 Nov 2025 00:00:00 +0800</pubDate><guid>/blog/2025-11-04-git-merge-why-no-conflict/</guid><description>&lt;p&gt;两个分支在同一个文件的同一区域各自加了新行，merge 之后两边的改动都在，没有冲突。直觉上这应该冲突——都在改同一个地方。但 Git 没报。为什么？&lt;/p&gt;
+&lt;/div&gt;</description></item><item><title>Git 交叉合并：两个分支可以有多个共同祖先？</title><link>/blog/2025-11-04-git-criss-cross-merge/</link><pubDate>Tue, 04 Nov 2025 00:00:00 +0800</pubDate><guid>/blog/2025-11-04-git-criss-cross-merge/</guid><description>&lt;p&gt;Git 里两个分支的公共祖先（merge base）通常只有一个。但有一个问题：&lt;strong&gt;有没有可能不止一个？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;答案是&lt;strong&gt;有&lt;/strong&gt;。典型场景就是交叉合并（criss-cross merge）。&lt;/p&gt;
+&lt;h2 id="正常的合并基础"&gt;正常的合并基础 &lt;a href="#%e6%ad%a3%e5%b8%b8%e7%9a%84%e5%90%88%e5%b9%b6%e5%9f%ba%e7%a1%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;先回顾一下正常情况。从提交 &lt;code&gt;C1&lt;/code&gt; 拉出两个分支，各自往前走了若干提交：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt; C2 (branch-A)
+/
+C1
+\
+C3 (branch-B)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这时候 &lt;code&gt;branch-A&lt;/code&gt; 和 &lt;code&gt;branch-B&lt;/code&gt; 的共同祖先是 &lt;code&gt;C1&lt;/code&gt;，唯一。&lt;code&gt;git merge-base branch-A branch-B&lt;/code&gt; 也只会返回 &lt;code&gt;C1&lt;/code&gt;。&lt;/p&gt;
+&lt;h2 id="交叉合并怎么产生多个共同祖先"&gt;交叉合并怎么产生多个共同祖先 &lt;a href="#%e4%ba%a4%e5%8f%89%e5%90%88%e5%b9%b6%e6%80%8e%e4%b9%88%e4%ba%a7%e7%94%9f%e5%a4%9a%e4%b8%aa%e5%85%b1%e5%90%8c%e7%a5%96%e5%85%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;问题出在下面这一步。假设两个分支分别被合入对方：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;有人把 &lt;code&gt;branch-A&lt;/code&gt; 合到了 &lt;code&gt;branch-B&lt;/code&gt;，产生合并提交 &lt;code&gt;M1&lt;/code&gt;（父提交是 &lt;code&gt;C3&lt;/code&gt; 和 &lt;code&gt;C2&lt;/code&gt;）&lt;/li&gt;
+&lt;li&gt;同时另一个人把 &lt;code&gt;branch-B&lt;/code&gt; 合到了 &lt;code&gt;branch-A&lt;/code&gt;，产生合并提交 &lt;code&gt;M2&lt;/code&gt;（父提交是 &lt;code&gt;C2&lt;/code&gt; 和 &lt;code&gt;C3&lt;/code&gt;）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code&gt; C2---M2 (branch-A)
+/ \ /
+C1 X
+\ / \
+C3---M1 (branch-B)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这个 X 形历史就是 criss-cross merge。现在来看 &lt;code&gt;branch-A&lt;/code&gt;（在 &lt;code&gt;M2&lt;/code&gt;）和 &lt;code&gt;branch-B&lt;/code&gt;（在 &lt;code&gt;M1&lt;/code&gt;）的共同祖先：&lt;/p&gt;</description></item><item><title>为什么 git merge 不报冲突？</title><link>/blog/2025-11-04-git-merge-why-no-conflict/</link><pubDate>Tue, 04 Nov 2025 00:00:00 +0800</pubDate><guid>/blog/2025-11-04-git-merge-why-no-conflict/</guid><description>&lt;p&gt;两个分支在同一个文件的同一区域各自加了新行，merge 之后两边的改动都在，没有冲突。直觉上这应该冲突——都在改同一个地方。但 Git 没报。为什么？&lt;/p&gt;
 &lt;h2 id="git-的三路合并"&gt;Git 的三路合并 &lt;a href="#git-%e7%9a%84%e4%b8%89%e8%b7%af%e5%90%88%e5%b9%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;Git merge 不是直接比较两个分支的差异，而是引入第三个参照点——&lt;strong&gt;merge base&lt;/strong&gt;（两个分支的最近公共祖先）。&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt; O (base)

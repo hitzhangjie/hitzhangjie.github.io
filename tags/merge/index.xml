@@ -76,4 +76,57 @@ top: -170px;
 &lt;/style&gt;
 &lt;div class="iframe-container"&gt;
 &lt;iframe src="https://docs.qq.com/doc/DYmhCZXNiYXhLVHFK"/&gt;
-&lt;/div&gt;</description></item></channel></rss>
+&lt;/div&gt;</description></item><item><title>为什么 git merge 不报冲突？</title><link>/blog/2025-11-04-git-merge-why-no-conflict/</link><pubDate>Tue, 04 Nov 2025 00:00:00 +0800</pubDate><guid>/blog/2025-11-04-git-merge-why-no-conflict/</guid><description>&lt;p&gt;两个分支在同一个文件的同一区域各自加了新行，merge 之后两边的改动都在，没有冲突。直觉上这应该冲突——都在改同一个地方。但 Git 没报。为什么？&lt;/p&gt;
+&lt;h2 id="git-的三路合并"&gt;Git 的三路合并 &lt;a href="#git-%e7%9a%84%e4%b8%89%e8%b7%af%e5%90%88%e5%b9%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Git merge 不是直接比较两个分支的差异，而是引入第三个参照点——&lt;strong&gt;merge base&lt;/strong&gt;（两个分支的最近公共祖先）。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt; O (base)
+/ \
+A B
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Git 分别计算 &lt;code&gt;diff(base, A)&lt;/code&gt; 和 &lt;code&gt;diff(base, B)&lt;/code&gt;，然后尝试合并这两组差异。对每一行，判断逻辑很直接：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Base → Ours&lt;/th&gt;
+&lt;th&gt;Base → Theirs&lt;/th&gt;
+&lt;th&gt;结果&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;没变&lt;/td&gt;
+&lt;td&gt;没变&lt;/td&gt;
+&lt;td&gt;保留原样&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;变了&lt;/td&gt;
+&lt;td&gt;没变&lt;/td&gt;
+&lt;td&gt;取 ours&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;没变&lt;/td&gt;
+&lt;td&gt;变了&lt;/td&gt;
+&lt;td&gt;取 theirs&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;变了，结果相同&lt;/td&gt;
+&lt;td&gt;变了，结果相同&lt;/td&gt;
+&lt;td&gt;自动合并&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;变了，结果不同&lt;/td&gt;
+&lt;td&gt;变了，结果不同&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;冲突&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;这个表本身没什么意外的。关键是：Git 怎么定义&amp;quot;变了&amp;quot;？&lt;/p&gt;
+&lt;h2 id="插入-vs-修改git-分得很清楚"&gt;插入 vs. 修改，Git 分得很清楚 &lt;a href="#%e6%8f%92%e5%85%a5-vs-%e4%bf%ae%e6%94%b9git-%e5%88%86%e5%be%97%e5%be%88%e6%b8%85%e6%a5%9a" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Git 的合并引擎（&lt;code&gt;merge-recursive&lt;/code&gt; 或 &lt;code&gt;ort&lt;/code&gt;）以&lt;strong&gt;行为单位&lt;/strong&gt;做 diff，比较时依赖&lt;strong&gt;上下文锚点&lt;/strong&gt;——那些在两个分支中都没变的行。锚点用来定位改动发生的区域，Git 在锚点之间合并差异。&lt;/p&gt;
+&lt;p&gt;这里有一个关键区别：&lt;strong&gt;插入新行&lt;/strong&gt;和&lt;strong&gt;修改已有行&lt;/strong&gt;，在 Git 看来是两种完全不同的操作。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;修改已有行&lt;/strong&gt;：base 中某行是 X，ours 改成 Y，theirs 改成 Z——Git 检测到两边都动了同一行，冲突。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;插入新行&lt;/strong&gt;：base 中某行是 X，ours 在它后面加了一行，theirs 也在它后面加了一行——Git 看到的是&amp;quot;双方在锚点 X 之后各自添加了新内容&amp;quot;，两段插入之间没有直接冲突，直接拼接在一起。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;ps: 这里的&amp;quot;锚点&amp;quot;就是 diff hunk 头部的 &lt;code&gt;@@ -a,b +c,d @@&lt;/code&gt; 中所依据的那些上下文行。&lt;/p&gt;</description></item></channel></rss>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Interface on</title><link>/tags/interface/</link><description>Recent content in Interface on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 22 Mar 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/interface/index.xml" rel="self" type="application/rss+xml"/><item><title>Go 接口实现方法到底要不要加注释？</title><link>/blog/2026-03-22-%E6%8E%A5%E5%8F%A3%E5%AE%9E%E7%8E%B0%E5%8A%A0%E4%B8%8D%E5%8A%A0%E6%B3%A8%E9%87%8A/</link><pubDate>Sun, 22 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-22-%E6%8E%A5%E5%8F%A3%E5%AE%9E%E7%8E%B0%E5%8A%A0%E4%B8%8D%E5%8A%A0%E6%B3%A8%E9%87%8A/</guid><description>&lt;p&gt;先看一段代码：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;// Dialer 定义了拨号器的行为。
+type Dialer interface {
+// Push 将数据推送到远端。
+Push(data []byte) error
+}
+// MyDialer 是基于 TCP 的拨号器实现。
+type MyDialer struct {
+conn net.Conn
+}
+func (d *MyDialer) Push(data []byte) error {
+return d.write(data)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;Dialer.Push&lt;/code&gt; 有注释，&lt;code&gt;MyDialer.Push&lt;/code&gt; 没有。问题来了：实现方法要不要加注释？&lt;/p&gt;
+&lt;p&gt;有人觉得不需要——接口已经说清楚了，重复写一遍违反 DRY。但 Go 的接口实现是隐式的，&lt;code&gt;MyDialer&lt;/code&gt; 完全可以脱离 &lt;code&gt;Dialer&lt;/code&gt; 独立存在。一个读代码的人看到 &lt;code&gt;MyDialer.Push&lt;/code&gt;，不一定知道它实现了哪个接口，甚至不一定知道它实现了一个接口。&lt;/p&gt;
+&lt;p&gt;两边的顾虑都对。值得聊聊。&lt;/p&gt;
+&lt;h2 id="go-的隐式接口解耦的代价"&gt;Go 的隐式接口：解耦的代价 &lt;a href="#go-%e7%9a%84%e9%9a%90%e5%bc%8f%e6%8e%a5%e5%8f%a3%e8%a7%a3%e8%80%a6%e7%9a%84%e4%bb%a3%e4%bb%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Go 最受称道的一个设计是隐式接口满足（implicit interface satisfaction）。不需要 &lt;code&gt;implements&lt;/code&gt; 关键字，方法签名对上了，你就实现了这个接口。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type Writer interface {
+Write(p []byte) (n int, err error)
+}
+// 以下两个类型都实现了 Writer，但不需要显式声明
+type File struct { ... }
+func (f *File) Write(p []byte) (n int, err error) { ... }
+type Buffer struct { ... }
+func (b *Buffer) Write(p []byte) (n int, err error) { ... }
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;解耦效果极好：定义 &lt;code&gt;Writer&lt;/code&gt; 的包不需要知道 &lt;code&gt;File&lt;/code&gt; 和 &lt;code&gt;Buffer&lt;/code&gt; 的存在，&lt;code&gt;File&lt;/code&gt; 和 &lt;code&gt;Buffer&lt;/code&gt; 也不需要 import &lt;code&gt;Writer&lt;/code&gt; 所在的包。&lt;/p&gt;</description></item></channel></rss>

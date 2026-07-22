@@ -2274,7 +2274,35 @@ size 12345678
 &lt;/ol&gt;
 &lt;p&gt;三个问题都有明确答案，值得一试。如果答案大多是宏大叙事、需要&amp;quot;长期信仰&amp;quot;，那就别急着 All-in。&lt;/p&gt;
 &lt;h2 id="最近的一点观察"&gt;最近的一点观察 &lt;a href="#%e6%9c%80%e8%bf%91%e7%9a%84%e4%b8%80%e7%82%b9%e8%a7%82%e5%af%9f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;前阵子看到消息，字节跳动开始要求一线管理者也必须有实质性产出。这个方向我举双手赞成。&lt;/p&gt;</description></item><item><title>为什么 vibe coding 搞不定复杂系统</title><link>/blog/2026-03-18-why-vibe-coding-fails/</link><pubDate>Wed, 18 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-18-why-vibe-coding-fails/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;前阵子看到消息，字节跳动开始要求一线管理者也必须有实质性产出。这个方向我举双手赞成。&lt;/p&gt;</description></item><item><title>Go 接口实现方法到底要不要加注释？</title><link>/blog/2026-03-22-%E6%8E%A5%E5%8F%A3%E5%AE%9E%E7%8E%B0%E5%8A%A0%E4%B8%8D%E5%8A%A0%E6%B3%A8%E9%87%8A/</link><pubDate>Sun, 22 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-22-%E6%8E%A5%E5%8F%A3%E5%AE%9E%E7%8E%B0%E5%8A%A0%E4%B8%8D%E5%8A%A0%E6%B3%A8%E9%87%8A/</guid><description>&lt;p&gt;先看一段代码：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;// Dialer 定义了拨号器的行为。
+type Dialer interface {
+// Push 将数据推送到远端。
+Push(data []byte) error
+}
+// MyDialer 是基于 TCP 的拨号器实现。
+type MyDialer struct {
+conn net.Conn
+}
+func (d *MyDialer) Push(data []byte) error {
+return d.write(data)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;Dialer.Push&lt;/code&gt; 有注释，&lt;code&gt;MyDialer.Push&lt;/code&gt; 没有。问题来了：实现方法要不要加注释？&lt;/p&gt;
+&lt;p&gt;有人觉得不需要——接口已经说清楚了，重复写一遍违反 DRY。但 Go 的接口实现是隐式的，&lt;code&gt;MyDialer&lt;/code&gt; 完全可以脱离 &lt;code&gt;Dialer&lt;/code&gt; 独立存在。一个读代码的人看到 &lt;code&gt;MyDialer.Push&lt;/code&gt;，不一定知道它实现了哪个接口，甚至不一定知道它实现了一个接口。&lt;/p&gt;
+&lt;p&gt;两边的顾虑都对。值得聊聊。&lt;/p&gt;
+&lt;h2 id="go-的隐式接口解耦的代价"&gt;Go 的隐式接口：解耦的代价 &lt;a href="#go-%e7%9a%84%e9%9a%90%e5%bc%8f%e6%8e%a5%e5%8f%a3%e8%a7%a3%e8%80%a6%e7%9a%84%e4%bb%a3%e4%bb%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Go 最受称道的一个设计是隐式接口满足（implicit interface satisfaction）。不需要 &lt;code&gt;implements&lt;/code&gt; 关键字，方法签名对上了，你就实现了这个接口。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type Writer interface {
+Write(p []byte) (n int, err error)
+}
+// 以下两个类型都实现了 Writer，但不需要显式声明
+type File struct { ... }
+func (f *File) Write(p []byte) (n int, err error) { ... }
+type Buffer struct { ... }
+func (b *Buffer) Write(p []byte) (n int, err error) { ... }
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;解耦效果极好：定义 &lt;code&gt;Writer&lt;/code&gt; 的包不需要知道 &lt;code&gt;File&lt;/code&gt; 和 &lt;code&gt;Buffer&lt;/code&gt; 的存在，&lt;code&gt;File&lt;/code&gt; 和 &lt;code&gt;Buffer&lt;/code&gt; 也不需要 import &lt;code&gt;Writer&lt;/code&gt; 所在的包。&lt;/p&gt;</description></item><item><title>为什么 vibe coding 搞不定复杂系统</title><link>/blog/2026-03-18-why-vibe-coding-fails/</link><pubDate>Wed, 18 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-18-why-vibe-coding-fails/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;我用 AI coding 工具一年多了。从最早的代码补全，到现在的 agent 自主写代码、修 bug、做重构，能力提升是肉眼可见的。Claude Code、Cursor、Copilot 这些工具我都在用，确实大幅提高了日常效率。&lt;/p&gt;
 &lt;p&gt;但有一个感受始终没变：&lt;strong&gt;当软件规模到了一定复杂度之后，没有思想上的沉淀，很难短时间内靠 vibe coding 来 100% 解决问题。&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;Vibe coding 这个说法，大意是开发者通过自然语言 prompt 让 AI 生成代码，自己更多扮演&amp;quot;产品经理&amp;quot;或&amp;quot;审查员&amp;quot;的角色，而非亲自动手写每一行。听起来很美好——你说需求，AI 出代码，你只管 review。对快速原型、内部工具、简单 MVP，这确实管用。但一旦项目跨过某个复杂度阈值，问题就来了。&lt;/p&gt;

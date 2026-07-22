@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Llm Provider on</title><link>/categories/llm-provider/</link><description>Recent content in Llm Provider on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 22 Mar 2026 00:00:00 +0800</lastBuildDate><atom:link href="/categories/llm-provider/index.xml" rel="self" type="application/rss+xml"/><item><title>OpenAI 协议兼容性：契约、厂商与半兼容边界</title><link>/blog/2026-03-22-openai-api-compatibility/</link><pubDate>Sun, 22 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-22-openai-api-compatibility/</guid><description>&lt;h2 id="问题"&gt;问题 &lt;a href="#%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;接 LLM 服务，最烦的不是模型本身，是&lt;strong&gt;每次换一家 provider，客户端代码要不要重写&lt;/strong&gt;————新API？请求参数要改吗？响应解析要改吗？API能力上能对齐吗？等等。&lt;/p&gt;
+&lt;p&gt;理想情况是这样的：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-python"&gt;# 只改这两处
+client = OpenAI(
+api_key=os.environ[&amp;quot;API_KEY&amp;quot;],
+base_url=&amp;quot;https://api.deepseek.com/v1&amp;quot;, # 或 ollama、openrouter、自建 vLLM
+)
+resp = client.chat.completions.create(
+model=&amp;quot;deepseek-chat&amp;quot;,
+messages=[{&amp;quot;role&amp;quot;: &amp;quot;user&amp;quot;, &amp;quot;content&amp;quot;: &amp;quot;hello&amp;quot;}],
+)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;路径还是 &lt;code&gt;/v1/chat/completions&lt;/code&gt;，字段还是 &lt;code&gt;messages&lt;/code&gt; / &lt;code&gt;choices&lt;/code&gt; / &lt;code&gt;stream&lt;/code&gt;，SDK 不用换。这就是大家说的「兼容 OpenAI 协议」。&lt;/p&gt;
+&lt;p&gt;反过来，如果对方坚持自家 SDK（Gemini 的 &lt;code&gt;generateContent&lt;/code&gt;、Claude 的 Messages API、Bedrock 的签名调用），那业务层要么双端适配，要么中间再塞一层 gateway——成本一下就不一样了。&lt;/p&gt;
+&lt;p&gt;所以这篇文章只回答三个问题：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;「兼容」到底兼容到哪一层&lt;/li&gt;
+&lt;li&gt;谁兼容、谁故意不兼容&lt;/li&gt;
+&lt;li&gt;联调时「路径兼容、行为半兼容」会在哪遇到阻碍&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;h2 id="兼容的是契约不是模型"&gt;兼容的是契约，不是模型 &lt;a href="#%e5%85%bc%e5%ae%b9%e7%9a%84%e6%98%af%e5%a5%91%e7%ba%a6%e4%b8%8d%e6%98%af%e6%a8%a1%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;大模型权重本身是个黑盒函数：吃 token 序列（tensor），吐 next-token 分布。你 HTTP 里发的 JSON，它直接吃不下。&lt;/p&gt;
+&lt;p&gt;API Provider 干的事，是在模型前面加一层适配：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;HTTP JSON (OpenAI 形态)
+↓ 解析 messages / tools / stream 等
+chat template 拼装（按模型家族不同）
+↓
+tokenize → 推理引擎
+↓
+decode → 再包装成 choices / delta 返回
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;兼容 OpenAI，指的是这层适配的对外契约&lt;/strong&gt;长得像 OpenAI：&lt;/p&gt;</description></item></channel></rss>

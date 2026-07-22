@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Cot on</title><link>/tags/cot/</link><description>Recent content in Cot on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Jan 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/cot/index.xml" rel="self" type="application/rss+xml"/><item><title>AI Agent 技术全景：规划、记忆、工具、多 Agent 与人机协同</title><link>/blog/2026-01-06-ai-agent-architecture/</link><pubDate>Tue, 06 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-06-ai-agent-architecture/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;AI Agent 是 2025-2026 年最热门的 AI 话题之一。它的核心公式很简单：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Agent = LLM + Planning + Memory + Tools
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;但这四个组件各自的内涵远比表面看起来复杂。Planning 不是让 LLM 多输出几行字；现在的模型「看起来会想」，很多人却说不清这能力是 prompt 调出来的，还是训练里刻意灌的。Memory 也不等于把聊天记录全塞进 context。Tool Calling 不是模型内置了某个工具。Web Search 有一整套 API 生态。Multi-agent 经常被塞进 planning 那一格——其实更像编排。Human-in-the-Loop 则是 2026 年 AI coding 从「追求全自动」往回拉的关键趋势。&lt;/p&gt;
+&lt;p&gt;这篇文章按这条线拆完：&lt;strong&gt;Planning → Memory → Tools（含联网搜索）→ Multi-agent 编排 → HITL&lt;/strong&gt;。Planning 和 Memory 会写细一点——这也是写过 Agent 之后最容易跟别人对不齐口径的地方。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="一planning不只是-llm-的碎碎念"&gt;一、Planning：不只是 LLM 的&amp;quot;碎碎念&amp;quot; &lt;a href="#%e4%b8%80planning%e4%b8%8d%e5%8f%aa%e6%98%af-llm-%e7%9a%84%e7%a2%8e%e7%a2%8e%e5%bf%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 Agent 循环里，Planning 的本质是&lt;strong&gt;将高阶目标分解为可执行的原子步骤，并在执行中根据观察结果动态调整&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;核心就两件事：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;任务分解（Task Decomposition）&lt;/strong&gt;：把复杂问题拆成 step-by-step 的子任务&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;自我反思与修正（Self-Reflection）&lt;/strong&gt;：观察中间结果，偏了就改计划&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;工程上常见两条路径：&lt;/p&gt;</description></item></channel></rss>

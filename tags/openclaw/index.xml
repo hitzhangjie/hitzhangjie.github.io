@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Openclaw on</title><link>/tags/openclaw/</link><description>Recent content in Openclaw on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 05 Jun 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/openclaw/index.xml" rel="self" type="application/rss+xml"/><item><title>Agent 框架对比：Hermes Agent vs OpenClaw</title><link>/blog/2026-06-05-hermes-vs-openclaw/</link><pubDate>Fri, 05 Jun 2026 00:00:00 +0800</pubDate><guid>/blog/2026-06-05-hermes-vs-openclaw/</guid><description>&lt;blockquote&gt;
+&lt;p&gt;调研时间：2026-06-05 | 作者：Marvis&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h2 id="一项目概览"&gt;一、项目概览 &lt;a href="#%e4%b8%80%e9%a1%b9%e7%9b%ae%e6%a6%82%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;维度&lt;/th&gt;
+&lt;th&gt;OpenClaw&lt;/th&gt;
+&lt;th&gt;Hermes Agent&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;首次发布&lt;/td&gt;
+&lt;td&gt;2026 年 1 月（前身可追溯至 2025 年底）&lt;/td&gt;
+&lt;td&gt;2026 年 2 月（首个公开 release v0.3.0 于 2026 年 3 月）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;开发团队&lt;/td&gt;
+&lt;td&gt;OpenClaw 开源社区，由 PSPDFKit 创始人 Peter Steinberger 发起（已于 2026 年 2 月加入 OpenAI，项目转入独立基金会）&lt;/td&gt;
+&lt;td&gt;Nous Research（曾推出 Hermes 4 系列大模型）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;许可证&lt;/td&gt;
+&lt;td&gt;MIT 开源&lt;/td&gt;
+&lt;td&gt;MIT 开源&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;GitHub Stars&lt;/td&gt;
+&lt;td&gt;~28 万+&lt;/td&gt;
+&lt;td&gt;~15 万+（增速极快，日增峰值 6438 颗）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;最新版本&lt;/td&gt;
+&lt;td&gt;持续滚动迭代&lt;/td&gt;
+&lt;td&gt;v0.13.0（2026-05），PR 合并数 761 个&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;日 Token 处理量&lt;/td&gt;
+&lt;td&gt;1860 亿（#2）&lt;/td&gt;
+&lt;td&gt;2240 亿（#1）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;官方定位&lt;/td&gt;
+&lt;td&gt;本地优先多渠道 AI Agent 执行网关&lt;/td&gt;
+&lt;td&gt;自我进化的 AI Agent——&amp;ldquo;The agent that grows with you&amp;rdquo;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;社区昵称&lt;/td&gt;
+&lt;td&gt;龙虾（Claw = 螯足）&lt;/td&gt;
+&lt;td&gt;爱马仕&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h2 id="二架构设计最底层的哲学分歧"&gt;二、架构设计：最底层的哲学分歧 &lt;a href="#%e4%ba%8c%e6%9e%b6%e6%9e%84%e8%ae%be%e8%ae%a1%e6%9c%80%e5%ba%95%e5%b1%82%e7%9a%84%e5%93%b2%e5%ad%a6%e5%88%86%e6%ad%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="21-openclaw中央网关型架构"&gt;2.1 OpenClaw：中央网关型架构 &lt;a href="#21-openclaw%e4%b8%ad%e5%a4%ae%e7%bd%91%e5%85%b3%e5%9e%8b%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;[WhatsApp] ─┐
+[Telegram] ─┤
+[Discord] ─┼─→ Gateway (WebSocket 长连接) ─→ Task Brain (SQLite Ledger) ─→ Agent 实例 ─→ Skills
+[飞书] ─┤
+[钉钉] ─┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;核心理念&lt;/strong&gt;：广度优先。OpenClaw 的架构中心是一个长期运行的 Node.js 守护进程（Gateway），把所有消息渠道统一成一套内部协议，消息经过 Task Brain 路由分发到 Agent 实例。类比 K8s 的容器调度思路，所有子 Agent、Cron 任务、后台 CLI 进程全部统一在一个 SQLite Ledger 上。&lt;/p&gt;</description></item></channel></rss>

@@ -1,4 +1,142 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Ai on</title><link>/categories/ai/</link><description>Recent content in Ai on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 18 Mar 2026 00:00:00 +0800</lastBuildDate><atom:link href="/categories/ai/index.xml" rel="self" type="application/rss+xml"/><item><title>为什么 vibe coding 搞不定复杂系统</title><link>/blog/2026-03-18-why-vibe-coding-fails/</link><pubDate>Wed, 18 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-18-why-vibe-coding-fails/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Ai on</title><link>/categories/ai/</link><description>Recent content in Ai on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 05 Jun 2026 00:00:00 +0800</lastBuildDate><atom:link href="/categories/ai/index.xml" rel="self" type="application/rss+xml"/><item><title>Agent 框架对比：Hermes Agent vs OpenClaw</title><link>/blog/2026-06-05-hermes-vs-openclaw/</link><pubDate>Fri, 05 Jun 2026 00:00:00 +0800</pubDate><guid>/blog/2026-06-05-hermes-vs-openclaw/</guid><description>&lt;blockquote&gt;
+&lt;p&gt;调研时间：2026-06-05 | 作者：Marvis&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h2 id="一项目概览"&gt;一、项目概览 &lt;a href="#%e4%b8%80%e9%a1%b9%e7%9b%ae%e6%a6%82%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;维度&lt;/th&gt;
+&lt;th&gt;OpenClaw&lt;/th&gt;
+&lt;th&gt;Hermes Agent&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;首次发布&lt;/td&gt;
+&lt;td&gt;2026 年 1 月（前身可追溯至 2025 年底）&lt;/td&gt;
+&lt;td&gt;2026 年 2 月（首个公开 release v0.3.0 于 2026 年 3 月）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;开发团队&lt;/td&gt;
+&lt;td&gt;OpenClaw 开源社区，由 PSPDFKit 创始人 Peter Steinberger 发起（已于 2026 年 2 月加入 OpenAI，项目转入独立基金会）&lt;/td&gt;
+&lt;td&gt;Nous Research（曾推出 Hermes 4 系列大模型）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;许可证&lt;/td&gt;
+&lt;td&gt;MIT 开源&lt;/td&gt;
+&lt;td&gt;MIT 开源&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;GitHub Stars&lt;/td&gt;
+&lt;td&gt;~28 万+&lt;/td&gt;
+&lt;td&gt;~15 万+（增速极快，日增峰值 6438 颗）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;最新版本&lt;/td&gt;
+&lt;td&gt;持续滚动迭代&lt;/td&gt;
+&lt;td&gt;v0.13.0（2026-05），PR 合并数 761 个&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;日 Token 处理量&lt;/td&gt;
+&lt;td&gt;1860 亿（#2）&lt;/td&gt;
+&lt;td&gt;2240 亿（#1）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;官方定位&lt;/td&gt;
+&lt;td&gt;本地优先多渠道 AI Agent 执行网关&lt;/td&gt;
+&lt;td&gt;自我进化的 AI Agent——&amp;ldquo;The agent that grows with you&amp;rdquo;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;社区昵称&lt;/td&gt;
+&lt;td&gt;龙虾（Claw = 螯足）&lt;/td&gt;
+&lt;td&gt;爱马仕&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h2 id="二架构设计最底层的哲学分歧"&gt;二、架构设计：最底层的哲学分歧 &lt;a href="#%e4%ba%8c%e6%9e%b6%e6%9e%84%e8%ae%be%e8%ae%a1%e6%9c%80%e5%ba%95%e5%b1%82%e7%9a%84%e5%93%b2%e5%ad%a6%e5%88%86%e6%ad%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="21-openclaw中央网关型架构"&gt;2.1 OpenClaw：中央网关型架构 &lt;a href="#21-openclaw%e4%b8%ad%e5%a4%ae%e7%bd%91%e5%85%b3%e5%9e%8b%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;[WhatsApp] ─┐
+[Telegram] ─┤
+[Discord] ─┼─→ Gateway (WebSocket 长连接) ─→ Task Brain (SQLite Ledger) ─→ Agent 实例 ─→ Skills
+[飞书] ─┤
+[钉钉] ─┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;核心理念&lt;/strong&gt;：广度优先。OpenClaw 的架构中心是一个长期运行的 Node.js 守护进程（Gateway），把所有消息渠道统一成一套内部协议，消息经过 Task Brain 路由分发到 Agent 实例。类比 K8s 的容器调度思路，所有子 Agent、Cron 任务、后台 CLI 进程全部统一在一个 SQLite Ledger 上。&lt;/p&gt;</description></item><item><title>Embedding 与 Prompt：LLM 如何"理解"语言</title><link>/blog/2026-05-23-embedding-and-prompt-processing/</link><pubDate>Sat, 23 May 2026 00:00:00 +0800</pubDate><guid>/blog/2026-05-23-embedding-and-prompt-processing/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;我们每天都在跟 LLM 对话——输入一句话，它返回一段回复。但这中间发生了什么？&amp;ldquo;你好&amp;quot;这两个汉字是怎么变成 GPU 能算的矩阵的？Embedding 为什么是&amp;quot;分布式&amp;quot;的而不是&amp;quot;一个维度对应一个特征&amp;rdquo;？Prompt 处理有哪两条路径？RAG（检索增强生成）里的向量检索又是什么？&lt;/p&gt;
+&lt;p&gt;这篇文章用&lt;strong&gt;同一套记号&lt;/strong&gt;贯穿全文，一次性讲清楚。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;记号&lt;/th&gt;
+&lt;th&gt;含义&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;V&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;词表大小（有多少个 token id）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;d&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;隐藏维度（每个 token 向量的长度）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;T&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;序列长度（这条 prompt 有多少个 token）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h2 id="一从-one-hot-到-embedding"&gt;一、从 One-Hot 到 Embedding &lt;a href="#%e4%b8%80%e4%bb%8e-one-hot-%e5%88%b0-embedding" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="one-hot最笨的表示法"&gt;One-Hot：最&amp;quot;笨&amp;quot;的表示法 &lt;a href="#one-hot%e6%9c%80%e7%ac%a8%e7%9a%84%e8%a1%a8%e7%a4%ba%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;One-hot 就是&amp;quot;只有一个位置是 1，其余全是 0&amp;quot;。词汇表有 50000 个词，&amp;ldquo;猫&amp;quot;排在第 42 位，那它的 one-hot 向量就是：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[0, 0, 0, ..., 0, 1, 0, ..., 0]
+第42位是1，其余49999位全是0
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;核心问题&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;向量维度 = 词汇表大小，几万到几十万维&lt;/li&gt;
+&lt;li&gt;任意两个词的 one-hot 向量点积都是 0——完全正交&lt;/li&gt;
+&lt;li&gt;&amp;ldquo;猫&amp;quot;和&amp;quot;狗&amp;quot;在 one-hot 空间里的距离，跟&amp;quot;猫&amp;quot;和&amp;quot;量子力学&amp;quot;一样远&lt;/li&gt;
+&lt;li&gt;不携带任何语义信息，纯粹是一个&amp;quot;排他性编号&amp;rdquo;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="embedding可训练的语义查找表"&gt;Embedding：可训练的语义查找表 &lt;a href="#embedding%e5%8f%af%e8%ae%ad%e7%bb%83%e7%9a%84%e8%af%ad%e4%b9%89%e6%9f%a5%e6%89%be%e8%a1%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Embedding 的本质是一个&lt;strong&gt;可训练的查找表&lt;/strong&gt;。以 Word2Vec 为例：&lt;/p&gt;</description></item><item><title>OpenAI 协议兼容性：契约、厂商与半兼容边界</title><link>/blog/2026-03-22-openai-api-compatibility/</link><pubDate>Sun, 22 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-22-openai-api-compatibility/</guid><description>&lt;h2 id="问题"&gt;问题 &lt;a href="#%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;接 LLM 服务，最烦的不是模型本身，是&lt;strong&gt;每次换一家 provider，客户端代码要不要重写&lt;/strong&gt;————新API？请求参数要改吗？响应解析要改吗？API能力上能对齐吗？等等。&lt;/p&gt;
+&lt;p&gt;理想情况是这样的：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-python"&gt;# 只改这两处
+client = OpenAI(
+api_key=os.environ[&amp;quot;API_KEY&amp;quot;],
+base_url=&amp;quot;https://api.deepseek.com/v1&amp;quot;, # 或 ollama、openrouter、自建 vLLM
+)
+resp = client.chat.completions.create(
+model=&amp;quot;deepseek-chat&amp;quot;,
+messages=[{&amp;quot;role&amp;quot;: &amp;quot;user&amp;quot;, &amp;quot;content&amp;quot;: &amp;quot;hello&amp;quot;}],
+)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;路径还是 &lt;code&gt;/v1/chat/completions&lt;/code&gt;，字段还是 &lt;code&gt;messages&lt;/code&gt; / &lt;code&gt;choices&lt;/code&gt; / &lt;code&gt;stream&lt;/code&gt;，SDK 不用换。这就是大家说的「兼容 OpenAI 协议」。&lt;/p&gt;
+&lt;p&gt;反过来，如果对方坚持自家 SDK（Gemini 的 &lt;code&gt;generateContent&lt;/code&gt;、Claude 的 Messages API、Bedrock 的签名调用），那业务层要么双端适配，要么中间再塞一层 gateway——成本一下就不一样了。&lt;/p&gt;
+&lt;p&gt;所以这篇文章只回答三个问题：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;「兼容」到底兼容到哪一层&lt;/li&gt;
+&lt;li&gt;谁兼容、谁故意不兼容&lt;/li&gt;
+&lt;li&gt;联调时「路径兼容、行为半兼容」会在哪遇到阻碍&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;h2 id="兼容的是契约不是模型"&gt;兼容的是契约，不是模型 &lt;a href="#%e5%85%bc%e5%ae%b9%e7%9a%84%e6%98%af%e5%a5%91%e7%ba%a6%e4%b8%8d%e6%98%af%e6%a8%a1%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;大模型权重本身是个黑盒函数：吃 token 序列（tensor），吐 next-token 分布。你 HTTP 里发的 JSON，它直接吃不下。&lt;/p&gt;
+&lt;p&gt;API Provider 干的事，是在模型前面加一层适配：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;HTTP JSON (OpenAI 形态)
+↓ 解析 messages / tools / stream 等
+chat template 拼装（按模型家族不同）
+↓
+tokenize → 推理引擎
+↓
+decode → 再包装成 choices / delta 返回
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;兼容 OpenAI，指的是这层适配的对外契约&lt;/strong&gt;长得像 OpenAI：&lt;/p&gt;</description></item><item><title>为什么 vibe coding 搞不定复杂系统</title><link>/blog/2026-03-18-why-vibe-coding-fails/</link><pubDate>Wed, 18 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-18-why-vibe-coding-fails/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;我用 AI coding 工具一年多了。从最早的代码补全，到现在的 agent 自主写代码、修 bug、做重构，能力提升是肉眼可见的。Claude Code、Cursor、Copilot 这些工具我都在用，确实大幅提高了日常效率。&lt;/p&gt;
 &lt;p&gt;但有一个感受始终没变：&lt;strong&gt;当软件规模到了一定复杂度之后，没有思想上的沉淀，很难短时间内靠 vibe coding 来 100% 解决问题。&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;Vibe coding 这个说法，大意是开发者通过自然语言 prompt 让 AI 生成代码，自己更多扮演&amp;quot;产品经理&amp;quot;或&amp;quot;审查员&amp;quot;的角色，而非亲自动手写每一行。听起来很美好——你说需求，AI 出代码，你只管 review。对快速原型、内部工具、简单 MVP，这确实管用。但一旦项目跨过某个复杂度阈值，问题就来了。&lt;/p&gt;
@@ -10,4 +148,172 @@
 &lt;p&gt;ps: 这不是 AI 的&amp;quot;错&amp;quot;。这些问题本质上不是代码生成的问题，而是&lt;strong&gt;理解问题域&lt;/strong&gt;的问题。AI 不知道你的业务上下文、你的用户行为模式、你的运维约束——除非你用 prompt 把这些全部喂给它。但如果你能把这些全部精确地描述清楚，你实际上已经完成了软件工程中最难的部分。&lt;/p&gt;
 &lt;h2 id="修一个-bug引入两个新-bug"&gt;修一个 bug，引入两个新 bug &lt;a href="#%e4%bf%ae%e4%b8%80%e4%b8%aa-bug%e5%bc%95%e5%85%a5%e4%b8%a4%e4%b8%aa%e6%96%b0-bug" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;Vibe coding 的另一个典型陷阱是&amp;quot;让它先跑起来&amp;quot;的心态。这在小项目上没问题，但在长期维护的项目上会积累惊人的技术债务。&lt;/p&gt;
-&lt;p&gt;AI 修 bug 的方式很有意思——它倾向于&amp;quot;打补丁&amp;quot;而非&amp;quot;治根&amp;quot;。你告诉它这里有个 null pointer，它就在那里加个 nil check；你告诉它这里并发有问题，它就加个锁。至于这个 nil 是从哪里来的、为什么会有并发冲突、整个数据流是不是设计上就有问题——它不关心。它只解决你描述的那个症状。&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;AI 修 bug 的方式很有意思——它倾向于&amp;quot;打补丁&amp;quot;而非&amp;quot;治根&amp;quot;。你告诉它这里有个 null pointer，它就在那里加个 nil check；你告诉它这里并发有问题，它就加个锁。至于这个 nil 是从哪里来的、为什么会有并发冲突、整个数据流是不是设计上就有问题——它不关心。它只解决你描述的那个症状。&lt;/p&gt;</description></item><item><title>AI Agent 技术全景：规划、记忆、工具、多 Agent 与人机协同</title><link>/blog/2026-01-06-ai-agent-architecture/</link><pubDate>Tue, 06 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-06-ai-agent-architecture/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;AI Agent 是 2025-2026 年最热门的 AI 话题之一。它的核心公式很简单：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Agent = LLM + Planning + Memory + Tools
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;但这四个组件各自的内涵远比表面看起来复杂。Planning 不是让 LLM 多输出几行字；现在的模型「看起来会想」，很多人却说不清这能力是 prompt 调出来的，还是训练里刻意灌的。Memory 也不等于把聊天记录全塞进 context。Tool Calling 不是模型内置了某个工具。Web Search 有一整套 API 生态。Multi-agent 经常被塞进 planning 那一格——其实更像编排。Human-in-the-Loop 则是 2026 年 AI coding 从「追求全自动」往回拉的关键趋势。&lt;/p&gt;
+&lt;p&gt;这篇文章按这条线拆完：&lt;strong&gt;Planning → Memory → Tools（含联网搜索）→ Multi-agent 编排 → HITL&lt;/strong&gt;。Planning 和 Memory 会写细一点——这也是写过 Agent 之后最容易跟别人对不齐口径的地方。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="一planning不只是-llm-的碎碎念"&gt;一、Planning：不只是 LLM 的&amp;quot;碎碎念&amp;quot; &lt;a href="#%e4%b8%80planning%e4%b8%8d%e5%8f%aa%e6%98%af-llm-%e7%9a%84%e7%a2%8e%e7%a2%8e%e5%bf%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 Agent 循环里，Planning 的本质是&lt;strong&gt;将高阶目标分解为可执行的原子步骤，并在执行中根据观察结果动态调整&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;核心就两件事：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;任务分解（Task Decomposition）&lt;/strong&gt;：把复杂问题拆成 step-by-step 的子任务&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;自我反思与修正（Self-Reflection）&lt;/strong&gt;：观察中间结果，偏了就改计划&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;工程上常见两条路径：&lt;/p&gt;</description></item><item><title>LLM 训练全景：从 GPT-1 到 o1 的进化与对齐</title><link>/blog/2025-12-31-llm-training-and-alignment/</link><pubDate>Wed, 31 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-31-llm-training-and-alignment/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Base model 为什么「知道很多事」却不太会聊天？SFT 之后为什么还要再对齐？LoRA 又是在动哪些参数？&lt;/p&gt;
+&lt;p&gt;这篇文章按一条主线串：&lt;strong&gt;能力主要在预训练，行为与偏好在后训练&lt;/strong&gt;；中间夹参数高效微调，最后补 2024–2025 的偏好优化演进和 o1「更会想」又是如何去做的。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="一规模与范式变大的不只是参数"&gt;一、规模与范式：变大的不只是参数 &lt;a href="#%e4%b8%80%e8%a7%84%e6%a8%a1%e4%b8%8e%e8%8c%83%e5%bc%8f%e5%8f%98%e5%a4%a7%e7%9a%84%e4%b8%8d%e5%8f%aa%e6%98%af%e5%8f%82%e6%95%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;先看 GPT 家族七年里，&lt;strong&gt;方法论&lt;/strong&gt;到底换了什么。表里后半段数字多为业界估算或未证实流传，只作数量级对照，不是官方规格。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style="text-align: left"&gt;模型&lt;/th&gt;
+&lt;th style="text-align: left"&gt;年份&lt;/th&gt;
+&lt;th style="text-align: left"&gt;参数量&lt;/th&gt;
+&lt;th style="text-align: left"&gt;硬件 / 成本（口径）&lt;/th&gt;
+&lt;th style="text-align: left"&gt;范式上真正变了什么&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;GPT-1&lt;/td&gt;
+&lt;td style="text-align: left"&gt;2018&lt;/td&gt;
+&lt;td style="text-align: left"&gt;117M（公开）&lt;/td&gt;
+&lt;td style="text-align: left"&gt;约 8 GPU 量级；成本数千美元级&lt;/td&gt;
+&lt;td style="text-align: left"&gt;先大规模预训练，再任务微调&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;GPT-2&lt;/td&gt;
+&lt;td style="text-align: left"&gt;2019&lt;/td&gt;
+&lt;td style="text-align: left"&gt;1.5B（公开）&lt;/td&gt;
+&lt;td style="text-align: left"&gt;中等规模加速器；约数万美元级（估算）&lt;/td&gt;
+&lt;td style="text-align: left"&gt;出现可观察的 zero-shot 行为&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;GPT-3&lt;/td&gt;
+&lt;td style="text-align: left"&gt;2020&lt;/td&gt;
+&lt;td style="text-align: left"&gt;175B（公开）&lt;/td&gt;
+&lt;td style="text-align: left"&gt;约千卡 V100 量级（常见估算）；云价等价约数百万美元&lt;/td&gt;
+&lt;td style="text-align: left"&gt;in-context few-shot；「烧算力」进入主流叙事&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;GPT-4&lt;/td&gt;
+&lt;td style="text-align: left"&gt;2023&lt;/td&gt;
+&lt;td style="text-align: left"&gt;&lt;strong&gt;未官方披露&lt;/strong&gt;；流传约万亿级稀疏 MoE&lt;/td&gt;
+&lt;td style="text-align: left"&gt;训练成本公开表述过「亿美元级」；卡数多为流传&lt;/td&gt;
+&lt;td style="text-align: left"&gt;多模态 + 更强通用能力；架构细节未证实&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;GPT-4o&lt;/td&gt;
+&lt;td style="text-align: left"&gt;2024&lt;/td&gt;
+&lt;td style="text-align: left"&gt;未公开&lt;/td&gt;
+&lt;td style="text-align: left"&gt;单次 run 成本未公开（勿与集群 CapEx 混谈）&lt;/td&gt;
+&lt;td style="text-align: left"&gt;产品向：延迟、多模态、一体化体验&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;o1&lt;/td&gt;
+&lt;td style="text-align: left"&gt;2024&lt;/td&gt;
+&lt;td style="text-align: left"&gt;未公开&lt;/td&gt;
+&lt;td style="text-align: left"&gt;同上&lt;/td&gt;
+&lt;td style="text-align: left"&gt;&lt;strong&gt;后训练 RL + 测试时计算&lt;/strong&gt;，优化「会推理」&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id="几个转折只保留对训练有用的"&gt;几个转折（只保留对训练有用的） &lt;a href="#%e5%87%a0%e4%b8%aa%e8%bd%ac%e6%8a%98%e5%8f%aa%e4%bf%9d%e7%95%99%e5%af%b9%e8%ae%ad%e7%bb%83%e6%9c%89%e7%94%a8%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;GPT-1&lt;/strong&gt;：证明「大规模无监督预训练 + 小数据微调」可行。&lt;/p&gt;</description></item><item><title>AI 生成文本怎么检测</title><link>/blog/2025-12-30-ai-text-detection/</link><pubDate>Tue, 30 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-30-ai-text-detection/</guid><description>&lt;h2 id="问题"&gt;问题 &lt;a href="#%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;「这段是不是 AI 写的？」——考试、投稿、内容审核、内部合规都会问。难的地方在于：生成模型训练目标本身就是&lt;strong&gt;把「像人写的」学到极致&lt;/strong&gt;。你抓的是「不像人的痕迹」，对方每天都在消灭这些痕迹。&lt;/p&gt;
+&lt;p&gt;更麻烦的是产品需求经常长这样：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;不要整篇一个 0/1，要&lt;strong&gt;按段落&lt;/strong&gt;给置信度&lt;/li&gt;
+&lt;li&gt;要能解释「为什么判 AI」——给编辑、老师、审核员看&lt;/li&gt;
+&lt;li&gt;还要扛住：人改 AI 初稿、prompt 洗稿、跨模型二次生成&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;单靠一个黑盒百分比不够。下面按「看什么信号 → 怎么做成分数 → 为什么会失效」串一遍，方便以后自己回查。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="先看什么信号"&gt;先看什么信号 &lt;a href="#%e5%85%88%e7%9c%8b%e4%bb%80%e4%b9%88%e4%bf%a1%e5%8f%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;检测工具通常不是读懂语义后「凭感觉」，而是盯几类&lt;strong&gt;统计与结构特征&lt;/strong&gt;。&lt;/p&gt;
+&lt;h3 id="困惑度perplexity"&gt;困惑度（Perplexity） &lt;a href="#%e5%9b%b0%e6%83%91%e5%ba%a6perplexity" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;大意：在某个语言模型眼里，这段文本有多「出乎意料」。&lt;/p&gt;
+&lt;p&gt;人写会偶尔用偏、跳跃、不规范；模型更爱选条件概率上更稳的词，整段往往更「顺滑」，困惑度偏低。
+但公文、说明书、高度模板化的技术文档——&lt;strong&gt;人写也会低困惑度&lt;/strong&gt;。所以它是弱信号，不是判决。&lt;/p&gt;
+&lt;h3 id="突发性burstiness"&gt;突发性（Burstiness） &lt;a href="#%e7%aa%81%e5%8f%91%e6%80%a7burstiness" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;大意：句子长短、结构变化有没有节奏。&lt;/p&gt;
+&lt;p&gt;人写常长短句交替；模型生成的句长和从句结构更容易「铺得很匀」，读起来平。
+同样，列表体 README、changelog、法规条文，人类也可以写得很匀。&lt;/p&gt;
+&lt;h3 id="逐词概率分布"&gt;逐词概率分布 &lt;a href="#%e9%80%90%e8%af%8d%e6%a6%82%e7%8e%87%e5%88%86%e5%b8%83" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;逐 token 看：是不是总落在模型预测的高频区。整段都「太像模型会选的」，可疑度上升。
+和困惑度同源，只是展示/聚合方式不同；换参考模型，分数会跟着变。&lt;/p&gt;
+&lt;p&gt;这三项都是&lt;strong&gt;启发式&lt;/strong&gt;。单独拿任意一项卡阈值，误伤和漏检都会很难看。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="段落级人还会看哪些痕迹"&gt;段落级：人还会看哪些「痕迹」 &lt;a href="#%e6%ae%b5%e8%90%bd%e7%ba%a7%e4%ba%ba%e8%bf%98%e4%bc%9a%e7%9c%8b%e5%93%aa%e4%ba%9b%e7%97%95%e8%bf%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;做段落打分时，除了统计量，规则/特征系统也会扫一些可读痕迹（不等于严谨特征工程）：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th style="text-align: left"&gt;侧面&lt;/th&gt;
+&lt;th style="text-align: left"&gt;更像人&lt;/th&gt;
+&lt;th style="text-align: left"&gt;更可疑&lt;/th&gt;
+&lt;th style="text-align: left"&gt;更像模板化 AI&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;用词&lt;/td&gt;
+&lt;td style="text-align: left"&gt;俚语、隐喻、个人习惯用语&lt;/td&gt;
+&lt;td style="text-align: left"&gt;正确但没个性&lt;/td&gt;
+&lt;td style="text-align: left"&gt;连接词扎堆：「此外」「总之」「然而」「值得注意的是」&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;结构&lt;/td&gt;
+&lt;td style="text-align: left"&gt;跳跃、跑题、先结论后补洞&lt;/td&gt;
+&lt;td style="text-align: left"&gt;每段起承转合过于对称&lt;/td&gt;
+&lt;td style="text-align: left"&gt;严格总-分-总 / 纯列表，论证路径可预测&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td style="text-align: left"&gt;表面错误&lt;/td&gt;
+&lt;td style="text-align: left"&gt;轻微语病、标点随意、非正式缩写&lt;/td&gt;
+&lt;td style="text-align: left"&gt;完美但呆&lt;/td&gt;
+&lt;td style="text-align: left"&gt;教科书语法，缺少「呼吸感」&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;技术博客、RFC、API 文档天然偏右两列。&lt;strong&gt;用写作规范本身就会误伤&lt;/strong&gt;。我自己写设计文档时，连接词和总-分-总也很多——按这张表我也可能被标黄。&lt;/p&gt;
+&lt;p&gt;所以段落表只适合当「解释面板」的素材，不适合当唯一规则引擎。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="分数从哪来三条技术路线"&gt;分数从哪来：三条技术路线 &lt;a href="#%e5%88%86%e6%95%b0%e4%bb%8e%e5%93%aa%e6%9d%a5%e4%b8%89%e6%9d%a1%e6%8a%80%e6%9c%af%e8%b7%af%e7%ba%bf" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;要把「感觉像 AI」变成 0～1 的置信度，常见三条路，可叠加。&lt;/p&gt;</description></item><item><title>Ollama 深度解析：本地大模型服务的工程实践</title><link>/blog/2025-04-12-ollama-deep-dive/</link><pubDate>Sat, 12 Apr 2025 00:00:00 +0800</pubDate><guid>/blog/2025-04-12-ollama-deep-dive/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Ollama 是目前最流行的本地 LLM 部署工具之一——一行命令就能下载并运行各种开源模型。它屏蔽了模型格式、量化方案、GPU 加速等复杂性，让开发者可以像使用 Docker 一样使用大模型。&lt;/p&gt;
+&lt;p&gt;但 Ollama 内部是怎么做到这些的？这篇文章从源码和设计角度，系统性地拆解 Ollama 的核心技术：架构设计、认证机制、模型格式、量化技术、GPU 加速、模板语法和推理循环。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="一架构设计双-server-的分离之美"&gt;一、架构设计：双 Server 的分离之美 &lt;a href="#%e4%b8%80%e6%9e%b6%e6%9e%84%e8%ae%be%e8%ae%a1%e5%8f%8c-server-%e7%9a%84%e5%88%86%e7%a6%bb%e4%b9%8b%e7%be%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Ollama 的源码中有两个同名的 &lt;code&gt;Server&lt;/code&gt; 结构体，但它们定义在不同的包中，职责完全不同。这是理解 Ollama 架构的第一把钥匙。&lt;/p&gt;
+&lt;h3 id="api-serverserverroutesgo"&gt;API Server（&lt;code&gt;server/routes.go&lt;/code&gt;） &lt;a href="#api-serverserverroutesgo" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type Server struct {
+addr net.Addr
+sched *Scheduler
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这是 Ollama 的 &lt;strong&gt;HTTP API 服务器&lt;/strong&gt;，负责：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;处理 HTTP 路由和 REST API 请求（&lt;code&gt;/api/generate&lt;/code&gt;、&lt;code&gt;/api/chat&lt;/code&gt; 等）&lt;/li&gt;
+&lt;li&gt;管理模型调度器（Scheduler）&lt;/li&gt;
+&lt;li&gt;模型生命周期管理（加载、卸载、调度）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="llm-runnerrunnerllamarunnerrunnergo"&gt;LLM Runner（&lt;code&gt;runner/llamarunner/runner.go&lt;/code&gt;） &lt;a href="#llm-runnerrunnerllamarunnerrunnergo" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type Server struct {
+ready sync.WaitGroup
+model *llama.Model
+status llm.ServerStatus
+parallel int
+batchSize int
+lc *llama.Context
+seqs []*Sequence
+cache *InputCache
+// ...更多字段
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这是 &lt;strong&gt;LLM 运行时核心&lt;/strong&gt;，负责：&lt;/p&gt;</description></item></channel></rss>

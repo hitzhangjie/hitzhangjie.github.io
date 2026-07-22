@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Prompt-Engineering on</title><link>/tags/prompt-engineering/</link><description>Recent content in Prompt-Engineering on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 23 May 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/prompt-engineering/index.xml" rel="self" type="application/rss+xml"/><item><title>Embedding 与 Prompt：LLM 如何"理解"语言</title><link>/blog/2026-05-23-embedding-and-prompt-processing/</link><pubDate>Sat, 23 May 2026 00:00:00 +0800</pubDate><guid>/blog/2026-05-23-embedding-and-prompt-processing/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;我们每天都在跟 LLM 对话——输入一句话，它返回一段回复。但这中间发生了什么？&amp;ldquo;你好&amp;quot;这两个汉字是怎么变成 GPU 能算的矩阵的？Embedding 为什么是&amp;quot;分布式&amp;quot;的而不是&amp;quot;一个维度对应一个特征&amp;rdquo;？Prompt 处理有哪两条路径？RAG（检索增强生成）里的向量检索又是什么？&lt;/p&gt;
+&lt;p&gt;这篇文章用&lt;strong&gt;同一套记号&lt;/strong&gt;贯穿全文，一次性讲清楚。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;记号&lt;/th&gt;
+&lt;th&gt;含义&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;V&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;词表大小（有多少个 token id）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;d&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;隐藏维度（每个 token 向量的长度）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;T&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;序列长度（这条 prompt 有多少个 token）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h2 id="一从-one-hot-到-embedding"&gt;一、从 One-Hot 到 Embedding &lt;a href="#%e4%b8%80%e4%bb%8e-one-hot-%e5%88%b0-embedding" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="one-hot最笨的表示法"&gt;One-Hot：最&amp;quot;笨&amp;quot;的表示法 &lt;a href="#one-hot%e6%9c%80%e7%ac%a8%e7%9a%84%e8%a1%a8%e7%a4%ba%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;One-hot 就是&amp;quot;只有一个位置是 1，其余全是 0&amp;quot;。词汇表有 50000 个词，&amp;ldquo;猫&amp;quot;排在第 42 位，那它的 one-hot 向量就是：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[0, 0, 0, ..., 0, 1, 0, ..., 0]
+第42位是1，其余49999位全是0
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;核心问题&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;向量维度 = 词汇表大小，几万到几十万维&lt;/li&gt;
+&lt;li&gt;任意两个词的 one-hot 向量点积都是 0——完全正交&lt;/li&gt;
+&lt;li&gt;&amp;ldquo;猫&amp;quot;和&amp;quot;狗&amp;quot;在 one-hot 空间里的距离，跟&amp;quot;猫&amp;quot;和&amp;quot;量子力学&amp;quot;一样远&lt;/li&gt;
+&lt;li&gt;不携带任何语义信息，纯粹是一个&amp;quot;排他性编号&amp;rdquo;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="embedding可训练的语义查找表"&gt;Embedding：可训练的语义查找表 &lt;a href="#embedding%e5%8f%af%e8%ae%ad%e7%bb%83%e7%9a%84%e8%af%ad%e4%b9%89%e6%9f%a5%e6%89%be%e8%a1%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Embedding 的本质是一个&lt;strong&gt;可训练的查找表&lt;/strong&gt;。以 Word2Vec 为例：&lt;/p&gt;</description></item></channel></rss>

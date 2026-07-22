@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Ollama on</title><link>/tags/ollama/</link><description>Recent content in Ollama on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 12 Apr 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/ollama/index.xml" rel="self" type="application/rss+xml"/><item><title>Ollama 深度解析：本地大模型服务的工程实践</title><link>/blog/2025-04-12-ollama-deep-dive/</link><pubDate>Sat, 12 Apr 2025 00:00:00 +0800</pubDate><guid>/blog/2025-04-12-ollama-deep-dive/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Ollama 是目前最流行的本地 LLM 部署工具之一——一行命令就能下载并运行各种开源模型。它屏蔽了模型格式、量化方案、GPU 加速等复杂性，让开发者可以像使用 Docker 一样使用大模型。&lt;/p&gt;
+&lt;p&gt;但 Ollama 内部是怎么做到这些的？这篇文章从源码和设计角度，系统性地拆解 Ollama 的核心技术：架构设计、认证机制、模型格式、量化技术、GPU 加速、模板语法和推理循环。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="一架构设计双-server-的分离之美"&gt;一、架构设计：双 Server 的分离之美 &lt;a href="#%e4%b8%80%e6%9e%b6%e6%9e%84%e8%ae%be%e8%ae%a1%e5%8f%8c-server-%e7%9a%84%e5%88%86%e7%a6%bb%e4%b9%8b%e7%be%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Ollama 的源码中有两个同名的 &lt;code&gt;Server&lt;/code&gt; 结构体，但它们定义在不同的包中，职责完全不同。这是理解 Ollama 架构的第一把钥匙。&lt;/p&gt;
+&lt;h3 id="api-serverserverroutesgo"&gt;API Server（&lt;code&gt;server/routes.go&lt;/code&gt;） &lt;a href="#api-serverserverroutesgo" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type Server struct {
+addr net.Addr
+sched *Scheduler
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这是 Ollama 的 &lt;strong&gt;HTTP API 服务器&lt;/strong&gt;，负责：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;处理 HTTP 路由和 REST API 请求（&lt;code&gt;/api/generate&lt;/code&gt;、&lt;code&gt;/api/chat&lt;/code&gt; 等）&lt;/li&gt;
+&lt;li&gt;管理模型调度器（Scheduler）&lt;/li&gt;
+&lt;li&gt;模型生命周期管理（加载、卸载、调度）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="llm-runnerrunnerllamarunnerrunnergo"&gt;LLM Runner（&lt;code&gt;runner/llamarunner/runner.go&lt;/code&gt;） &lt;a href="#llm-runnerrunnerllamarunnerrunnergo" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type Server struct {
+ready sync.WaitGroup
+model *llama.Model
+status llm.ServerStatus
+parallel int
+batchSize int
+lc *llama.Context
+seqs []*Sequence
+cache *InputCache
+// ...更多字段
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这是 &lt;strong&gt;LLM 运行时核心&lt;/strong&gt;，负责：&lt;/p&gt;</description></item></channel></rss>

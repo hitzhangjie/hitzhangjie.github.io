@@ -1,6 +1,85 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>AI Agent on</title><link>/tags/ai-agent/</link><description>Recent content in AI Agent on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 07 Jul 2026 12:12:28 +0800</lastBuildDate><atom:link href="/tags/ai-agent/index.xml" rel="self" type="application/rss+xml"/><item><title>重读《持续交付2.0》：从EPC到AI Harness工程，隐性工程能力从未改变</title><link>/blog/2026-07-07-%E6%8C%81%E7%BB%AD%E4%BA%A4%E4%BB%982.0-ai%E6%97%B6%E4%BB%A3%E9%9A%90%E6%80%A7%E5%B7%A5%E7%A8%8B%E8%83%BD%E5%8A%9B%E4%BB%8E%E6%9C%AA%E6%94%B9%E5%8F%98/</link><pubDate>Tue, 07 Jul 2026 12:12:28 +0800</pubDate><guid>/blog/2026-07-07-%E6%8C%81%E7%BB%AD%E4%BA%A4%E4%BB%982.0-ai%E6%97%B6%E4%BB%A3%E9%9A%90%E6%80%A7%E5%B7%A5%E7%A8%8B%E8%83%BD%E5%8A%9B%E4%BB%8E%E6%9C%AA%E6%94%B9%E5%8F%98/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Ai-Agent on</title><link>/tags/ai-agent/</link><description>Recent content in Ai-Agent on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 07 Jul 2026 12:12:28 +0800</lastBuildDate><atom:link href="/tags/ai-agent/index.xml" rel="self" type="application/rss+xml"/><item><title>重读《持续交付2.0》：从EPC到AI Harness工程，隐性工程能力从未改变</title><link>/blog/2026-07-07-%E6%8C%81%E7%BB%AD%E4%BA%A4%E4%BB%982.0-ai%E6%97%B6%E4%BB%A3%E9%9A%90%E6%80%A7%E5%B7%A5%E7%A8%8B%E8%83%BD%E5%8A%9B%E4%BB%8E%E6%9C%AA%E6%94%B9%E5%8F%98/</link><pubDate>Tue, 07 Jul 2026 12:12:28 +0800</pubDate><guid>/blog/2026-07-07-%E6%8C%81%E7%BB%AD%E4%BA%A4%E4%BB%982.0-ai%E6%97%B6%E4%BB%A3%E9%9A%90%E6%80%A7%E5%B7%A5%E7%A8%8B%E8%83%BD%E5%8A%9B%E4%BB%8E%E6%9C%AA%E6%94%B9%E5%8F%98/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;2019 年到 2022 年，我深度参与了腾讯侧的技术治理工作：微服务框架、研发效能提升、统一协议托管、DevOps、测试左移、一站式研发发布平台……那几年对「软件工程」和「技术沉淀」的理解被拉高了一截。2022 年因团队变动，结合个人意愿，我加入了天美某在研的游戏后台团队，项目管理上实践良好，但是团队后台工程实践上 …… 也算是让我打开眼界了。&lt;/p&gt;
 &lt;p&gt;近几年 AI 大火，公司、团队、个人都在追问 AI 的能力边界，并希望把能力赋能到个人与组织——行业如此。我从 2021 年 GitHub Copilot 发布起就持续跟踪；ChatGPT 之后的一系列现象级产品与重大进展，常常让我生出「要不要 ALL IN AI」的冲动。从 Prompt 工程到 Context 工程，再到 Harness 工程，实践很热，但&lt;strong&gt;真正能驾驭 AI 的团队极其少见&lt;/strong&gt;，营销反而更多。从 AI Assist 到 AI First，远不只是「把 Harness 搭好」这么简单。若真这么简单，Agent 内置软件工程领域的 SKILL 便可横扫一切——现实是没有任何一个 Agent 能独自搞定所有领域。也许需要时间，也许需要专用 Agent 的协作与编排；无论如何，&lt;strong&gt;至今还没有哪家企业能拍着胸脯说已经把 AI 用得很好&lt;/strong&gt;，但这件事我认为会被实现，我这里欲扬先抑一下。&lt;/p&gt;
 &lt;p&gt;与此同时，常听到一种论调：「AI 总有搞不定的领域。」这不意外——对量化别人的产出，很多人毫无概念，要么笼统判断，要么在专业领域沉淀不够，找不到合理量化指标。&lt;strong&gt;「一切皆可计算」&lt;/strong&gt;：若不能计算，人的活动便既盲目又冒险；审视研发是否科学，就是量化、发现问题、改进、再量化的循环。乔梁老师在《持续交付 2.0：引领业务的 DevOps 精要》里，对这条主线讲得系统而具体。当然，这里的量化指标是用来验证我们的假设，改进我们的流程，而不是我们的终极目标。&lt;/p&gt;
 &lt;p&gt;不少参与过研发效能（EPC，工程效能胜任力）落地的人，对乔梁老师存在很深误解：理念死板、理论大于实践、花架子。多年之后，当我思考如何做出更好的 AI Agent、如何&lt;strong&gt;驾驭&lt;/strong&gt; Agent 时，突然发现：研发活动里的种种 &lt;strong&gt;SKILL&lt;/strong&gt;，与过去沉淀的一些&lt;strong&gt;隐形技能&lt;/strong&gt;之间，存在清晰映射。于是从书架取下这本书——当年还是&lt;strong&gt;腾讯技术副总裁曾宇&lt;/strong&gt;与&lt;strong&gt;腾讯特邀专家乔梁老师&lt;/strong&gt;亲笔签名本——耐着性子读了两周。越往后感触越深：过去的判断更详实了，也修正了一些认识误区。内网仍可搜到曾宇关于服务器开发的 PPT，言简意赅、有洞见，很多 2026 年的高级工程师也未必能写出那种密度。&lt;/p&gt;
-&lt;p&gt;有人说他们「空有其表」——在我看来，说这话的人才是真正的傲慢与无知。若真要埋怨，应埋怨当年 EPC 落地中某些团队的务虚作风，而不是理念本身。时至今日，这些理念对许多业务仍有牵引、指导作用。理念像水，没有绝对最好，只有更合适；唯一不变的是变：持续优化可维护性是变，满足于现状沦为屎山也是变。有洞见的 TL 能观察微妙变化，立规矩、建流程与质量门禁，让隐晦不可见的风险点变得可见，并专注培养人与提振技术氛围。若连学习进步的欲望都没有，工程上的怠惰难免迁移到业务领域探索优化上的怠惰。和大范围用 AI 一样，&lt;strong&gt;我们工作不只为了解决问题，也在培养与传承&lt;/strong&gt;。许多感动用户的设计与高可用，是在思辨进步的氛围里一点点夯出来的——AI 不会给你一切；若本身不是那块材料，即便 AI 给出更好方案，也不敢采纳，因为已超出认知。&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;有人说他们「空有其表」——在我看来，说这话的人才是真正的傲慢与无知。若真要埋怨，应埋怨当年 EPC 落地中某些团队的务虚作风，而不是理念本身。时至今日，这些理念对许多业务仍有牵引、指导作用。理念像水，没有绝对最好，只有更合适；唯一不变的是变：持续优化可维护性是变，满足于现状沦为屎山也是变。有洞见的 TL 能观察微妙变化，立规矩、建流程与质量门禁，让隐晦不可见的风险点变得可见，并专注培养人与提振技术氛围。若连学习进步的欲望都没有，工程上的怠惰难免迁移到业务领域探索优化上的怠惰。和大范围用 AI 一样，&lt;strong&gt;我们工作不只为了解决问题，也在培养与传承&lt;/strong&gt;。许多感动用户的设计与高可用，是在思辨进步的氛围里一点点夯出来的——AI 不会给你一切；若本身不是那块材料，即便 AI 给出更好方案，也不敢采纳，因为已超出认知。&lt;/p&gt;</description></item><item><title>Agent 框架对比：Hermes Agent vs OpenClaw</title><link>/blog/2026-06-05-hermes-vs-openclaw/</link><pubDate>Fri, 05 Jun 2026 00:00:00 +0800</pubDate><guid>/blog/2026-06-05-hermes-vs-openclaw/</guid><description>&lt;blockquote&gt;
+&lt;p&gt;调研时间：2026-06-05 | 作者：Marvis&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h2 id="一项目概览"&gt;一、项目概览 &lt;a href="#%e4%b8%80%e9%a1%b9%e7%9b%ae%e6%a6%82%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;维度&lt;/th&gt;
+&lt;th&gt;OpenClaw&lt;/th&gt;
+&lt;th&gt;Hermes Agent&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;首次发布&lt;/td&gt;
+&lt;td&gt;2026 年 1 月（前身可追溯至 2025 年底）&lt;/td&gt;
+&lt;td&gt;2026 年 2 月（首个公开 release v0.3.0 于 2026 年 3 月）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;开发团队&lt;/td&gt;
+&lt;td&gt;OpenClaw 开源社区，由 PSPDFKit 创始人 Peter Steinberger 发起（已于 2026 年 2 月加入 OpenAI，项目转入独立基金会）&lt;/td&gt;
+&lt;td&gt;Nous Research（曾推出 Hermes 4 系列大模型）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;许可证&lt;/td&gt;
+&lt;td&gt;MIT 开源&lt;/td&gt;
+&lt;td&gt;MIT 开源&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;GitHub Stars&lt;/td&gt;
+&lt;td&gt;~28 万+&lt;/td&gt;
+&lt;td&gt;~15 万+（增速极快，日增峰值 6438 颗）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;最新版本&lt;/td&gt;
+&lt;td&gt;持续滚动迭代&lt;/td&gt;
+&lt;td&gt;v0.13.0（2026-05），PR 合并数 761 个&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;日 Token 处理量&lt;/td&gt;
+&lt;td&gt;1860 亿（#2）&lt;/td&gt;
+&lt;td&gt;2240 亿（#1）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;官方定位&lt;/td&gt;
+&lt;td&gt;本地优先多渠道 AI Agent 执行网关&lt;/td&gt;
+&lt;td&gt;自我进化的 AI Agent——&amp;ldquo;The agent that grows with you&amp;rdquo;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;社区昵称&lt;/td&gt;
+&lt;td&gt;龙虾（Claw = 螯足）&lt;/td&gt;
+&lt;td&gt;爱马仕&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h2 id="二架构设计最底层的哲学分歧"&gt;二、架构设计：最底层的哲学分歧 &lt;a href="#%e4%ba%8c%e6%9e%b6%e6%9e%84%e8%ae%be%e8%ae%a1%e6%9c%80%e5%ba%95%e5%b1%82%e7%9a%84%e5%93%b2%e5%ad%a6%e5%88%86%e6%ad%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="21-openclaw中央网关型架构"&gt;2.1 OpenClaw：中央网关型架构 &lt;a href="#21-openclaw%e4%b8%ad%e5%a4%ae%e7%bd%91%e5%85%b3%e5%9e%8b%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;[WhatsApp] ─┐
+[Telegram] ─┤
+[Discord] ─┼─→ Gateway (WebSocket 长连接) ─→ Task Brain (SQLite Ledger) ─→ Agent 实例 ─→ Skills
+[飞书] ─┤
+[钉钉] ─┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;核心理念&lt;/strong&gt;：广度优先。OpenClaw 的架构中心是一个长期运行的 Node.js 守护进程（Gateway），把所有消息渠道统一成一套内部协议，消息经过 Task Brain 路由分发到 Agent 实例。类比 K8s 的容器调度思路，所有子 Agent、Cron 任务、后台 CLI 进程全部统一在一个 SQLite Ledger 上。&lt;/p&gt;</description></item><item><title>AI Agent 技术全景：规划、记忆、工具、多 Agent 与人机协同</title><link>/blog/2026-01-06-ai-agent-architecture/</link><pubDate>Tue, 06 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-06-ai-agent-architecture/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;AI Agent 是 2025-2026 年最热门的 AI 话题之一。它的核心公式很简单：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Agent = LLM + Planning + Memory + Tools
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;但这四个组件各自的内涵远比表面看起来复杂。Planning 不是让 LLM 多输出几行字；现在的模型「看起来会想」，很多人却说不清这能力是 prompt 调出来的，还是训练里刻意灌的。Memory 也不等于把聊天记录全塞进 context。Tool Calling 不是模型内置了某个工具。Web Search 有一整套 API 生态。Multi-agent 经常被塞进 planning 那一格——其实更像编排。Human-in-the-Loop 则是 2026 年 AI coding 从「追求全自动」往回拉的关键趋势。&lt;/p&gt;
+&lt;p&gt;这篇文章按这条线拆完：&lt;strong&gt;Planning → Memory → Tools（含联网搜索）→ Multi-agent 编排 → HITL&lt;/strong&gt;。Planning 和 Memory 会写细一点——这也是写过 Agent 之后最容易跟别人对不齐口径的地方。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="一planning不只是-llm-的碎碎念"&gt;一、Planning：不只是 LLM 的&amp;quot;碎碎念&amp;quot; &lt;a href="#%e4%b8%80planning%e4%b8%8d%e5%8f%aa%e6%98%af-llm-%e7%9a%84%e7%a2%8e%e7%a2%8e%e5%bf%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 Agent 循环里，Planning 的本质是&lt;strong&gt;将高阶目标分解为可执行的原子步骤，并在执行中根据观察结果动态调整&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;核心就两件事：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;任务分解（Task Decomposition）&lt;/strong&gt;：把复杂问题拆成 step-by-step 的子任务&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;自我反思与修正（Self-Reflection）&lt;/strong&gt;：观察中间结果，偏了就改计划&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;工程上常见两条路径：&lt;/p&gt;</description></item></channel></rss>

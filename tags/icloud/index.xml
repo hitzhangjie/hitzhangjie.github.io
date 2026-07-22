@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Icloud on</title><link>/tags/icloud/</link><description>Recent content in Icloud on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 23 May 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/icloud/index.xml" rel="self" type="application/rss+xml"/><item><title>3-2-1 备份：从 iCloud 丢数据说起</title><link>/blog/2026-05-23-321-backup-rule/</link><pubDate>Sat, 23 May 2026 00:00:00 +0800</pubDate><guid>/blog/2026-05-23-321-backup-rule/</guid><description>&lt;p&gt;前文写了 iCloud Drive 的破坏性变更——清空本地废纸篓会绕过 iCloud 的&amp;quot;最近删除&amp;quot;，直接永久删除云端文件。我因为这个变更丢了近十年的文档和照片。&lt;/p&gt;
+&lt;p&gt;这件事逼我重新想清楚一个问题：&lt;strong&gt;数据到底要怎么备份，才不至于把十年积累押在单一平台的行为上。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;答案就是 3-2-1 备份策略。这不是什么新鲜概念，但经历过数据丢失之后再回头推演它的数学原理，感受完全不同。&lt;/p&gt;
+&lt;h2 id="概率为什么三份副本不是过度谨慎"&gt;概率：为什么三份副本不是过度谨慎 &lt;a href="#%e6%a6%82%e7%8e%87%e4%b8%ba%e4%bb%80%e4%b9%88%e4%b8%89%e4%bb%bd%e5%89%af%e6%9c%ac%e4%b8%8d%e6%98%af%e8%bf%87%e5%ba%a6%e8%b0%a8%e6%85%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;假设一块普通硬盘的年故障率是 1%（实际可能更高，这里用保守数字）。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;只有 1 份数据（无备份）：&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;数据丢失概率 = 1%。看起来不高，一年 1/100。但如果你的数据要保存十年，累积概率就完全不一样了——十年内至少发生一次故障的概率约 9.6%。不是小概率事件。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;2 份副本（原始 + 1 份本地备份）：&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;两块盘同时故障才算丢数据。两块盘在同一时间段内独立故障的概率：&lt;/p&gt;
+&lt;p&gt;$$0.01 \times 0.01 = 0.0001$$&lt;/p&gt;
+&lt;p&gt;数据丢失概率降到 0.01%，也就是万分之一。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;3 份副本（原始 + 2 份备份，即 3-2-1 中的&amp;quot;3&amp;quot;）：&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;$$0.01 \times 0.01 \times 0.01 = 0.000001$$&lt;/p&gt;
+&lt;p&gt;百万分之一的概率。多一份副本，安全性跳了两个数量级。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;ps: 这个计算假设三份副本的故障是独立事件。如果三份副本放在同一个机箱、同一块主板供电，独立性就不成立了——接下来要说的&amp;quot;2&amp;quot;和&amp;quot;1&amp;quot;正是为了解决这个问题。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="2-种介质切断关联故障"&gt;&amp;ldquo;2 种介质&amp;rdquo;：切断关联故障 &lt;a href="#2-%e7%a7%8d%e4%bb%8b%e8%b4%a8%e5%88%87%e6%96%ad%e5%85%b3%e8%81%94%e6%95%85%e9%9a%9c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;三份数据全存同一型号的硬盘上，独立性的假设就不成立。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;批次缺陷&lt;/strong&gt;：同一批次的硬盘买回来同时上线，如果这批有固件 bug，可能在同一时间点集体挂掉。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;环境故障&lt;/strong&gt;：两块外置盘插在同一台电脑上，一次电涌、雷击、或者勒索软件加密，两块盘一起完蛋。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&amp;ldquo;2&amp;quot;的意思是至少用两种不同类型的存储介质。比如一块内置 SSD 加一块机械硬盘，或者一台 NAS 加冷备的蓝光盘。不同类型介质不会因为同一种物理/软件事件同时失效。&lt;/p&gt;
+&lt;p&gt;这不是为了一年发生一次的大灾难，而是为了切断看似独立的故障之间的隐藏关联。备份真正怕的不是单点故障，是关联故障。&lt;/p&gt;
+&lt;h2 id="1-份异地对抗物理毁灭"&gt;&amp;ldquo;1 份异地&amp;rdquo;：对抗物理毁灭 &lt;a href="#1-%e4%bb%bd%e5%bc%82%e5%9c%b0%e5%af%b9%e6%8a%97%e7%89%a9%e7%90%86%e6%af%81%e7%81%ad" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;本地备份能防误删、硬盘坏、勒索软件。但防不了火灾、洪水、地震、入室盗窃。&lt;/p&gt;
+&lt;p&gt;如果你的电脑和外置备份盘都在同一张桌子上，一次火灾就能带走所有副本。这时候哪怕有十份副本也没用——它们共享同一个物理位置。&lt;/p&gt;</description></item></channel></rss>

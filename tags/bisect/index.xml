@@ -1,19 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Bisect on</title><link>/tags/bisect/</link><description>Recent content in Bisect on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 14 Mar 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/bisect/index.xml" rel="self" type="application/rss+xml"/><item><title>bisect 实现原理：二分定位背后的协议与算法</title><link>/blog/2025-03-14-debug-bisect-internals/</link><pubDate>Fri, 14 Mar 2025 00:00:00 +0800</pubDate><guid>/blog/2025-03-14-debug-bisect-internals/</guid><description>&lt;p&gt;&lt;a href="/blog/debug/2025-03-14-debug-bisect/"&gt;上一篇文章&lt;/a&gt; 演示了怎么把 bisect 接进项目来定位问题开关，走的是实操路线。这篇拆一下 bisect 的实现原理——它怎么跟 target 程序通信、pattern 怎么编码开关状态、hash 位数怎么自适应、以及二分搜索的过程。&lt;/p&gt;
-&lt;p&gt;理解了这些，下次遇到类似的&amp;quot;多因素故障定位&amp;quot;场景，你就能自己设计一套类似的东西了。&lt;/p&gt;
-&lt;h1 id="协议设计"&gt;协议设计 &lt;a href="#%e5%8d%8f%e8%ae%ae%e8%ae%be%e8%ae%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
-&lt;p&gt;bisect 的设计核心是一个简单的协议：&lt;strong&gt;工具（bisect）通过环境变量下发指令，target 程序通过 stderr 上报状态，最终通过退出码告知结果&lt;/strong&gt;。&lt;/p&gt;
-&lt;p&gt;不依赖任何外部设施——没有 IPC、没有 socket、没有文件。这让它几乎可以嵌入任何构建和测试流程。&lt;/p&gt;
-&lt;h2 id="markertarget-如何报告点位"&gt;Marker：target 如何报告点位 &lt;a href="#markertarget-%e5%a6%82%e4%bd%95%e6%8a%a5%e5%91%8a%e7%82%b9%e4%bd%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;当 target 程序在某个开关点决定启用还是禁用时，它必须向 stderr 打印一个 marker。bisect 库提供了 &lt;code&gt;AppendMarker&lt;/code&gt; 来生成这行输出：&lt;/p&gt;
-&lt;pre&gt;&lt;code class="language-go"&gt;func AppendMarker(dst []byte, id uint64) []byte {
-return fmt.Appendf(dst, &amp;quot;[bisect-match 0x%016x]&amp;quot;, id)
-}
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;实际输出格式：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;[bisect-match 0x0000000000000001] feature description
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;hash ID 固定以 16 位 hex 输出（完整的 64 位），保证 marker 在不同 pattern 下都携带完整的点位身份。&lt;/p&gt;
-&lt;p&gt;bisect 工具端通过 &lt;code&gt;CutMarker&lt;/code&gt; 解析这些行——扫描每行中的 &lt;code&gt;[bisect-match ...]&lt;/code&gt;，提取 hash ID 并将标记从文本中移除：&lt;/p&gt;</description></item><item><title>用 bisect 二分定位多特性开关引入的 bug</title><link>/blog/2025-03-14-debug-bisect/</link><pubDate>Fri, 14 Mar 2025 00:00:00 +0800</pubDate><guid>/blog/2025-03-14-debug-bisect/</guid><description>&lt;p&gt;开发过程中经常遇到这种情况：项目里有多个特性开关，某次发布后测试报了个 bug，但你不知道是哪个开关、或者哪几个开关的组合导致的。如果只有两三个开关，手动 enable/disable 一个个试也行。但如果开关数量多、迭代频率高、开关之间还相互影响，手动排查的效率就完全跟不上了。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Bisect on</title><link>/tags/bisect/</link><description>Recent content in Bisect on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 14 Mar 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/bisect/index.xml" rel="self" type="application/rss+xml"/><item><title>bisect：二分定位多特性开关中引入的bug</title><link>/blog/2025-03-14-debug-bisect/</link><pubDate>Fri, 14 Mar 2025 00:00:00 +0800</pubDate><guid>/blog/2025-03-14-debug-bisect/</guid><description>&lt;p&gt;开发过程中经常遇到这种情况：项目里有多个特性开关，某次发布后测试报了个 bug，但你不知道是哪个开关、或者哪几个开关的组合导致的。如果只有两三个开关，手动 enable/disable 一个个试也行。但如果开关数量多、迭代频率高、开关之间还相互影响，手动排查的效率就完全跟不上了。&lt;/p&gt;
 &lt;p&gt;这个问题 Go 编译器团队也遇到过——编译器的每个优化 pass 都可能引入 bug，而且这些优化之间会相互触发。他们搞了一套叫 bisect 的定位方法，Russ Cox 专门写了篇文章介绍&lt;sup id="fnref:1"&gt;&lt;a href="#fn:1" class="footnote-ref" role="doc-noteref"&gt;1&lt;/a&gt;&lt;/sup&gt;，我在 &lt;a href="https://github.com/hitzhangjie/golang-debugger-book"&gt;golang-debugger-book&lt;/a&gt; 里也做过系统性的拆解。后来这套方法被沉淀成了 Go 官方的 bisect 工具和库&lt;sup id="fnref:2"&gt;&lt;a href="#fn:2" class="footnote-ref" role="doc-noteref"&gt;2&lt;/a&gt;&lt;/sup&gt;，任何 Go 项目都能直接用。&lt;/p&gt;
 &lt;p&gt;本文通过一个实际的例子演示怎么把 bisect 接入项目，以及怎么用它快速定位问题开关。&lt;/p&gt;
 &lt;h1 id="场景udp-echo-server-改造为支持-tcp"&gt;场景：UDP echo server 改造为支持 TCP &lt;a href="#%e5%9c%ba%e6%99%afudp-echo-server-%e6%94%b9%e9%80%a0%e4%b8%ba%e6%94%af%e6%8c%81-tcp" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
@@ -79,4 +64,19 @@ runes[i], runes[len(runes)-1-i] = runes[len(runes)-1-i], runes[i]
 return string(runes)
 }
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;改造完成后一跑测试：client 发过去的数据，server 没回。这里有两个 bug——buffered write 忘了 flush，字符串反转的循环条件也写错了。&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;改造完成后一跑测试：client 发过去的数据，server 没回。这里有两个 bug——buffered write 忘了 flush，字符串反转的循环条件也写错了。&lt;/p&gt;</description></item><item><title>bisect：二分定位背后的协议与算法</title><link>/blog/2025-03-14-debug-bisect-internals/</link><pubDate>Fri, 14 Mar 2025 00:00:00 +0800</pubDate><guid>/blog/2025-03-14-debug-bisect-internals/</guid><description>&lt;p&gt;&lt;a href="/blog/debug/2025-03-14-debug-bisect/"&gt;上一篇文章&lt;/a&gt; 演示了怎么把 bisect 接进项目来定位问题开关，走的是实操路线。这篇拆一下 bisect 的实现原理——它怎么跟 target 程序通信、pattern 怎么编码开关状态、hash 位数怎么自适应、以及二分搜索的过程。&lt;/p&gt;
+&lt;p&gt;理解了这些，下次遇到类似的&amp;quot;多因素故障定位&amp;quot;场景，你就能自己设计一套类似的东西了。&lt;/p&gt;
+&lt;h1 id="协议设计"&gt;协议设计 &lt;a href="#%e5%8d%8f%e8%ae%ae%e8%ae%be%e8%ae%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;bisect 的设计核心是一个简单的协议：&lt;strong&gt;工具（bisect）通过环境变量下发指令，target 程序通过 stderr 上报状态，最终通过退出码告知结果&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;不依赖任何外部设施——没有 IPC、没有 socket、没有文件。这让它几乎可以嵌入任何构建和测试流程。&lt;/p&gt;
+&lt;h2 id="markertarget-如何报告点位"&gt;Marker：target 如何报告点位 &lt;a href="#markertarget-%e5%a6%82%e4%bd%95%e6%8a%a5%e5%91%8a%e7%82%b9%e4%bd%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当 target 程序在某个开关点决定启用还是禁用时，它必须向 stderr 打印一个 marker。bisect 库提供了 &lt;code&gt;AppendMarker&lt;/code&gt; 来生成这行输出：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;func AppendMarker(dst []byte, id uint64) []byte {
+return fmt.Appendf(dst, &amp;quot;[bisect-match 0x%016x]&amp;quot;, id)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;实际输出格式：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[bisect-match 0x0000000000000001] feature description
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;hash ID 固定以 16 位 hex 输出（完整的 64 位），保证 marker 在不同 pattern 下都携带完整的点位身份。&lt;/p&gt;
+&lt;p&gt;bisect 工具端通过 &lt;code&gt;CutMarker&lt;/code&gt; 解析这些行——扫描每行中的 &lt;code&gt;[bisect-match ...]&lt;/code&gt;，提取 hash ID 并将标记从文本中移除：&lt;/p&gt;</description></item></channel></rss>

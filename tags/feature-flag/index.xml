@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Feature-Flag on</title><link>/tags/feature-flag/</link><description>Recent content in Feature-Flag on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 14 Mar 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/feature-flag/index.xml" rel="self" type="application/rss+xml"/><item><title>用 bisect 二分定位多特性开关引入的 bug</title><link>/blog/2025-03-14-debug-bisect/</link><pubDate>Fri, 14 Mar 2025 00:00:00 +0800</pubDate><guid>/blog/2025-03-14-debug-bisect/</guid><description>&lt;p&gt;开发过程中经常遇到这种情况：项目里有多个特性开关，某次发布后测试报了个 bug，但你不知道是哪个开关、或者哪几个开关的组合导致的。如果只有两三个开关，手动 enable/disable 一个个试也行。但如果开关数量多、迭代频率高、开关之间还相互影响，手动排查的效率就完全跟不上了。&lt;/p&gt;
+&lt;p&gt;这个问题 Go 编译器团队也遇到过——编译器的每个优化 pass 都可能引入 bug，而且这些优化之间会相互触发。他们搞了一套叫 bisect 的定位方法，Russ Cox 专门写了篇文章介绍&lt;sup id="fnref:1"&gt;&lt;a href="#fn:1" class="footnote-ref" role="doc-noteref"&gt;1&lt;/a&gt;&lt;/sup&gt;，我在 &lt;a href="https://github.com/hitzhangjie/golang-debugger-book"&gt;golang-debugger-book&lt;/a&gt; 里也做过系统性的拆解。后来这套方法被沉淀成了 Go 官方的 bisect 工具和库&lt;sup id="fnref:2"&gt;&lt;a href="#fn:2" class="footnote-ref" role="doc-noteref"&gt;2&lt;/a&gt;&lt;/sup&gt;，任何 Go 项目都能直接用。&lt;/p&gt;
+&lt;p&gt;本文通过一个实际的例子演示怎么把 bisect 接入项目，以及怎么用它快速定位问题开关。&lt;/p&gt;
+&lt;h1 id="场景udp-echo-server-改造为支持-tcp"&gt;场景：UDP echo server 改造为支持 TCP &lt;a href="#%e5%9c%ba%e6%99%afudp-echo-server-%e6%94%b9%e9%80%a0%e4%b8%ba%e6%94%af%e6%8c%81-tcp" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;假设我们维护着一个 UDP echo server，现在要做一次改造，让它也支持 TCP。改动的点比较多：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;新增 TCP listener 和 accept 循环&lt;/li&gt;
+&lt;li&gt;连接处理中引入 buffered write&lt;/li&gt;
+&lt;li&gt;新增字符串反转功能（产品要求）&lt;/li&gt;
+&lt;li&gt;还顺手调整了连接关闭逻辑&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;为了控制上线风险，每个改动点都有一个开关。代码大概长这样：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;var (
+useTCP = true // 开关 1：是否启用 TCP
+useBufferedWrite = true // 开关 2：是否使用 buffered write
+reverseEcho = true // 开关 3：是否反转回显内容
+skipClose = false // 开关 4：是否跳过连接关闭
+)
+func main() {
+if useTCP {
+go startTCPListener()
+}
+go startUDPListener()
+select {}
+}
+func handleConnection(conn net.Conn) {
+defer func() {
+if !skipClose {
+conn.Close()
+}
+}()
+buf := make([]byte, 1024)
+for {
+n, err := conn.Read(buf)
+if err != nil {
+return
+}
+response := processResponse(string(buf[:n]))
+if useBufferedWrite {
+writer := bufio.NewWriter(conn)
+writer.WriteString(response)
+// BUG: 忘了 writer.Flush()
+} else {
+conn.Write([]byte(response))
+}
+}
+}
+func processResponse(data string) string {
+if reverseEcho {
+words := strings.Split(data, &amp;quot; &amp;quot;)
+for i := range words {
+words[i] = reverseString(words[i])
+}
+return strings.Join(words, &amp;quot; &amp;quot;)
+}
+return data
+}
+func reverseString(s string) string {
+runes := []rune(s)
+// BUG: 循环条件应该是 len(runes)/2
+for i := 0; i &amp;lt; len(runes)/2-1; i++ {
+runes[i], runes[len(runes)-1-i] = runes[len(runes)-1-i], runes[i]
+}
+return string(runes)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;改造完成后一跑测试：client 发过去的数据，server 没回。这里有两个 bug——buffered write 忘了 flush，字符串反转的循环条件也写错了。&lt;/p&gt;</description></item></channel></rss>

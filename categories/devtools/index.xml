@@ -35,23 +35,7 @@
 &lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
-&lt;p&gt;&lt;code&gt;asciinema rec&lt;/code&gt; 时大致是这样：&lt;/p&gt;</description></item><item><title>如何把 Notion 页面完美嵌入个人博客</title><link>/blog/2026-06-12-blog_%E5%8D%9A%E5%AE%A2%E4%B8%AD%E5%B5%8C%E5%85%A5notion%E9%A1%B5%E5%86%85%E5%AE%B9/</link><pubDate>Fri, 12 Jun 2026 08:00:00 +0800</pubDate><guid>/blog/2026-06-12-blog_%E5%8D%9A%E5%AE%A2%E4%B8%AD%E5%B5%8C%E5%85%A5notion%E9%A1%B5%E5%86%85%E5%AE%B9/</guid><description>&lt;style&gt;
-.iframe-container {
-position: relative;
-height: 100vh;
-overflow: hidden;
-}
-.iframe-container iframe {
-width: 100%;
-height: 100%;
-border: none;
-position: absolute;
-top: -170px;
-}
-&lt;/style&gt;
-&lt;div class="iframe-container"&gt;
-&lt;iframe src="https://docs.qq.com/doc/DYkxmdENJTGFHd0VY"/&gt;
-&lt;/div&gt;</description></item><item><title>vscode-常规配置以及同步说明</title><link>/blog/2024-04-14-vscode_%E5%B8%B8%E8%A7%84%E9%85%8D%E7%BD%AE%E5%8F%8A%E5%90%8C%E6%AD%A5%E8%AF%B4%E6%98%8E/</link><pubDate>Sun, 14 Apr 2024 23:00:00 +0800</pubDate><guid>/blog/2024-04-14-vscode_%E5%B8%B8%E8%A7%84%E9%85%8D%E7%BD%AE%E5%8F%8A%E5%90%8C%E6%AD%A5%E8%AF%B4%E6%98%8E/</guid><description>&lt;h2 id="前言"&gt;前言 &lt;a href="#%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;asciinema rec&lt;/code&gt; 时大致是这样：&lt;/p&gt;</description></item><item><title>vscode-常规配置以及同步说明</title><link>/blog/2024-04-14-vscode_%E5%B8%B8%E8%A7%84%E9%85%8D%E7%BD%AE%E5%8F%8A%E5%90%8C%E6%AD%A5%E8%AF%B4%E6%98%8E/</link><pubDate>Sun, 14 Apr 2024 23:00:00 +0800</pubDate><guid>/blog/2024-04-14-vscode_%E5%B8%B8%E8%A7%84%E9%85%8D%E7%BD%AE%E5%8F%8A%E5%90%8C%E6%AD%A5%E8%AF%B4%E6%98%8E/</guid><description>&lt;h2 id="前言"&gt;前言 &lt;a href="#%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;我经常在项目开发过程中针对不同项目，甚至是相同项目的不同模块阶段，频繁调整配置以满足当时的需要，我觉得能够快速调整vscode配置满足开发人员需要，是一项必备技能。&lt;/p&gt;
 &lt;p&gt;这里就简单总结下vscode配置调整过程中，一些比较有价值的信息。&lt;/p&gt;
 &lt;h2 id="搜索配置项"&gt;搜索配置项 &lt;a href="#%e6%90%9c%e7%b4%a2%e9%85%8d%e7%bd%ae%e9%a1%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
@@ -228,30 +212,7 @@ width: 680px;
 &lt;img alt="script filter配置" src="assets/alfred/8.jpg"/&gt;&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
-&lt;p&gt;节点2，是Copy to Clipboard，它干什么呢？节点1中显示了列表之后，用户选择一个列表项+回车之后，选中的列表项对应的参数值将被传递给该节点作为参数，Copy to Clipboard就是将参数拷贝到剪贴板；&lt;/p&gt;</description></item><item><title>静态站点生成器，为什么选择hugo？</title><link>/blog/2020-05-30-blog_%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8/</link><pubDate>Sat, 30 May 2020 16:58:22 +0800</pubDate><guid>/blog/2020-05-30-blog_%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8/</guid><description>&lt;style&gt;
-img {width:680px;}
-video {width:680px;}
-&lt;/style&gt;
-&lt;p&gt;&lt;img src="assets/2020-05-30-%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8/%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8hugo.png" alt="hugo"&gt;&lt;/p&gt;
-&lt;p&gt;Hugo 是一个静态站点生成器，是评测最快的静态站点生成器，采用golang编写，依赖bep、spf13、friends这几个第三方库来实现。Hugo是一个不错的静态站点生成器，类似的还有readthedoc、gitbook、jekyll、gatsby等等，谈谈我对这几个流行的站点生成器的看法。&lt;/p&gt;
-&lt;h3 id="jekyll"&gt;&lt;strong&gt;jekyll&lt;/strong&gt; &lt;a href="#jekyll" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;img src="assets/2020-05-30-%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8/640-20220625165716427.png" alt="图片"&gt;&lt;/p&gt;
-&lt;p&gt;jekyll，是我使用的第一个静态站点生成器，用于我的 github pages， 它有比较丰富的主题，这个是我当时选择的一个原因，我可以专心于文档的编写，文档也是markdown格式。但是由于它对markdown的支持比较鸡肋，比如缺乏对图片引用、图表、plantuml、flowchart等的良好的支持，最终让我觉得通过jekyll来维护一个静态站点比较痛苦。&lt;/p&gt;
-&lt;h3 id="gitbook"&gt;&lt;strong&gt;gitbook&lt;/strong&gt; &lt;a href="#gitbook" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;img src="assets/2020-05-30-%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8/640-20220625165733460.png" alt="图片"&gt;&lt;/p&gt;
-&lt;p&gt;gitbook，是我平时经常使用的一个编辑工具吧，特别是涉及到类似书籍章节的大量内容组织的时候，现在依旧是我常用的编辑工具之一。gitbook-cli是其配套的一个工具，现在已经不再更新、维护，离线编辑已经不再被支持，现在转为线上服务。我还是比较倾向于离线编辑，不得不寻求其他可替代方案。&lt;/p&gt;
-&lt;h3 id="readthedoc"&gt;&lt;strong&gt;readthedoc&lt;/strong&gt; &lt;a href="#readthedoc" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;img src="assets/2020-05-30-%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8/640-20220625165744359.png" alt="图片"&gt;&lt;/p&gt;
-&lt;p&gt;见名知意，readthedoc确实比较用来写技术文档，其本身也是为了给python写api文档的，其用来构建类似的技术文档、手册还比较合适，但是用来构建一个更通用点的静态站点的话就有些不合适，不管多大的屏幕，它展示的区域总是那么小，有点死守每行N个字符的味道。&lt;/p&gt;
-&lt;h3 id="gatsby"&gt;&lt;strong&gt;gatsby&lt;/strong&gt; &lt;a href="#gatsby" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;这个也是一个比较好用的静态站点生成器，网上也有很多它和hugo的对比，由于我对背后的实现js等不太熟悉，而我本人也经常有些定制化的修改需求，我还是有可能会去改下源码为自己所用的，所以选型阶段直接放弃。&lt;/p&gt;
-&lt;p&gt;&lt;img src="assets/2020-05-30-%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8/640-20220625165752044.png" alt="图片"&gt;&lt;/p&gt;
-&lt;h3 id="mkdocs"&gt;&lt;strong&gt;mkdocs&lt;/strong&gt; &lt;a href="#mkdocs" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;&lt;img src="assets/2020-05-30-%E9%9D%99%E6%80%81%E7%AB%99%E7%82%B9%E7%94%9F%E6%88%90%E5%99%A8/640-20220625165800334.png" alt="图片"&gt;&lt;/p&gt;
-&lt;p&gt;mkdocs和gitbook类似，使用都比较简单，但是其风格定制化比较难操作，如果你对它的默认风格不太满意，又想定制主题，而不想沾染什么前端相关的工作，mkdocs可能并不一定合适。&lt;/p&gt;
-&lt;h3 id="hugo"&gt;&lt;strong&gt;hugo&lt;/strong&gt; &lt;a href="#hugo" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;hugo的支持、维护、更新都还不错，生态也不错，也有很多使用hugo的公司、团队、个人用它来维护自己产品、个人的文档、博客等等，也有比较丰富的主题可供选择。hugo的好处是它的主题是完整的，包括各种各样的插件，可以体验、下载安装、应用中意的主题，后续切换主题也比较方便。而且hugo也提供了一些命令行操作来快速发布静态站点。还有就是对golang的偏爱，意味着我可以在有需要的时候了解其实现，修改其源码进行定制化，或者做贡献。&lt;/p&gt;
-&lt;p&gt;综合上述考虑和对比，现在呢，我更倾向于使用hugo来作为接下来的静态站点生成器。&lt;/p&gt;</description></item><item><title>你的mac有哪些“趁手”的配置呢？</title><link>/blog/2020-04-25-macos_%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/</link><pubDate>Sat, 25 Apr 2020 17:13:14 +0800</pubDate><guid>/blog/2020-04-25-macos_%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/</guid><description>&lt;style&gt;
+&lt;p&gt;节点2，是Copy to Clipboard，它干什么呢？节点1中显示了列表之后，用户选择一个列表项+回车之后，选中的列表项对应的参数值将被传递给该节点作为参数，Copy to Clipboard就是将参数拷贝到剪贴板；&lt;/p&gt;</description></item><item><title>你的mac有哪些“趁手”的配置呢？</title><link>/blog/2020-04-25-macos_%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/</link><pubDate>Sat, 25 Apr 2020 17:13:14 +0800</pubDate><guid>/blog/2020-04-25-macos_%E4%BD%A0%E7%9A%84mac%E6%9C%89%E5%93%AA%E4%BA%9B%E8%B6%81%E6%89%8B%E7%9A%84%E9%85%8D%E7%BD%AE/</guid><description>&lt;style&gt;
 img {width:680px;}
 video {width:680px;}
 &lt;/style&gt;

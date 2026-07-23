@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Record-Replay on</title><link>/tags/record-replay/</link><description>Recent content in Record-Replay on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 25 May 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/record-replay/index.xml" rel="self" type="application/rss+xml"/><item><title>Mozilla rr 工作原理及其与 Delve 的集成</title><link>/blog/2025-05-25-dlv-how-rr-works/</link><pubDate>Sun, 25 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-25-dlv-how-rr-works/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在调试非确定性的 bug（如数据竞争、时序相关的问题）时，传统的断点-单步调试方式往往力不从心——同一个程序两次运行的表现可能完全不同。Mozilla rr 通过录制/回放（record/replay）机制解决了这个问题，而 Delve 通过 gdbserial 协议与 rr 集成，为 Go 开发者提供了时间旅行（time-travel）调试的能力。本文梳理 rr 的工作原理以及它与 Delve 的协作方式。&lt;/p&gt;
+&lt;h1 id="rr-是不是基于-gdb-源代码修改的"&gt;rr 是不是基于 GDB 源代码修改的？ &lt;a href="#rr-%e6%98%af%e4%b8%8d%e6%98%af%e5%9f%ba%e4%ba%8e-gdb-%e6%ba%90%e4%bb%a3%e7%a0%81%e4%bf%ae%e6%94%b9%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;一个常见的误解是 rr 在 GDB 代码基础上修改而来。实际上：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;rr 是一个完全独立的项目&lt;/strong&gt;，拥有自己的录制/回放引擎&lt;/li&gt;
+&lt;li&gt;录制阶段使用 Linux 的 &lt;code&gt;ptrace&lt;/code&gt; 系统调用来追踪程序的每一步执行&lt;/li&gt;
+&lt;li&gt;它和 GDB 的关系是&lt;strong&gt;客户端-服务端关系&lt;/strong&gt;，而非派生关系&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;具体来说，rr 在重放阶段会启动一个 GDB 实例作为调试器前端，并通过 GDB Remote Serial Protocol 与这个 GDB 实例通信。这也就是为什么在 Delve 的 rr 集成代码中能看到 &lt;code&gt;target extended-remote&lt;/code&gt; 等 GDB 命令常量：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;const (
+rrGdbCommandLegacyPrefix = &amp;quot; gdb &amp;quot;
+rrGdbCommandPrefix = &amp;quot; 'gdb' &amp;quot;
+rrGdbLaunchLegacyPrefix = &amp;quot;Launch gdb with&amp;quot;
+rrGdbLaunchPrefix = &amp;quot;Launch debugger with&amp;quot;
+targetCmd = &amp;quot;target extended-remote &amp;quot;
+)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id="rr-的工作机制"&gt;rr 的工作机制 &lt;a href="#rr-%e7%9a%84%e5%b7%a5%e4%bd%9c%e6%9c%ba%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;rr 的工作分为两个阶段：&lt;/p&gt;</description></item></channel></rss>

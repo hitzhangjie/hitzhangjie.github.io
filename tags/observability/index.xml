@@ -1,4 +1,32 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Observability on</title><link>/tags/observability/</link><description>Recent content in Observability on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 15 Sep 2023 23:00:22 +0800</lastBuildDate><atom:link href="/tags/observability/index.xml" rel="self" type="application/rss+xml"/><item><title>eBPF案例及分析：gofuncgraph</title><link>/blog/2023-09-15-ebpf%E6%A1%88%E4%BE%8B%E5%8F%8A%E5%88%86%E6%9E%90gofuncgraph/</link><pubDate>Fri, 15 Sep 2023 23:00:22 +0800</pubDate><guid>/blog/2023-09-15-ebpf%E6%A1%88%E4%BE%8B%E5%8F%8A%E5%88%86%E6%9E%90gofuncgraph/</guid><description>&lt;h2 id="前言"&gt;前言 &lt;a href="#%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Observability on</title><link>/tags/observability/</link><description>Recent content in Observability on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 23 May 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/observability/index.xml" rel="self" type="application/rss+xml"/><item><title>Delve 的遥测（Telemetry）系统：父进程记录、子进程上报</title><link>/blog/2025-05-23-dlv-telemetry/</link><pubDate>Fri, 23 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-23-dlv-telemetry/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Delve 在 &lt;code&gt;v1.22.0&lt;/code&gt; 之后引入了遥测（telemetry）系统，遵循 Go 工具链的 telemetry 机制。它的核心目的是收集使用数据和崩溃信息，帮助维护者了解工具的使用模式并发现 bug。设计上充分考虑了隐私和性能——数据收集是可选的（opt-in），且采用了父进程记录 + 子进程上报的分离架构，避免对调试会话本身产生性能干扰。&lt;/p&gt;
+&lt;h1 id="初始化"&gt;初始化 &lt;a href="#%e5%88%9d%e5%a7%8b%e5%8c%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;遥测系统在 Delve 启动时通过 &lt;code&gt;telemetry.Start()&lt;/code&gt; 初始化：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;telemetry.Start(telemetry.Config{
+ReportCrashes: true,
+})
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这个调用在 &lt;code&gt;cmd/dlv/main.go&lt;/code&gt; 的入口处执行，确保遥测覆盖整个进程生命周期。&lt;/p&gt;
+&lt;h1 id="父子进程分离架构"&gt;父子进程分离架构 &lt;a href="#%e7%88%b6%e5%ad%90%e8%bf%9b%e7%a8%8b%e5%88%86%e7%a6%bb%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;遥测系统最巧妙的设计是&lt;strong&gt;父子进程分离&lt;/strong&gt;：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;┌──────────────────────┐
+│ 父进程 (Delve) │ ← 运行时记录计数数据
+│ 通过 mmap 记录指标 │
+└──────┬───────────────┘
+│ 环境变量
+│ GO_TELEMETRY_CHILD
+▼
+┌──────────────────────┐
+│ 子进程 (Sidecar) │ ← 负责上报数据
+│ 读取 mmap 文件 │
+│ 发送到遥测服务端 │
+└──────────────────────┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;父进程&lt;/strong&gt;：即 Delve 主进程，负责在运行时通过 mmap 高效记录计数数据。这部分开销极小，不会影响调试性能&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;子进程&lt;/strong&gt;：独立进程，通过环境变量 &lt;code&gt;GO_TELEMETRY_CHILD&lt;/code&gt; 区分身份，负责读取 mmap 文件并将数据上报到 Go 遥测服务端&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这种分离的核心价值是：&lt;strong&gt;上报操作（网络 I/O、序列化、文件轮转）完全不影响主调试进程&lt;/strong&gt;。即使上报失败，也不会对调试会话产生任何副作用。&lt;/p&gt;</description></item><item><title>eBPF案例及分析：gofuncgraph</title><link>/blog/2023-09-15-ebpf%E6%A1%88%E4%BE%8B%E5%8F%8A%E5%88%86%E6%9E%90gofuncgraph/</link><pubDate>Fri, 15 Sep 2023 23:00:22 +0800</pubDate><guid>/blog/2023-09-15-ebpf%E6%A1%88%E4%BE%8B%E5%8F%8A%E5%88%86%E6%9E%90gofuncgraph/</guid><description>&lt;h2 id="前言"&gt;前言 &lt;a href="#%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;可观测性（observability）是这几年开始被频繁提及的一个词，特别是在微服务领域可观测性已经成为了微服务治理的一项关键的平台化技术手段，在CNCF孵化的项目中我们看到Opentelemetry如火如荼的发展背后也逐渐出现了一些成熟的解决方案。在腾讯内部也有类似天机阁、蓝鲸、wxg等不同的解决方案。这些往往配合框架解决了微服务RPC层面 的可观测性问题，实际上借助eBPF这项革命性技术，我们还可以做更多。&lt;/p&gt;
 &lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;不久前，在做一个关于序列化方面的优化工作，先说下项目情况：项目中使用的go框架采用了pb+protoc-gen-gogofast来生成桩代码，RPC通信的时候使用pb序列化。另外呢，为了方便开发人员查看pb message对应的log信息，项目的日志库使用了pbjson将pb message格式化为json后输出到log，RPC interceptor也会使用相同的方式序列化req、rsp后将其上报到链路跟踪系统。&lt;/p&gt;

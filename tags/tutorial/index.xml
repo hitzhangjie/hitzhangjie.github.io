@@ -1,4 +1,33 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Tutorial on</title><link>/tags/tutorial/</link><description>Recent content in Tutorial on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 02 Sep 2018 12:00:00 +0800</lastBuildDate><atom:link href="/tags/tutorial/index.xml" rel="self" type="application/rss+xml"/><item><title>Tutorialspoint：Go核心特性 &amp; 与C/C++关键差异</title><link>/blog/2018-09-02-go-basic-tutorial-review/</link><pubDate>Sun, 02 Sep 2018 12:00:00 +0800</pubDate><guid>/blog/2018-09-02-go-basic-tutorial-review/</guid><description>&lt;blockquote&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Tutorial on</title><link>/tags/tutorial/</link><description>Recent content in Tutorial on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 25 May 2025 01:00:00 +0800</lastBuildDate><atom:link href="/tags/tutorial/index.xml" rel="self" type="application/rss+xml"/><item><title>Starlark 在 Delve 中的实战：从脚本编写到踩坑记录</title><link>/blog/2025-05-25-dlv-starlark2/</link><pubDate>Sun, 25 May 2025 01:00:00 +0800</pubDate><guid>/blog/2025-05-25-dlv-starlark2/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;a href="/blog/delve/2025-05-25-dlv-starlark"&gt;前一篇&lt;/a&gt; 介绍了 Delve Starlark 脚本系统的架构和内置函数。本文通过一个完整的实战示例，展示如何编写 Starlark 脚本来自动化调试流程，并记录编写过程中容易踩到的坑。&lt;/p&gt;
+&lt;h1 id="示例程序"&gt;示例程序 &lt;a href="#%e7%a4%ba%e4%be%8b%e7%a8%8b%e5%ba%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;假设我们要调试下面这个简单的 Go 程序：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;package main
+import (
+&amp;quot;fmt&amp;quot;
+&amp;quot;time&amp;quot;
+)
+type Person struct {
+Name string
+Age int
+}
+func main() {
+people := []Person{
+{Name: &amp;quot;Alice&amp;quot;, Age: 25},
+{Name: &amp;quot;Bob&amp;quot;, Age: 30},
+{Name: &amp;quot;Charlie&amp;quot;, Age: 35},
+}
+for i, p := range people {
+fmt.Printf(&amp;quot;Processing person %d: %s\n&amp;quot;, i, p.Name)
+time.Sleep(time.Second)
+processPerson(p)
+}
+}
+func processPerson(p Person) {
+fmt.Printf(&amp;quot;Name: %s, Age: %d\n&amp;quot;, p.Name, p.Age)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;需求：在 &lt;code&gt;processPerson&lt;/code&gt; 中自动打印变量 &lt;code&gt;p&lt;/code&gt; 的值，并将调试信息保存到文件。这个流程如果手动操作需要反复 &lt;code&gt;continue&lt;/code&gt; → &lt;code&gt;print&lt;/code&gt; → &lt;code&gt;next&lt;/code&gt;，用 Starlark 脚本可以一键完成。&lt;/p&gt;</description></item><item><title>Tutorialspoint：Go核心特性 &amp; 与C/C++关键差异</title><link>/blog/2018-09-02-go-basic-tutorial-review/</link><pubDate>Sun, 02 Sep 2018 12:00:00 +0800</pubDate><guid>/blog/2018-09-02-go-basic-tutorial-review/</guid><description>&lt;blockquote&gt;
 &lt;p&gt;说明：早年刚接触 Go 时，曾对照 &lt;a href="https://www.tutorialspoint.com/go/index.htm"&gt;Tutorialspoint Go Tutorial&lt;/a&gt; 整理过一批学习笔记。原材料偏照搬、且已过时不全。本文不再逐页复制，而是按该站最新整理的内容进行更系统性总结：每节用尽量短的文字概括要点，并附 &lt;strong&gt;与 C/C++ 的对比&lt;/strong&gt;，方便有 C/C++ 背景时快速捡起细节。&lt;/p&gt;
 &lt;p&gt;整理基准时间可视为 &lt;strong&gt;2018-09-02&lt;/strong&gt; 前后的学习阶段，但实际包含了后续年份版本的内容，算是为了纪念当时的学习历程；文中个别处会标注后续语言演进（如 Generics）。&lt;/p&gt;
 &lt;/blockquote&gt;

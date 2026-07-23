@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Automation on</title><link>/tags/automation/</link><description>Recent content in Automation on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 25 May 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/automation/index.xml" rel="self" type="application/rss+xml"/><item><title>Delve 的 Starlark 脚本系统：用 Python 风格脚本自动化调试</title><link>/blog/2025-05-25-dlv-starlark/</link><pubDate>Sun, 25 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-25-dlv-starlark/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Delve 的命令行交互模式已经足够强大，但在面对复杂调试任务时——比如批量设置条件断点、自动采集特定变量快照、或者在特定条件下自动执行一系列操作——纯手动交互的效率就显得捉襟见肘。为了解决这个问题，Delve（以及它的教学版 tinydbg）集成了 Starlark 脚本引擎，允许用户用 Python 风格的脚本来自动化调试流程。&lt;/p&gt;
+&lt;h1 id="starlark-简介"&gt;Starlark 简介 &lt;a href="#starlark-%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;a href="https://github.com/google/starlark-go"&gt;Starlark&lt;/a&gt; 是 Google 开发的一种类 Python 脚本语言，专为嵌入宿主应用而设计。它与 Python 的核心区别在于：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;确定性执行&lt;/strong&gt;：没有 I/O、随机数等副作用，相同的输入始终产生相同的输出&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;无循环依赖&lt;/strong&gt;：不支持递归导入&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;内建沙箱&lt;/strong&gt;：默认没有文件系统访问、网络访问等能力，宿主需要显式暴露&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;线程安全&lt;/strong&gt;：可以在多 goroutine 环境中安全执行&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些特性使 Starlark 非常适合作为调试器的脚本引擎——安全、可控、可预测。&lt;/p&gt;
+&lt;h1 id="架构概览"&gt;架构概览 &lt;a href="#%e6%9e%b6%e6%9e%84%e6%a6%82%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Delve 中 Starlark 集成主要由 &lt;code&gt;pkg/terminal/starbind&lt;/code&gt; 包负责：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Delve CLI
+│
+├── source debug.star ← 用户加载 Starlark 脚本
+│
+└── starbind 包
+├── starlark.go ← Starlark 执行环境、内置函数注册
+├── conv.go ← Go ↔ Starlark 值类型转换
+└── (debugger API) ← 向脚本暴露的调试原语
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id="内置函数调试原语的脚本映射"&gt;内置函数：调试原语的脚本映射 &lt;a href="#%e5%86%85%e7%bd%ae%e5%87%bd%e6%95%b0%e8%b0%83%e8%af%95%e5%8e%9f%e8%af%ad%e7%9a%84%e8%84%9a%e6%9c%ac%e6%98%a0%e5%b0%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Delve 向 Starlark 脚本暴露了一系列内置函数，每个函数对应一个调试操作：&lt;/p&gt;</description></item></channel></rss>

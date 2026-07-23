@@ -1,4 +1,33 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Ebpf on</title><link>/tags/ebpf/</link><description>Recent content in Ebpf on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 12 Dec 2023 12:42:47 +0800</lastBuildDate><atom:link href="/tags/ebpf/index.xml" rel="self" type="application/rss+xml"/><item><title>观测Go函数调用：go-ftrace 设计实现</title><link>/blog/2023-12-12-%E8%A7%82%E6%B5%8Bgo%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8go-ftrace%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</link><pubDate>Tue, 12 Dec 2023 12:42:47 +0800</pubDate><guid>/blog/2023-12-12-%E8%A7%82%E6%B5%8Bgo%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8go-ftrace%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</guid><description>&lt;style&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Ebpf on</title><link>/tags/ebpf/</link><description>Recent content in Ebpf on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 25 May 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/ebpf/index.xml" rel="self" type="application/rss+xml"/><item><title>调试器中 tracepoint 的两种实现：breakpoint 方案 vs eBPF uprobe 方案</title><link>/blog/2025-05-25-dlv-tracepoint/</link><pubDate>Sun, 25 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-25-dlv-tracepoint/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;调试器中的 tracepoint 是一种&amp;quot;轻量级断点&amp;quot;——在函数入口或出口打印关键信息（如入参、出参、时间戳），然后立即继续执行，而不是停下来等待用户交互。实现 tracepoint 有两条技术路线：一是复用现有的 breakpoint 机制，写入 &lt;code&gt;int3&lt;/code&gt; 并捕获后再恢复；二是利用 eBPF uprobe，在内核态完成数据采集。本文对比这两种方案的优劣，特别是打印函数入参和出参场景下的表现。&lt;/p&gt;
+&lt;h1 id="方案一基于-breakpoint-实现"&gt;方案一：基于 breakpoint 实现 &lt;a href="#%e6%96%b9%e6%a1%88%e4%b8%80%e5%9f%ba%e4%ba%8e-breakpoint-%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;这是传统调试器（包括 Delve）最直接的做法：将 tracepoint 当作&amp;quot;自动继续&amp;quot;的断点。&lt;/p&gt;
+&lt;h3 id="实现方式"&gt;实现方式 &lt;a href="#%e5%ae%9e%e7%8e%b0%e6%96%b9%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;bp := &amp;amp;api.Breakpoint{
+FunctionName: &amp;quot;targetFunc&amp;quot;,
+Tracepoint: true,
+LoadArgs: &amp;amp;ShortLoadConfig,
+LoadLocals: &amp;amp;ShortLoadConfig,
+Stacktrace: 10,
+}
+debugger.CreateBreakpoint(bp)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;流程是：在目标函数地址写入 &lt;code&gt;int3&lt;/code&gt; → 程序触发 &lt;code&gt;SIGTRAP&lt;/code&gt; → tracer 捕获 → 读取寄存器和栈上参数 → 打印信息 → 恢复被覆盖的指令 → &lt;code&gt;PTRACE_CONT&lt;/code&gt; 继续执行。&lt;/p&gt;
+&lt;h3 id="优点"&gt;优点 &lt;a href="#%e4%bc%98%e7%82%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;完整的变量访问&lt;/strong&gt;：通过 DWARF 调试信息，可以精确解析任意参数的&lt;strong&gt;类型、位置和值&lt;/strong&gt;——包括嵌套结构体、slice、map、interface 等复杂数据结构&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;表达式求值&lt;/strong&gt;：支持条件 tracepoint（如 &lt;code&gt;len(slice) &amp;gt; 5&lt;/code&gt;），以及基于栈帧的任意表达式求值&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;实现简单&lt;/strong&gt;：直接复用现有的断点基础设施，不需要引入新的内核机制&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;调试信息丰富&lt;/strong&gt;：可以同时获取调用栈（stacktrace）、局部变量，甚至在 tracepoint 命中时做条件判断&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="缺点"&gt;缺点 &lt;a href="#%e7%bc%ba%e7%82%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;性能开销大&lt;/strong&gt;：每次触发都需要上下文切换到 tracer、读内存、恢复指令、再继续——这是完整的 ptrace 往返。对高频函数（如每秒触发万次以上），性能退化会非常明显&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;时机不精确&lt;/strong&gt;：从 &lt;code&gt;int3&lt;/code&gt; 触发到 tracer 打印信息之间存在显著延迟，不适合测量精确时间&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;侵入性&lt;/strong&gt;：程序会反复暂停/恢复，对并发程序的时序行为产生影响&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id="方案二基于-ebpf-uprobe-实现"&gt;方案二：基于 eBPF uprobe 实现 &lt;a href="#%e6%96%b9%e6%a1%88%e4%ba%8c%e5%9f%ba%e4%ba%8e-ebpf-uprobe-%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;eBPF uprobe 在内核态拦截函数调用，执行预定义的 BPF 程序，向用户态 ring buffer 写入数据后立即返回。&lt;/p&gt;</description></item><item><title>观测Go函数调用：go-ftrace 设计实现</title><link>/blog/2023-12-12-%E8%A7%82%E6%B5%8Bgo%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8go-ftrace%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</link><pubDate>Tue, 12 Dec 2023 12:42:47 +0800</pubDate><guid>/blog/2023-12-12-%E8%A7%82%E6%B5%8Bgo%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8go-ftrace%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</guid><description>&lt;style&gt;
 img {
 width: 680px;
 padding-bottom: 1rem;

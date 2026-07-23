@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Processgroup on</title><link>/tags/processgroup/</link><description>Recent content in Processgroup on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 23 May 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/processgroup/index.xml" rel="self" type="application/rss+xml"/><item><title>Delve 架构解析：TargetGroup 与 ProcessGroup 的分层设计</title><link>/blog/2025-05-23-dlv-targetgroup-and-processgroup/</link><pubDate>Fri, 23 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-23-dlv-targetgroup-and-processgroup/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Delve 是一个支持多种场景的调试器：既可以调试单个进程，也可以跟踪 fork/exec 产生的子进程，还能连接远程 gdbserver。这些场景下，调试器需要管理一个或多个目标进程，同时保持不同的后端实现（ptrace、gdbserial 等）对上层透明。Delve 通过 TargetGroup 和 ProcessGroup 两层抽象来解决这个问题。&lt;/p&gt;
+&lt;h1 id="两层架构"&gt;两层架构 &lt;a href="#%e4%b8%a4%e5%b1%82%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;pre&gt;&lt;code&gt;┌──────────────────────────────────────┐
+│ TargetGroup │ 高层抽象：调试逻辑
+│ - 逻辑断点共享 │
+│ - 多 target 状态同步 │
+│ - follow-exec 协调 │
+└──────────────┬───────────────────────┘
+│ 调用
+┌──────────────▼───────────────────────┐
+│ ProcessGroup │ 底层接口：进程管理
+│ - Attach / Detach │
+│ - 进程事件分发 │
+│ - 平台相关实现 │
+└──────────────────────────────────────┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id="targetgroup调试逻辑的高层抽象"&gt;TargetGroup：调试逻辑的高层抽象 &lt;a href="#targetgroup%e8%b0%83%e8%af%95%e9%80%bb%e8%be%91%e7%9a%84%e9%ab%98%e5%b1%82%e6%8a%bd%e8%b1%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;TargetGroup 解决的核心问题是：&lt;strong&gt;一个调试会话中可能有多个被调试进程，它们需要共享断点、同步状态&lt;/strong&gt;。&lt;/p&gt;
+&lt;h3 id="管理多个目标"&gt;管理多个目标 &lt;a href="#%e7%ae%a1%e7%90%86%e5%a4%9a%e4%b8%aa%e7%9b%ae%e6%a0%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在 Go 程序中，一个主进程可能通过 &lt;code&gt;fork&lt;/code&gt; / &lt;code&gt;exec&lt;/code&gt; 产生子进程。当启用 &lt;code&gt;follow-exec&lt;/code&gt; 模式时，Delve 需要跟踪这些子进程，将它们纳入同一个 TargetGroup 进行统一管理。&lt;/p&gt;</description></item></channel></rss>

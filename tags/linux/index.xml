@@ -102,7 +102,7 @@ return unlink(LOCKFILE); // 删除文件即释放锁
 } // namespace FileLockExcl
 &lt;/code&gt;&lt;/pre&gt;
 &lt;h2 id="优缺点分析"&gt;优缺点分析 &lt;a href="#%e4%bc%98%e7%bc%ba%e7%82%b9%e5%88%86%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;&lt;strong&gt;优点：&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>终端、TTY、PTY、Console：把这些概念一次理清</title><link>/blog/2026-07-11-%E7%90%86%E8%A7%A3%E7%BB%88%E7%AB%AF/</link><pubDate>Sat, 11 Jul 2026 17:05:26 +0800</pubDate><guid>/blog/2026-07-11-%E7%90%86%E8%A7%A3%E7%BB%88%E7%AB%AF/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;优点：&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>终端、TTY、PTY、Console：把这些概念一次理清</title><link>/blog/2026-07-11-%E7%90%86%E8%A7%A3%E7%BB%88%E7%AB%AF-tty-pty-console/</link><pubDate>Sat, 11 Jul 2026 17:05:26 +0800</pubDate><guid>/blog/2026-07-11-%E7%90%86%E8%A7%A3%E7%BB%88%E7%AB%AF-tty-pty-console/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;写 &lt;a href="/blog/2026-07-11-asciinema-how-it-works/"&gt;asciinema 工作原理&lt;/a&gt; 时，我再次遇到了 Terminal、Console、TTY、PTY、master、slave 和 &lt;code&gt;isatty()&lt;/code&gt;。这些词经常一起出现，却分属硬件历史、内核抽象和用户态程序三个层次。单独看每个定义并不难，把它们放进同一条数据链路时却很容易混淆。&lt;/p&gt;
 &lt;p&gt;日常开发中，我们接触最多的是以下几类对象：&lt;/p&gt;
 &lt;ol&gt;
@@ -204,7 +204,18 @@ top: -170px;
 &lt;/style&gt;
 &lt;div class="iframe-container"&gt;
 &lt;iframe src="https://docs.qq.com/aio/DYnZ4VVVSVkxjbHFG"/&gt;
-&lt;/div&gt;</description></item><item><title>Bash常用命令</title><link>/blog/linux-bash%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/</link><pubDate>Sun, 19 May 2024 09:10:25 +0800</pubDate><guid>/blog/linux-bash%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是一些日常高频使用的Linux命令。&lt;/p&gt;
+&lt;/div&gt;</description></item><item><title>深入理解 ptrace：进程的 tl 状态与运行中 tracee 的控制</title><link>/blog/2025-05-27-dlv-addbreakpoints-to-running-tracee/</link><pubDate>Tue, 27 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-27-dlv-addbreakpoints-to-running-tracee/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在使用调试器时，我们经常会通过 &lt;code&gt;ps&lt;/code&gt; 查看被调试进程的状态。比如下面这个输出：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;root 3859551 0.0 0.0 1225560 2004 pts/12 tl 18:17 0:00 /root/test/debug/__debug_bin2092487096
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;其中的 &lt;code&gt;tl&lt;/code&gt; 状态是什么意思？它反映了进程当前处于什么样的运行阶段？更进一步，如果 tracee 已经通过 &lt;code&gt;continue&lt;/code&gt; 继续运行，tracer 还能否重新获得对它的控制？本文就来理清这些问题。&lt;/p&gt;
+&lt;h1 id="ps-输出中的-tl-状态"&gt;ps 输出中的 tl 状态 &lt;a href="#ps-%e8%be%93%e5%87%ba%e4%b8%ad%e7%9a%84-tl-%e7%8a%b6%e6%80%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;code&gt;ps&lt;/code&gt; 的 STAT 列可以包含多个字符，每个字符代表进程的一个属性。&lt;code&gt;tl&lt;/code&gt; 由两个独立标志组成：&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;t&lt;/code&gt; — traced / stopped&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;第一个字符 &lt;code&gt;t&lt;/code&gt; 表示进程正被调试器跟踪（traced），或者处于停止状态（stopped）。在 Linux 中，这通常意味着进程通过 &lt;code&gt;ptrace(PTRACE_ATTACH, ...)&lt;/code&gt; 被附加到了一个 tracer 上，此时进程会收到 &lt;code&gt;SIGSTOP&lt;/code&gt; 并暂停。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;l&lt;/code&gt; — multi-threaded&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;第二个字符 &lt;code&gt;l&lt;/code&gt; 表示进程是多线程的（multi-threaded）。在 Linux 中，当进程创建了多个线程时，&lt;code&gt;ps&lt;/code&gt; 会在 STAT 中标记 &lt;code&gt;l&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;这两个标志组合在一起，&lt;code&gt;tl&lt;/code&gt; 表示的就是：&lt;strong&gt;一个被调试器暂停的多线程进程&lt;/strong&gt;。在上面的例子中，进程名 &lt;code&gt;__debug_bin2092487096&lt;/code&gt; 也印证了这一点——这是调试器（如 Delve 或 gdb）生成的临时可执行文件。&lt;/p&gt;</description></item><item><title>Bash常用命令</title><link>/blog/linux-bash%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/</link><pubDate>Sun, 19 May 2024 09:10:25 +0800</pubDate><guid>/blog/linux-bash%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是一些日常高频使用的Linux命令。&lt;/p&gt;
 &lt;h2 id="navigation"&gt;Navigation &lt;a href="#navigation" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;code&gt;pwd&lt;/code&gt;: print current workdir, &lt;code&gt;print -P&lt;/code&gt; print workdir and resolves symbolic link&lt;/li&gt;

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Io-Redirect on</title><link>/tags/io-redirect/</link><description>Recent content in Io-Redirect on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 23 May 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/io-redirect/index.xml" rel="self" type="application/rss+xml"/><item><title>Delve 的 I/O 重定向机制：分离调试器与被调试进程的标准流</title><link>/blog/2025-05-23-dlv-redirect/</link><pubDate>Fri, 23 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-23-dlv-redirect/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Delve 作为交互式调试器，自身要用 stdin/stdout/stderr 和用户说话——读命令、打变量、显示调用栈。被调试的 target（tracee）同样可能读写标准流。两边若挂在同一条终端链路上，就会出现两个问题：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;输入归谁&lt;/strong&gt;：这行字是给 &lt;code&gt;(dlv)&lt;/code&gt; 的，还是给程序里的 &lt;code&gt;Scan&lt;/code&gt; / &lt;code&gt;scanf&lt;/code&gt;？&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;输出怎么分&lt;/strong&gt;：程序的 &lt;code&gt;Println&lt;/code&gt; 和调试器的 prompt 混在同一窗口，自动化场景里几乎无法解析。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;很多人第一反应是：那 Delve 必须把 target 的 IO 全部重定向走。其实默认并不是这样——&lt;strong&gt;不指定 &lt;code&gt;-r&lt;/code&gt; / &lt;code&gt;--tty&lt;/code&gt; 时，target 常常和 dlv 共享同一终端&lt;/strong&gt;。重定向是&lt;strong&gt;可选的隔离手段&lt;/strong&gt;，在手工调试时一般用不到，在自动化调试时几乎刚需。&lt;/p&gt;
+&lt;h1 id="默认共享终端时为什么多数时候不太乱"&gt;默认共享终端时，为什么多数时候“不太乱” &lt;a href="#%e9%bb%98%e8%ae%a4%e5%85%b1%e4%ba%ab%e7%bb%88%e7%ab%af%e6%97%b6%e4%b8%ba%e4%bb%80%e4%b9%88%e5%a4%9a%e6%95%b0%e6%97%b6%e5%80%99%e4%b8%8d%e5%a4%aa%e4%b9%b1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;同一次终端会话里，shell、&lt;code&gt;dlv&lt;/code&gt;、以及 dlv 拉起的 target，&lt;strong&gt;默认往往指向同一个 PTY slave&lt;/strong&gt;。进程各自有 fd 表，但 0/1/2 背后的设备可以是同一个 &lt;code&gt;/dev/pts/N&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;PTY、前台进程组、后台读终端收到 &lt;code&gt;SIGTTIN&lt;/code&gt; 等细节，见 &lt;a href="/blog/2026-07-11-%E7%90%86%E8%A7%A3%E7%BB%88%E7%AB%AF+tty+pty+console/"&gt;终端、TTY、PTY、Console：把这些概念一次理清&lt;/a&gt; 中「同一会话里：谁共享 PTY slave？」一节。这里只留和调试相关的结论：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;输出&lt;/strong&gt;：多个进程写同一 slave，字节在窗口里会交错——这是真共享，不是显示 bug。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;输入&lt;/strong&gt;：内核把键盘交给当前&lt;strong&gt;前台进程组&lt;/strong&gt;；不是“每个进程各有一份 stdin 副本”。&lt;/li&gt;
+&lt;li&gt;调试时 dlv 与 target 对终端的使用，多数是&lt;strong&gt;时分交错&lt;/strong&gt;，而不是长时间并行抢读：&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;停在断点 / 停在 (dlv) 提示符
+→ 主要是调试器在读命令、打输出
+continue / step 跑起来
+→ target 在执行，可能读输入、写输出
+再断下
+→ 又回到调试器
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;所以手动调试时，你敲 &lt;code&gt;next&lt;/code&gt; 的时候 target 往往停着；target 在 &lt;code&gt;fmt.Scanln&lt;/code&gt; 等输入时，你也很少同时在敲 Delve 命令。&lt;strong&gt;交替执行&lt;/strong&gt;掩盖了共享终端的本质矛盾，体验上“&lt;strong&gt;大多时候还行&lt;/strong&gt;”。&lt;/p&gt;</description></item></channel></rss>

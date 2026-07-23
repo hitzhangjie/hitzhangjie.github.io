@@ -17,7 +17,7 @@
 &lt;li&gt;&lt;strong&gt;单一事实来源&lt;/strong&gt;：所有历史、元数据都在服务器上，不存在&amp;quot;谁有最新版本&amp;quot;的问题。&lt;/li&gt;
 &lt;/ul&gt;
 &lt;h2 id="分布式git--mercurial"&gt;分布式（Git / Mercurial） &lt;a href="#%e5%88%86%e5%b8%83%e5%bc%8fgit--mercurial" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;Git 把完整的仓库历史克隆到每个客户端本地。&lt;code&gt;.git&lt;/code&gt; 目录包含了所有 commit、tree、blob，是一份完整的、自包含的数据库。&lt;/p&gt;</description></item><item><title>dlv 调试速查表</title><link>/blog/2026-07-22-dlv-cheatsheet/</link><pubDate>Wed, 22 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/2026-07-22-dlv-cheatsheet/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Git 把完整的仓库历史克隆到每个客户端本地。&lt;code&gt;.git&lt;/code&gt; 目录包含了所有 commit、tree、blob，是一份完整的、自包含的数据库。&lt;/p&gt;</description></item><item><title>dlv 调试速查表</title><link>/blog/2022-08-25-dlv-cheatsheet/</link><pubDate>Wed, 22 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/2022-08-25-dlv-cheatsheet/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;我对 dlv 做过&lt;a href="./2020-08-25-delve%E8%B0%83%E8%AF%95%E5%99%A8%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0.md"&gt;比较深入的源码分析&lt;/a&gt;，也写过一本关于调试器实现的书&lt;sup id="fnref:1"&gt;&lt;a href="#fn:1" class="footnote-ref" role="doc-noteref"&gt;1&lt;/a&gt;&lt;/sup&gt;。但日常使用层面，大部分需求 VS Code + dlv dap 已经覆盖了。真正需要裸调的时候往往是一些特殊场景——比如远程服务器上没装 IDE、需要脚本化批量设断点、需要追踪子进程、或者需要监控某个变量被谁写过。这些时候对命令结构的熟悉程度就决定了排查效率。&lt;/p&gt;
 &lt;p&gt;本文把 dlv 的命令分为两大部分：&lt;/p&gt;
 &lt;ol&gt;
@@ -1251,7 +1251,7 @@ return nil, err
 // ...
 }
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;同样的道理适用于数据库连接、HTTP 客户端、缓存等。&lt;strong&gt;凡是会变的东西，都应该作为依赖传入，而非在函数内部直接构造。&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>终端、TTY、PTY、Console：把这些概念一次理清</title><link>/blog/2026-07-11-%E7%90%86%E8%A7%A3%E7%BB%88%E7%AB%AF/</link><pubDate>Sat, 11 Jul 2026 17:05:26 +0800</pubDate><guid>/blog/2026-07-11-%E7%90%86%E8%A7%A3%E7%BB%88%E7%AB%AF/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;同样的道理适用于数据库连接、HTTP 客户端、缓存等。&lt;strong&gt;凡是会变的东西，都应该作为依赖传入，而非在函数内部直接构造。&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>终端、TTY、PTY、Console：把这些概念一次理清</title><link>/blog/2026-07-11-%E7%90%86%E8%A7%A3%E7%BB%88%E7%AB%AF-tty-pty-console/</link><pubDate>Sat, 11 Jul 2026 17:05:26 +0800</pubDate><guid>/blog/2026-07-11-%E7%90%86%E8%A7%A3%E7%BB%88%E7%AB%AF-tty-pty-console/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;写 &lt;a href="/blog/2026-07-11-asciinema-how-it-works/"&gt;asciinema 工作原理&lt;/a&gt; 时，我再次遇到了 Terminal、Console、TTY、PTY、master、slave 和 &lt;code&gt;isatty()&lt;/code&gt;。这些词经常一起出现，却分属硬件历史、内核抽象和用户态程序三个层次。单独看每个定义并不难，把它们放进同一条数据链路时却很容易混淆。&lt;/p&gt;
 &lt;p&gt;日常开发中，我们接触最多的是以下几类对象：&lt;/p&gt;
 &lt;ol&gt;
@@ -2817,7 +2817,35 @@ git clone --shallow-exclude=&amp;quot;v2.0&amp;quot; &amp;lt;url&amp;gt;
 &lt;p&gt;这些选项可以组合。比如 &lt;code&gt;--depth 10 --shallow-since=&amp;quot;2024-06-01&amp;quot;&lt;/code&gt;，最终的提交数量就是两个条件的交集。&lt;/p&gt;
 &lt;h2 id="底层机制"&gt;底层机制 &lt;a href="#%e5%ba%95%e5%b1%82%e6%9c%ba%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;h3 id="--depth-工作流程"&gt;&lt;code&gt;--depth&lt;/code&gt; 工作流程 &lt;a href="#--depth-%e5%b7%a5%e4%bd%9c%e6%b5%81%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;Shallow clone 的核心行为在 fetch 阶段。以 &lt;code&gt;git clone --depth 3&lt;/code&gt; 为例：&lt;/p&gt;</description></item><item><title>Flaky Test 与偶现 Bug：别再混为一谈</title><link>/blog/2025-05-28-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_flakytest%E4%B8%8E%E5%81%B6%E7%8E%B0bug%E5%8C%BA%E5%88%AB/</link><pubDate>Wed, 28 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-28-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_flakytest%E4%B8%8E%E5%81%B6%E7%8E%B0bug%E5%8C%BA%E5%88%AB/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Shallow clone 的核心行为在 fetch 阶段。以 &lt;code&gt;git clone --depth 3&lt;/code&gt; 为例：&lt;/p&gt;</description></item><item><title>Delve checkpoint：调试时的存档与读档</title><link>/blog/2025-05-30-dlv-checkpoint/</link><pubDate>Fri, 30 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-30-dlv-checkpoint/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;调试复杂 bug 时，我们经常需要反复回到某个关键位置，尝试不同的执行路径来定位问题。传统做法是重新启动程序、重新设置断点、重新触发条件——这个机械性的重放过程既耗时又容易遗漏关键状态。Delve 的 checkpoint 功能正是为了解决这个问题而设计的：它允许你随时&amp;quot;存档&amp;quot;，并在需要时&amp;quot;读档&amp;quot;，回到之前的程序状态继续调试。&lt;/p&gt;
+&lt;h1 id="checkpoint-是什么"&gt;checkpoint 是什么 &lt;a href="#checkpoint-%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在 Delve 中，&lt;strong&gt;checkpoint&lt;/strong&gt; 是一个调试时的&amp;quot;快照&amp;quot;功能：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;保存程序状态&lt;/strong&gt;：你可以在某个时刻创建一个 checkpoint，相当于拍了一个快照，记录下此时程序的完整执行状态&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;恢复到任意 checkpoint&lt;/strong&gt;：之后你可以随时让程序回到某个 checkpoint 时的状态继续调试&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这类似于游戏的&amp;quot;存档/读档&amp;quot;机制，或者编辑器的 undo/redo 操作。它的核心价值在于：&lt;strong&gt;避免重复的重启调试才能进行后续排查的方式，让你专注于真正需要探索的执行路径&lt;/strong&gt;。&lt;/p&gt;
+&lt;h1 id="典型使用场景"&gt;典型使用场景 &lt;a href="#%e5%85%b8%e5%9e%8b%e4%bd%bf%e7%94%a8%e5%9c%ba%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;strong&gt;调试逆向执行&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;在调试中走错方向是常有的事。比如你 step into 了一个不相关的函数，或者跳过了关键代码。有了 checkpoint，直接回到之前的检查点即可，无需重启进程、重新触发 bug。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;多路径探索&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;在某个分支点创建 checkpoint 后，你可以：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;先探索路径 A，观察程序行为&lt;/li&gt;
+&lt;li&gt;恢复到 checkpoint，再探索路径 B&lt;/li&gt;
+&lt;li&gt;反复对比两条路径的状态差异&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;这在排查条件分支相关的 bug 时特别有用。&lt;/p&gt;
+&lt;h1 id="底层依赖录制回放技术"&gt;底层依赖：录制/回放技术 &lt;a href="#%e5%ba%95%e5%b1%82%e4%be%9d%e8%b5%96%e5%bd%95%e5%88%b6%e5%9b%9e%e6%94%be%e6%8a%80%e6%9c%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;checkpoint 功能并不是免费的。它的实现依赖于底层的**录制/回放（record/replay）**技术，例如 &lt;a href="https://rr-project.org/"&gt;Mozilla rr&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;原理是：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;程序的完整执行过程被录制下来（包括所有非确定性事件，如信号、系统调用返回值等）&lt;/li&gt;
+&lt;li&gt;checkpoint 本质上是在录制的时间线上标记一个位置&lt;/li&gt;
+&lt;li&gt;恢复时，回放引擎从记录的初始状态重放到 checkpoint 标记的位置&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;如果没有录制支持（如普通的 live 调试模式），checkpoint 功能就不可用。&lt;/strong&gt; 这也是为什么你在直接 &lt;code&gt;dlv debug&lt;/code&gt; 时看不到 checkpoint 命令，而需要先通过 &lt;code&gt;dlv record&lt;/code&gt; 或在 rr 环境下启动。&lt;/p&gt;</description></item><item><title>Flaky Test 与偶现 Bug：别再混为一谈</title><link>/blog/2025-05-28-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_flakytest%E4%B8%8E%E5%81%B6%E7%8E%B0bug%E5%8C%BA%E5%88%AB/</link><pubDate>Wed, 28 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-28-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_flakytest%E4%B8%8E%E5%81%B6%E7%8E%B0bug%E5%8C%BA%E5%88%AB/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;日常开发中经常会遇到两类令人头疼的问题：一是 CI 跑着跑着红了，重试一次又绿了；二是用户反馈了一个 bug，但自己怎么都复现不出来。前者我们习惯叫&amp;quot;flaky test&amp;quot;，后者叫&amp;quot;偶现 bug&amp;quot;。&lt;/p&gt;
 &lt;p&gt;它们表面上都是&amp;quot;偶现&amp;quot;，于是很多人（包括之前的我）会下意识地认为它们是一回事——flaky test 就是偶现 bug 在测试里的表现形式。但仔细想想，这个等式真的成立吗？&lt;/p&gt;
 &lt;h1 id="两个概念分别定义"&gt;两个概念，分别定义 &lt;a href="#%e4%b8%a4%e4%b8%aa%e6%a6%82%e5%bf%b5%e5%88%86%e5%88%ab%e5%ae%9a%e4%b9%89" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
@@ -2849,7 +2877,263 @@ git clone --shallow-exclude=&amp;quot;v2.0&amp;quot; &amp;lt;url&amp;gt;
 &lt;p&gt;&lt;strong&gt;关键点&lt;/strong&gt;：偶现 bug 的根因&lt;strong&gt;一定在产品侧&lt;/strong&gt;——代码本身有缺陷，只是触发条件苛刻。&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;h1 id="核心差异不止是描述对象不同"&gt;核心差异：不止是&amp;quot;描述对象不同&amp;quot; &lt;a href="#%e6%a0%b8%e5%bf%83%e5%b7%ae%e5%bc%82%e4%b8%8d%e6%ad%a2%e6%98%af%e6%8f%8f%e8%bf%b0%e5%af%b9%e8%b1%a1%e4%b8%8d%e5%90%8c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
-&lt;p&gt;表面上看，一个在说测试，一个在说产品，泾渭分明。但真正容易混淆的地方在于&lt;strong&gt;归因方向&lt;/strong&gt;和&lt;strong&gt;发现场景&lt;/strong&gt;。&lt;/p&gt;</description></item><item><title>使用etcd做服务发现的13条教训</title><link>/blog/2025-04-25-%E5%BA%94%E7%94%A8%E5%AE%9E%E8%B7%B5_%E4%BD%BF%E7%94%A8etcd%E5%81%9A%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0%E7%9A%84%E6%95%99%E8%AE%AD/</link><pubDate>Fri, 25 Apr 2025 10:00:00 +0800</pubDate><guid>/blog/2025-04-25-%E5%BA%94%E7%94%A8%E5%AE%9E%E8%B7%B5_%E4%BD%BF%E7%94%A8etcd%E5%81%9A%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0%E7%9A%84%E6%95%99%E8%AE%AD/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;表面上看，一个在说测试，一个在说产品，泾渭分明。但真正容易混淆的地方在于&lt;strong&gt;归因方向&lt;/strong&gt;和&lt;strong&gt;发现场景&lt;/strong&gt;。&lt;/p&gt;</description></item><item><title>深入理解 ptrace：进程的 tl 状态与运行中 tracee 的控制</title><link>/blog/2025-05-27-dlv-addbreakpoints-to-running-tracee/</link><pubDate>Tue, 27 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-27-dlv-addbreakpoints-to-running-tracee/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在使用调试器时，我们经常会通过 &lt;code&gt;ps&lt;/code&gt; 查看被调试进程的状态。比如下面这个输出：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;root 3859551 0.0 0.0 1225560 2004 pts/12 tl 18:17 0:00 /root/test/debug/__debug_bin2092487096
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;其中的 &lt;code&gt;tl&lt;/code&gt; 状态是什么意思？它反映了进程当前处于什么样的运行阶段？更进一步，如果 tracee 已经通过 &lt;code&gt;continue&lt;/code&gt; 继续运行，tracer 还能否重新获得对它的控制？本文就来理清这些问题。&lt;/p&gt;
+&lt;h1 id="ps-输出中的-tl-状态"&gt;ps 输出中的 tl 状态 &lt;a href="#ps-%e8%be%93%e5%87%ba%e4%b8%ad%e7%9a%84-tl-%e7%8a%b6%e6%80%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;code&gt;ps&lt;/code&gt; 的 STAT 列可以包含多个字符，每个字符代表进程的一个属性。&lt;code&gt;tl&lt;/code&gt; 由两个独立标志组成：&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;t&lt;/code&gt; — traced / stopped&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;第一个字符 &lt;code&gt;t&lt;/code&gt; 表示进程正被调试器跟踪（traced），或者处于停止状态（stopped）。在 Linux 中，这通常意味着进程通过 &lt;code&gt;ptrace(PTRACE_ATTACH, ...)&lt;/code&gt; 被附加到了一个 tracer 上，此时进程会收到 &lt;code&gt;SIGSTOP&lt;/code&gt; 并暂停。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;l&lt;/code&gt; — multi-threaded&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;第二个字符 &lt;code&gt;l&lt;/code&gt; 表示进程是多线程的（multi-threaded）。在 Linux 中，当进程创建了多个线程时，&lt;code&gt;ps&lt;/code&gt; 会在 STAT 中标记 &lt;code&gt;l&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;这两个标志组合在一起，&lt;code&gt;tl&lt;/code&gt; 表示的就是：&lt;strong&gt;一个被调试器暂停的多线程进程&lt;/strong&gt;。在上面的例子中，进程名 &lt;code&gt;__debug_bin2092487096&lt;/code&gt; 也印证了这一点——这是调试器（如 Delve 或 gdb）生成的临时可执行文件。&lt;/p&gt;</description></item><item><title>Starlark 在 Delve 中的实战：从脚本编写到踩坑记录</title><link>/blog/2025-05-25-dlv-starlark2/</link><pubDate>Sun, 25 May 2025 01:00:00 +0800</pubDate><guid>/blog/2025-05-25-dlv-starlark2/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;a href="/blog/delve/2025-05-25-dlv-starlark"&gt;前一篇&lt;/a&gt; 介绍了 Delve Starlark 脚本系统的架构和内置函数。本文通过一个完整的实战示例，展示如何编写 Starlark 脚本来自动化调试流程，并记录编写过程中容易踩到的坑。&lt;/p&gt;
+&lt;h1 id="示例程序"&gt;示例程序 &lt;a href="#%e7%a4%ba%e4%be%8b%e7%a8%8b%e5%ba%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;假设我们要调试下面这个简单的 Go 程序：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;package main
+import (
+&amp;quot;fmt&amp;quot;
+&amp;quot;time&amp;quot;
+)
+type Person struct {
+Name string
+Age int
+}
+func main() {
+people := []Person{
+{Name: &amp;quot;Alice&amp;quot;, Age: 25},
+{Name: &amp;quot;Bob&amp;quot;, Age: 30},
+{Name: &amp;quot;Charlie&amp;quot;, Age: 35},
+}
+for i, p := range people {
+fmt.Printf(&amp;quot;Processing person %d: %s\n&amp;quot;, i, p.Name)
+time.Sleep(time.Second)
+processPerson(p)
+}
+}
+func processPerson(p Person) {
+fmt.Printf(&amp;quot;Name: %s, Age: %d\n&amp;quot;, p.Name, p.Age)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;需求：在 &lt;code&gt;processPerson&lt;/code&gt; 中自动打印变量 &lt;code&gt;p&lt;/code&gt; 的值，并将调试信息保存到文件。这个流程如果手动操作需要反复 &lt;code&gt;continue&lt;/code&gt; → &lt;code&gt;print&lt;/code&gt; → &lt;code&gt;next&lt;/code&gt;，用 Starlark 脚本可以一键完成。&lt;/p&gt;</description></item><item><title>Delve 的 Starlark 脚本系统：用 Python 风格脚本自动化调试</title><link>/blog/2025-05-25-dlv-starlark/</link><pubDate>Sun, 25 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-25-dlv-starlark/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Delve 的命令行交互模式已经足够强大，但在面对复杂调试任务时——比如批量设置条件断点、自动采集特定变量快照、或者在特定条件下自动执行一系列操作——纯手动交互的效率就显得捉襟见肘。为了解决这个问题，Delve（以及它的教学版 tinydbg）集成了 Starlark 脚本引擎，允许用户用 Python 风格的脚本来自动化调试流程。&lt;/p&gt;
+&lt;h1 id="starlark-简介"&gt;Starlark 简介 &lt;a href="#starlark-%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;a href="https://github.com/google/starlark-go"&gt;Starlark&lt;/a&gt; 是 Google 开发的一种类 Python 脚本语言，专为嵌入宿主应用而设计。它与 Python 的核心区别在于：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;确定性执行&lt;/strong&gt;：没有 I/O、随机数等副作用，相同的输入始终产生相同的输出&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;无循环依赖&lt;/strong&gt;：不支持递归导入&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;内建沙箱&lt;/strong&gt;：默认没有文件系统访问、网络访问等能力，宿主需要显式暴露&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;线程安全&lt;/strong&gt;：可以在多 goroutine 环境中安全执行&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些特性使 Starlark 非常适合作为调试器的脚本引擎——安全、可控、可预测。&lt;/p&gt;
+&lt;h1 id="架构概览"&gt;架构概览 &lt;a href="#%e6%9e%b6%e6%9e%84%e6%a6%82%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Delve 中 Starlark 集成主要由 &lt;code&gt;pkg/terminal/starbind&lt;/code&gt; 包负责：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Delve CLI
+│
+├── source debug.star ← 用户加载 Starlark 脚本
+│
+└── starbind 包
+├── starlark.go ← Starlark 执行环境、内置函数注册
+├── conv.go ← Go ↔ Starlark 值类型转换
+└── (debugger API) ← 向脚本暴露的调试原语
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id="内置函数调试原语的脚本映射"&gt;内置函数：调试原语的脚本映射 &lt;a href="#%e5%86%85%e7%bd%ae%e5%87%bd%e6%95%b0%e8%b0%83%e8%af%95%e5%8e%9f%e8%af%ad%e7%9a%84%e8%84%9a%e6%9c%ac%e6%98%a0%e5%b0%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Delve 向 Starlark 脚本暴露了一系列内置函数，每个函数对应一个调试操作：&lt;/p&gt;</description></item><item><title>GDB Serial Protocol 详解：调试器与目标进程的通信语言</title><link>/blog/2025-05-25-dlv-gdbserial/</link><pubDate>Sun, 25 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-25-dlv-gdbserial/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Delve 支持多种后端（backend）来与被调试进程通信——Linux 原生的 ptrace、macOS 的 debugserver，以及基于 GDB Serial Protocol 的远程调试。其中 GDB Serial Protocol 扮演着&amp;quot;通用语言&amp;quot;的角色，让 Delve 能够调试运行在远程机器、嵌入式设备甚至是 rr 录制回放环境中的程序。理解这个协议，是理解 Delve 多后端架构的关键一环。&lt;/p&gt;
+&lt;h1 id="协议概述"&gt;协议概述 &lt;a href="#%e5%8d%8f%e8%ae%ae%e6%a6%82%e8%bf%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;GDB Serial Protocol（也称 GDB Remote Serial Protocol）最初设计用于让 GDB 调试嵌入式环境中的程序。由于协议简洁、功能完备，逐渐被广泛采纳：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;实现&lt;/th&gt;
+&lt;th&gt;说明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;gdbserver&lt;/td&gt;
+&lt;td&gt;GDB 的标准存根（stub）实现&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;lldb-server&lt;/td&gt;
+&lt;td&gt;LLDB 的存根版本&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;debugserver&lt;/td&gt;
+&lt;td&gt;macOS 上随 LLDB 安装的存根&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;mozilla rr&lt;/td&gt;
+&lt;td&gt;录制/回放调试工具，也提供 gdbserial 兼容接口&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;这个协议的核心价值在于&lt;strong&gt;解耦调试器和目标进程&lt;/strong&gt;：调试器通过串行连接或网络与存根通信，存根负责在本机执行实际的调试原语（ptrace 等）。&lt;/p&gt;
+&lt;h1 id="协议格式"&gt;协议格式 &lt;a href="#%e5%8d%8f%e8%ae%ae%e6%a0%bc%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h3 id="数据包结构"&gt;数据包结构 &lt;a href="#%e6%95%b0%e6%8d%ae%e5%8c%85%e7%bb%93%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;每个数据包遵循固定的帧格式：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$&amp;lt;payload&amp;gt;#&amp;lt;checksum&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;$&lt;/code&gt;：帧起始标记&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;&amp;lt;payload&amp;gt;&lt;/code&gt;：变长数据，通常为 ASCII 文本&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;#&lt;/code&gt;：校验和前缀&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;&amp;lt;checksum&amp;gt;&lt;/code&gt;：两个十六进制字符，为 payload 所有字节之和模 256&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="确认机制"&gt;确认机制 &lt;a href="#%e7%a1%ae%e8%ae%a4%e6%9c%ba%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;接收方使用单字符进行确认：&lt;/p&gt;</description></item><item><title>Mozilla rr 工作原理及其与 Delve 的集成</title><link>/blog/2025-05-25-dlv-how-rr-works/</link><pubDate>Sun, 25 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-25-dlv-how-rr-works/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在调试非确定性的 bug（如数据竞争、时序相关的问题）时，传统的断点-单步调试方式往往力不从心——同一个程序两次运行的表现可能完全不同。Mozilla rr 通过录制/回放（record/replay）机制解决了这个问题，而 Delve 通过 gdbserial 协议与 rr 集成，为 Go 开发者提供了时间旅行（time-travel）调试的能力。本文梳理 rr 的工作原理以及它与 Delve 的协作方式。&lt;/p&gt;
+&lt;h1 id="rr-是不是基于-gdb-源代码修改的"&gt;rr 是不是基于 GDB 源代码修改的？ &lt;a href="#rr-%e6%98%af%e4%b8%8d%e6%98%af%e5%9f%ba%e4%ba%8e-gdb-%e6%ba%90%e4%bb%a3%e7%a0%81%e4%bf%ae%e6%94%b9%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;一个常见的误解是 rr 在 GDB 代码基础上修改而来。实际上：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;rr 是一个完全独立的项目&lt;/strong&gt;，拥有自己的录制/回放引擎&lt;/li&gt;
+&lt;li&gt;录制阶段使用 Linux 的 &lt;code&gt;ptrace&lt;/code&gt; 系统调用来追踪程序的每一步执行&lt;/li&gt;
+&lt;li&gt;它和 GDB 的关系是&lt;strong&gt;客户端-服务端关系&lt;/strong&gt;，而非派生关系&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;具体来说，rr 在重放阶段会启动一个 GDB 实例作为调试器前端，并通过 GDB Remote Serial Protocol 与这个 GDB 实例通信。这也就是为什么在 Delve 的 rr 集成代码中能看到 &lt;code&gt;target extended-remote&lt;/code&gt; 等 GDB 命令常量：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;const (
+rrGdbCommandLegacyPrefix = &amp;quot; gdb &amp;quot;
+rrGdbCommandPrefix = &amp;quot; 'gdb' &amp;quot;
+rrGdbLaunchLegacyPrefix = &amp;quot;Launch gdb with&amp;quot;
+rrGdbLaunchPrefix = &amp;quot;Launch debugger with&amp;quot;
+targetCmd = &amp;quot;target extended-remote &amp;quot;
+)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id="rr-的工作机制"&gt;rr 的工作机制 &lt;a href="#rr-%e7%9a%84%e5%b7%a5%e4%bd%9c%e6%9c%ba%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;rr 的工作分为两个阶段：&lt;/p&gt;</description></item><item><title>调试器中 tracepoint 的两种实现：breakpoint 方案 vs eBPF uprobe 方案</title><link>/blog/2025-05-25-dlv-tracepoint/</link><pubDate>Sun, 25 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-25-dlv-tracepoint/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;调试器中的 tracepoint 是一种&amp;quot;轻量级断点&amp;quot;——在函数入口或出口打印关键信息（如入参、出参、时间戳），然后立即继续执行，而不是停下来等待用户交互。实现 tracepoint 有两条技术路线：一是复用现有的 breakpoint 机制，写入 &lt;code&gt;int3&lt;/code&gt; 并捕获后再恢复；二是利用 eBPF uprobe，在内核态完成数据采集。本文对比这两种方案的优劣，特别是打印函数入参和出参场景下的表现。&lt;/p&gt;
+&lt;h1 id="方案一基于-breakpoint-实现"&gt;方案一：基于 breakpoint 实现 &lt;a href="#%e6%96%b9%e6%a1%88%e4%b8%80%e5%9f%ba%e4%ba%8e-breakpoint-%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;这是传统调试器（包括 Delve）最直接的做法：将 tracepoint 当作&amp;quot;自动继续&amp;quot;的断点。&lt;/p&gt;
+&lt;h3 id="实现方式"&gt;实现方式 &lt;a href="#%e5%ae%9e%e7%8e%b0%e6%96%b9%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;bp := &amp;amp;api.Breakpoint{
+FunctionName: &amp;quot;targetFunc&amp;quot;,
+Tracepoint: true,
+LoadArgs: &amp;amp;ShortLoadConfig,
+LoadLocals: &amp;amp;ShortLoadConfig,
+Stacktrace: 10,
+}
+debugger.CreateBreakpoint(bp)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;流程是：在目标函数地址写入 &lt;code&gt;int3&lt;/code&gt; → 程序触发 &lt;code&gt;SIGTRAP&lt;/code&gt; → tracer 捕获 → 读取寄存器和栈上参数 → 打印信息 → 恢复被覆盖的指令 → &lt;code&gt;PTRACE_CONT&lt;/code&gt; 继续执行。&lt;/p&gt;
+&lt;h3 id="优点"&gt;优点 &lt;a href="#%e4%bc%98%e7%82%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;完整的变量访问&lt;/strong&gt;：通过 DWARF 调试信息，可以精确解析任意参数的&lt;strong&gt;类型、位置和值&lt;/strong&gt;——包括嵌套结构体、slice、map、interface 等复杂数据结构&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;表达式求值&lt;/strong&gt;：支持条件 tracepoint（如 &lt;code&gt;len(slice) &amp;gt; 5&lt;/code&gt;），以及基于栈帧的任意表达式求值&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;实现简单&lt;/strong&gt;：直接复用现有的断点基础设施，不需要引入新的内核机制&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;调试信息丰富&lt;/strong&gt;：可以同时获取调用栈（stacktrace）、局部变量，甚至在 tracepoint 命中时做条件判断&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="缺点"&gt;缺点 &lt;a href="#%e7%bc%ba%e7%82%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;性能开销大&lt;/strong&gt;：每次触发都需要上下文切换到 tracer、读内存、恢复指令、再继续——这是完整的 ptrace 往返。对高频函数（如每秒触发万次以上），性能退化会非常明显&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;时机不精确&lt;/strong&gt;：从 &lt;code&gt;int3&lt;/code&gt; 触发到 tracer 打印信息之间存在显著延迟，不适合测量精确时间&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;侵入性&lt;/strong&gt;：程序会反复暂停/恢复，对并发程序的时序行为产生影响&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1 id="方案二基于-ebpf-uprobe-实现"&gt;方案二：基于 eBPF uprobe 实现 &lt;a href="#%e6%96%b9%e6%a1%88%e4%ba%8c%e5%9f%ba%e4%ba%8e-ebpf-uprobe-%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;eBPF uprobe 在内核态拦截函数调用，执行预定义的 BPF 程序，向用户态 ring buffer 写入数据后立即返回。&lt;/p&gt;</description></item><item><title>Delve 如何处理 fork/exec 时的断点继承</title><link>/blog/2025-05-23-dlv-forkexec/</link><pubDate>Fri, 23 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-23-dlv-forkexec/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;调试多进程程序时，子进程在 fork/exec 之后还能否继承父进程的断点？直觉上，由于 fork 是写时复制（Copy-on-Write），代码段是共享的，断点指令似乎应该自动保留。但实际情况比这复杂，本文从物理内存和调试器架构两个层面来分析。&lt;/p&gt;
+&lt;h2 id="断点的物理实现"&gt;断点的物理实现 &lt;a href="#%e6%96%ad%e7%82%b9%e7%9a%84%e7%89%a9%e7%90%86%e5%ae%9e%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;先回顾一下断点是如何工作的。软件断点的实现方式是在目标代码段中插入特殊指令——在 x86 架构上通常是 &lt;code&gt;int3&lt;/code&gt;（0xCC）。当 CPU 执行到这条指令时，会触发调试异常，内核将控制权交给调试器（tracer）。&lt;/p&gt;
+&lt;p&gt;因此，断点在内存中的存在形式就是：&lt;strong&gt;代码段中被替换为 &lt;code&gt;int3&lt;/code&gt; 的若干字节&lt;/strong&gt;。&lt;/p&gt;
+&lt;h2 id="关键前提page-cache-共享-vs-进程地址空间"&gt;关键前提：page cache 共享 vs 进程地址空间 &lt;a href="#%e5%85%b3%e9%94%ae%e5%89%8d%e6%8f%90page-cache-%e5%85%b1%e4%ba%ab-vs-%e8%bf%9b%e7%a8%8b%e5%9c%b0%e5%9d%80%e7%a9%ba%e9%97%b4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在讨论 fork 和 exec 的行为之前，必须区分两个容易混淆的概念：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;层面&lt;/th&gt;
+&lt;th&gt;是否共享&lt;/th&gt;
+&lt;th&gt;说明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;内核 page cache&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;✅ 是&lt;/td&gt;
+&lt;td&gt;同一个 inode 的文件内容在内核中只缓存一份&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;进程页表映射&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;❌ 否&lt;/td&gt;
+&lt;td&gt;每个进程有自己的页表，将虚拟地址映射到物理页&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;断点写入 &lt;code&gt;int3&lt;/code&gt; 时发生的是：调试器修改进程 text 段的某个字节 → CPU 尝试写入 → 触发 &lt;strong&gt;CoW (Copy-on-Write) 缺页异常&lt;/strong&gt; → 内核为该进程&lt;strong&gt;分配一个新的私有物理页&lt;/strong&gt;，复制原始内容，然后修改。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;这个含 &lt;code&gt;int3&lt;/code&gt; 的页是该进程的私有副本，不影响内核 page cache 中的原始页，也不影响其他映射同一文件页的进程。&lt;/strong&gt;&lt;/p&gt;
+&lt;h2 id="fork-时的断点继承"&gt;fork 时的断点继承 &lt;a href="#fork-%e6%97%b6%e7%9a%84%e6%96%ad%e7%82%b9%e7%bb%a7%e6%89%bf" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="物理层面继承因为-cow-复制的是父进程的私有页"&gt;物理层面：继承，因为 CoW 复制的是父进程的私有页 &lt;a href="#%e7%89%a9%e7%90%86%e5%b1%82%e9%9d%a2%e7%bb%a7%e6%89%bf%e5%9b%a0%e4%b8%ba-cow-%e5%a4%8d%e5%88%b6%e7%9a%84%e6%98%af%e7%88%b6%e8%bf%9b%e7%a8%8b%e7%9a%84%e7%a7%81%e6%9c%89%e9%a1%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;当进程调用 &lt;code&gt;fork()&lt;/code&gt; 时，内核路径如下：&lt;/p&gt;</description></item><item><title>Delve 架构解析：TargetGroup 与 ProcessGroup 的分层设计</title><link>/blog/2025-05-23-dlv-targetgroup-and-processgroup/</link><pubDate>Fri, 23 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-23-dlv-targetgroup-and-processgroup/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Delve 是一个支持多种场景的调试器：既可以调试单个进程，也可以跟踪 fork/exec 产生的子进程，还能连接远程 gdbserver。这些场景下，调试器需要管理一个或多个目标进程，同时保持不同的后端实现（ptrace、gdbserial 等）对上层透明。Delve 通过 TargetGroup 和 ProcessGroup 两层抽象来解决这个问题。&lt;/p&gt;
+&lt;h1 id="两层架构"&gt;两层架构 &lt;a href="#%e4%b8%a4%e5%b1%82%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;pre&gt;&lt;code&gt;┌──────────────────────────────────────┐
+│ TargetGroup │ 高层抽象：调试逻辑
+│ - 逻辑断点共享 │
+│ - 多 target 状态同步 │
+│ - follow-exec 协调 │
+└──────────────┬───────────────────────┘
+│ 调用
+┌──────────────▼───────────────────────┐
+│ ProcessGroup │ 底层接口：进程管理
+│ - Attach / Detach │
+│ - 进程事件分发 │
+│ - 平台相关实现 │
+└──────────────────────────────────────┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id="targetgroup调试逻辑的高层抽象"&gt;TargetGroup：调试逻辑的高层抽象 &lt;a href="#targetgroup%e8%b0%83%e8%af%95%e9%80%bb%e8%be%91%e7%9a%84%e9%ab%98%e5%b1%82%e6%8a%bd%e8%b1%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;TargetGroup 解决的核心问题是：&lt;strong&gt;一个调试会话中可能有多个被调试进程，它们需要共享断点、同步状态&lt;/strong&gt;。&lt;/p&gt;
+&lt;h3 id="管理多个目标"&gt;管理多个目标 &lt;a href="#%e7%ae%a1%e7%90%86%e5%a4%9a%e4%b8%aa%e7%9b%ae%e6%a0%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;在 Go 程序中，一个主进程可能通过 &lt;code&gt;fork&lt;/code&gt; / &lt;code&gt;exec&lt;/code&gt; 产生子进程。当启用 &lt;code&gt;follow-exec&lt;/code&gt; 模式时，Delve 需要跟踪这些子进程，将它们纳入同一个 TargetGroup 进行统一管理。&lt;/p&gt;</description></item><item><title>Delve 的 I/O 重定向机制：分离调试器与被调试进程的标准流</title><link>/blog/2025-05-23-dlv-redirect/</link><pubDate>Fri, 23 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-23-dlv-redirect/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Delve 作为交互式调试器，自身要用 stdin/stdout/stderr 和用户说话——读命令、打变量、显示调用栈。被调试的 target（tracee）同样可能读写标准流。两边若挂在同一条终端链路上，就会出现两个问题：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;输入归谁&lt;/strong&gt;：这行字是给 &lt;code&gt;(dlv)&lt;/code&gt; 的，还是给程序里的 &lt;code&gt;Scan&lt;/code&gt; / &lt;code&gt;scanf&lt;/code&gt;？&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;输出怎么分&lt;/strong&gt;：程序的 &lt;code&gt;Println&lt;/code&gt; 和调试器的 prompt 混在同一窗口，自动化场景里几乎无法解析。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;很多人第一反应是：那 Delve 必须把 target 的 IO 全部重定向走。其实默认并不是这样——&lt;strong&gt;不指定 &lt;code&gt;-r&lt;/code&gt; / &lt;code&gt;--tty&lt;/code&gt; 时，target 常常和 dlv 共享同一终端&lt;/strong&gt;。重定向是&lt;strong&gt;可选的隔离手段&lt;/strong&gt;，在手工调试时一般用不到，在自动化调试时几乎刚需。&lt;/p&gt;
+&lt;h1 id="默认共享终端时为什么多数时候不太乱"&gt;默认共享终端时，为什么多数时候“不太乱” &lt;a href="#%e9%bb%98%e8%ae%a4%e5%85%b1%e4%ba%ab%e7%bb%88%e7%ab%af%e6%97%b6%e4%b8%ba%e4%bb%80%e4%b9%88%e5%a4%9a%e6%95%b0%e6%97%b6%e5%80%99%e4%b8%8d%e5%a4%aa%e4%b9%b1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;同一次终端会话里，shell、&lt;code&gt;dlv&lt;/code&gt;、以及 dlv 拉起的 target，&lt;strong&gt;默认往往指向同一个 PTY slave&lt;/strong&gt;。进程各自有 fd 表，但 0/1/2 背后的设备可以是同一个 &lt;code&gt;/dev/pts/N&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;PTY、前台进程组、后台读终端收到 &lt;code&gt;SIGTTIN&lt;/code&gt; 等细节，见 &lt;a href="/blog/2026-07-11-%E7%90%86%E8%A7%A3%E7%BB%88%E7%AB%AF+tty+pty+console/"&gt;终端、TTY、PTY、Console：把这些概念一次理清&lt;/a&gt; 中「同一会话里：谁共享 PTY slave？」一节。这里只留和调试相关的结论：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;输出&lt;/strong&gt;：多个进程写同一 slave，字节在窗口里会交错——这是真共享，不是显示 bug。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;输入&lt;/strong&gt;：内核把键盘交给当前&lt;strong&gt;前台进程组&lt;/strong&gt;；不是“每个进程各有一份 stdin 副本”。&lt;/li&gt;
+&lt;li&gt;调试时 dlv 与 target 对终端的使用，多数是&lt;strong&gt;时分交错&lt;/strong&gt;，而不是长时间并行抢读：&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;停在断点 / 停在 (dlv) 提示符
+→ 主要是调试器在读命令、打输出
+continue / step 跑起来
+→ target 在执行，可能读输入、写输出
+再断下
+→ 又回到调试器
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;所以手动调试时，你敲 &lt;code&gt;next&lt;/code&gt; 的时候 target 往往停着；target 在 &lt;code&gt;fmt.Scanln&lt;/code&gt; 等输入时，你也很少同时在敲 Delve 命令。&lt;strong&gt;交替执行&lt;/strong&gt;掩盖了共享终端的本质矛盾，体验上“&lt;strong&gt;大多时候还行&lt;/strong&gt;”。&lt;/p&gt;</description></item><item><title>Delve 的遥测（Telemetry）系统：父进程记录、子进程上报</title><link>/blog/2025-05-23-dlv-telemetry/</link><pubDate>Fri, 23 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-23-dlv-telemetry/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Delve 在 &lt;code&gt;v1.22.0&lt;/code&gt; 之后引入了遥测（telemetry）系统，遵循 Go 工具链的 telemetry 机制。它的核心目的是收集使用数据和崩溃信息，帮助维护者了解工具的使用模式并发现 bug。设计上充分考虑了隐私和性能——数据收集是可选的（opt-in），且采用了父进程记录 + 子进程上报的分离架构，避免对调试会话本身产生性能干扰。&lt;/p&gt;
+&lt;h1 id="初始化"&gt;初始化 &lt;a href="#%e5%88%9d%e5%a7%8b%e5%8c%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;遥测系统在 Delve 启动时通过 &lt;code&gt;telemetry.Start()&lt;/code&gt; 初始化：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;telemetry.Start(telemetry.Config{
+ReportCrashes: true,
+})
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这个调用在 &lt;code&gt;cmd/dlv/main.go&lt;/code&gt; 的入口处执行，确保遥测覆盖整个进程生命周期。&lt;/p&gt;
+&lt;h1 id="父子进程分离架构"&gt;父子进程分离架构 &lt;a href="#%e7%88%b6%e5%ad%90%e8%bf%9b%e7%a8%8b%e5%88%86%e7%a6%bb%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;遥测系统最巧妙的设计是&lt;strong&gt;父子进程分离&lt;/strong&gt;：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;┌──────────────────────┐
+│ 父进程 (Delve) │ ← 运行时记录计数数据
+│ 通过 mmap 记录指标 │
+└──────┬───────────────┘
+│ 环境变量
+│ GO_TELEMETRY_CHILD
+▼
+┌──────────────────────┐
+│ 子进程 (Sidecar) │ ← 负责上报数据
+│ 读取 mmap 文件 │
+│ 发送到遥测服务端 │
+└──────────────────────┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;父进程&lt;/strong&gt;：即 Delve 主进程，负责在运行时通过 mmap 高效记录计数数据。这部分开销极小，不会影响调试性能&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;子进程&lt;/strong&gt;：独立进程，通过环境变量 &lt;code&gt;GO_TELEMETRY_CHILD&lt;/code&gt; 区分身份，负责读取 mmap 文件并将数据上报到 Go 遥测服务端&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这种分离的核心价值是：&lt;strong&gt;上报操作（网络 I/O、序列化、文件轮转）完全不影响主调试进程&lt;/strong&gt;。即使上报失败，也不会对调试会话产生任何副作用。&lt;/p&gt;</description></item><item><title>使用etcd做服务发现的13条教训</title><link>/blog/2025-04-25-%E5%BA%94%E7%94%A8%E5%AE%9E%E8%B7%B5_%E4%BD%BF%E7%94%A8etcd%E5%81%9A%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0%E7%9A%84%E6%95%99%E8%AE%AD/</link><pubDate>Fri, 25 Apr 2025 10:00:00 +0800</pubDate><guid>/blog/2025-04-25-%E5%BA%94%E7%94%A8%E5%AE%9E%E8%B7%B5_%E4%BD%BF%E7%94%A8etcd%E5%81%9A%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0%E7%9A%84%E6%95%99%E8%AE%AD/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;在我们的项目中，我们使用ETCD作为我们的服务注册发现中心，在业务上线前的野蛮生长期，我们大部分时间用在开发产品功能上，对于真正的分布式系统层面可能面临的一些挑战，团队初期并没有花太多时间去打磨。在经历了很多轮的对外CE之后，其实用户量带来的性能层面的挑战极小，与之对应的部署的服务实例数量、机器数量在那个时候也没有构成太多挑战。&lt;/p&gt;
 &lt;p&gt;真正的挑战来自产品上线后，大量用户涌入，产品也成为了爆款，惊喜之余也发现了一些隐藏了很久没有被充分重视的性能缺陷，以及潜在的巨大风险点。可以说，在过去的实践中我们曾经犯过不少错误。如果你们也想在ETCD基础上构建可靠的、高可用的服务注册发现能力，你们需要注意避免犯相同的错误。&lt;/p&gt;
 &lt;h2 id="实践中的13条教训"&gt;实践中的13条教训 &lt;a href="#%e5%ae%9e%e8%b7%b5%e4%b8%ad%e7%9a%8413%e6%9d%a1%e6%95%99%e8%ae%ad" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;

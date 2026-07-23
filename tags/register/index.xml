@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Register on</title><link>/tags/register/</link><description>Recent content in Register on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 02 May 2024 00:00:00 +0800</lastBuildDate><atom:link href="/tags/register/index.xml" rel="self" type="application/rss+xml"/><item><title>Vim 复制粘贴丢内容？寄存器机制详解</title><link>/blog/2024-05-02-vim-clipboard/</link><pubDate>Thu, 02 May 2024 00:00:00 +0800</pubDate><guid>/blog/2024-05-02-vim-clipboard/</guid><description>&lt;p&gt;用 Vim 的时候你一定遇到过这种情况：&lt;code&gt;y&lt;/code&gt; 复制了一段代码，准备跳过去 &lt;code&gt;p&lt;/code&gt; 粘贴——但中间需要删个空行、改个变量名，啪，再按 &lt;code&gt;p&lt;/code&gt;，贴出来的不是刚才复制的内容，而是刚刚删除的那一行。&lt;/p&gt;
+&lt;p&gt;这个问题困扰过几乎所有 Vim 用户。原因不复杂，但解法有好几种，各自的适用场景也不太一样。&lt;/p&gt;
+&lt;h2 id="为什么会丢"&gt;为什么会丢？ &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e4%bc%9a%e4%b8%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Vim 的 yank（&lt;code&gt;y&lt;/code&gt;）、delete（&lt;code&gt;d&lt;/code&gt;）、change（&lt;code&gt;c&lt;/code&gt;）、cut（&lt;code&gt;x&lt;/code&gt;）、substitute（&lt;code&gt;s&lt;/code&gt;）操作，默认都把内容写入同一个地方——&lt;strong&gt;无名寄存器&lt;/strong&gt;（unnamed register，&lt;code&gt;&amp;quot;&amp;quot;&lt;/code&gt;）。&lt;/p&gt;
+&lt;p&gt;你在 &lt;code&gt;y&lt;/code&gt; 和 &lt;code&gt;p&lt;/code&gt; 之间做的任何编辑操作（比如 &lt;code&gt;dd&lt;/code&gt; 删一行、&lt;code&gt;x&lt;/code&gt; 删一个字符），都会覆盖这个寄存器的内容。之前 yank 的东西自然就没了。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;yy → &amp;quot;&amp;quot; = &amp;quot;line 1&amp;quot;
+dd → &amp;quot;&amp;quot; = &amp;quot;line 2&amp;quot; ← 覆盖了！
+p → 贴出 &amp;quot;line 2&amp;quot; ← 不是你要的
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这个问题本质上是寄存器选错了——不是 Vim 的 bug，是默认行为不够直观。下面几种解法由简到繁。&lt;/p&gt;
+&lt;h2 id="解法一0-寄存器yank-专用安全区"&gt;解法一：&lt;code&gt;&amp;quot;0&lt;/code&gt; 寄存器——yank 专用安全区 &lt;a href="#%e8%a7%a3%e6%b3%95%e4%b8%800-%e5%af%84%e5%ad%98%e5%99%a8yank-%e4%b8%93%e7%94%a8%e5%ae%89%e5%85%a8%e5%8c%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Vim 有一个特殊寄存器 &lt;code&gt;&amp;quot;0&lt;/code&gt;，&lt;strong&gt;只存最近一次 yank 的内容&lt;/strong&gt;。删除、修改操作不会碰它。&lt;/p&gt;
+&lt;p&gt;所以最简单的做法：yank 照常用 &lt;code&gt;y&lt;/code&gt;，粘贴时用 &lt;code&gt;&amp;quot;0p&lt;/code&gt;。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-vim"&gt;yy → &amp;quot;&amp;quot; = &amp;quot;line 1&amp;quot;, &amp;quot;0 = &amp;quot;line 1&amp;quot;
+dd → &amp;quot;&amp;quot; = &amp;quot;line 2&amp;quot;, &amp;quot;0 = &amp;quot;line 1&amp;quot; ← &amp;quot;0 没变
+&amp;quot;0p → 贴出 &amp;quot;line 1&amp;quot; ← 正确
+&lt;/code&gt;&lt;/pre&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;code&gt;&amp;quot;0&lt;/code&gt; 是 yank 寄存器，不是&amp;quot;第 0 号命名寄存器&amp;quot;。不要把它和 &lt;code&gt;&amp;quot;1&lt;/code&gt;~&lt;code&gt;&amp;quot;9&lt;/code&gt; 搞混——那些存的是删除历史。&lt;/p&gt;</description></item></channel></rss>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Compression on</title><link>/tags/compression/</link><description>Recent content in Compression on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 26 Jun 2024 00:00:00 +0800</lastBuildDate><atom:link href="/tags/compression/index.xml" rel="self" type="application/rss+xml"/><item><title>ClickHouse 列压缩机制：从 CODEC 到 Part 层面的压缩策略</title><link>/blog/2024-06-26-clickhouse-compress/</link><pubDate>Wed, 26 Jun 2024 00:00:00 +0800</pubDate><guid>/blog/2024-06-26-clickhouse-compress/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;使用 ClickHouse 做分析型负载时，存储成本是一个绕不开的话题。ClickHouse 以列式存储著称，而列存天然适合压缩——同一列的数据类型相同、值域相近，压缩算法可以轻松达到高压缩比。但在实际使用中，关于压缩有几个常见疑问：业务侧自己压缩后写入，还是让 ClickHouse 自己压缩？如何在表定义中指定压缩算法？如果不指定，ClickHouse 会不会自动压缩？压缩后的列还能用来做查询过滤吗？&lt;/p&gt;
+&lt;p&gt;这篇文章逐一梳理这些问题，帮你理清 ClickHouse 的压缩机制。&lt;/p&gt;
+&lt;h1 id="clickhouse-压缩机制全景"&gt;ClickHouse 压缩机制全景 &lt;a href="#clickhouse-%e5%8e%8b%e7%bc%a9%e6%9c%ba%e5%88%b6%e5%85%a8%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="业务侧压缩-vs-clickhouse-内置压缩"&gt;业务侧压缩 vs ClickHouse 内置压缩 &lt;a href="#%e4%b8%9a%e5%8a%a1%e4%be%a7%e5%8e%8b%e7%bc%a9-vs-clickhouse-%e5%86%85%e7%bd%ae%e5%8e%8b%e7%bc%a9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;一个很自然的想法是：既然数据最终要压缩存储，那业务侧先把数据压了再写进去，不是更省带宽和磁盘吗？&lt;/p&gt;
+&lt;p&gt;但实际推荐的做法是方案 2——业务侧不压缩，直接写入，让 ClickHouse 利用自身的列压缩能力来压缩存储。原因有几个：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;压缩效率更高&lt;/strong&gt;：ClickHouse 内部使用高度优化的压缩算法，会根据列的数据特征自动选择最优策略，压缩效果通常好于业务侧的通用压缩。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;简化业务逻辑&lt;/strong&gt;：如果业务侧自行压缩，需要在代码中增加压缩/解压逻辑，增加维护成本。利用 ClickHouse 自身能力，业务侧可以更专注于业务本身。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;保证一致性&lt;/strong&gt;：所有数据由 ClickHouse 统一压缩，格式一致，有利于后续数据处理和分析。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;灵活性&lt;/strong&gt;：ClickHouse 提供丰富的压缩选项，可根据实际需求灵活配置。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;当然也有例外——如果网络带宽是瓶颈而 CPU 充足，业务侧预压缩减少传输量也是一个可选的优化方向。但对大多数场景来说，把压缩交给 ClickHouse 就行。&lt;/p&gt;
+&lt;h2 id="表定义中指定列压缩codec"&gt;表定义中指定列压缩：CODEC &lt;a href="#%e8%a1%a8%e5%ae%9a%e4%b9%89%e4%b8%ad%e6%8c%87%e5%ae%9a%e5%88%97%e5%8e%8b%e7%bc%a9codec" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;如果某列数据量特别大（比如文章正文、日志内容），可以在建表时通过 &lt;code&gt;CODEC&lt;/code&gt; 语法为它指定压缩算法：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-sql"&gt;CREATE TABLE articles (
+name String,
+sex String,
+age UInt8,
+article String CODEC(ZSTD(10))
+) ENGINE = MergeTree()
+ORDER BY tuple();
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这里 &lt;code&gt;article&lt;/code&gt; 列使用了 &lt;code&gt;CODEC(ZSTD(10))&lt;/code&gt;：&lt;/p&gt;</description></item></channel></rss>

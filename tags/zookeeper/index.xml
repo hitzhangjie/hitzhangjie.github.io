@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Zookeeper on</title><link>/tags/zookeeper/</link><description>Recent content in Zookeeper on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 18 Feb 2024 00:00:00 +0800</lastBuildDate><atom:link href="/tags/zookeeper/index.xml" rel="self" type="application/rss+xml"/><item><title>ClickHouse 副本同步机制：ZooKeeper 在其中的角色</title><link>/blog/2024-02-18-clickhouse-use-zk/</link><pubDate>Sun, 18 Feb 2024 00:00:00 +0800</pubDate><guid>/blog/2024-02-18-clickhouse-use-zk/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在生产环境中使用 ClickHouse，高可用几乎是必选项。ClickHouse 通过 ReplicatedMergeTree 引擎支持副本复制，而副本间的数据同步依赖于 ZooKeeper（或 ClickHouse Keeper）来协调。很多人知道 ClickHouse 用了 ZK，但对它具体怎么用、为什么不直接用 Raft/Paxos、以及最终一致性可能带来的问题并不清楚。本文从架构层面梳理 ClickHouse 副本同步的全过程。&lt;/p&gt;
+&lt;h1 id="副本同步的完整流程"&gt;副本同步的完整流程 &lt;a href="#%e5%89%af%e6%9c%ac%e5%90%8c%e6%ad%a5%e7%9a%84%e5%ae%8c%e6%95%b4%e6%b5%81%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="基于-zk-的异步复制"&gt;基于 ZK 的异步复制 &lt;a href="#%e5%9f%ba%e4%ba%8e-zk-%e7%9a%84%e5%bc%82%e6%ad%a5%e5%a4%8d%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;ClickHouse 的副本同步过程如下：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;主节点写入&lt;/strong&gt;：当主节点接收到写操作请求后，首先将数据写入本地磁盘。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;写入 ZNode&lt;/strong&gt;：主节点将写操作的元数据和数据位置作为一个新的 ZNode（ZooKeeper 的数据节点）写入 ZooKeeper。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;副本节点感知&lt;/strong&gt;：副本节点定期从 ZooKeeper 拉取新的 ZNode（通过 Watch 机制），发现新数据后从主节点拉取数据并写入本地磁盘。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;确认完成&lt;/strong&gt;：副本节点成功写入后，向 ZooKeeper 报告该 ZNode 已被处理。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;清理 ZNode&lt;/strong&gt;：当所有副本节点都报告处理完毕后，ZooKeeper 删除该 ZNode。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;这个流程是&lt;strong&gt;异步&lt;/strong&gt;的——主节点写完本地磁盘就算写入成功，副本同步在后台进行。这种方式简单高效，但存在一个时间窗口：在副本同步完成之前，不同节点可能看到不同的数据。&lt;/p&gt;
+&lt;h2 id="zk-的角色协调器而非共识层"&gt;ZK 的角色：协调器，而非共识层 &lt;a href="#zk-%e7%9a%84%e8%a7%92%e8%89%b2%e5%8d%8f%e8%b0%83%e5%99%a8%e8%80%8c%e9%9d%9e%e5%85%b1%e8%af%86%e5%b1%82" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;ZooKeeper 本身通过 ZAB（ZooKeeper Atomic Broadcast）协议保证自身数据的一致性。但它为 ClickHouse 提供的是更高层的服务——ZNode 的注册和 Watch 机制——本质上是一种&lt;strong&gt;异步的副本间数据同步机制&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;并不是说 ClickHouse 的每次数据复制都跑了一遍共识算法。ZK 提供的是一个可靠的&amp;quot;任务队列&amp;quot;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;ZNode 存储&amp;quot;有哪些数据需要同步&amp;quot;的元信息。&lt;/li&gt;
+&lt;li&gt;Watch 机制通知副本&amp;quot;有新数据来了&amp;quot;。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这种设计让 ClickHouse 的副本同步保持简单高效，同时借助 ZK 的可靠性保证不丢任务。&lt;/p&gt;</description></item></channel></rss>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Distributed-Query on</title><link>/tags/distributed-query/</link><description>Recent content in Distributed-Query on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 26 Mar 2024 00:00:00 +0800</lastBuildDate><atom:link href="/tags/distributed-query/index.xml" rel="self" type="application/rss+xml"/><item><title>ClickHouse GLOBAL IN：分布式查询中的全局子查询是怎么工作的</title><link>/blog/2024-03-26-clickhouse-global-in/</link><pubDate>Tue, 26 Mar 2024 00:00:00 +0800</pubDate><guid>/blog/2024-03-26-clickhouse-global-in/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在 ClickHouse 集群中做分布式查询时，&lt;code&gt;GLOBAL IN&lt;/code&gt; 是一个常用的语法。但它的执行机制和普通的 &lt;code&gt;IN&lt;/code&gt; 有很大不同，如果不理解清楚，很容易踩坑——比如以为子查询会在每个节点独立执行、结果不一致，或者对网络开销没有概念。&lt;/p&gt;
+&lt;p&gt;本文通过一个具体的例子，拆解 &lt;code&gt;GLOBAL IN&lt;/code&gt; 在分布式场景下的完整执行流程。&lt;/p&gt;
+&lt;h1 id="global-in-的执行机制"&gt;GLOBAL IN 的执行机制 &lt;a href="#global-in-%e7%9a%84%e6%89%a7%e8%a1%8c%e6%9c%ba%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="基础行为"&gt;基础行为 &lt;a href="#%e5%9f%ba%e7%a1%80%e8%a1%8c%e4%b8%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;GLOBAL IN&lt;/code&gt; 的作用是：在分布式查询中，&lt;strong&gt;先在全局范围内执行子查询，然后将结果发送给所有远程节点，最后在每个节点上执行主查询&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;这意味着不管集群有多少个节点，主查询在每个节点上使用的子查询结果集都是相同的，从而保证结果一致性。&lt;/p&gt;
+&lt;p&gt;考虑一个简单查询：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-sql"&gt;SELECT * FROM distributed_table
+WHERE id GLOBAL IN (SELECT id FROM xx_dist);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;执行流程如下：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;子查询先执行&lt;/strong&gt;：在接收查询请求的节点（初始节点）上，&lt;code&gt;SELECT id FROM xx_dist&lt;/code&gt; 被发送到 &lt;code&gt;xx_dist&lt;/code&gt; 对应的所有节点执行。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;结果汇总&lt;/strong&gt;：初始节点收集所有节点的子查询结果并合并。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;广播结果集&lt;/strong&gt;：将合并后的结果集发送到集群中分布式表 &lt;code&gt;distributed_table&lt;/code&gt; 对应的所有节点。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;执行主查询&lt;/strong&gt;：每个节点用收到的子查询结果集执行主查询。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;返回结果&lt;/strong&gt;：各节点将主查询结果返回给初始节点，初始节点汇总后返回给客户端。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id="复合子查询intersect-的情况"&gt;复合子查询：INTERSECT 的情况 &lt;a href="#%e5%a4%8d%e5%90%88%e5%ad%90%e6%9f%a5%e8%af%a2intersect-%e7%9a%84%e6%83%85%e5%86%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;一个更复杂的场景是子查询中包含 &lt;code&gt;INTERSECT&lt;/code&gt;：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-sql"&gt;SELECT * FROM distributed_table
+WHERE id GLOBAL IN (
+SELECT id FROM xx_dist
+INTERSECT
+SELECT id FROM yy_dist
+);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这里有两种可能的理解方式：&lt;/p&gt;</description></item></channel></rss>

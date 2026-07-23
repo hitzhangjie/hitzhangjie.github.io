@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Table-Engine on</title><link>/tags/table-engine/</link><description>Recent content in Table-Engine on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 19 Feb 2024 00:00:00 +0800</lastBuildDate><atom:link href="/tags/table-engine/index.xml" rel="self" type="application/rss+xml"/><item><title>ClickHouse 表引擎详解：为什么需要这么多引擎，各自解决什么问题</title><link>/blog/2024-02-19-clickhouse-table-engines/</link><pubDate>Mon, 19 Feb 2024 00:00:00 +0800</pubDate><guid>/blog/2024-02-19-clickhouse-table-engines/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;如果你从 MySQL 转过来，可能会对 ClickHouse 支持十几种表引擎感到困惑。MySQL 基本上就是 MyISAM 和 InnoDB 两个选择，而 ClickHouse 的 &lt;code&gt;ENGINE = ...&lt;/code&gt; 却有很多选项。为什么需要这么多引擎？每种引擎解决什么问题？本文逐一梳理。&lt;/p&gt;
+&lt;h1 id="为什么-clickhouse-需要多种表引擎"&gt;为什么 ClickHouse 需要多种表引擎 &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88-clickhouse-%e9%9c%80%e8%a6%81%e5%a4%9a%e7%a7%8d%e8%a1%a8%e5%bc%95%e6%93%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;ClickHouse 的设计哲学是：&lt;strong&gt;每种数据使用模式都有最优的存储和查询策略&lt;/strong&gt;。不同的场景对数据的写入方式、查询模式、数据生命周期、一致性要求各不相同，没有一种引擎能通吃所有场景。&lt;/p&gt;
+&lt;p&gt;MySQL 的 InnoDB 虽然也支持事务、行锁、MVCC 等复杂特性，但它面向的是 OLTP 场景。ClickHouse 面向 OLAP，场景分化更严重：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;有的数据需要高频追加、定期合并（日志、监控）。&lt;/li&gt;
+&lt;li&gt;有的数据是临时计算的中间结果（ETL 中的中间表）。&lt;/li&gt;
+&lt;li&gt;有的数据分布在多个节点上（分布式表）。&lt;/li&gt;
+&lt;li&gt;有的数据需要跨副本高可用（复制表）。&lt;/li&gt;
+&lt;li&gt;有的数据来自 Kafka（实时流式摄入）。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;不同的需求，对应不同的引擎。&lt;/p&gt;
+&lt;h1 id="常用表引擎一览"&gt;常用表引擎一览 &lt;a href="#%e5%b8%b8%e7%94%a8%e8%a1%a8%e5%bc%95%e6%93%8e%e4%b8%80%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="mergetree--主力引擎"&gt;MergeTree —— 主力引擎 &lt;a href="#mergetree--%e4%b8%bb%e5%8a%9b%e5%bc%95%e6%93%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;MergeTree 是 ClickHouse 最重要的引擎，适用于&lt;strong&gt;高速插入和复杂查询&lt;/strong&gt;的场景。它支持：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;数据分区&lt;/strong&gt;（&lt;code&gt;PARTITION BY&lt;/code&gt;）：按时间或其他维度将数据物理分开。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;主键排序&lt;/strong&gt;（&lt;code&gt;ORDER BY&lt;/code&gt;）：数据按主键排序存储，用于稀疏索引。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;后台合并&lt;/strong&gt;：自动将小 Part 合并为大 Part，减少文件数量、提升查询效率。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;数据 TTL&lt;/strong&gt;：自动过期删除旧数据。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;绝大多数 ClickHouse 生产表都使用 MergeTree 或其变种。&lt;/p&gt;
+&lt;h2 id="replicatedmergetree--高可用版本"&gt;ReplicatedMergeTree —— 高可用版本 &lt;a href="#replicatedmergetree--%e9%ab%98%e5%8f%af%e7%94%a8%e7%89%88%e6%9c%ac" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;MergeTree 的增强版，在 MergeTree 的基础上增加了&lt;strong&gt;跨副本数据复制&lt;/strong&gt;的能力。它依赖 ZooKeeper（或 ClickHouse Keeper）来协调副本间的数据同步。&lt;/p&gt;</description></item></channel></rss>

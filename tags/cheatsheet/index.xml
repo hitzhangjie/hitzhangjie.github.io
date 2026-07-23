@@ -1,4 +1,58 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Cheatsheet on</title><link>/tags/cheatsheet/</link><description>Recent content in Cheatsheet on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 22 Jul 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/cheatsheet/index.xml" rel="self" type="application/rss+xml"/><item><title>dlv 调试速查表</title><link>/blog/2022-08-25-dlv-cheatsheet/</link><pubDate>Wed, 22 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/2022-08-25-dlv-cheatsheet/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Cheatsheet on</title><link>/tags/cheatsheet/</link><description>Recent content in Cheatsheet on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 24 Jul 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/cheatsheet/index.xml" rel="self" type="application/rss+xml"/><item><title>ClickHouse 速查手册：场景、架构、存储、部署与成本</title><link>/blog/2026-07-24-clickhouse-cheatsheet/</link><pubDate>Fri, 24 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/2026-07-24-clickhouse-cheatsheet/</guid><description>&lt;h1 id="前言"&gt;前言 &lt;a href="#%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;这不是一篇入门教程，也不是某个特性的深入分析。这是一份面向&lt;strong&gt;架构师&lt;/strong&gt;的系统性速查手册，目标是让你在对 ClickHouse 没有系统性学习的情况下，仍能做出合理的技术决策——判断它是否适合当前场景、理解它的核心架构、估算部署和运维成本。&lt;/p&gt;
+&lt;h1 id="一适用场景决策树"&gt;一、适用场景决策树 &lt;a href="#%e4%b8%80%e9%80%82%e7%94%a8%e5%9c%ba%e6%99%af%e5%86%b3%e7%ad%96%e6%a0%91" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;strong&gt;✅ ClickHouse 最适合&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;日志分析（应用日志、访问日志、审计日志）&lt;/li&gt;
+&lt;li&gt;监控指标存储与查询（时序数据，如 Prometheus 远程存储）&lt;/li&gt;
+&lt;li&gt;实时 OLAP 报表（用户行为分析、漏斗分析、留存分析）&lt;/li&gt;
+&lt;li&gt;大规模数据聚合（GROUP BY 亿级行数据在秒级返回）&lt;/li&gt;
+&lt;li&gt;事件追踪与分析（点击流、用户轨迹）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;⚠️ 勉强可用但不擅长&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;频繁更新已存在数据（如用户状态变更）&lt;/li&gt;
+&lt;li&gt;单行点查询（按 ID 查一条记录的全部字段）&lt;/li&gt;
+&lt;li&gt;高并发短查询（QPS &amp;gt; 100）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;❌ 完全不适合&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;OLTP 业务（订单交易、库存扣减）&lt;/li&gt;
+&lt;li&gt;需要 ACID 事务的场景&lt;/li&gt;
+&lt;li&gt;需要外键约束、唯一约束的场景&lt;/li&gt;
+&lt;li&gt;高频单行 DELETE/UPDATE 操作&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;决策公式&lt;/strong&gt;：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;写入量大 + 查询重分析 + 很少更新 + 并发不高 ≈ ClickHouse&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id="二架构设计"&gt;二、架构设计 &lt;a href="#%e4%ba%8c%e6%9e%b6%e6%9e%84%e8%ae%be%e8%ae%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="整体架构"&gt;整体架构 &lt;a href="#%e6%95%b4%e4%bd%93%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code&gt;┌─────────────────────────────────────────────┐
+│ Client (SQL) │
+└─────────────────┬───────────────────────────┘
+│
+┌─────────────────▼───────────────────────────┐
+│ Distributed Table (代理层) │
+│ ┌─────────┐ ┌─────────┐ ┌─────────┐ │
+│ │ Shard 1 │ │ Shard 2 │ │ Shard N │ │
+│ │┌───────┐│ │┌───────┐│ │┌───────┐│ │
+│ ││Replica││ ││Replica││ ││Replica││ │
+│ ││ A ││ ││ A ││ ││ A ││ │
+│ ││Replica││ ││Replica││ ││Replica││ │
+│ ││ B ││ ││ B ││ ││ B ││ │
+│ │└───────┘│ │└───────┘│ │└───────┘│ │
+│ └─────────┘ └─────────┘ └─────────┘ │
+└─────────────────────────────────────────────┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Shard（分片）&lt;/strong&gt;：数据水平切分，不同分片存储不同数据，用于&lt;strong&gt;扩展写入吞吐和存储容量&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Replica（副本）&lt;/strong&gt;：同一分片的数据冗余，用于&lt;strong&gt;高可用和读扩展&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Distributed Table&lt;/strong&gt;：逻辑代理层，对用户透明，内部将查询路由到各分片并汇总结果。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="核心计算引擎特性"&gt;核心计算引擎特性 &lt;a href="#%e6%a0%b8%e5%bf%83%e8%ae%a1%e7%ae%97%e5%bc%95%e6%93%8e%e7%89%b9%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="mpp大规模并行处理"&gt;MPP（大规模并行处理） &lt;a href="#mpp%e5%a4%a7%e8%a7%84%e6%a8%a1%e5%b9%b6%e8%a1%8c%e5%a4%84%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;查询被分解为多个子查询，分发到各计算节点并行执行，各节点只处理自己分片内的数据，最后汇总。&lt;/p&gt;</description></item><item><title>dlv 调试速查表</title><link>/blog/2022-08-25-dlv-cheatsheet/</link><pubDate>Wed, 22 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/2022-08-25-dlv-cheatsheet/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;我对 dlv 做过&lt;a href="./2020-08-25-delve%E8%B0%83%E8%AF%95%E5%99%A8%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0.md"&gt;比较深入的源码分析&lt;/a&gt;，也写过一本关于调试器实现的书&lt;sup id="fnref:1"&gt;&lt;a href="#fn:1" class="footnote-ref" role="doc-noteref"&gt;1&lt;/a&gt;&lt;/sup&gt;。但日常使用层面，大部分需求 VS Code + dlv dap 已经覆盖了。真正需要裸调的时候往往是一些特殊场景——比如远程服务器上没装 IDE、需要脚本化批量设断点、需要追踪子进程、或者需要监控某个变量被谁写过。这些时候对命令结构的熟悉程度就决定了排查效率。&lt;/p&gt;
 &lt;p&gt;本文把 dlv 的命令分为两大部分：&lt;/p&gt;
 &lt;ol&gt;

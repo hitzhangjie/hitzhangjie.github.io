@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Clickhouse on</title><link>/categories/clickhouse/</link><description>Recent content in Clickhouse on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 24 Jul 2026 00:00:00 +0800</lastBuildDate><atom:link href="/categories/clickhouse/index.xml" rel="self" type="application/rss+xml"/><item><title>ClickHouse 速查手册：场景、架构、存储、部署与成本</title><link>/blog/2026-07-24-clickhouse-cheatsheet/</link><pubDate>Fri, 24 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/2026-07-24-clickhouse-cheatsheet/</guid><description>&lt;h1 id="前言"&gt;前言 &lt;a href="#%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;这不是一篇入门教程，也不是某个特性的深入分析。这是一份面向&lt;strong&gt;架构师&lt;/strong&gt;的系统性速查手册，目标是让你在对 ClickHouse 没有系统性学习的情况下，仍能做出合理的技术决策——判断它是否适合当前场景、理解它的核心架构、估算部署和运维成本。&lt;/p&gt;
+&lt;h1 id="一适用场景决策树"&gt;一、适用场景决策树 &lt;a href="#%e4%b8%80%e9%80%82%e7%94%a8%e5%9c%ba%e6%99%af%e5%86%b3%e7%ad%96%e6%a0%91" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;strong&gt;✅ ClickHouse 最适合&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;日志分析（应用日志、访问日志、审计日志）&lt;/li&gt;
+&lt;li&gt;监控指标存储与查询（时序数据，如 Prometheus 远程存储）&lt;/li&gt;
+&lt;li&gt;实时 OLAP 报表（用户行为分析、漏斗分析、留存分析）&lt;/li&gt;
+&lt;li&gt;大规模数据聚合（GROUP BY 亿级行数据在秒级返回）&lt;/li&gt;
+&lt;li&gt;事件追踪与分析（点击流、用户轨迹）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;⚠️ 勉强可用但不擅长&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;频繁更新已存在数据（如用户状态变更）&lt;/li&gt;
+&lt;li&gt;单行点查询（按 ID 查一条记录的全部字段）&lt;/li&gt;
+&lt;li&gt;高并发短查询（QPS &amp;gt; 100）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;❌ 完全不适合&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;OLTP 业务（订单交易、库存扣减）&lt;/li&gt;
+&lt;li&gt;需要 ACID 事务的场景&lt;/li&gt;
+&lt;li&gt;需要外键约束、唯一约束的场景&lt;/li&gt;
+&lt;li&gt;高频单行 DELETE/UPDATE 操作&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;决策公式&lt;/strong&gt;：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;写入量大 + 查询重分析 + 很少更新 + 并发不高 ≈ ClickHouse&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id="二架构设计"&gt;二、架构设计 &lt;a href="#%e4%ba%8c%e6%9e%b6%e6%9e%84%e8%ae%be%e8%ae%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="整体架构"&gt;整体架构 &lt;a href="#%e6%95%b4%e4%bd%93%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code&gt;┌─────────────────────────────────────────────┐
+│ Client (SQL) │
+└─────────────────┬───────────────────────────┘
+│
+┌─────────────────▼───────────────────────────┐
+│ Distributed Table (代理层) │
+│ ┌─────────┐ ┌─────────┐ ┌─────────┐ │
+│ │ Shard 1 │ │ Shard 2 │ │ Shard N │ │
+│ │┌───────┐│ │┌───────┐│ │┌───────┐│ │
+│ ││Replica││ ││Replica││ ││Replica││ │
+│ ││ A ││ ││ A ││ ││ A ││ │
+│ ││Replica││ ││Replica││ ││Replica││ │
+│ ││ B ││ ││ B ││ ││ B ││ │
+│ │└───────┘│ │└───────┘│ │└───────┘│ │
+│ └─────────┘ └─────────┘ └─────────┘ │
+└─────────────────────────────────────────────┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Shard（分片）&lt;/strong&gt;：数据水平切分，不同分片存储不同数据，用于&lt;strong&gt;扩展写入吞吐和存储容量&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Replica（副本）&lt;/strong&gt;：同一分片的数据冗余，用于&lt;strong&gt;高可用和读扩展&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Distributed Table&lt;/strong&gt;：逻辑代理层，对用户透明，内部将查询路由到各分片并汇总结果。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="核心计算引擎特性"&gt;核心计算引擎特性 &lt;a href="#%e6%a0%b8%e5%bf%83%e8%ae%a1%e7%ae%97%e5%bc%95%e6%93%8e%e7%89%b9%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="mpp大规模并行处理"&gt;MPP（大规模并行处理） &lt;a href="#mpp%e5%a4%a7%e8%a7%84%e6%a8%a1%e5%b9%b6%e8%a1%8c%e5%a4%84%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;查询被分解为多个子查询，分发到各计算节点并行执行，各节点只处理自己分片内的数据，最后汇总。&lt;/p&gt;</description></item><item><title>ClickHouse 列压缩机制：从 CODEC 到 Part 层面的压缩策略</title><link>/blog/2024-06-26-clickhouse-compress/</link><pubDate>Wed, 26 Jun 2024 00:00:00 +0800</pubDate><guid>/blog/2024-06-26-clickhouse-compress/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;使用 ClickHouse 做分析型负载时，存储成本是一个绕不开的话题。ClickHouse 以列式存储著称，而列存天然适合压缩——同一列的数据类型相同、值域相近，压缩算法可以轻松达到高压缩比。但在实际使用中，关于压缩有几个常见疑问：业务侧自己压缩后写入，还是让 ClickHouse 自己压缩？如何在表定义中指定压缩算法？如果不指定，ClickHouse 会不会自动压缩？压缩后的列还能用来做查询过滤吗？&lt;/p&gt;
+&lt;p&gt;这篇文章逐一梳理这些问题，帮你理清 ClickHouse 的压缩机制。&lt;/p&gt;
+&lt;h1 id="clickhouse-压缩机制全景"&gt;ClickHouse 压缩机制全景 &lt;a href="#clickhouse-%e5%8e%8b%e7%bc%a9%e6%9c%ba%e5%88%b6%e5%85%a8%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="业务侧压缩-vs-clickhouse-内置压缩"&gt;业务侧压缩 vs ClickHouse 内置压缩 &lt;a href="#%e4%b8%9a%e5%8a%a1%e4%be%a7%e5%8e%8b%e7%bc%a9-vs-clickhouse-%e5%86%85%e7%bd%ae%e5%8e%8b%e7%bc%a9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;一个很自然的想法是：既然数据最终要压缩存储，那业务侧先把数据压了再写进去，不是更省带宽和磁盘吗？&lt;/p&gt;
+&lt;p&gt;但实际推荐的做法是方案 2——业务侧不压缩，直接写入，让 ClickHouse 利用自身的列压缩能力来压缩存储。原因有几个：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;压缩效率更高&lt;/strong&gt;：ClickHouse 内部使用高度优化的压缩算法，会根据列的数据特征自动选择最优策略，压缩效果通常好于业务侧的通用压缩。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;简化业务逻辑&lt;/strong&gt;：如果业务侧自行压缩，需要在代码中增加压缩/解压逻辑，增加维护成本。利用 ClickHouse 自身能力，业务侧可以更专注于业务本身。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;保证一致性&lt;/strong&gt;：所有数据由 ClickHouse 统一压缩，格式一致，有利于后续数据处理和分析。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;灵活性&lt;/strong&gt;：ClickHouse 提供丰富的压缩选项，可根据实际需求灵活配置。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;当然也有例外——如果网络带宽是瓶颈而 CPU 充足，业务侧预压缩减少传输量也是一个可选的优化方向。但对大多数场景来说，把压缩交给 ClickHouse 就行。&lt;/p&gt;
+&lt;h2 id="表定义中指定列压缩codec"&gt;表定义中指定列压缩：CODEC &lt;a href="#%e8%a1%a8%e5%ae%9a%e4%b9%89%e4%b8%ad%e6%8c%87%e5%ae%9a%e5%88%97%e5%8e%8b%e7%bc%a9codec" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;如果某列数据量特别大（比如文章正文、日志内容），可以在建表时通过 &lt;code&gt;CODEC&lt;/code&gt; 语法为它指定压缩算法：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-sql"&gt;CREATE TABLE articles (
+name String,
+sex String,
+age UInt8,
+article String CODEC(ZSTD(10))
+) ENGINE = MergeTree()
+ORDER BY tuple();
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这里 &lt;code&gt;article&lt;/code&gt; 列使用了 &lt;code&gt;CODEC(ZSTD(10))&lt;/code&gt;：&lt;/p&gt;</description></item><item><title>ClickHouse GLOBAL IN：分布式查询中的全局子查询是怎么工作的</title><link>/blog/2024-03-26-clickhouse-global-in/</link><pubDate>Tue, 26 Mar 2024 00:00:00 +0800</pubDate><guid>/blog/2024-03-26-clickhouse-global-in/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在 ClickHouse 集群中做分布式查询时，&lt;code&gt;GLOBAL IN&lt;/code&gt; 是一个常用的语法。但它的执行机制和普通的 &lt;code&gt;IN&lt;/code&gt; 有很大不同，如果不理解清楚，很容易踩坑——比如以为子查询会在每个节点独立执行、结果不一致，或者对网络开销没有概念。&lt;/p&gt;
+&lt;p&gt;本文通过一个具体的例子，拆解 &lt;code&gt;GLOBAL IN&lt;/code&gt; 在分布式场景下的完整执行流程。&lt;/p&gt;
+&lt;h1 id="global-in-的执行机制"&gt;GLOBAL IN 的执行机制 &lt;a href="#global-in-%e7%9a%84%e6%89%a7%e8%a1%8c%e6%9c%ba%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="基础行为"&gt;基础行为 &lt;a href="#%e5%9f%ba%e7%a1%80%e8%a1%8c%e4%b8%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;GLOBAL IN&lt;/code&gt; 的作用是：在分布式查询中，&lt;strong&gt;先在全局范围内执行子查询，然后将结果发送给所有远程节点，最后在每个节点上执行主查询&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;这意味着不管集群有多少个节点，主查询在每个节点上使用的子查询结果集都是相同的，从而保证结果一致性。&lt;/p&gt;
+&lt;p&gt;考虑一个简单查询：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-sql"&gt;SELECT * FROM distributed_table
+WHERE id GLOBAL IN (SELECT id FROM xx_dist);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;执行流程如下：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;子查询先执行&lt;/strong&gt;：在接收查询请求的节点（初始节点）上，&lt;code&gt;SELECT id FROM xx_dist&lt;/code&gt; 被发送到 &lt;code&gt;xx_dist&lt;/code&gt; 对应的所有节点执行。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;结果汇总&lt;/strong&gt;：初始节点收集所有节点的子查询结果并合并。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;广播结果集&lt;/strong&gt;：将合并后的结果集发送到集群中分布式表 &lt;code&gt;distributed_table&lt;/code&gt; 对应的所有节点。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;执行主查询&lt;/strong&gt;：每个节点用收到的子查询结果集执行主查询。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;返回结果&lt;/strong&gt;：各节点将主查询结果返回给初始节点，初始节点汇总后返回给客户端。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id="复合子查询intersect-的情况"&gt;复合子查询：INTERSECT 的情况 &lt;a href="#%e5%a4%8d%e5%90%88%e5%ad%90%e6%9f%a5%e8%af%a2intersect-%e7%9a%84%e6%83%85%e5%86%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;一个更复杂的场景是子查询中包含 &lt;code&gt;INTERSECT&lt;/code&gt;：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-sql"&gt;SELECT * FROM distributed_table
+WHERE id GLOBAL IN (
+SELECT id FROM xx_dist
+INTERSECT
+SELECT id FROM yy_dist
+);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这里有两种可能的理解方式：&lt;/p&gt;</description></item><item><title>ClickHouse 表引擎详解：为什么需要这么多引擎，各自解决什么问题</title><link>/blog/2024-02-19-clickhouse-table-engines/</link><pubDate>Mon, 19 Feb 2024 00:00:00 +0800</pubDate><guid>/blog/2024-02-19-clickhouse-table-engines/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;如果你从 MySQL 转过来，可能会对 ClickHouse 支持十几种表引擎感到困惑。MySQL 基本上就是 MyISAM 和 InnoDB 两个选择，而 ClickHouse 的 &lt;code&gt;ENGINE = ...&lt;/code&gt; 却有很多选项。为什么需要这么多引擎？每种引擎解决什么问题？本文逐一梳理。&lt;/p&gt;
+&lt;h1 id="为什么-clickhouse-需要多种表引擎"&gt;为什么 ClickHouse 需要多种表引擎 &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88-clickhouse-%e9%9c%80%e8%a6%81%e5%a4%9a%e7%a7%8d%e8%a1%a8%e5%bc%95%e6%93%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;ClickHouse 的设计哲学是：&lt;strong&gt;每种数据使用模式都有最优的存储和查询策略&lt;/strong&gt;。不同的场景对数据的写入方式、查询模式、数据生命周期、一致性要求各不相同，没有一种引擎能通吃所有场景。&lt;/p&gt;
+&lt;p&gt;MySQL 的 InnoDB 虽然也支持事务、行锁、MVCC 等复杂特性，但它面向的是 OLTP 场景。ClickHouse 面向 OLAP，场景分化更严重：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;有的数据需要高频追加、定期合并（日志、监控）。&lt;/li&gt;
+&lt;li&gt;有的数据是临时计算的中间结果（ETL 中的中间表）。&lt;/li&gt;
+&lt;li&gt;有的数据分布在多个节点上（分布式表）。&lt;/li&gt;
+&lt;li&gt;有的数据需要跨副本高可用（复制表）。&lt;/li&gt;
+&lt;li&gt;有的数据来自 Kafka（实时流式摄入）。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;不同的需求，对应不同的引擎。&lt;/p&gt;
+&lt;h1 id="常用表引擎一览"&gt;常用表引擎一览 &lt;a href="#%e5%b8%b8%e7%94%a8%e8%a1%a8%e5%bc%95%e6%93%8e%e4%b8%80%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="mergetree--主力引擎"&gt;MergeTree —— 主力引擎 &lt;a href="#mergetree--%e4%b8%bb%e5%8a%9b%e5%bc%95%e6%93%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;MergeTree 是 ClickHouse 最重要的引擎，适用于&lt;strong&gt;高速插入和复杂查询&lt;/strong&gt;的场景。它支持：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;数据分区&lt;/strong&gt;（&lt;code&gt;PARTITION BY&lt;/code&gt;）：按时间或其他维度将数据物理分开。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;主键排序&lt;/strong&gt;（&lt;code&gt;ORDER BY&lt;/code&gt;）：数据按主键排序存储，用于稀疏索引。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;后台合并&lt;/strong&gt;：自动将小 Part 合并为大 Part，减少文件数量、提升查询效率。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;数据 TTL&lt;/strong&gt;：自动过期删除旧数据。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;绝大多数 ClickHouse 生产表都使用 MergeTree 或其变种。&lt;/p&gt;
+&lt;h2 id="replicatedmergetree--高可用版本"&gt;ReplicatedMergeTree —— 高可用版本 &lt;a href="#replicatedmergetree--%e9%ab%98%e5%8f%af%e7%94%a8%e7%89%88%e6%9c%ac" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;MergeTree 的增强版，在 MergeTree 的基础上增加了&lt;strong&gt;跨副本数据复制&lt;/strong&gt;的能力。它依赖 ZooKeeper（或 ClickHouse Keeper）来协调副本间的数据同步。&lt;/p&gt;</description></item><item><title>ClickHouse 优劣分析：什么时候该用它，什么时候不该用</title><link>/blog/2024-02-18-clickhouse-pros-cons/</link><pubDate>Sun, 18 Feb 2024 00:00:00 +0800</pubDate><guid>/blog/2024-02-18-clickhouse-pros-cons/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;ClickHouse 在监控、日志分析、实时报表等领域非常受欢迎，但它并不是银弹。在做技术选型时，了解一个系统的优势和短板同样重要——它擅长什么，不擅长什么，什么场景下应该优先考虑，什么场景下应该避开。本文对 ClickHouse 的优缺点做一个系统梳理。&lt;/p&gt;
+&lt;h1 id="clickhouse-的优势"&gt;ClickHouse 的优势 &lt;a href="#clickhouse-%e7%9a%84%e4%bc%98%e5%8a%bf" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="1-极致的计算性能"&gt;1. 极致的计算性能 &lt;a href="#1-%e6%9e%81%e8%87%b4%e7%9a%84%e8%ae%a1%e7%ae%97%e6%80%a7%e8%83%bd" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;ClickHouse 在计算层做了大量优化，竭尽所能利用硬件能力：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;单机多核并行&lt;/strong&gt;：查询自动利用所有 CPU 核心。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;分布式计算&lt;/strong&gt;：跨节点并行执行查询。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;向量化执行与 SIMD 指令&lt;/strong&gt;：批量处理数据而非逐行处理，充分利用 CPU 的 SIMD 指令集（如 SSE、AVX）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;代码生成&lt;/strong&gt;：对查询表达式进行 JIT 编译，消除解释执行的开销。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;性能基准测试显示，ClickHouse 的查询速度比传统方案快 100&lt;del&gt;1000 倍，同时提供 50MB/s&lt;/del&gt;200MB/s 的高吞吐实时导入能力。&lt;/p&gt;
+&lt;h2 id="2-高效的列存储和压缩"&gt;2. 高效的列存储和压缩 &lt;a href="#2-%e9%ab%98%e6%95%88%e7%9a%84%e5%88%97%e5%ad%98%e5%82%a8%e5%92%8c%e5%8e%8b%e7%bc%a9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;ClickHouse 的列存储设计配合高效的数据压缩算法，可提供高达 &lt;strong&gt;10 倍的压缩比&lt;/strong&gt;。这大大提高了单机数据存储和计算能力，降低了使用成本。以较低成本存储海量数据，是构建海量数据仓库的绝佳方案。&lt;/p&gt;
+&lt;h2 id="3-完善的-sql-支持"&gt;3. 完善的 SQL 支持 &lt;a href="#3-%e5%ae%8c%e5%96%84%e7%9a%84-sql-%e6%94%af%e6%8c%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;ClickHouse 提供完善的 SQL 支持，上手非常简单。同时支持灵活的 JSON、Map、Array 等数据类型，可适应业务的快速变化。另外还支持近似计算、概率数据结构（如 HyperLogLog）等功能来处理海量数据。&lt;/p&gt;
+&lt;h2 id="4-完整的-olap-解决方案"&gt;4. 完整的 OLAP 解决方案 &lt;a href="#4-%e5%ae%8c%e6%95%b4%e7%9a%84-olap-%e8%a7%a3%e5%86%b3%e6%96%b9%e6%a1%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;与 Druid、Presto、Impala、Kylin、Elasticsearch 等开源分析技术相比，ClickHouse 是一套&lt;strong&gt;完整&lt;/strong&gt;的解决方案：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;包含存储和计算能力，&lt;strong&gt;无须依赖其他存储组件&lt;/strong&gt;（不像 Presto 需要 Hive/HDFS）。&lt;/li&gt;
+&lt;li&gt;独立实现高可用。&lt;/li&gt;
+&lt;li&gt;支持完整的 SQL 语法。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;与 Hadoop 体系相比，ClickHouse 的数据库方式数据处理更加简单易用，学习成本低，灵活性高。其他开源 OLAP 数据库（InfiniDB、MonetDB、LucidDB）的应用规模较小，且缺乏大型互联网服务的验证，相比之下 ClickHouse 的成熟度和稳定性更胜一筹。&lt;/p&gt;</description></item><item><title>ClickHouse 副本同步机制：ZooKeeper 在其中的角色</title><link>/blog/2024-02-18-clickhouse-use-zk/</link><pubDate>Sun, 18 Feb 2024 00:00:00 +0800</pubDate><guid>/blog/2024-02-18-clickhouse-use-zk/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在生产环境中使用 ClickHouse，高可用几乎是必选项。ClickHouse 通过 ReplicatedMergeTree 引擎支持副本复制，而副本间的数据同步依赖于 ZooKeeper（或 ClickHouse Keeper）来协调。很多人知道 ClickHouse 用了 ZK，但对它具体怎么用、为什么不直接用 Raft/Paxos、以及最终一致性可能带来的问题并不清楚。本文从架构层面梳理 ClickHouse 副本同步的全过程。&lt;/p&gt;
+&lt;h1 id="副本同步的完整流程"&gt;副本同步的完整流程 &lt;a href="#%e5%89%af%e6%9c%ac%e5%90%8c%e6%ad%a5%e7%9a%84%e5%ae%8c%e6%95%b4%e6%b5%81%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="基于-zk-的异步复制"&gt;基于 ZK 的异步复制 &lt;a href="#%e5%9f%ba%e4%ba%8e-zk-%e7%9a%84%e5%bc%82%e6%ad%a5%e5%a4%8d%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;ClickHouse 的副本同步过程如下：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;主节点写入&lt;/strong&gt;：当主节点接收到写操作请求后，首先将数据写入本地磁盘。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;写入 ZNode&lt;/strong&gt;：主节点将写操作的元数据和数据位置作为一个新的 ZNode（ZooKeeper 的数据节点）写入 ZooKeeper。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;副本节点感知&lt;/strong&gt;：副本节点定期从 ZooKeeper 拉取新的 ZNode（通过 Watch 机制），发现新数据后从主节点拉取数据并写入本地磁盘。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;确认完成&lt;/strong&gt;：副本节点成功写入后，向 ZooKeeper 报告该 ZNode 已被处理。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;清理 ZNode&lt;/strong&gt;：当所有副本节点都报告处理完毕后，ZooKeeper 删除该 ZNode。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;这个流程是&lt;strong&gt;异步&lt;/strong&gt;的——主节点写完本地磁盘就算写入成功，副本同步在后台进行。这种方式简单高效，但存在一个时间窗口：在副本同步完成之前，不同节点可能看到不同的数据。&lt;/p&gt;
+&lt;h2 id="zk-的角色协调器而非共识层"&gt;ZK 的角色：协调器，而非共识层 &lt;a href="#zk-%e7%9a%84%e8%a7%92%e8%89%b2%e5%8d%8f%e8%b0%83%e5%99%a8%e8%80%8c%e9%9d%9e%e5%85%b1%e8%af%86%e5%b1%82" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;ZooKeeper 本身通过 ZAB（ZooKeeper Atomic Broadcast）协议保证自身数据的一致性。但它为 ClickHouse 提供的是更高层的服务——ZNode 的注册和 Watch 机制——本质上是一种&lt;strong&gt;异步的副本间数据同步机制&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;并不是说 ClickHouse 的每次数据复制都跑了一遍共识算法。ZK 提供的是一个可靠的&amp;quot;任务队列&amp;quot;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;ZNode 存储&amp;quot;有哪些数据需要同步&amp;quot;的元信息。&lt;/li&gt;
+&lt;li&gt;Watch 机制通知副本&amp;quot;有新数据来了&amp;quot;。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这种设计让 ClickHouse 的副本同步保持简单高效，同时借助 ZK 的可靠性保证不丢任务。&lt;/p&gt;</description></item><item><title>ClickHouse 本地表与分布式表：读写路径和选型建议</title><link>/blog/2024-02-18-clickhouse-local-vs-distributed/</link><pubDate>Sun, 18 Feb 2024 00:00:00 +0800</pubDate><guid>/blog/2024-02-18-clickhouse-local-vs-distributed/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;刚接触 ClickHouse 时，本地表和分布式表的概念容易让人困惑。在单机数据库（如 MySQL）中，表就是表，没有本地/分布式之分。但在 ClickHouse 集群里，这两种表的读写行为差异很大，选择不当会直接影响性能和运维复杂度。&lt;/p&gt;
+&lt;h1 id="本地表-vs-分布式表"&gt;本地表 vs 分布式表 &lt;a href="#%e6%9c%ac%e5%9c%b0%e8%a1%a8-vs-%e5%88%86%e5%b8%83%e5%bc%8f%e8%a1%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="概念区分"&gt;概念区分 &lt;a href="#%e6%a6%82%e5%bf%b5%e5%8c%ba%e5%88%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;本地表&lt;/strong&gt;：ClickHouse 中最基本的表类型。在某个节点上创建的表，数据只存储在该节点上，只能由该节点直接访问。通常使用 MergeTree 引擎。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;分布式表&lt;/strong&gt;：不直接存储数据，而是作为多个本地表的&lt;strong&gt;代理&lt;/strong&gt;。一张分布式表背后对应所有节点的本地表，让你可以像操作单表一样跨节点读写。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-sql"&gt;-- 每个节点上创建本地表
+CREATE TABLE local_events ON CLUSTER 'my_cluster' (
+event_time DateTime,
+user_id UInt64,
+event_type String
+) ENGINE = MergeTree()
+PARTITION BY toYYYYMM(event_time)
+ORDER BY (user_id, event_time);
+-- 在任意节点上创建分布式表（代理）
+CREATE TABLE distributed_events ON CLUSTER 'my_cluster' (
+event_time DateTime,
+user_id UInt64,
+event_type String
+) ENGINE = Distributed(
+'my_cluster', -- 集群名
+'default', -- 数据库名
+'local_events', -- 本地表名
+rand() -- 分片键
+);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="写入路径"&gt;写入路径 &lt;a href="#%e5%86%99%e5%85%a5%e8%b7%af%e5%be%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;写入分布式表&lt;/strong&gt;：&lt;/p&gt;</description></item></channel></rss>

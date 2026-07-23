@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Distributed-Table on</title><link>/tags/distributed-table/</link><description>Recent content in Distributed-Table on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 18 Feb 2024 00:00:00 +0800</lastBuildDate><atom:link href="/tags/distributed-table/index.xml" rel="self" type="application/rss+xml"/><item><title>ClickHouse 本地表与分布式表：读写路径和选型建议</title><link>/blog/2024-02-18-clickhouse-local-vs-distributed/</link><pubDate>Sun, 18 Feb 2024 00:00:00 +0800</pubDate><guid>/blog/2024-02-18-clickhouse-local-vs-distributed/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;刚接触 ClickHouse 时，本地表和分布式表的概念容易让人困惑。在单机数据库（如 MySQL）中，表就是表，没有本地/分布式之分。但在 ClickHouse 集群里，这两种表的读写行为差异很大，选择不当会直接影响性能和运维复杂度。&lt;/p&gt;
+&lt;h1 id="本地表-vs-分布式表"&gt;本地表 vs 分布式表 &lt;a href="#%e6%9c%ac%e5%9c%b0%e8%a1%a8-vs-%e5%88%86%e5%b8%83%e5%bc%8f%e8%a1%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="概念区分"&gt;概念区分 &lt;a href="#%e6%a6%82%e5%bf%b5%e5%8c%ba%e5%88%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;本地表&lt;/strong&gt;：ClickHouse 中最基本的表类型。在某个节点上创建的表，数据只存储在该节点上，只能由该节点直接访问。通常使用 MergeTree 引擎。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;分布式表&lt;/strong&gt;：不直接存储数据，而是作为多个本地表的&lt;strong&gt;代理&lt;/strong&gt;。一张分布式表背后对应所有节点的本地表，让你可以像操作单表一样跨节点读写。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-sql"&gt;-- 每个节点上创建本地表
+CREATE TABLE local_events ON CLUSTER 'my_cluster' (
+event_time DateTime,
+user_id UInt64,
+event_type String
+) ENGINE = MergeTree()
+PARTITION BY toYYYYMM(event_time)
+ORDER BY (user_id, event_time);
+-- 在任意节点上创建分布式表（代理）
+CREATE TABLE distributed_events ON CLUSTER 'my_cluster' (
+event_time DateTime,
+user_id UInt64,
+event_type String
+) ENGINE = Distributed(
+'my_cluster', -- 集群名
+'default', -- 数据库名
+'local_events', -- 本地表名
+rand() -- 分片键
+);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="写入路径"&gt;写入路径 &lt;a href="#%e5%86%99%e5%85%a5%e8%b7%af%e5%be%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;写入分布式表&lt;/strong&gt;：&lt;/p&gt;</description></item></channel></rss>

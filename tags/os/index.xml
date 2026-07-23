@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Os on</title><link>/tags/os/</link><description>Recent content in Os on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Jan 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/os/index.xml" rel="self" type="application/rss+xml"/><item><title>Go 1.26 os.ProcessHandle：进程管理的能力增强</title><link>/blog/2026-01-06-go-process-handle/</link><pubDate>Tue, 06 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-06-go-process-handle/</guid><description>&lt;p&gt;在 Go 1.26 中引入的 &lt;code&gt;os.ProcessHandle&lt;/code&gt; 是对进程管理能力的重大增强。在此之前，Go 对外部进程的控制主要依赖于进程 ID（PID），但在高并发或长运行的系统中，PID 存在**重用（Reuse）**的风险。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;ProcessHandle&lt;/code&gt; 的核心价值在于它提供了一个&lt;strong&gt;确定性的、受生命周期管理的句柄&lt;/strong&gt;，确保你操作的正是你启动的那个进程。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-processhandle-解决了什么痛点"&gt;1. ProcessHandle 解决了什么痛点？ &lt;a href="#1-processhandle-%e8%a7%a3%e5%86%b3%e4%ba%86%e4%bb%80%e4%b9%88%e7%97%9b%e7%82%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在旧版本中，我们通常这样操作：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;使用 &lt;code&gt;exec.Command&lt;/code&gt; 启动进程。&lt;/li&gt;
+&lt;li&gt;通过 &lt;code&gt;cmd.Process.Pid&lt;/code&gt; 获取 PID。&lt;/li&gt;
+&lt;li&gt;之后如果想给进程发信号，系统会根据 PID 查找。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;&lt;strong&gt;风险点：&lt;/strong&gt; 如果进程已经意外退出，而操作系统迅速将该 PID 分配给了另一个新进程（如浏览器或数据库），你此时调用 &lt;code&gt;process.Signal()&lt;/code&gt; 可能会误杀掉无关的系统进程。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;ProcessHandle&lt;/code&gt; 的优势：&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;句柄唯一性：&lt;/strong&gt; 它持有内核层面的句柄（如 Windows 的 HANDLE 或 Linux 的 PidFd）。只要句柄没释放，系统就不会重用该 PID。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;资源安全：&lt;/strong&gt; 通过 &lt;code&gt;WithHandle&lt;/code&gt; 机制，确保在你的逻辑执行完之前，句柄保持有效。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="2-你可以用它做什么"&gt;2. 你可以用它做什么？ &lt;a href="#2-%e4%bd%a0%e5%8f%af%e4%bb%a5%e7%94%a8%e5%ae%83%e5%81%9a%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="安全的多进程协作"&gt;安全的多进程协作 &lt;a href="#%e5%ae%89%e5%85%a8%e7%9a%84%e5%a4%9a%e8%bf%9b%e7%a8%8b%e5%8d%8f%e4%bd%9c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;如果你在开发一个 Master-Worker 架构的服务，Master 需要频繁监控和操作 Worker 进程。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;以前：&lt;/strong&gt; 担心 Worker 挂了后 PID 被别的程序占了。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;现在：&lt;/strong&gt; 持有 &lt;code&gt;ProcessHandle&lt;/code&gt;，你可以百分之百确定 &lt;code&gt;Signal&lt;/code&gt; 或 &lt;code&gt;Wait&lt;/code&gt; 作用的对象是正确的。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="跨进程句柄传递withhandle"&gt;跨进程句柄传递（WithHandle） &lt;a href="#%e8%b7%a8%e8%bf%9b%e7%a8%8b%e5%8f%a5%e6%9f%84%e4%bc%a0%e9%80%92withhandle" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;os.Process.WithHandle(f)&lt;/code&gt; 允许你将句柄的所有权逻辑封装起来。&lt;/p&gt;</description></item><item><title>Go 信号处理：同步信号与异步信号的区别</title><link>/blog/2025-05-26-go-signals/</link><pubDate>Mon, 26 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-26-go-signals/</guid><description>&lt;p&gt;Go 程序运行时经常会收到操作系统的信号，理解同步信号和异步信号的区别，对于编写健壮的程序非常重要。&lt;/p&gt;
+&lt;h2 id="1-同步信号synchronous-signal"&gt;1. 同步信号（Synchronous Signal） &lt;a href="#1-%e5%90%8c%e6%ad%a5%e4%bf%a1%e5%8f%b7synchronous-signal" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;同步信号由程序自身的执行直接触发，与特定指令的执行直接相关，在指令执行过程中立即发生。&lt;/p&gt;
+&lt;p&gt;常见的同步信号包括：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;SIGSEGV&lt;/strong&gt;（段错误）：访问非法内存地址&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;SIGFPE&lt;/strong&gt;（浮点异常）：除以零等算术错误&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;SIGILL&lt;/strong&gt;（非法指令）：执行了无效的机器指令&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些信号不能被普通的信号处理机制捕获，因为它们在指令执行过程中就发生了。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;并不是完全不能捕获——比如 Go runtime 就捕获并处理了这些信号，但普通用户不应自行捕获处理，因为处理不当可能导致更严重的问题。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="2-异步信号asynchronous-signal"&gt;2. 异步信号（Asynchronous Signal） &lt;a href="#2-%e5%bc%82%e6%ad%a5%e4%bf%a1%e5%8f%b7asynchronous-signal" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;异步信号由外部事件触发，与程序当前执行状态无关，可以在任何时候发生。&lt;/p&gt;
+&lt;p&gt;常见的异步信号包括：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;SIGINT&lt;/strong&gt;（中断信号）：通常由 Ctrl+C 触发&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;SIGTERM&lt;/strong&gt;（终止信号）：请求程序终止&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;SIGUSR1/SIGUSR2&lt;/strong&gt;（用户自定义信号）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些信号可以被 &lt;code&gt;signal.Notify&lt;/code&gt; 捕获和处理。&lt;/p&gt;
+&lt;h2 id="3-举例说明"&gt;3. 举例说明 &lt;a href="#3-%e4%b8%be%e4%be%8b%e8%af%b4%e6%98%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;// 异步信号可以被捕获
+c := make(chan os.Signal, 1)
+signal.Notify(c, syscall.SIGINT) // 可以捕获 Ctrl+C
+// 同步信号不能被普通方式捕获
+var s *struct{ Age int }
+println(s.Age) // 触发 SIGSEGV，不能被 signal.Notify 捕获
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="4-为什么会有这种区别"&gt;4. 为什么会有这种区别 &lt;a href="#4-%e4%b8%ba%e4%bb%80%e4%b9%88%e4%bc%9a%e6%9c%89%e8%bf%99%e7%a7%8d%e5%8c%ba%e5%88%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;同步信号表示程序执行出现了严重错误&lt;/li&gt;
+&lt;li&gt;这些错误通常意味着程序处于一个不可恢复的状态&lt;/li&gt;
+&lt;li&gt;允许程序处理这些信号可能会导致更多的问题&lt;/li&gt;
+&lt;li&gt;操作系统选择直接终止程序，而不是给程序处理的机会&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="5-实际应用中的处理方式"&gt;5. 实际应用中的处理方式 &lt;a href="#5-%e5%ae%9e%e9%99%85%e5%ba%94%e7%94%a8%e4%b8%ad%e7%9a%84%e5%a4%84%e7%90%86%e6%96%b9%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;对于同步信号（如 SIGSEGV）：&lt;/strong&gt;&lt;/p&gt;</description></item></channel></rss>

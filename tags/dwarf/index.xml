@@ -1,4 +1,29 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Dwarf on</title><link>/tags/dwarf/</link><description>Recent content in Dwarf on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 12 Dec 2023 12:42:47 +0800</lastBuildDate><atom:link href="/tags/dwarf/index.xml" rel="self" type="application/rss+xml"/><item><title>观测Go函数调用：go-ftrace 设计实现</title><link>/blog/2023-12-12-%E8%A7%82%E6%B5%8Bgo%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8go-ftrace%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</link><pubDate>Tue, 12 Dec 2023 12:42:47 +0800</pubDate><guid>/blog/2023-12-12-%E8%A7%82%E6%B5%8Bgo%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8go-ftrace%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</guid><description>&lt;style&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Dwarf on</title><link>/tags/dwarf/</link><description>Recent content in Dwarf on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 23 Jan 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/dwarf/index.xml" rel="self" type="application/rss+xml"/><item><title>如何让 Go 工具链生成 DWARF 调试信息</title><link>/blog/2026-01-23-go-toolchain-dwarf/</link><pubDate>Fri, 23 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-23-go-toolchain-dwarf/</guid><description>&lt;p&gt;如果你想调试 Go 编译工具链本身，会发现默认的 Go 正式版在构建 &lt;code&gt;go/src/cmd/...&lt;/code&gt; 时不会生成 DWARF 调试信息。如果想让 Go toolchain 也生成 DWARF 调试信息，方便做相关研究时通过调试器跟踪，该怎么办？&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="版本检查和-isrelease-设置"&gt;版本检查和 isRelease 设置 &lt;a href="#%e7%89%88%e6%9c%ac%e6%a3%80%e6%9f%a5%e5%92%8c-isrelease-%e8%ae%be%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 &lt;code&gt;src/cmd/dist/build.go&lt;/code&gt; 第 272-273 行：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;goversion := findgoversion()
+isRelease = strings.HasPrefix(goversion, &amp;quot;release.&amp;quot;) || strings.HasPrefix(goversion, &amp;quot;go&amp;quot;)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="dwarf-调试信息禁用逻辑"&gt;DWARF 调试信息禁用逻辑 &lt;a href="#dwarf-%e8%b0%83%e8%af%95%e4%bf%a1%e6%81%af%e7%a6%81%e7%94%a8%e9%80%bb%e8%be%91" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;同一文件第 1346-1352 行：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;if isRelease || os.Getenv(&amp;quot;GO_BUILDER_NAME&amp;quot;) != &amp;quot;&amp;quot; {
+// Add -trimpath for reproducible builds of releases.
+// Include builders so that -trimpath is well-tested ahead of releases.
+// Do not include local development, so that people working in the
+// main branch for day-to-day work on the Go toolchain itself can
+// still have full paths for stack traces for compiler crashes and the like.
+env = append(env, &amp;quot;GOFLAGS=-trimpath -ldflags=-w -gcflags=cmd/...=-dwarf=false&amp;quot;)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="工作原理"&gt;工作原理 &lt;a href="#%e5%b7%a5%e4%bd%9c%e5%8e%9f%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;code&gt;findgoversion()&lt;/code&gt; 读取 &lt;code&gt;VERSION&lt;/code&gt; 文件的第一行作为版本字符串。&lt;/li&gt;
+&lt;li&gt;如果版本字符串以 &lt;code&gt;&amp;quot;release.&amp;quot;&lt;/code&gt; 或 &lt;code&gt;&amp;quot;go&amp;quot;&lt;/code&gt; 开头，&lt;code&gt;isRelease&lt;/code&gt; 被设为 &lt;code&gt;true&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;当 &lt;code&gt;isRelease&lt;/code&gt; 为 &lt;code&gt;true&lt;/code&gt; 时，会添加 &lt;code&gt;-dwarf=false&lt;/code&gt;，从而禁用 DWARF 调试信息。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id="绕过方法"&gt;绕过方法 &lt;a href="#%e7%bb%95%e8%bf%87%e6%96%b9%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 &lt;code&gt;VERSION&lt;/code&gt; 文件的第一行前加前缀（如 &lt;code&gt;&amp;quot;notes/&amp;quot;&lt;/code&gt; 或 &lt;code&gt;&amp;quot;tests/&amp;quot;&lt;/code&gt;），例如：&lt;/p&gt;</description></item><item><title>观测Go函数调用：go-ftrace 设计实现</title><link>/blog/2023-12-12-%E8%A7%82%E6%B5%8Bgo%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8go-ftrace%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</link><pubDate>Tue, 12 Dec 2023 12:42:47 +0800</pubDate><guid>/blog/2023-12-12-%E8%A7%82%E6%B5%8Bgo%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8go-ftrace%E8%AE%BE%E8%AE%A1%E5%AE%9E%E7%8E%B0/</guid><description>&lt;style&gt;
 img {
 width: 680px;
 padding-bottom: 1rem;

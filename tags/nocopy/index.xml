@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Nocopy on</title><link>/tags/nocopy/</link><description>Recent content in Nocopy on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 27 Jan 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/nocopy/index.xml" rel="self" type="application/rss+xml"/><item><title>Go 里为什么要加 noCopy —— 防止 Mutex 复制</title><link>/blog/2026-01-27-go-nocopy-prevent-copylock/</link><pubDate>Tue, 27 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-27-go-nocopy-prevent-copylock/</guid><description>&lt;p&gt;看一个代码片段：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;package main
+type noCopy struct{}
+func (*noCopy) Lock() {}
+func (*noCopy) Unlock() {}
+type myType struct {
+noCopy // ← 这行
+}
+func main() {
+var m myType
+var n = m
+_ = n
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;执行 &lt;code&gt;go vet&lt;/code&gt; 检查：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;$ go vet main.go
+main.go:14:10: variable declaration copies lock value to n: command-line-arguments.myType
+main.go:15:6: assignment copies lock value to _: command-line-arguments.myType
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="nocopy-是干什么的"&gt;noCopy 是干什么的？ &lt;a href="#nocopy-%e6%98%af%e5%b9%b2%e4%bb%80%e4%b9%88%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;noCopy&lt;/code&gt; 只是一种&lt;strong&gt;静态检查的提示&lt;/strong&gt;，它不会在运行时产生任何锁或同步操作，也不会阻止真正的复制。&lt;/p&gt;
+&lt;p&gt;go sync包为了阻止sync.Mutex/sync.Once/&amp;hellip;等被复制导致的问题，这个包就定义了noCopy，go vet会检测一个类型是否embed了一个noCopy实现，是的话就会阻止copy，检查时，并不会阻止编译时的真的copy。&lt;/p&gt;</description></item></channel></rss>

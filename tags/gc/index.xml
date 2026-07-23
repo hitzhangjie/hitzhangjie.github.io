@@ -85,7 +85,127 @@ top: -170px;
 &lt;/style&gt;
 &lt;div class="iframe-container"&gt;
 &lt;iframe src="https://docs.qq.com/doc/DYmZKd0NVQU9ObHRL"/&gt;
-&lt;/div&gt;</description></item><item><title>垃圾回收：go如何触发垃圾回收的</title><link>/blog/2022-11-20-%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6_go%E5%A6%82%E4%BD%95%E8%A7%A6%E5%8F%91%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</link><pubDate>Sun, 20 Nov 2022 20:39:22 +0800</pubDate><guid>/blog/2022-11-20-%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6_go%E5%A6%82%E4%BD%95%E8%A7%A6%E5%8F%91%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</guid><description>&lt;h2 id="前言"&gt;前言 &lt;a href="#%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;/div&gt;</description></item><item><title>Go 语言精确 GC 实现机制深度解析</title><link>/blog/2026-01-23-go-precise-gc/</link><pubDate>Fri, 23 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-23-go-precise-gc/</guid><description>&lt;h2 id="精确-gc-概述"&gt;精确 GC 概述 &lt;a href="#%e7%b2%be%e7%a1%ae-gc-%e6%a6%82%e8%bf%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;精确 GC（Precise Garbage Collection）是指垃圾收集器能够准确识别所有指针位置，不会将非指针数据当作指针，也不会漏掉任何指针。这与保守式 GC（Conservative GC）形成对比，保守式 GC 可能会将一些看起来像指针的值当作指针来处理，导致本该回收的对象不敢回收，该移动的对象不敢移动，造成内存碎片。&lt;/p&gt;
+&lt;h3 id="精确-gc-的优势"&gt;精确 GC 的优势 &lt;a href="#%e7%b2%be%e7%a1%ae-gc-%e7%9a%84%e4%bc%98%e5%8a%bf" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;准确性&lt;/strong&gt;：不会误标记非指针数据，避免内存泄漏或错误回收&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;性能&lt;/strong&gt;：不需要扫描所有可能是指针的数据，只扫描已知的指针位置&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;可预测性&lt;/strong&gt;：GC 行为更加可预测，便于调试和优化&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id="go-语言精确-gc-的实现方式"&gt;Go 语言精确 GC 的实现方式 &lt;a href="#go-%e8%af%ad%e8%a8%80%e7%b2%be%e7%a1%ae-gc-%e7%9a%84%e5%ae%9e%e7%8e%b0%e6%96%b9%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Go 语言通过以下机制实现精确 GC：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;pclntab&lt;/strong&gt;：记录程序计数器（PC）与各种元信息的映射关系&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;栈映射表（Stack Map）&lt;/strong&gt;：记录函数栈帧中哪些位置包含指针&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;参数映射表（Args Map）&lt;/strong&gt;：记录函数参数中哪些位置包含指针&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;PCDATA 指令&lt;/strong&gt;：在汇编代码中标记 PC 相关的数据变化&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;FUNCDATA 指令&lt;/strong&gt;：在汇编代码中标记函数级别的元数据&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;h2 id="pclntab-详解"&gt;pclntab 详解 &lt;a href="#pclntab-%e8%af%a6%e8%a7%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;pclntab（Program Counter Line Table）是 Go 运行时系统中的重要数据结构，记录了 PC 与多种元信息的映射关系，包括函数信息、行号信息、文件信息、栈映射信息和 GC 相关信息。&lt;/p&gt;
+&lt;h3 id="pclntab-的结构"&gt;pclntab 的结构 &lt;a href="#pclntab-%e7%9a%84%e7%bb%93%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;根据 &lt;code&gt;src/cmd/link/internal/ld/pcln.go&lt;/code&gt;，pclntab 的布局如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.gopclntab/__gopclntab [elf/macho section]
+runtime.pclntab
+runtime.pcheader (8-byte magic, nfunc, offsets)
+runtime.funcnametab (null terminated function names)
+runtime.cutab (CU file index mapping)
+runtime.filetab (null terminated filename strings)
+runtime.pctab (deduplicated pc data)
+runtime.functab (function table with PC and func struct offsets)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="_func-结构体"&gt;_func 结构体 &lt;a href="#_func-%e7%bb%93%e6%9e%84%e4%bd%93" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type _func struct {
+entryOff uint32 // start pc offset
+nameOff int32 // function name index
+args int32 // in/out args size
+deferreturn uint32
+pcsp uint32 // stack pointer delta table
+pcfile uint32 // file number table
+pcln uint32 // line number table
+npcdata uint32
+cuOffset uint32
+startLine int32
+funcID abi.FuncID
+flag abi.FuncFlag
+nfuncdata uint8
+// followed by pcdata[npcdata]uint32 and funcdata[nfuncdata]uint32
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr&gt;
+&lt;h2 id="pcdata-和-funcdata-指令"&gt;PCDATA 和 FUNCDATA 指令 &lt;a href="#pcdata-%e5%92%8c-funcdata-%e6%8c%87%e4%bb%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;PCDATA 和 FUNCDATA 是 Go 编译器生成的伪指令，不会生成实际的机器指令，而是为链接器提供元数据信息。&lt;/p&gt;</description></item><item><title>Green Tea GC：Go 1.26 垃圾回收器升级详解</title><link>/blog/2026-01-06-go-greentea-gc/</link><pubDate>Tue, 06 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-06-go-greentea-gc/</guid><description>&lt;p&gt;在 Go 1.26 中，&lt;strong&gt;Green Tea GC&lt;/strong&gt; 正式成为了默认的垃圾回收器。这并非是一个推翻重建的算法，而是对 Go 长期使用的&amp;quot;三色并发标记-清除（Concurrent Mark-and-Sweep）&amp;ldquo;算法的一次&lt;strong&gt;底层架构升级&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;它并没有放弃可达性分析，核心提升点在于&lt;strong&gt;解决 CPU 等待内存导致的&amp;quot;访存墙（Memory Wall）&amp;ldquo;问题&lt;/strong&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-前代-gcobject-centric有什么问题"&gt;1. 前代 GC（Object-centric）有什么问题？ &lt;a href="#1-%e5%89%8d%e4%bb%a3-gcobject-centric%e6%9c%89%e4%bb%80%e4%b9%88%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 Go 1.26 之前，GC 是**以对象为中心（Object-centric）**的。当 GC 发现一个对象包含指针时，会立即将这些指针指向的&amp;quot;子对象&amp;quot;加入到工作队列中。&lt;/p&gt;
+&lt;p&gt;这种模式在现代高性能硬件上面临三个挑战：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;缓存命中率极低（Poor Locality）：&lt;/strong&gt; 指针指向的对象在内存中往往是随机分布的。GC 扫描器频繁地在堆中&amp;quot;跳跃&amp;rdquo;，导致大量的 L1/L2 Cache Miss，CPU 经常停顿（Stall）以等待内存数据加载。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;同步开销大（High Contention）：&lt;/strong&gt; 高并发环境下，成千上万个小对象的任务入队/出队会导致全局工作队列或 Work-stealing 机制产生严重的锁竞争。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;难以利用向量化指令（SIMD）：&lt;/strong&gt; 逐个扫描小对象是非常零碎的任务，无法使用现代 CPU 的 SIMD 指令进行批量并行化。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="2-green-tea-的核心改进从对象到页面"&gt;2. Green Tea 的核心改进：从&amp;quot;对象&amp;quot;到&amp;quot;页面&amp;rdquo; &lt;a href="#2-green-tea-%e7%9a%84%e6%a0%b8%e5%bf%83%e6%94%b9%e8%bf%9b%e4%bb%8e%e5%af%b9%e8%b1%a1%e5%88%b0%e9%a1%b5%e9%9d%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Green Tea 的核心理念是&lt;strong&gt;以存储块为中心（Memory-block-centric）&lt;/strong&gt;，主要针对**小对象（Small Objects，通常指 &amp;lt; 512 Bytes）**进行了优化。&lt;/p&gt;
+&lt;h3 id="关键技术差异对比"&gt;关键技术差异对比 &lt;a href="#%e5%85%b3%e9%94%ae%e6%8a%80%e6%9c%af%e5%b7%ae%e5%bc%82%e5%af%b9%e6%af%94" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;特性&lt;/th&gt;
+&lt;th&gt;前代 GC (Pre-1.26)&lt;/th&gt;
+&lt;th&gt;Green Tea GC (Go 1.26+)&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;操作单位&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;单个对象&lt;/strong&gt;（Object-based）&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;内存页/跨度&lt;/strong&gt;（Page/Span-based）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;任务调度&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;发现指针立即入队子对象&lt;/td&gt;
+&lt;td&gt;发现指针时标记所属的 &lt;strong&gt;Span&lt;/strong&gt;，延迟批量处理&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;扫描模式&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;随机、离散的指针追踪&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;顺序扫描&lt;/strong&gt;整个 8 KiB 的 Span&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;硬件利用&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;频繁触发 CPU Stalls 等待内存&lt;/td&gt;
+&lt;td&gt;利用 &lt;strong&gt;Cache Line&lt;/strong&gt; 预取，支持 &lt;strong&gt;SIMD&lt;/strong&gt; 加速&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;吞吐提升&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;-&lt;/td&gt;
+&lt;td&gt;GC 耗时降低 &lt;strong&gt;10%-40%&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h2 id="3-green-tea-是如何工作的"&gt;3. Green Tea 是如何工作的？ &lt;a href="#3-green-tea-%e6%98%af%e5%a6%82%e4%bd%95%e5%b7%a5%e4%bd%9c%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Green Tea 依然基于图的可达性分析（仍然是三色标记），但它改变了&amp;quot;遍历图的节奏&amp;quot;：&lt;/p&gt;</description></item><item><title>Green Tea 命名由来：Go GC 的「绿茶」梗</title><link>/blog/2026-01-06-go-greentea-naming/</link><pubDate>Tue, 06 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-06-go-greentea-naming/</guid><description>&lt;p&gt;在中文互联网语境下，&amp;ldquo;绿茶&amp;quot;这个词带有一种贬义的特定暗示。但对 Go 团队（主要是 Google 的工程师）来说，这个命名完全是另一种画风。&lt;/p&gt;
+&lt;h2 id="1-为什么叫-green-tea绿茶"&gt;1. 为什么叫 Green Tea（绿茶）？ &lt;a href="#1-%e4%b8%ba%e4%bb%80%e4%b9%88%e5%8f%ab-green-tea%e7%bb%bf%e8%8c%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;根据 Go 团队开发者在设计文档和技术博客中的描述，这个命名的由来非常简单直观，甚至带点程序员的&amp;quot;养生&amp;quot;幽默：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;放松与性能的平衡：&lt;/strong&gt; 官方曾提到，这个 GC 的设计目标是让程序运行得更&amp;quot;丝滑&amp;rdquo;、更高效，减少因内存压力导致的&amp;quot;焦虑&amp;quot;（Stall/停顿）。就像在紧张的工作间隙喝一杯温润的&lt;strong&gt;绿茶&lt;/strong&gt;，它不仅提神（提高吞吐量），还比浓咖啡（高压力的 GC 策略）更平和。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;致敬硬件：&lt;/strong&gt; Green Tea 的核心是 &lt;strong&gt;&amp;ldquo;Memory-aware（内存感知）&amp;rdquo;&lt;/strong&gt;。在西方文化中，绿茶常与&amp;quot;天然&amp;quot;、&amp;ldquo;有机&amp;rdquo;、&amp;ldquo;对环境友好&amp;quot;联系在一起。这里的&amp;quot;环境&amp;quot;指的是 CPU 的层级结构和缓存行（Cache Line）。它不再暴力地扫荡内存，而是优雅地顺着内存布局进行标记。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;内部代号习惯：&lt;/strong&gt; Go 团队内部喜欢用简单的食物或饮品给实验性功能起代号。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="2-关于中文含义的文化反差"&gt;2. 关于&amp;quot;中文含义&amp;quot;的文化反差 &lt;a href="#2-%e5%85%b3%e4%ba%8e%e4%b8%ad%e6%96%87%e5%90%ab%e4%b9%89%e7%9a%84%e6%96%87%e5%8c%96%e5%8f%8d%e5%b7%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;这个命名在进入中国开发者视野时确实产生了一些有趣的&amp;quot;化学反应&amp;rdquo;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;程序员的自嘲：&lt;/strong&gt; 很多国内开发者调侃说，这个 GC &lt;strong&gt;&amp;ldquo;看起来人畜无害（Pause 时间极短），背地里手段了得（后台偷偷重组扫描逻辑，疯狂优化 CPU 周期）&amp;rdquo;&lt;/strong&gt;。这倒是非常符合&amp;quot;绿茶&amp;quot;在中文里的另一层隐喻。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;翻译与本地化：&lt;/strong&gt; 尽管在中文里有歧义，但作为一个全球开源项目的技术名词，通常会直接保留原名（Green Tea）或直译。毕竟在计算机领域，能被命名为&amp;quot;茶&amp;quot;的算法，通常都暗示着它比前代更&amp;quot;轻盈&amp;quot;。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="3-一个冷知识"&gt;3. 一个冷知识 &lt;a href="#3-%e4%b8%80%e4%b8%aa%e5%86%b7%e7%9f%a5%e8%af%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;如果回头看 Go GC 的历史，你会发现这是一种**&amp;ldquo;颜色系列&amp;rdquo;&lt;strong&gt;的延续：
+Go 一直使用的是&lt;/strong&gt;三色标记法（Tri-color marking）**。原本的颜色只有&amp;quot;黑、灰、白&amp;quot;。现在引入了 &lt;strong&gt;&amp;ldquo;Green&amp;rdquo;&lt;/strong&gt;，在某种程度上也算是在三色模型的基础上，为这种&amp;quot;基于 Span 扫描&amp;quot;的新机制涂上了一种代表高效和清新的新底色。&lt;/p&gt;</description></item><item><title>垃圾回收：go如何触发垃圾回收的</title><link>/blog/2022-11-20-%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6_go%E5%A6%82%E4%BD%95%E8%A7%A6%E5%8F%91%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</link><pubDate>Sun, 20 Nov 2022 20:39:22 +0800</pubDate><guid>/blog/2022-11-20-%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6_go%E5%A6%82%E4%BD%95%E8%A7%A6%E5%8F%91%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/</guid><description>&lt;h2 id="前言"&gt;前言 &lt;a href="#%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;go触发GC有这么几个时机，内存分配时触发mallogc，定时触发sysmon，手动触发runtime.GC、debug.FreeOSMemory，其中内存分配时触发是go是重中之重，go runtime以此来平衡好内存分配、内存回收的节奏以让内存占用维持在一个合适的水准。本文对内存分配过程中触发GC的一些设计考量进行了总结梳理。&lt;/p&gt;
 &lt;h2 id="应该听过mark-assist"&gt;应该听过“mark assist” &lt;a href="#%e5%ba%94%e8%af%a5%e5%90%ac%e8%bf%87mark-assist" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;gc过程中mutator分配内存时可能会被搞去做assistg,去辅助扫描标记一些对象是否该回收的工作,当我的辅助标记内存数量减去要申请的内存数,如果为负数时,相当于我申请的比辅助标记的多,相当于欠债了,这个时候我就得去做些辅助标记的工作 gcAssistBytes:&lt;/p&gt;

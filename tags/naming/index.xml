@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Naming on</title><link>/tags/naming/</link><description>Recent content in Naming on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Jan 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/naming/index.xml" rel="self" type="application/rss+xml"/><item><title>Green Tea 命名由来：Go GC 的「绿茶」梗</title><link>/blog/2026-01-06-go-greentea-naming/</link><pubDate>Tue, 06 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-06-go-greentea-naming/</guid><description>&lt;p&gt;在中文互联网语境下，&amp;ldquo;绿茶&amp;quot;这个词带有一种贬义的特定暗示。但对 Go 团队（主要是 Google 的工程师）来说，这个命名完全是另一种画风。&lt;/p&gt;
+&lt;h2 id="1-为什么叫-green-tea绿茶"&gt;1. 为什么叫 Green Tea（绿茶）？ &lt;a href="#1-%e4%b8%ba%e4%bb%80%e4%b9%88%e5%8f%ab-green-tea%e7%bb%bf%e8%8c%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;根据 Go 团队开发者在设计文档和技术博客中的描述，这个命名的由来非常简单直观，甚至带点程序员的&amp;quot;养生&amp;quot;幽默：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;放松与性能的平衡：&lt;/strong&gt; 官方曾提到，这个 GC 的设计目标是让程序运行得更&amp;quot;丝滑&amp;rdquo;、更高效，减少因内存压力导致的&amp;quot;焦虑&amp;quot;（Stall/停顿）。就像在紧张的工作间隙喝一杯温润的&lt;strong&gt;绿茶&lt;/strong&gt;，它不仅提神（提高吞吐量），还比浓咖啡（高压力的 GC 策略）更平和。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;致敬硬件：&lt;/strong&gt; Green Tea 的核心是 &lt;strong&gt;&amp;ldquo;Memory-aware（内存感知）&amp;rdquo;&lt;/strong&gt;。在西方文化中，绿茶常与&amp;quot;天然&amp;quot;、&amp;ldquo;有机&amp;rdquo;、&amp;ldquo;对环境友好&amp;quot;联系在一起。这里的&amp;quot;环境&amp;quot;指的是 CPU 的层级结构和缓存行（Cache Line）。它不再暴力地扫荡内存，而是优雅地顺着内存布局进行标记。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;内部代号习惯：&lt;/strong&gt; Go 团队内部喜欢用简单的食物或饮品给实验性功能起代号。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="2-关于中文含义的文化反差"&gt;2. 关于&amp;quot;中文含义&amp;quot;的文化反差 &lt;a href="#2-%e5%85%b3%e4%ba%8e%e4%b8%ad%e6%96%87%e5%90%ab%e4%b9%89%e7%9a%84%e6%96%87%e5%8c%96%e5%8f%8d%e5%b7%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;这个命名在进入中国开发者视野时确实产生了一些有趣的&amp;quot;化学反应&amp;rdquo;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;程序员的自嘲：&lt;/strong&gt; 很多国内开发者调侃说，这个 GC &lt;strong&gt;&amp;ldquo;看起来人畜无害（Pause 时间极短），背地里手段了得（后台偷偷重组扫描逻辑，疯狂优化 CPU 周期）&amp;rdquo;&lt;/strong&gt;。这倒是非常符合&amp;quot;绿茶&amp;quot;在中文里的另一层隐喻。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;翻译与本地化：&lt;/strong&gt; 尽管在中文里有歧义，但作为一个全球开源项目的技术名词，通常会直接保留原名（Green Tea）或直译。毕竟在计算机领域，能被命名为&amp;quot;茶&amp;quot;的算法，通常都暗示着它比前代更&amp;quot;轻盈&amp;quot;。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="3-一个冷知识"&gt;3. 一个冷知识 &lt;a href="#3-%e4%b8%80%e4%b8%aa%e5%86%b7%e7%9f%a5%e8%af%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;如果回头看 Go GC 的历史，你会发现这是一种**&amp;ldquo;颜色系列&amp;rdquo;&lt;strong&gt;的延续：
+Go 一直使用的是&lt;/strong&gt;三色标记法（Tri-color marking）**。原本的颜色只有&amp;quot;黑、灰、白&amp;quot;。现在引入了 &lt;strong&gt;&amp;ldquo;Green&amp;rdquo;&lt;/strong&gt;，在某种程度上也算是在三色模型的基础上，为这种&amp;quot;基于 Span 扫描&amp;quot;的新机制涂上了一种代表高效和清新的新底色。&lt;/p&gt;</description></item></channel></rss>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Fmt on</title><link>/tags/fmt/</link><description>Recent content in Fmt on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Jan 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/fmt/index.xml" rel="self" type="application/rss+xml"/><item><title>Go 1.26 fmt.Errorf 性能优化：与 errors.New 再无差别</title><link>/blog/2026-01-06-go-fmt-errorf-optimization/</link><pubDate>Tue, 06 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-06-go-fmt-errorf-optimization/</guid><description>&lt;p&gt;以前我们会拿 &lt;code&gt;fmt.Errorf&lt;/code&gt; 的开销说事，来推荐大家在可以使用 &lt;code&gt;errors.New&lt;/code&gt; 的时候就不要用 &lt;code&gt;fmt.Errorf&lt;/code&gt;。这么做的原因还有一个就是可读性——没有占位符就不要用 &lt;code&gt;fmt.Errorf&lt;/code&gt; 了。&lt;/p&gt;
+&lt;p&gt;但从 Go 1.26 开始，情况发生了根本变化。现在统一使用 &lt;code&gt;fmt.Errorf&lt;/code&gt; 几乎没有性能损失，编译器会自动帮你做优化。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-性能鸿沟的消失"&gt;1. 性能鸿沟的消失 &lt;a href="#1-%e6%80%a7%e8%83%bd%e9%b8%bf%e6%b2%9f%e7%9a%84%e6%b6%88%e5%a4%b1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在旧版本（Go 1.25 及以前）中，即便你不使用任何占位符，&lt;code&gt;fmt.Errorf&lt;/code&gt; 也会执行一套沉重的流程：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;初始化：&lt;/strong&gt; &lt;code&gt;newPrinter()&lt;/code&gt; 获取打印对象。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;解析：&lt;/strong&gt; &lt;code&gt;doPrintf&lt;/code&gt; 扫描字符串查找 &lt;code&gt;%&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;分配：&lt;/strong&gt; 产生临时缓冲区 &lt;code&gt;p.buf&lt;/code&gt;，最后再通过 &lt;code&gt;errors.New(s)&lt;/code&gt; 转换，整个过程至少 2 次以上堆分配。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Go 1.26 的革新：&lt;/strong&gt;
+通过将 &lt;code&gt;Errorf&lt;/code&gt; 拆分为可内联的轻量级函数，编译器在发现无格式化需求时，直接&amp;quot;跳级&amp;quot;调用 &lt;code&gt;errors.New&lt;/code&gt;。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Non-escaping（不逃逸）&lt;/strong&gt;：从 2 次分配降至 &lt;strong&gt;0 次&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Escaping（逃逸）&lt;/strong&gt;：从 2 次分配降至 &lt;strong&gt;1 次&lt;/strong&gt;（与 &lt;code&gt;errors.New&lt;/code&gt; 完全一致）。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="2-编程范式的统一"&gt;2. 编程范式的统一 &lt;a href="#2-%e7%bc%96%e7%a8%8b%e8%8c%83%e5%bc%8f%e7%9a%84%e7%bb%9f%e4%b8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;以前推荐 &lt;code&gt;errors.New&lt;/code&gt; 的理由通常有两个：&lt;strong&gt;性能&lt;/strong&gt;和&lt;strong&gt;语义清晰度&lt;/strong&gt;。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;性能层面&lt;/strong&gt;：现在这个理由已经不复存在。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;语义层面&lt;/strong&gt;：
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;旧观念&lt;/strong&gt;：用 &lt;code&gt;fmt.Errorf&lt;/code&gt; 意味着&amp;quot;我要格式化&amp;quot;，用 &lt;code&gt;errors.New&lt;/code&gt; 意味着&amp;quot;我是静态文本&amp;quot;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;新观念&lt;/strong&gt;：统一使用 &lt;code&gt;fmt.Errorf&lt;/code&gt; 可以减少心智负担。开发者不再需要纠结&amp;quot;我现在是否需要加个变量&amp;quot;，因为即使不加，性能也没有惩罚。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="3-错误管理的工程化"&gt;3. 错误管理的工程化 &lt;a href="#3-%e9%94%99%e8%af%af%e7%ae%a1%e7%90%86%e7%9a%84%e5%b7%a5%e7%a8%8b%e5%8c%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;统一使用 &lt;code&gt;fmt.Errorf&lt;/code&gt; 在大型项目中带来的好处：&lt;/p&gt;</description></item></channel></rss>

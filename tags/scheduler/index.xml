@@ -62,7 +62,61 @@ v
 &lt;li&gt;&lt;strong&gt;信号捕获&lt;/strong&gt;：操作系统中断当前线程的执行，将控制权交给 Go 运行时提前注册好的信号处理函数 &lt;code&gt;sighandler&lt;/code&gt;。&lt;/li&gt;
 &lt;/ol&gt;
 &lt;h3 id="为什么选择-sigurg-信号"&gt;为什么选择 SIGURG 信号？ &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e9%80%89%e6%8b%a9-sigurg-%e4%bf%a1%e5%8f%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;在 Unix/Linux 系统中，&lt;code&gt;SIGALRM&lt;/code&gt; 常用于定时器，但容易与 CGO 或用户自定义计时器冲突。而 &lt;code&gt;SIGURG&lt;/code&gt; 在标准应用中极少被显式使用，且各大操作系统对其支持非常成熟，不会触发默认的进程终止，因此是绝佳的&amp;quot;内鬼信号&amp;quot;。&lt;/p&gt;</description></item><item><title>Linux任务调度(8): 任务越多调度就越频繁吗</title><link>/blog/2025-04-22-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6-8/</link><pubDate>Tue, 22 Apr 2025 12:36:00 +0800</pubDate><guid>/blog/2025-04-22-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6-8/</guid><description>&lt;h2 id="linux任务调度8-任务越多调度就越频繁吗"&gt;Linux任务调度(8): 任务越多调度就越频繁吗 &lt;a href="#linux%e4%bb%bb%e5%8a%a1%e8%b0%83%e5%ba%a68-%e4%bb%bb%e5%8a%a1%e8%b6%8a%e5%a4%9a%e8%b0%83%e5%ba%a6%e5%b0%b1%e8%b6%8a%e9%a2%91%e7%b9%81%e5%90%97" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 Unix/Linux 系统中，&lt;code&gt;SIGALRM&lt;/code&gt; 常用于定时器，但容易与 CGO 或用户自定义计时器冲突。而 &lt;code&gt;SIGURG&lt;/code&gt; 在标准应用中极少被显式使用，且各大操作系统对其支持非常成熟，不会触发默认的进程终止，因此是绝佳的&amp;quot;内鬼信号&amp;quot;。&lt;/p&gt;</description></item><item><title>Go runtime 中的 g0：调度器的特殊协程</title><link>/blog/2025-05-20-go-runtime-g0/</link><pubDate>Tue, 20 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-20-go-runtime-g0/</guid><description>&lt;p&gt;Go runtime 中的 g0 是不是就类似于 Linux 操作系统中的 idle 进程，它主要是用来做调度相关的工作，比如没有 goroutine 可执行时就切换到 g0，g0 执行调度相关的工作？&lt;/p&gt;
+&lt;p&gt;答案是肯定的。下面详细解释。&lt;/p&gt;
+&lt;h2 id="1-g0-与-idle-进程的相似之处"&gt;1. g0 与 idle 进程的相似之处 &lt;a href="#1-g0-%e4%b8%8e-idle-%e8%bf%9b%e7%a8%8b%e7%9a%84%e7%9b%b8%e4%bc%bc%e4%b9%8b%e5%a4%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;两者都是系统级别的&amp;quot;空闲&amp;quot;执行实体&lt;/li&gt;
+&lt;li&gt;都负责调度和系统级任务&lt;/li&gt;
+&lt;li&gt;当没有其他任务可执行时，都会切换到它们&lt;/li&gt;
+&lt;li&gt;都运行在特殊的系统栈上&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="2-g0-的主要职责"&gt;2. g0 的主要职责 &lt;a href="#2-g0-%e7%9a%84%e4%b8%bb%e8%a6%81%e8%81%8c%e8%b4%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;执行调度器逻辑，寻找下一个要运行的 goroutine&lt;/li&gt;
+&lt;li&gt;执行垃圾回收等系统级任务&lt;/li&gt;
+&lt;li&gt;处理系统调用&lt;/li&gt;
+&lt;li&gt;处理网络轮询&lt;/li&gt;
+&lt;li&gt;处理定时器&lt;/li&gt;
+&lt;li&gt;处理信号处理等&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="3-从代码中看-g0"&gt;3. 从代码中看 g0 &lt;a href="#3-%e4%bb%8e%e4%bb%a3%e7%a0%81%e4%b8%ad%e7%9c%8b-g0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;if g.ID == 0 {
+// The runtime uses a special goroutine with ID == 0 to mark that the
+// current goroutine is executing on the system stack (sometimes also
+// referred to as the g0 stack or scheduler stack).
+mvar, err := g.variable.structMember(&amp;quot;m&amp;quot;)
+if err != nil {
+return nil, err
+}
+curgvar, err := mvar.structMember(&amp;quot;curg&amp;quot;)
+if err != nil {
+return nil, err
+}
+g, err = curgvar.parseG()
+if err != nil {
+if _, ok := err.(ErrNoGoroutine); ok {
+err = ErrNoGoroutine{thread.ThreadID()}
+}
+return nil, err
+}
+g.SystemStack = true
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="4-主要区别"&gt;4. 主要区别 &lt;a href="#4-%e4%b8%bb%e8%a6%81%e5%8c%ba%e5%88%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;g0 是 Go runtime 层面的概念，而 idle 进程是操作系统层面的概念&lt;/li&gt;
+&lt;li&gt;g0 是每个 M（系统线程）都有的，而 idle 进程是系统全局的&lt;/li&gt;
+&lt;li&gt;g0 除了调度外还负责很多 Go runtime 特有的系统级任务&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="5-工作流程"&gt;5. 工作流程 &lt;a href="#5-%e5%b7%a5%e4%bd%9c%e6%b5%81%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;当没有用户 goroutine 可执行时，会切换到 g0&lt;/li&gt;
+&lt;li&gt;g0 执行调度器逻辑，寻找下一个可运行的 goroutine&lt;/li&gt;
+&lt;li&gt;如果找到可运行的 goroutine，则切换到该 goroutine&lt;/li&gt;
+&lt;li&gt;如果没找到，则继续执行 g0 的其他系统级任务&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;所以 g0 确实在 Go runtime 中扮演着类似操作系统 idle 进程的角色，是调度和系统级任务的核心执行实体。&lt;/p&gt;</description></item><item><title>Linux任务调度(8): 任务越多调度就越频繁吗</title><link>/blog/2025-04-22-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6-8/</link><pubDate>Tue, 22 Apr 2025 12:36:00 +0800</pubDate><guid>/blog/2025-04-22-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6-8/</guid><description>&lt;h2 id="linux任务调度8-任务越多调度就越频繁吗"&gt;Linux任务调度(8): 任务越多调度就越频繁吗 &lt;a href="#linux%e4%bb%bb%e5%8a%a1%e8%b0%83%e5%ba%a68-%e4%bb%bb%e5%8a%a1%e8%b6%8a%e5%a4%9a%e8%b0%83%e5%ba%a6%e5%b0%b1%e8%b6%8a%e9%a2%91%e7%b9%81%e5%90%97" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;本文将讲述一个曾经困扰在我们项目组心头的关于go进程混部时的担忧，以及由此引出的多进程混部时的隔离性问题。比如，个别程序不健壮创建大量进程，是否会推高上下文切换次数导致无谓的CPU开销的问题。我们将结合工具perf、bpftrace来深入观察并分析，以加深了对真实负载场景下任务调度的深层理解。&lt;/p&gt;
 &lt;h3 id="go运行时引发的思考"&gt;Go运行时引发的思考 &lt;a href="#go%e8%bf%90%e8%a1%8c%e6%97%b6%e5%bc%95%e5%8f%91%e7%9a%84%e6%80%9d%e8%80%83" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
 &lt;h4 id="一个线上问题"&gt;一个线上问题 &lt;a href="#%e4%b8%80%e4%b8%aa%e7%ba%bf%e4%b8%8a%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;

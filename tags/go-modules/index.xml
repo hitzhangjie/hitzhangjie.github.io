@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Go-Modules on</title><link>/tags/go-modules/</link><description>Recent content in Go-Modules on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 30 May 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/go-modules/index.xml" rel="self" type="application/rss+xml"/><item><title>Go 工具链：依赖下载到底发生在哪里</title><link>/blog/2026-05-30-go-deps-download/</link><pubDate>Sat, 30 May 2026 00:00:00 +0800</pubDate><guid>/blog/2026-05-30-go-deps-download/</guid><description>&lt;p&gt;无论是否先跑 &lt;code&gt;go mod download&lt;/code&gt;，Go 工具链下载依赖的机制都是一样的。&lt;/p&gt;
+&lt;h2 id="下载流程"&gt;下载流程 &lt;a href="#%e4%b8%8b%e8%bd%bd%e6%b5%81%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code&gt;go build / go test / go install
+↓
+读 go.mod、go.sum，解析 import 需要的模块
+↓
+查本地 module cache（go env GOMODCACHE，常见是 ~/go/pkg/mod）
+↓
+缺包 → 从 GOPROXY（默认 https://proxy.golang.org）拉 zip
+↓
+用 go.sum 校验 checksum
+↓
+解压到 cache，再编译
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="go-mod-download-vs-go-build"&gt;go mod download vs go build &lt;a href="#go-mod-download-vs-go-build" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;go mod download&lt;/code&gt;&lt;/strong&gt;：在编译之前主动把 &lt;code&gt;go.mod&lt;/code&gt; 里列出的模块都 prefetch 进 cache。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;go build&lt;/code&gt;&lt;/strong&gt;：编译过程中若发现 cache 缺某个模块，会当场按上面流程下载（懒加载）。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;也就是说：&lt;strong&gt;下载发生在&amp;quot;解析依赖、准备编译&amp;quot;阶段&lt;/strong&gt;，不是链接器里，也不是只有 &lt;code&gt;go mod tidy&lt;/code&gt; 才会下。&lt;/p&gt;
+&lt;p&gt;这个机制确保了无论你用哪种方式触发编译，依赖解析和下载的路径都是一致的。&lt;/p&gt;</description></item></channel></rss>

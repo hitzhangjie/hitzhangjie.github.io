@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Escape-Analysis on</title><link>/tags/escape-analysis/</link><description>Recent content in Escape-Analysis on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 18 Jul 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/escape-analysis/index.xml" rel="self" type="application/rss+xml"/><item><title>理解 Go 逃逸分析：变量与值的区别</title><link>/blog/2025-07-18-go-escape-analysis/</link><pubDate>Fri, 18 Jul 2025 00:00:00 +0800</pubDate><guid>/blog/2025-07-18-go-escape-analysis/</guid><description>&lt;p&gt;一个常见的困惑点：当工具报告关于变量位置的矛盾信息时，到底哪个是对的？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;go build -gcflags '-m'&lt;/code&gt;&lt;/strong&gt; 可能报告 &lt;code&gt;variable escapes to heap&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;调试器 Delve&lt;/strong&gt; 可能报告同一个变量是 &lt;code&gt;stack allocated&lt;/code&gt;。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;两者都是对的。关键在于理解&lt;strong&gt;变量&lt;/strong&gt;（命名存储位置）和它持有的&lt;strong&gt;值&lt;/strong&gt;之间的区别。&lt;/p&gt;
+&lt;h2 id="1-变量栈上的一个位置"&gt;1. 变量：栈上的一个位置 &lt;a href="#1-%e5%8f%98%e9%87%8f%e6%a0%88%e4%b8%8a%e7%9a%84%e4%b8%80%e4%b8%aa%e4%bd%8d%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当你在函数中声明 &lt;code&gt;i := 0&lt;/code&gt; 时，Go 编译器默认会在该函数的&lt;strong&gt;栈帧&lt;/strong&gt;上分配空间。栈是管理函数局部变量的高效内存区域。&lt;/p&gt;
+&lt;p&gt;Delve 在运行时检查程序状态。当你 &lt;code&gt;watch i&lt;/code&gt; 时，它在当前作用域中找到命名的变量 &lt;code&gt;i&lt;/code&gt;，该变量物理上位于栈上。因此 Delve 正确地将其识别为&amp;quot;栈分配变量&amp;quot;。&lt;/p&gt;
+&lt;h2 id="2-值一个副本逃逸到堆上"&gt;2. 值：一个副本逃逸到堆上 &lt;a href="#2-%e5%80%bc%e4%b8%80%e4%b8%aa%e5%89%af%e6%9c%ac%e9%80%83%e9%80%b8%e5%88%b0%e5%a0%86%e4%b8%8a" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;编译器的逃逸分析消息不是由变量本身触发的，而是由它的&lt;strong&gt;值如何被使用&lt;/strong&gt;触发的。一个常见触发器是将值传递给接受 &lt;code&gt;interface{}&lt;/code&gt; 的函数，比如 &lt;code&gt;fmt.Println(...)&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;当调用 &lt;code&gt;fmt.Println(i)&lt;/code&gt; 时，运行时发生以下事情：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Go 需要将具体类型（&lt;code&gt;int&lt;/code&gt;）转换为 &lt;code&gt;interface{}&lt;/code&gt;。这个过程称为&lt;strong&gt;装箱（boxing）&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;为了&amp;quot;装箱&amp;quot;这个值，运行时在&lt;strong&gt;堆&lt;/strong&gt;上分配一小块内存。&lt;/li&gt;
+&lt;li&gt;然后将 &lt;code&gt;i&lt;/code&gt; 的值从栈&lt;strong&gt;复制&lt;/strong&gt;到这个新的堆分配中。&lt;/li&gt;
+&lt;li&gt;生成的 &lt;code&gt;interface{}&lt;/code&gt; 值包含指向这个堆副本的指针，这就是传给 &lt;code&gt;fmt.Println&lt;/code&gt; 的内容。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;编译器的逃逸分析在编译时检测到这个需求。它看到 &lt;code&gt;i&lt;/code&gt; 的值*必须*被复制到堆上才能满足调用。消息 &lt;code&gt;i escapes to heap&lt;/code&gt; 是编译器在说：&amp;ldquo;我已经生成了代码，将在此时为 &lt;code&gt;i&lt;/code&gt; 持有的值触发堆分配。&amp;rdquo;&lt;/p&gt;
+&lt;h3 id="类比便利贴和文件柜"&gt;类比：便利贴和文件柜 &lt;a href="#%e7%b1%bb%e6%af%94%e4%be%bf%e5%88%a9%e8%b4%b4%e5%92%8c%e6%96%87%e4%bb%b6%e6%9f%9c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;栈&lt;/strong&gt;是你的办公桌。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;变量 &lt;code&gt;i&lt;/code&gt;&lt;/strong&gt; 是桌上的便利贴。你在上面写了数字 &lt;code&gt;1&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;堆&lt;/strong&gt;是走廊对面的共享文件柜。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;fmt.Println&lt;/code&gt;&lt;/strong&gt; 是一个只接受文件柜中官方文件夹文档的同事。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;要传递这个数字给同事，你不能直接递给便利贴。你必须：&lt;/p&gt;</description></item></channel></rss>

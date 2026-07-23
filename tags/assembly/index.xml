@@ -1,4 +1,25 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Assembly on</title><link>/tags/assembly/</link><description>Recent content in Assembly on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 20 Aug 2020 20:27:19 +0800</lastBuildDate><atom:link href="/tags/assembly/index.xml" rel="self" type="application/rss+xml"/><item><title>x64汇编开发介绍</title><link>/blog/2020-08-20-x64%E6%B1%87%E7%BC%96%E5%BC%80%E5%8F%91%E4%BB%8B%E7%BB%8D/</link><pubDate>Thu, 20 Aug 2020 20:27:19 +0800</pubDate><guid>/blog/2020-08-20-x64%E6%B1%87%E7%BC%96%E5%BC%80%E5%8F%91%E4%BB%8B%E7%BB%8D/</guid><description>&lt;p&gt;最近在工作和学习中发现，其实汇编是非常重要的，即便现在高级语言已经非常方便了，但是了解汇编对于深入理解计算机系统，以及一些高深的知识点是不可或缺的。举几个例子，比如说Linux操作系统有一个系统调用函数叫Fork我们都知道Fork的返回值在子进程中是0，在父进程中是非0，那这个是如何实现的呢？对于不了解汇编的人也很难有能力去阅读Linux操作系统源码，只能道听途说了解到个大概原因。再比如接下来要讲的gomonkey测试框架实现的一些指令patching操作，这些都是与汇编操作分不开的。甚至你想了解下上下文切换开销，你都需要深入了解下指令执行周期等等的问题。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Assembly on</title><link>/tags/assembly/</link><description>Recent content in Assembly on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 23 Jan 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/assembly/index.xml" rel="self" type="application/rss+xml"/><item><title>Go 汇编语言详解</title><link>/blog/2026-01-23-go%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E8%AF%A6%E8%A7%A3/</link><pubDate>Fri, 23 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-23-go%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E8%AF%A6%E8%A7%A3/</guid><description>&lt;h2 id="引出问题"&gt;引出问题 &lt;a href="#%e5%bc%95%e5%87%ba%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;写 Go 的人，迟早会碰到需要读汇编的场景。比如用 pprof 做 CPU 分析，火焰图上函数名后面的指令你看不懂；比如你想搞清楚一个 channel 操作到底编译成了什么；比如 Go 编译器的 nil 检查到底长什么样。&lt;/p&gt;
+&lt;p&gt;Go 的汇编不是 x86 AT&amp;amp;T，也不是 Intel 语法——它基于 Plan 9 汇编，Go 编译器在此基础上做了大量定制。这篇文章的目标是让你读完能看懂 &lt;code&gt;go tool compile -S&lt;/code&gt; 的输出，也能自己写 &lt;code&gt;.s&lt;/code&gt; 文件。&lt;/p&gt;
+&lt;h2 id="go-assembly-是什么"&gt;Go Assembly 是什么 &lt;a href="#go-assembly-%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Go 编译器（&lt;code&gt;gc&lt;/code&gt;，不是 gccgo）的汇编器源自 Plan 9 操作系统的汇编器。Plan 9 是 Bell Labs 在 Unix 之后开发的操作系统，Go 的三位创始人（Rob Pike、Ken Thompson、Robert Griesemer）都曾在 Bell Labs 工作，他们在设计 Go 时沿用了 Plan 9 汇编的风格。&lt;/p&gt;
+&lt;p&gt;为什么要自己搞一套而不是直接用 AT&amp;amp;T 或 Intel 语法？核心原因是 &lt;strong&gt;可移植性&lt;/strong&gt;。Go 汇编本质上是一层&amp;quot;伪汇编&amp;quot;——它是&lt;strong&gt;架构无关&lt;/strong&gt;的中间表示。同一段 Go 汇编代码，经过不同架构的汇编器处理后，会生成对应的机器码。这一点和 LLVM IR 的思路类似，只不过 Go 汇编更贴近机器，保留了寄存器和具体指令，但用统一的助记符和操作数顺序屏蔽了平台差异。&lt;/p&gt;</description></item><item><title>Go 空指针检查：从一行汇编指令到 SIGSEGV 的完整链路</title><link>/blog/2025-05-26-%E7%BC%96%E8%AF%91%E5%99%A8_%E7%A9%BA%E6%8C%87%E9%92%88%E6%A3%80%E6%9F%A5nilcheck/</link><pubDate>Mon, 26 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-26-%E7%BC%96%E8%AF%91%E5%99%A8_%E7%A9%BA%E6%8C%87%E9%92%88%E6%A3%80%E6%9F%A5nilcheck/</guid><description>&lt;h2 id="引出问题"&gt;引出问题 &lt;a href="#%e5%bc%95%e5%87%ba%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;前阵子写了一段简单的 Go 代码，反汇编后发现了一些不太一样的指令。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type Student struct {
+Age int
+}
+func main() {
+var s *Student
+println(s.Age) // s 是 nil，这里必然崩
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;对应的汇编代码中，&lt;code&gt;println(s.Age)&lt;/code&gt; 被编译为：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-asm"&gt;mov 0x48(%rsp), %rax ; 从栈上加载指针 s 到 rax
+test %al, (%rax) ; ★ 奇怪的指令
+mov (%rax), %rax ; 实际读取 s.Age（第一个字段偏移 0）
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;第三行的 &lt;code&gt;test %al, (%rax)&lt;/code&gt; 是干什么的？&lt;code&gt;test&lt;/code&gt; 在 x86 中是按位 AND，只设置标志位不写回结果，通常用于比较。但这里 &lt;code&gt;%al&lt;/code&gt; 是 AX 的低 8 位，&lt;code&gt;(%rax)&lt;/code&gt; 是 rax 指向的内存——把寄存器低字节和指针指向的内存做 AND，有什么意义？&lt;/p&gt;
+&lt;p&gt;答案是：&lt;strong&gt;它不关心 AND 的结果，而是想让 CPU 尝试读取 &lt;code&gt;(%rax)&lt;/code&gt; 指向的内存地址。&lt;/strong&gt; 如果 &lt;code&gt;rax&lt;/code&gt; 是 0（nil），访问地址 0 会立即触发 page fault → SIGSEGV。编译器在 &lt;strong&gt;实际读取字段值之前&lt;/strong&gt; 主动插入了一次地址 0 的试探访问，这就是 Go 编译器的显式 nil 检查。&lt;/p&gt;</description></item><item><title>x64汇编开发介绍</title><link>/blog/2020-08-20-x64%E6%B1%87%E7%BC%96%E5%BC%80%E5%8F%91%E4%BB%8B%E7%BB%8D/</link><pubDate>Thu, 20 Aug 2020 20:27:19 +0800</pubDate><guid>/blog/2020-08-20-x64%E6%B1%87%E7%BC%96%E5%BC%80%E5%8F%91%E4%BB%8B%E7%BB%8D/</guid><description>&lt;p&gt;最近在工作和学习中发现，其实汇编是非常重要的，即便现在高级语言已经非常方便了，但是了解汇编对于深入理解计算机系统，以及一些高深的知识点是不可或缺的。举几个例子，比如说Linux操作系统有一个系统调用函数叫Fork我们都知道Fork的返回值在子进程中是0，在父进程中是非0，那这个是如何实现的呢？对于不了解汇编的人也很难有能力去阅读Linux操作系统源码，只能道听途说了解到个大概原因。再比如接下来要讲的gomonkey测试框架实现的一些指令patching操作，这些都是与汇编操作分不开的。甚至你想了解下上下文切换开销，你都需要深入了解下指令执行周期等等的问题。&lt;/p&gt;
 &lt;p&gt;不懂汇编，不妨碍你开发上层应用，但是对你的深度就是一道坎，你很难跨国这个鸿沟去窥探更底层的一些原理。&lt;/p&gt;
 &lt;p&gt;有感而发，今天就回顾下intel官方开发发布的x64汇编知识，做一个简单的回顾，也为后面研究gomonkey指令patching等等做一些准备和铺垫。&lt;/p&gt;
 &lt;h2 id="介绍"&gt;介绍 &lt;a href="#%e4%bb%8b%e7%bb%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;

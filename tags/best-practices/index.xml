@@ -1,4 +1,106 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Best-Practices on</title><link>/tags/best-practices/</link><description>Recent content in Best-Practices on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 12 Apr 2025 00:05:08 +0800</lastBuildDate><atom:link href="/tags/best-practices/index.xml" rel="self" type="application/rss+xml"/><item><title>Go精进之路：从错误中学习</title><link>/blog/2025-04-12-0001-go%E5%AE%B9%E6%98%93%E4%B8%8A%E6%89%8B%E4%BD%86%E4%B8%8D%E4%BB%A3%E8%A1%A8%E8%BD%BB%E6%9D%BE%E5%B0%B1%E8%83%BD%E6%8E%8C%E6%8F%A1/</link><pubDate>Sat, 12 Apr 2025 00:05:08 +0800</pubDate><guid>/blog/2025-04-12-0001-go%E5%AE%B9%E6%98%93%E4%B8%8A%E6%89%8B%E4%BD%86%E4%B8%8D%E4%BB%A3%E8%A1%A8%E8%BD%BB%E6%9D%BE%E5%B0%B1%E8%83%BD%E6%8E%8C%E6%8F%A1/</guid><description>&lt;h1 id="go精进之路从错误中学习"&gt;Go精进之路：从错误中学习 &lt;a href="#go%e7%b2%be%e8%bf%9b%e4%b9%8b%e8%b7%af%e4%bb%8e%e9%94%99%e8%af%af%e4%b8%ad%e5%ad%a6%e4%b9%a0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Best-Practices on</title><link>/tags/best-practices/</link><description>Recent content in Best-Practices on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 27 Dec 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/best-practices/index.xml" rel="self" type="application/rss+xml"/><item><title>在业务层和基础设施层之间：错误处理与日志记录的分层原则</title><link>/blog/2025-12-27-go-error-handling-layers/</link><pubDate>Sat, 27 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-27-go-error-handling-layers/</guid><description>&lt;blockquote&gt;
+&lt;p&gt;代码片段（Redis &lt;code&gt;HMGet&lt;/code&gt;）：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;func HMGet(ctx context.Context, key string, fields []string) (any, error) {
+fullKey := &amp;quot;xxxxxxxxxxx&amp;quot;
+fields := []string{f1, f2, f3}
+result, err := redisClient.HMGet(ctx, fullKey, fields...).Result()
+if err != nil {
+log.ErrorContextf(ctx, &amp;quot;hmget failed. key: %s, err: %v&amp;quot;, fullKey, err)
+return nil, err
+}
+...
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这里的疑问是：
+&lt;em&gt;是&lt;/em&gt; 在 &lt;strong&gt;内部&lt;/strong&gt; 打印日志更合适，还是 &lt;strong&gt;返回包装好的错误&lt;/strong&gt; 让调用方自行打印？&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;本文给出一个 &lt;strong&gt;分层&lt;/strong&gt; 的错误与日志处理思路，帮助你在实际项目中做出更清晰、更易维护的决策。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-业务场景快速回顾"&gt;1. 业务场景快速回顾 &lt;a href="#1-%e4%b8%9a%e5%8a%a1%e5%9c%ba%e6%99%af%e5%bf%ab%e9%80%9f%e5%9b%9e%e9%a1%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;基础设施层&lt;/strong&gt;：Redis、数据库、第三方 SDK 等，负责与外部系统的交互。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;业务/服务层&lt;/strong&gt;：业务逻辑、HTTP 处理器、命令/查询处理器等，负责实现业务需求。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;工具/通用库&lt;/strong&gt;：可复用的代码段、工具函数，供多项目使用。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="2-错误与日志的职责拆分"&gt;2. 错误与日志的职责拆分 &lt;a href="#2-%e9%94%99%e8%af%af%e4%b8%8e%e6%97%a5%e5%bf%97%e7%9a%84%e8%81%8c%e8%b4%a3%e6%8b%86%e5%88%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;层次&lt;/th&gt;
+&lt;th&gt;负责什么&lt;/th&gt;
+&lt;th&gt;不能做什么&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;基础设施层&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;只负责执行操作、返回错误&lt;/td&gt;
+&lt;td&gt;打印业务级日志&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;业务层&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;记录错误、统一日志格式&lt;/td&gt;
+&lt;td&gt;随意包装错误（除非需要保留更多上下文）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;工具层&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;只返回错误，必要时做重试&lt;/td&gt;
+&lt;td&gt;打印日志&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;核心原则&lt;/strong&gt;：
+&lt;strong&gt;&amp;ldquo;谁知道错误最有意义？&amp;rdquo;&lt;/strong&gt;——
+业务层最清楚业务语义，基础设施层最清楚技术细节。&lt;/p&gt;</description></item><item><title>sync.Once：类型结构体中作为值字段还是指针字段？</title><link>/blog/2025-12-26-sync-once-value-vs-pointer/</link><pubDate>Fri, 26 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-26-sync-once-value-vs-pointer/</guid><description>&lt;h2 id="tldr"&gt;TL;DR &lt;a href="#tldr" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Embed &lt;code&gt;sync.Once&lt;/code&gt; by value&lt;/strong&gt; — 它是一个小结构体，零值即可使用。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;不要用 &lt;code&gt;*sync.Once&lt;/code&gt;&lt;/strong&gt; 除非你真的需要在多个结构体间共享同一个 &lt;code&gt;Once&lt;/code&gt;（或者你想避免复制整个结构体，但这种情况很少见）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;永远不要复制已经调用过 &lt;code&gt;Do&lt;/code&gt; 的结构体&lt;/strong&gt; — &lt;code&gt;sync.Once&lt;/code&gt; 在使用后就不再安全复制了。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="为什么-synconce-通常是值字段"&gt;为什么 sync.Once 通常是值字段 &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88-synconce-%e9%80%9a%e5%b8%b8%e6%98%af%e5%80%bc%e5%ad%97%e6%ae%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type MyService struct {
+once sync.Once
+// other fields …
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;sync.Once&lt;/code&gt; 只是一个小结构体（目前只有一个指向内部状态的指针），复制开销极低。&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;sync.Once&lt;/code&gt; 的零值已经是一个功能完备的&amp;quot;once&amp;quot;对象，不需要额外分配或初始化。&lt;/li&gt;
+&lt;li&gt;嵌入它（或作为命名字段）提供了地道的 &lt;code&gt;foo.once.Do(...)&lt;/code&gt; 用法。&lt;/li&gt;
+&lt;li&gt;Go 标准库和实际代码中的大多数示例都使用值类型。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="什么时候考虑用指针"&gt;什么时候考虑用指针 &lt;a href="#%e4%bb%80%e4%b9%88%e6%97%b6%e5%80%99%e8%80%83%e8%99%91%e7%94%a8%e6%8c%87%e9%92%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;场景&lt;/th&gt;
+&lt;th&gt;为什么用指针可能有帮助&lt;/th&gt;
+&lt;th&gt;代价&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;在多个结构体间共享同一个 Once&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;所有结构体都调用同一个 once 实例，初始化只运行一次&lt;/td&gt;
+&lt;td&gt;失去 &lt;code&gt;Do&lt;/code&gt; 的自动提升，需要管理指针的生命周期&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;避免复制包含 sync.Once 的结构体&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;如果复制了已调用过 &lt;code&gt;Do&lt;/code&gt; 的结构体，副本可能会再次运行初始化或导致竞态。使用指针可以保持单实例&lt;/td&gt;
+&lt;td&gt;仍要小心不要复制结构体本身；Once 的指针不会魔术般地让结构体安全复制&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;需要延迟创建 Once&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;*sync.Once&lt;/code&gt; 允许你在需要前设为 &lt;code&gt;nil&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;sync.Once&lt;/code&gt; 零值已经是可用的，很少需要这个&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;在绝大多数典型场景中，你都会看到 &lt;code&gt;sync.Once&lt;/code&gt; 作为值嵌入。&lt;/p&gt;</description></item><item><title>Go精进之路：从错误中学习</title><link>/blog/2025-04-12-0001-go%E5%AE%B9%E6%98%93%E4%B8%8A%E6%89%8B%E4%BD%86%E4%B8%8D%E4%BB%A3%E8%A1%A8%E8%BD%BB%E6%9D%BE%E5%B0%B1%E8%83%BD%E6%8E%8C%E6%8F%A1/</link><pubDate>Sat, 12 Apr 2025 00:05:08 +0800</pubDate><guid>/blog/2025-04-12-0001-go%E5%AE%B9%E6%98%93%E4%B8%8A%E6%89%8B%E4%BD%86%E4%B8%8D%E4%BB%A3%E8%A1%A8%E8%BD%BB%E6%9D%BE%E5%B0%B1%E8%83%BD%E6%8E%8C%E6%8F%A1/</guid><description>&lt;h1 id="go精进之路从错误中学习"&gt;Go精进之路：从错误中学习 &lt;a href="#go%e7%b2%be%e8%bf%9b%e4%b9%8b%e8%b7%af%e4%bb%8e%e9%94%99%e8%af%af%e4%b8%ad%e5%ad%a6%e4%b9%a0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;&lt;img src="https://fastly.jsdelivr.net/gh/bucketio/img12@main/2025/04/11/1744347781802-c70c26c3-2838-4b80-bd98-5a38c29b5ec2.png" alt=""&gt;&lt;/p&gt;
 &lt;p&gt;欢迎来到这个Go语言开发经验分享系列！&lt;/p&gt;
 &lt;p&gt;时光荏苒，转眼间Go语言已经陪伴我们走过了16个春秋。自2009年横空出世，Go语言凭借其简洁高效的特性，迅速在服务器开发、分布式系统、以及各种实用工具链的构建中获得了广泛的应用。它就像一位老朋友，默默地支撑着互联网的基石。&lt;/p&gt;

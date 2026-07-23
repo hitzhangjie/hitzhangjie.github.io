@@ -85,7 +85,63 @@ v
 &lt;li&gt;&lt;strong&gt;信号捕获&lt;/strong&gt;：操作系统中断当前线程的执行，将控制权交给 Go 运行时提前注册好的信号处理函数 &lt;code&gt;sighandler&lt;/code&gt;。&lt;/li&gt;
 &lt;/ol&gt;
 &lt;h3 id="为什么选择-sigurg-信号"&gt;为什么选择 SIGURG 信号？ &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e9%80%89%e6%8b%a9-sigurg-%e4%bf%a1%e5%8f%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;在 Unix/Linux 系统中，&lt;code&gt;SIGALRM&lt;/code&gt; 常用于定时器，但容易与 CGO 或用户自定义计时器冲突。而 &lt;code&gt;SIGURG&lt;/code&gt; 在标准应用中极少被显式使用，且各大操作系统对其支持非常成熟，不会触发默认的进程终止，因此是绝佳的&amp;quot;内鬼信号&amp;quot;。&lt;/p&gt;</description></item><item><title>GoTalk - Go Execution Tracer</title><link>/blog/2025-11-08-go_execution_tracer/</link><pubDate>Sat, 08 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/2025-11-08-go_execution_tracer/</guid><description>&lt;style&gt;
+&lt;p&gt;在 Unix/Linux 系统中，&lt;code&gt;SIGALRM&lt;/code&gt; 常用于定时器，但容易与 CGO 或用户自定义计时器冲突。而 &lt;code&gt;SIGURG&lt;/code&gt; 在标准应用中极少被显式使用，且各大操作系统对其支持非常成熟，不会触发默认的进程终止，因此是绝佳的&amp;quot;内鬼信号&amp;quot;。&lt;/p&gt;</description></item><item><title>Go 汇编语言详解</title><link>/blog/2026-01-23-go%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E8%AF%A6%E8%A7%A3/</link><pubDate>Fri, 23 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-23-go%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E8%AF%A6%E8%A7%A3/</guid><description>&lt;h2 id="引出问题"&gt;引出问题 &lt;a href="#%e5%bc%95%e5%87%ba%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;写 Go 的人，迟早会碰到需要读汇编的场景。比如用 pprof 做 CPU 分析，火焰图上函数名后面的指令你看不懂；比如你想搞清楚一个 channel 操作到底编译成了什么；比如 Go 编译器的 nil 检查到底长什么样。&lt;/p&gt;
+&lt;p&gt;Go 的汇编不是 x86 AT&amp;amp;T，也不是 Intel 语法——它基于 Plan 9 汇编，Go 编译器在此基础上做了大量定制。这篇文章的目标是让你读完能看懂 &lt;code&gt;go tool compile -S&lt;/code&gt; 的输出，也能自己写 &lt;code&gt;.s&lt;/code&gt; 文件。&lt;/p&gt;
+&lt;h2 id="go-assembly-是什么"&gt;Go Assembly 是什么 &lt;a href="#go-assembly-%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Go 编译器（&lt;code&gt;gc&lt;/code&gt;，不是 gccgo）的汇编器源自 Plan 9 操作系统的汇编器。Plan 9 是 Bell Labs 在 Unix 之后开发的操作系统，Go 的三位创始人（Rob Pike、Ken Thompson、Robert Griesemer）都曾在 Bell Labs 工作，他们在设计 Go 时沿用了 Plan 9 汇编的风格。&lt;/p&gt;
+&lt;p&gt;为什么要自己搞一套而不是直接用 AT&amp;amp;T 或 Intel 语法？核心原因是 &lt;strong&gt;可移植性&lt;/strong&gt;。Go 汇编本质上是一层&amp;quot;伪汇编&amp;quot;——它是&lt;strong&gt;架构无关&lt;/strong&gt;的中间表示。同一段 Go 汇编代码，经过不同架构的汇编器处理后，会生成对应的机器码。这一点和 LLVM IR 的思路类似，只不过 Go 汇编更贴近机器，保留了寄存器和具体指令，但用统一的助记符和操作数顺序屏蔽了平台差异。&lt;/p&gt;</description></item><item><title>Go 语言精确 GC 实现机制深度解析</title><link>/blog/2026-01-23-go-precise-gc/</link><pubDate>Fri, 23 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-23-go-precise-gc/</guid><description>&lt;h2 id="精确-gc-概述"&gt;精确 GC 概述 &lt;a href="#%e7%b2%be%e7%a1%ae-gc-%e6%a6%82%e8%bf%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;精确 GC（Precise Garbage Collection）是指垃圾收集器能够准确识别所有指针位置，不会将非指针数据当作指针，也不会漏掉任何指针。这与保守式 GC（Conservative GC）形成对比，保守式 GC 可能会将一些看起来像指针的值当作指针来处理，导致本该回收的对象不敢回收，该移动的对象不敢移动，造成内存碎片。&lt;/p&gt;
+&lt;h3 id="精确-gc-的优势"&gt;精确 GC 的优势 &lt;a href="#%e7%b2%be%e7%a1%ae-gc-%e7%9a%84%e4%bc%98%e5%8a%bf" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;准确性&lt;/strong&gt;：不会误标记非指针数据，避免内存泄漏或错误回收&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;性能&lt;/strong&gt;：不需要扫描所有可能是指针的数据，只扫描已知的指针位置&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;可预测性&lt;/strong&gt;：GC 行为更加可预测，便于调试和优化&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id="go-语言精确-gc-的实现方式"&gt;Go 语言精确 GC 的实现方式 &lt;a href="#go-%e8%af%ad%e8%a8%80%e7%b2%be%e7%a1%ae-gc-%e7%9a%84%e5%ae%9e%e7%8e%b0%e6%96%b9%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Go 语言通过以下机制实现精确 GC：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;pclntab&lt;/strong&gt;：记录程序计数器（PC）与各种元信息的映射关系&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;栈映射表（Stack Map）&lt;/strong&gt;：记录函数栈帧中哪些位置包含指针&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;参数映射表（Args Map）&lt;/strong&gt;：记录函数参数中哪些位置包含指针&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;PCDATA 指令&lt;/strong&gt;：在汇编代码中标记 PC 相关的数据变化&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;FUNCDATA 指令&lt;/strong&gt;：在汇编代码中标记函数级别的元数据&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;h2 id="pclntab-详解"&gt;pclntab 详解 &lt;a href="#pclntab-%e8%af%a6%e8%a7%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;pclntab（Program Counter Line Table）是 Go 运行时系统中的重要数据结构，记录了 PC 与多种元信息的映射关系，包括函数信息、行号信息、文件信息、栈映射信息和 GC 相关信息。&lt;/p&gt;
+&lt;h3 id="pclntab-的结构"&gt;pclntab 的结构 &lt;a href="#pclntab-%e7%9a%84%e7%bb%93%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;根据 &lt;code&gt;src/cmd/link/internal/ld/pcln.go&lt;/code&gt;，pclntab 的布局如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.gopclntab/__gopclntab [elf/macho section]
+runtime.pclntab
+runtime.pcheader (8-byte magic, nfunc, offsets)
+runtime.funcnametab (null terminated function names)
+runtime.cutab (CU file index mapping)
+runtime.filetab (null terminated filename strings)
+runtime.pctab (deduplicated pc data)
+runtime.functab (function table with PC and func struct offsets)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="_func-结构体"&gt;_func 结构体 &lt;a href="#_func-%e7%bb%93%e6%9e%84%e4%bd%93" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type _func struct {
+entryOff uint32 // start pc offset
+nameOff int32 // function name index
+args int32 // in/out args size
+deferreturn uint32
+pcsp uint32 // stack pointer delta table
+pcfile uint32 // file number table
+pcln uint32 // line number table
+npcdata uint32
+cuOffset uint32
+startLine int32
+funcID abi.FuncID
+flag abi.FuncFlag
+nfuncdata uint8
+// followed by pcdata[npcdata]uint32 and funcdata[nfuncdata]uint32
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr&gt;
+&lt;h2 id="pcdata-和-funcdata-指令"&gt;PCDATA 和 FUNCDATA 指令 &lt;a href="#pcdata-%e5%92%8c-funcdata-%e6%8c%87%e4%bb%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;PCDATA 和 FUNCDATA 是 Go 编译器生成的伪指令，不会生成实际的机器指令，而是为链接器提供元数据信息。&lt;/p&gt;</description></item><item><title>GoTalk - Go Execution Tracer</title><link>/blog/2025-11-08-go_execution_tracer/</link><pubDate>Sat, 08 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/2025-11-08-go_execution_tracer/</guid><description>&lt;style&gt;
 .iframe-container {
 position: relative;
 height: 100vh;
@@ -101,7 +157,77 @@ top: -200px;
 &lt;/style&gt;
 &lt;div class="iframe-container"&gt;
 &lt;iframe src="https://docs.qq.com/slide/DYnVocFl6dHhWdnBO"/&gt;
-&lt;/div&gt;</description></item><item><title>syscall：how does go runtime handles syscall</title><link>/blog/2021-06-06-%E8%BF%90%E8%A1%8C%E6%97%B6_how-go-handles-syscall/</link><pubDate>Sun, 06 Jun 2021 10:17:34 +0800</pubDate><guid>/blog/2021-06-06-%E8%BF%90%E8%A1%8C%E6%97%B6_how-go-handles-syscall/</guid><description>&lt;h1 id="1-how-go-runtime-handle-syscall-"&gt;1 How go runtime handle syscall ? &lt;a href="#1-how-go-runtime-handle-syscall-" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;/div&gt;</description></item><item><title>Go 空指针检查：从一行汇编指令到 SIGSEGV 的完整链路</title><link>/blog/2025-05-26-%E7%BC%96%E8%AF%91%E5%99%A8_%E7%A9%BA%E6%8C%87%E9%92%88%E6%A3%80%E6%9F%A5nilcheck/</link><pubDate>Mon, 26 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-26-%E7%BC%96%E8%AF%91%E5%99%A8_%E7%A9%BA%E6%8C%87%E9%92%88%E6%A3%80%E6%9F%A5nilcheck/</guid><description>&lt;h2 id="引出问题"&gt;引出问题 &lt;a href="#%e5%bc%95%e5%87%ba%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;前阵子写了一段简单的 Go 代码，反汇编后发现了一些不太一样的指令。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type Student struct {
+Age int
+}
+func main() {
+var s *Student
+println(s.Age) // s 是 nil，这里必然崩
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;对应的汇编代码中，&lt;code&gt;println(s.Age)&lt;/code&gt; 被编译为：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-asm"&gt;mov 0x48(%rsp), %rax ; 从栈上加载指针 s 到 rax
+test %al, (%rax) ; ★ 奇怪的指令
+mov (%rax), %rax ; 实际读取 s.Age（第一个字段偏移 0）
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;第三行的 &lt;code&gt;test %al, (%rax)&lt;/code&gt; 是干什么的？&lt;code&gt;test&lt;/code&gt; 在 x86 中是按位 AND，只设置标志位不写回结果，通常用于比较。但这里 &lt;code&gt;%al&lt;/code&gt; 是 AX 的低 8 位，&lt;code&gt;(%rax)&lt;/code&gt; 是 rax 指向的内存——把寄存器低字节和指针指向的内存做 AND，有什么意义？&lt;/p&gt;
+&lt;p&gt;答案是：&lt;strong&gt;它不关心 AND 的结果，而是想让 CPU 尝试读取 &lt;code&gt;(%rax)&lt;/code&gt; 指向的内存地址。&lt;/strong&gt; 如果 &lt;code&gt;rax&lt;/code&gt; 是 0（nil），访问地址 0 会立即触发 page fault → SIGSEGV。编译器在 &lt;strong&gt;实际读取字段值之前&lt;/strong&gt; 主动插入了一次地址 0 的试探访问，这就是 Go 编译器的显式 nil 检查。&lt;/p&gt;</description></item><item><title>Go runtime 中的 g0：调度器的特殊协程</title><link>/blog/2025-05-20-go-runtime-g0/</link><pubDate>Tue, 20 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-20-go-runtime-g0/</guid><description>&lt;p&gt;Go runtime 中的 g0 是不是就类似于 Linux 操作系统中的 idle 进程，它主要是用来做调度相关的工作，比如没有 goroutine 可执行时就切换到 g0，g0 执行调度相关的工作？&lt;/p&gt;
+&lt;p&gt;答案是肯定的。下面详细解释。&lt;/p&gt;
+&lt;h2 id="1-g0-与-idle-进程的相似之处"&gt;1. g0 与 idle 进程的相似之处 &lt;a href="#1-g0-%e4%b8%8e-idle-%e8%bf%9b%e7%a8%8b%e7%9a%84%e7%9b%b8%e4%bc%bc%e4%b9%8b%e5%a4%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;两者都是系统级别的&amp;quot;空闲&amp;quot;执行实体&lt;/li&gt;
+&lt;li&gt;都负责调度和系统级任务&lt;/li&gt;
+&lt;li&gt;当没有其他任务可执行时，都会切换到它们&lt;/li&gt;
+&lt;li&gt;都运行在特殊的系统栈上&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="2-g0-的主要职责"&gt;2. g0 的主要职责 &lt;a href="#2-g0-%e7%9a%84%e4%b8%bb%e8%a6%81%e8%81%8c%e8%b4%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;执行调度器逻辑，寻找下一个要运行的 goroutine&lt;/li&gt;
+&lt;li&gt;执行垃圾回收等系统级任务&lt;/li&gt;
+&lt;li&gt;处理系统调用&lt;/li&gt;
+&lt;li&gt;处理网络轮询&lt;/li&gt;
+&lt;li&gt;处理定时器&lt;/li&gt;
+&lt;li&gt;处理信号处理等&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="3-从代码中看-g0"&gt;3. 从代码中看 g0 &lt;a href="#3-%e4%bb%8e%e4%bb%a3%e7%a0%81%e4%b8%ad%e7%9c%8b-g0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;if g.ID == 0 {
+// The runtime uses a special goroutine with ID == 0 to mark that the
+// current goroutine is executing on the system stack (sometimes also
+// referred to as the g0 stack or scheduler stack).
+mvar, err := g.variable.structMember(&amp;quot;m&amp;quot;)
+if err != nil {
+return nil, err
+}
+curgvar, err := mvar.structMember(&amp;quot;curg&amp;quot;)
+if err != nil {
+return nil, err
+}
+g, err = curgvar.parseG()
+if err != nil {
+if _, ok := err.(ErrNoGoroutine); ok {
+err = ErrNoGoroutine{thread.ThreadID()}
+}
+return nil, err
+}
+g.SystemStack = true
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="4-主要区别"&gt;4. 主要区别 &lt;a href="#4-%e4%b8%bb%e8%a6%81%e5%8c%ba%e5%88%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;g0 是 Go runtime 层面的概念，而 idle 进程是操作系统层面的概念&lt;/li&gt;
+&lt;li&gt;g0 是每个 M（系统线程）都有的，而 idle 进程是系统全局的&lt;/li&gt;
+&lt;li&gt;g0 除了调度外还负责很多 Go runtime 特有的系统级任务&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="5-工作流程"&gt;5. 工作流程 &lt;a href="#5-%e5%b7%a5%e4%bd%9c%e6%b5%81%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;当没有用户 goroutine 可执行时，会切换到 g0&lt;/li&gt;
+&lt;li&gt;g0 执行调度器逻辑，寻找下一个可运行的 goroutine&lt;/li&gt;
+&lt;li&gt;如果找到可运行的 goroutine，则切换到该 goroutine&lt;/li&gt;
+&lt;li&gt;如果没找到，则继续执行 g0 的其他系统级任务&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;所以 g0 确实在 Go runtime 中扮演着类似操作系统 idle 进程的角色，是调度和系统级任务的核心执行实体。&lt;/p&gt;</description></item><item><title>syscall：how does go runtime handles syscall</title><link>/blog/2021-06-06-%E8%BF%90%E8%A1%8C%E6%97%B6_how-go-handles-syscall/</link><pubDate>Sun, 06 Jun 2021 10:17:34 +0800</pubDate><guid>/blog/2021-06-06-%E8%BF%90%E8%A1%8C%E6%97%B6_how-go-handles-syscall/</guid><description>&lt;h1 id="1-how-go-runtime-handle-syscall-"&gt;1 How go runtime handle syscall ? &lt;a href="#1-how-go-runtime-handle-syscall-" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;最近遇到个线上服务频繁陷入系统调用导致go运行时创建了大量线程，影响到了服务质量，定位、解决问题之后，希望能进一步探究go运行时处理系统调用的过程，以便加深理解。参考了不少网友的分享，特别是知乎Golang Inernal专栏，结合个人的学习理解在此整理记录一下，与大家分享。&lt;/p&gt;
 &lt;h2 id="11-前言"&gt;1.1 前言 &lt;a href="#11-%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;在开始结合源码进行分析之前，先做下简单的介绍，方便先从整体上把握go对系统调用的处理过程，然后从第二部分开始，再结合源码介绍具体的细节。&lt;/p&gt;

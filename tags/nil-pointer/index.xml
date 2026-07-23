@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Nil-Pointer on</title><link>/tags/nil-pointer/</link><description>Recent content in Nil-Pointer on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 26 May 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/nil-pointer/index.xml" rel="self" type="application/rss+xml"/><item><title>Go 空指针检查：从一行汇编指令到 SIGSEGV 的完整链路</title><link>/blog/2025-05-26-%E7%BC%96%E8%AF%91%E5%99%A8_%E7%A9%BA%E6%8C%87%E9%92%88%E6%A3%80%E6%9F%A5nilcheck/</link><pubDate>Mon, 26 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-26-%E7%BC%96%E8%AF%91%E5%99%A8_%E7%A9%BA%E6%8C%87%E9%92%88%E6%A3%80%E6%9F%A5nilcheck/</guid><description>&lt;h2 id="引出问题"&gt;引出问题 &lt;a href="#%e5%bc%95%e5%87%ba%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;前阵子写了一段简单的 Go 代码，反汇编后发现了一些不太一样的指令。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type Student struct {
+Age int
+}
+func main() {
+var s *Student
+println(s.Age) // s 是 nil，这里必然崩
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;对应的汇编代码中，&lt;code&gt;println(s.Age)&lt;/code&gt; 被编译为：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-asm"&gt;mov 0x48(%rsp), %rax ; 从栈上加载指针 s 到 rax
+test %al, (%rax) ; ★ 奇怪的指令
+mov (%rax), %rax ; 实际读取 s.Age（第一个字段偏移 0）
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;第三行的 &lt;code&gt;test %al, (%rax)&lt;/code&gt; 是干什么的？&lt;code&gt;test&lt;/code&gt; 在 x86 中是按位 AND，只设置标志位不写回结果，通常用于比较。但这里 &lt;code&gt;%al&lt;/code&gt; 是 AX 的低 8 位，&lt;code&gt;(%rax)&lt;/code&gt; 是 rax 指向的内存——把寄存器低字节和指针指向的内存做 AND，有什么意义？&lt;/p&gt;
+&lt;p&gt;答案是：&lt;strong&gt;它不关心 AND 的结果，而是想让 CPU 尝试读取 &lt;code&gt;(%rax)&lt;/code&gt; 指向的内存地址。&lt;/strong&gt; 如果 &lt;code&gt;rax&lt;/code&gt; 是 0（nil），访问地址 0 会立即触发 page fault → SIGSEGV。编译器在 &lt;strong&gt;实际读取字段值之前&lt;/strong&gt; 主动插入了一次地址 0 的试探访问，这就是 Go 编译器的显式 nil 检查。&lt;/p&gt;</description></item></channel></rss>

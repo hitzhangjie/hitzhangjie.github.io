@@ -95,7 +95,91 @@ return nil, err
 // ...
 }
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;同样的道理适用于数据库连接、HTTP 客户端、缓存等。&lt;strong&gt;凡是会变的东西，都应该作为依赖传入，而非在函数内部直接构造。&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>Go map / sync.Map / concurrent_map benchmark</title><link>/blog/2019-08-22-go-map/</link><pubDate>Thu, 22 Aug 2019 14:32:38 +0800</pubDate><guid>/blog/2019-08-22-go-map/</guid><description>&lt;p&gt;&lt;strong&gt;对 map、sync.Map、&lt;a href="https://github.com/orcaman/concurrent-map"&gt;concurrent_map&lt;/a&gt; 进行了 benchmark，结果如下：&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;同样的道理适用于数据库连接、HTTP 客户端、缓存等。&lt;strong&gt;凡是会变的东西，都应该作为依赖传入，而非在函数内部直接构造。&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>Go 1.24 vs Go 1.26 切片分配性能对比</title><link>/blog/2026-01-22-go-makeslice-faster/</link><pubDate>Thu, 22 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-22-go-makeslice-faster/</guid><description>&lt;h2 id="测试代码"&gt;测试代码 &lt;a href="#%e6%b5%8b%e8%af%95%e4%bb%a3%e7%a0%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;func allocate1() []byte {
+finalsize := 1024
+final := append([]byte(nil), make([]byte, finalsize)...)[:0]
+return final
+}
+func allocate2() []byte {
+finalsize := 1024
+final := make([]byte, 0, finalsize)
+return final
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="benchmark-结果"&gt;Benchmark 结果 &lt;a href="#benchmark-%e7%bb%93%e6%9e%9c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Go 版本&lt;/th&gt;
+&lt;th&gt;allocate1&lt;/th&gt;
+&lt;th&gt;allocate2&lt;/th&gt;
+&lt;th&gt;更快的方式&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Go 1.24.1&lt;/td&gt;
+&lt;td&gt;~181 ns/op&lt;/td&gt;
+&lt;td&gt;~196 ns/op&lt;/td&gt;
+&lt;td&gt;allocate1 快 ~8%&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Go 1.26rc2&lt;/td&gt;
+&lt;td&gt;~237 ns/op&lt;/td&gt;
+&lt;td&gt;~191 ns/op&lt;/td&gt;
+&lt;td&gt;allocate2 快 ~19%&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="汇编分析"&gt;汇编分析 &lt;a href="#%e6%b1%87%e7%bc%96%e5%88%86%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="go-124"&gt;Go 1.24 &lt;a href="#go-124" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;函数&lt;/th&gt;
+&lt;th&gt;runtime 调用&lt;/th&gt;
+&lt;th&gt;清零方式&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;allocate1&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;growslice&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;duffzero&lt;/code&gt;（高度优化的展开循环）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;allocate2&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;makeslice&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;makeslice 内部清零&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id="go-126"&gt;Go 1.26 &lt;a href="#go-126" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;函数&lt;/th&gt;
+&lt;th&gt;runtime 调用&lt;/th&gt;
+&lt;th&gt;清零方式&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;allocate1&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;growslice&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;内联 MOVUPS 循环（16次×64字节）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;allocate2&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;makeslice&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;makeslice 内部清零（size-specialized 优化）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="原因分析"&gt;原因分析 &lt;a href="#%e5%8e%9f%e5%9b%a0%e5%88%86%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="为什么-go-124-中-allocate1-更快"&gt;为什么 Go 1.24 中 allocate1 更快？ &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88-go-124-%e4%b8%ad-allocate1-%e6%9b%b4%e5%bf%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;allocate1&lt;/code&gt; 使用了 &lt;code&gt;runtime.duffzero&lt;/code&gt;，这是基于 Duff&amp;rsquo;s device 技术的高度优化清零例程：&lt;/p&gt;</description></item><item><title>Go map / sync.Map / concurrent_map benchmark</title><link>/blog/2019-08-22-go-map/</link><pubDate>Thu, 22 Aug 2019 14:32:38 +0800</pubDate><guid>/blog/2019-08-22-go-map/</guid><description>&lt;p&gt;&lt;strong&gt;对 map、sync.Map、&lt;a href="https://github.com/orcaman/concurrent-map"&gt;concurrent_map&lt;/a&gt; 进行了 benchmark，结果如下：&lt;/strong&gt;&lt;/p&gt;
 &lt;pre&gt;&lt;code class="language-bash"&gt;BenchmarkDeleteEmptyMap-8 20000000 86.9 ns/op
 BenchmarkDeleteEmptySyncMap-8 300000000 5.16 ns/op
 BenchmarkDeleteEmptyCMap-8 50000000 34.8 ns/op

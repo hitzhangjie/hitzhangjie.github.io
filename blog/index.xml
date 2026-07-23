@@ -2224,7 +2224,27 @@ sudo update-alternatives --install /usr/bin/java java /opt/jdk-21/bin/java 2 --s
 [飞书] ─┤
 [钉钉] ─┘
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;核心理念&lt;/strong&gt;：广度优先。OpenClaw 的架构中心是一个长期运行的 Node.js 守护进程（Gateway），把所有消息渠道统一成一套内部协议，消息经过 Task Brain 路由分发到 Agent 实例。类比 K8s 的容器调度思路，所有子 Agent、Cron 任务、后台 CLI 进程全部统一在一个 SQLite Ledger 上。&lt;/p&gt;</description></item><item><title>3-2-1 备份：从 iCloud 丢数据说起</title><link>/blog/2026-05-23-321-backup-rule/</link><pubDate>Sat, 23 May 2026 00:00:00 +0800</pubDate><guid>/blog/2026-05-23-321-backup-rule/</guid><description>&lt;p&gt;前文写了 iCloud Drive 的破坏性变更——清空本地废纸篓会绕过 iCloud 的&amp;quot;最近删除&amp;quot;，直接永久删除云端文件。我因为这个变更丢了近十年的文档和照片。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;核心理念&lt;/strong&gt;：广度优先。OpenClaw 的架构中心是一个长期运行的 Node.js 守护进程（Gateway），把所有消息渠道统一成一套内部协议，消息经过 Task Brain 路由分发到 Agent 实例。类比 K8s 的容器调度思路，所有子 Agent、Cron 任务、后台 CLI 进程全部统一在一个 SQLite Ledger 上。&lt;/p&gt;</description></item><item><title>Go 工具链：依赖下载到底发生在哪里</title><link>/blog/2026-05-30-go-deps-download/</link><pubDate>Sat, 30 May 2026 00:00:00 +0800</pubDate><guid>/blog/2026-05-30-go-deps-download/</guid><description>&lt;p&gt;无论是否先跑 &lt;code&gt;go mod download&lt;/code&gt;，Go 工具链下载依赖的机制都是一样的。&lt;/p&gt;
+&lt;h2 id="下载流程"&gt;下载流程 &lt;a href="#%e4%b8%8b%e8%bd%bd%e6%b5%81%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code&gt;go build / go test / go install
+↓
+读 go.mod、go.sum，解析 import 需要的模块
+↓
+查本地 module cache（go env GOMODCACHE，常见是 ~/go/pkg/mod）
+↓
+缺包 → 从 GOPROXY（默认 https://proxy.golang.org）拉 zip
+↓
+用 go.sum 校验 checksum
+↓
+解压到 cache，再编译
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="go-mod-download-vs-go-build"&gt;go mod download vs go build &lt;a href="#go-mod-download-vs-go-build" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;go mod download&lt;/code&gt;&lt;/strong&gt;：在编译之前主动把 &lt;code&gt;go.mod&lt;/code&gt; 里列出的模块都 prefetch 进 cache。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;go build&lt;/code&gt;&lt;/strong&gt;：编译过程中若发现 cache 缺某个模块，会当场按上面流程下载（懒加载）。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;也就是说：&lt;strong&gt;下载发生在&amp;quot;解析依赖、准备编译&amp;quot;阶段&lt;/strong&gt;，不是链接器里，也不是只有 &lt;code&gt;go mod tidy&lt;/code&gt; 才会下。&lt;/p&gt;
+&lt;p&gt;这个机制确保了无论你用哪种方式触发编译，依赖解析和下载的路径都是一致的。&lt;/p&gt;</description></item><item><title>3-2-1 备份：从 iCloud 丢数据说起</title><link>/blog/2026-05-23-321-backup-rule/</link><pubDate>Sat, 23 May 2026 00:00:00 +0800</pubDate><guid>/blog/2026-05-23-321-backup-rule/</guid><description>&lt;p&gt;前文写了 iCloud Drive 的破坏性变更——清空本地废纸篓会绕过 iCloud 的&amp;quot;最近删除&amp;quot;，直接永久删除云端文件。我因为这个变更丢了近十年的文档和照片。&lt;/p&gt;
 &lt;p&gt;这件事逼我重新想清楚一个问题：&lt;strong&gt;数据到底要怎么备份，才不至于把十年积累押在单一平台的行为上。&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;答案就是 3-2-1 备份策略。这不是什么新鲜概念，但经历过数据丢失之后再回头推演它的数学原理，感受完全不同。&lt;/p&gt;
 &lt;h2 id="概率为什么三份副本不是过度谨慎"&gt;概率：为什么三份副本不是过度谨慎 &lt;a href="#%e6%a6%82%e7%8e%87%e4%b8%ba%e4%bb%80%e4%b9%88%e4%b8%89%e4%bb%bd%e5%89%af%e6%9c%ac%e4%b8%8d%e6%98%af%e8%bf%87%e5%ba%a6%e8%b0%a8%e6%85%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
@@ -2309,7 +2329,30 @@ size 12345678
 &lt;p&gt;Git LFS 根据 pointer 里的 &lt;code&gt;oid&lt;/code&gt; 去远端 LFS 存储拉取本体，落到 &lt;code&gt;.git/lfs/objects&lt;/code&gt; 目录下。这个目录跟 &lt;code&gt;.git/objects&lt;/code&gt; 是两套体系，互不干扰。&lt;/p&gt;</description></item><item><title>iCloudDrive 严重破坏性变更</title><link>/blog/2026-04-01-iclouddrive/</link><pubDate>Wed, 01 Apr 2026 00:00:00 +0800</pubDate><guid>/blog/2026-04-01-iclouddrive/</guid><description>&lt;p&gt;前几个月言辞恳切地写了一堆信息，结果无一例外不允许发布，Apple Community被不知什么管理员给删掉了，Reddit也不允许发布，可能违反了Reddit什么规定吧 …… anyway，不管是发布渠道、违反规定发不出去，总之就是很难发出去。反馈给苹果官方算是正规渠道吧，扔进去也是没什么反馈。哈哈！总之，重要的东西一定不要依赖任何平台或者个人，全靠自己！&lt;/p&gt;
 &lt;h2 id="critical-design-flaw"&gt;CRITICAL DESIGN FLAW &lt;a href="#critical-design-flaw" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;Hello, I am writing to file a serious complaint regarding a disastrous and hazardous design change in iCloud Drive, which has directly resulted in the permanent loss of my important data.&lt;/p&gt;
-&lt;p&gt;Issue Description: Historically, files deleted via command line (rm -rf) or third-party tools (like Alfred&amp;rsquo;s &amp;ldquo;Empty Trash&amp;rdquo;) would still be retained in the &amp;ldquo;Recently Deleted&amp;rdquo; folder on iCloud.com for 30 days. This served as a critical safety net.&lt;/p&gt;</description></item><item><title>方法论本身没错，我恶心的是拿它当 PPT 的人</title><link>/blog/2026-03-23-%E6%96%B9%E6%B3%95%E8%AE%BA%E4%B9%B1%E8%B1%A1%E6%A8%AA%E8%A1%8C%E7%9A%84%E8%83%8C%E5%90%8E/</link><pubDate>Mon, 23 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-23-%E6%96%B9%E6%B3%95%E8%AE%BA%E4%B9%B1%E8%B1%A1%E6%A8%AA%E8%A1%8C%E7%9A%84%E8%83%8C%E5%90%8E/</guid><description>&lt;h2 id="问题"&gt;问题 &lt;a href="#%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Issue Description: Historically, files deleted via command line (rm -rf) or third-party tools (like Alfred&amp;rsquo;s &amp;ldquo;Empty Trash&amp;rdquo;) would still be retained in the &amp;ldquo;Recently Deleted&amp;rdquo; folder on iCloud.com for 30 days. This served as a critical safety net.&lt;/p&gt;</description></item><item><title>为什么 vscode-go 无法正确处理嵌套子测试</title><link>/blog/2026-03-26-vscode-go-nested-subtests/</link><pubDate>Thu, 26 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-26-vscode-go-nested-subtests/</guid><description>&lt;h2 id="问题描述"&gt;问题描述 &lt;a href="#%e9%97%ae%e9%a2%98%e6%8f%8f%e8%bf%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Go 测试文件中，常用 &lt;code&gt;t.Run&lt;/code&gt; 来组织子测试。vscode-go 的 CodeLens 功能会为每个 &lt;code&gt;t.Run&lt;/code&gt; 生成对应的 &lt;code&gt;go test -run&lt;/code&gt; 命令。但当嵌套超过 2 层时，生成的命令是错误的：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;实际生成&lt;/strong&gt;：&lt;code&gt;go test -run=^TestXXX$/^t2$&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;正确应为&lt;/strong&gt;：&lt;code&gt;go test -run=^TestXXX$/^t1$/^t2$&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;中间的层级 &lt;code&gt;t1&lt;/code&gt; 被漏掉了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="问题定位"&gt;问题定位 &lt;a href="#%e9%97%ae%e9%a2%98%e5%ae%9a%e4%bd%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Bug 在 &lt;code&gt;extension/src/goRunTestCodelens.ts&lt;/code&gt; 第 112-153 行：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-typescript"&gt;const simpleRunRegex = /t.Run\(&amp;quot;([^&amp;quot;]+)&amp;quot;,/;
+for (let i = f.range.start.line; i &amp;lt; f.range.end.line; i++) {
+const line = document.lineAt(i);
+const simpleMatch = line.text.match(simpleRunRegex);
+// BUG: this does not handle nested subtests. This should
+// be solved once codelens is handled by gopls and not by
+// vscode.
+if (simpleMatch) {
+const subTestName = simpleMatch[1];
+// ... 只记录了名称，不知道嵌套层级
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;代码里甚至有明确的 &lt;code&gt;BUG&lt;/code&gt; 注释，承认这个问题。&lt;/p&gt;</description></item><item><title>方法论本身没错，我恶心的是拿它当 PPT 的人</title><link>/blog/2026-03-23-%E6%96%B9%E6%B3%95%E8%AE%BA%E4%B9%B1%E8%B1%A1%E6%A8%AA%E8%A1%8C%E7%9A%84%E8%83%8C%E5%90%8E/</link><pubDate>Mon, 23 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-23-%E6%96%B9%E6%B3%95%E8%AE%BA%E4%B9%B1%E8%B1%A1%E6%A8%AA%E8%A1%8C%E7%9A%84%E8%83%8C%E5%90%8E/</guid><description>&lt;h2 id="问题"&gt;问题 &lt;a href="#%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;过去几年，大厂里最不缺的就是方法论。&lt;/p&gt;
 &lt;p&gt;项目启动要 OKR，研发流程搞 Scrum，产品设计讲 Design Thinking，商业模型谈精益创业。你如果不在会上甩几个方法论名词，显得你不够&amp;quot;高阶&amp;quot;。但怪就怪在，这些听起来高大上的东西，落到日常工作中，常常变成一堆 PPT 和汇报材料，实际的产出——代码质量、系统稳定性、交付速度——该烂还是烂。&lt;/p&gt;
 &lt;p&gt;我就不禁想：这些东西跟我们程序员每天在用的设计模式、架构风格、编程语言 idiom，到底是不是一类东西？如果是，为什么我们从代码里获得了实打实的效率提升，而管理方法论却常常让人感觉很&amp;quot;虚&amp;quot;？&lt;/p&gt;
@@ -2417,7 +2460,193 @@ decode → 再包装成 choices / delta 返回
 &lt;p&gt;ps: 这不是 AI 的&amp;quot;错&amp;quot;。这些问题本质上不是代码生成的问题，而是&lt;strong&gt;理解问题域&lt;/strong&gt;的问题。AI 不知道你的业务上下文、你的用户行为模式、你的运维约束——除非你用 prompt 把这些全部喂给它。但如果你能把这些全部精确地描述清楚，你实际上已经完成了软件工程中最难的部分。&lt;/p&gt;
 &lt;h2 id="修一个-bug引入两个新-bug"&gt;修一个 bug，引入两个新 bug &lt;a href="#%e4%bf%ae%e4%b8%80%e4%b8%aa-bug%e5%bc%95%e5%85%a5%e4%b8%a4%e4%b8%aa%e6%96%b0-bug" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;Vibe coding 的另一个典型陷阱是&amp;quot;让它先跑起来&amp;quot;的心态。这在小项目上没问题，但在长期维护的项目上会积累惊人的技术债务。&lt;/p&gt;
-&lt;p&gt;AI 修 bug 的方式很有意思——它倾向于&amp;quot;打补丁&amp;quot;而非&amp;quot;治根&amp;quot;。你告诉它这里有个 null pointer，它就在那里加个 nil check；你告诉它这里并发有问题，它就加个锁。至于这个 nil 是从哪里来的、为什么会有并发冲突、整个数据流是不是设计上就有问题——它不关心。它只解决你描述的那个症状。&lt;/p&gt;</description></item><item><title>AI Agent 技术全景：规划、记忆、工具、多 Agent 与人机协同</title><link>/blog/2026-01-06-ai-agent-architecture/</link><pubDate>Tue, 06 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-06-ai-agent-architecture/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;AI 修 bug 的方式很有意思——它倾向于&amp;quot;打补丁&amp;quot;而非&amp;quot;治根&amp;quot;。你告诉它这里有个 null pointer，它就在那里加个 nil check；你告诉它这里并发有问题，它就加个锁。至于这个 nil 是从哪里来的、为什么会有并发冲突、整个数据流是不是设计上就有问题——它不关心。它只解决你描述的那个症状。&lt;/p&gt;</description></item><item><title>Go 里为什么要加 noCopy —— 防止 Mutex 复制</title><link>/blog/2026-01-27-go-nocopy-prevent-copylock/</link><pubDate>Tue, 27 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-27-go-nocopy-prevent-copylock/</guid><description>&lt;p&gt;看一个代码片段：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;package main
+type noCopy struct{}
+func (*noCopy) Lock() {}
+func (*noCopy) Unlock() {}
+type myType struct {
+noCopy // ← 这行
+}
+func main() {
+var m myType
+var n = m
+_ = n
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;执行 &lt;code&gt;go vet&lt;/code&gt; 检查：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;$ go vet main.go
+main.go:14:10: variable declaration copies lock value to n: command-line-arguments.myType
+main.go:15:6: assignment copies lock value to _: command-line-arguments.myType
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="nocopy-是干什么的"&gt;noCopy 是干什么的？ &lt;a href="#nocopy-%e6%98%af%e5%b9%b2%e4%bb%80%e4%b9%88%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;noCopy&lt;/code&gt; 只是一种&lt;strong&gt;静态检查的提示&lt;/strong&gt;，它不会在运行时产生任何锁或同步操作，也不会阻止真正的复制。&lt;/p&gt;
+&lt;p&gt;go sync包为了阻止sync.Mutex/sync.Once/&amp;hellip;等被复制导致的问题，这个包就定义了noCopy，go vet会检测一个类型是否embed了一个noCopy实现，是的话就会阻止copy，检查时，并不会阻止编译时的真的copy。&lt;/p&gt;</description></item><item><title>Go 汇编语言详解</title><link>/blog/2026-01-23-go%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E8%AF%A6%E8%A7%A3/</link><pubDate>Fri, 23 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-23-go%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E8%AF%A6%E8%A7%A3/</guid><description>&lt;h2 id="引出问题"&gt;引出问题 &lt;a href="#%e5%bc%95%e5%87%ba%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;写 Go 的人，迟早会碰到需要读汇编的场景。比如用 pprof 做 CPU 分析，火焰图上函数名后面的指令你看不懂；比如你想搞清楚一个 channel 操作到底编译成了什么；比如 Go 编译器的 nil 检查到底长什么样。&lt;/p&gt;
+&lt;p&gt;Go 的汇编不是 x86 AT&amp;amp;T，也不是 Intel 语法——它基于 Plan 9 汇编，Go 编译器在此基础上做了大量定制。这篇文章的目标是让你读完能看懂 &lt;code&gt;go tool compile -S&lt;/code&gt; 的输出，也能自己写 &lt;code&gt;.s&lt;/code&gt; 文件。&lt;/p&gt;
+&lt;h2 id="go-assembly-是什么"&gt;Go Assembly 是什么 &lt;a href="#go-assembly-%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Go 编译器（&lt;code&gt;gc&lt;/code&gt;，不是 gccgo）的汇编器源自 Plan 9 操作系统的汇编器。Plan 9 是 Bell Labs 在 Unix 之后开发的操作系统，Go 的三位创始人（Rob Pike、Ken Thompson、Robert Griesemer）都曾在 Bell Labs 工作，他们在设计 Go 时沿用了 Plan 9 汇编的风格。&lt;/p&gt;
+&lt;p&gt;为什么要自己搞一套而不是直接用 AT&amp;amp;T 或 Intel 语法？核心原因是 &lt;strong&gt;可移植性&lt;/strong&gt;。Go 汇编本质上是一层&amp;quot;伪汇编&amp;quot;——它是&lt;strong&gt;架构无关&lt;/strong&gt;的中间表示。同一段 Go 汇编代码，经过不同架构的汇编器处理后，会生成对应的机器码。这一点和 LLVM IR 的思路类似，只不过 Go 汇编更贴近机器，保留了寄存器和具体指令，但用统一的助记符和操作数顺序屏蔽了平台差异。&lt;/p&gt;</description></item><item><title>Go 语言精确 GC 实现机制深度解析</title><link>/blog/2026-01-23-go-precise-gc/</link><pubDate>Fri, 23 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-23-go-precise-gc/</guid><description>&lt;h2 id="精确-gc-概述"&gt;精确 GC 概述 &lt;a href="#%e7%b2%be%e7%a1%ae-gc-%e6%a6%82%e8%bf%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;精确 GC（Precise Garbage Collection）是指垃圾收集器能够准确识别所有指针位置，不会将非指针数据当作指针，也不会漏掉任何指针。这与保守式 GC（Conservative GC）形成对比，保守式 GC 可能会将一些看起来像指针的值当作指针来处理，导致本该回收的对象不敢回收，该移动的对象不敢移动，造成内存碎片。&lt;/p&gt;
+&lt;h3 id="精确-gc-的优势"&gt;精确 GC 的优势 &lt;a href="#%e7%b2%be%e7%a1%ae-gc-%e7%9a%84%e4%bc%98%e5%8a%bf" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;准确性&lt;/strong&gt;：不会误标记非指针数据，避免内存泄漏或错误回收&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;性能&lt;/strong&gt;：不需要扫描所有可能是指针的数据，只扫描已知的指针位置&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;可预测性&lt;/strong&gt;：GC 行为更加可预测，便于调试和优化&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id="go-语言精确-gc-的实现方式"&gt;Go 语言精确 GC 的实现方式 &lt;a href="#go-%e8%af%ad%e8%a8%80%e7%b2%be%e7%a1%ae-gc-%e7%9a%84%e5%ae%9e%e7%8e%b0%e6%96%b9%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Go 语言通过以下机制实现精确 GC：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;pclntab&lt;/strong&gt;：记录程序计数器（PC）与各种元信息的映射关系&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;栈映射表（Stack Map）&lt;/strong&gt;：记录函数栈帧中哪些位置包含指针&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;参数映射表（Args Map）&lt;/strong&gt;：记录函数参数中哪些位置包含指针&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;PCDATA 指令&lt;/strong&gt;：在汇编代码中标记 PC 相关的数据变化&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;FUNCDATA 指令&lt;/strong&gt;：在汇编代码中标记函数级别的元数据&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;h2 id="pclntab-详解"&gt;pclntab 详解 &lt;a href="#pclntab-%e8%af%a6%e8%a7%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;pclntab（Program Counter Line Table）是 Go 运行时系统中的重要数据结构，记录了 PC 与多种元信息的映射关系，包括函数信息、行号信息、文件信息、栈映射信息和 GC 相关信息。&lt;/p&gt;
+&lt;h3 id="pclntab-的结构"&gt;pclntab 的结构 &lt;a href="#pclntab-%e7%9a%84%e7%bb%93%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;根据 &lt;code&gt;src/cmd/link/internal/ld/pcln.go&lt;/code&gt;，pclntab 的布局如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.gopclntab/__gopclntab [elf/macho section]
+runtime.pclntab
+runtime.pcheader (8-byte magic, nfunc, offsets)
+runtime.funcnametab (null terminated function names)
+runtime.cutab (CU file index mapping)
+runtime.filetab (null terminated filename strings)
+runtime.pctab (deduplicated pc data)
+runtime.functab (function table with PC and func struct offsets)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="_func-结构体"&gt;_func 结构体 &lt;a href="#_func-%e7%bb%93%e6%9e%84%e4%bd%93" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type _func struct {
+entryOff uint32 // start pc offset
+nameOff int32 // function name index
+args int32 // in/out args size
+deferreturn uint32
+pcsp uint32 // stack pointer delta table
+pcfile uint32 // file number table
+pcln uint32 // line number table
+npcdata uint32
+cuOffset uint32
+startLine int32
+funcID abi.FuncID
+flag abi.FuncFlag
+nfuncdata uint8
+// followed by pcdata[npcdata]uint32 and funcdata[nfuncdata]uint32
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr&gt;
+&lt;h2 id="pcdata-和-funcdata-指令"&gt;PCDATA 和 FUNCDATA 指令 &lt;a href="#pcdata-%e5%92%8c-funcdata-%e6%8c%87%e4%bb%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;PCDATA 和 FUNCDATA 是 Go 编译器生成的伪指令，不会生成实际的机器指令，而是为链接器提供元数据信息。&lt;/p&gt;</description></item><item><title>如何让 Go 工具链生成 DWARF 调试信息</title><link>/blog/2026-01-23-go-toolchain-dwarf/</link><pubDate>Fri, 23 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-23-go-toolchain-dwarf/</guid><description>&lt;p&gt;如果你想调试 Go 编译工具链本身，会发现默认的 Go 正式版在构建 &lt;code&gt;go/src/cmd/...&lt;/code&gt; 时不会生成 DWARF 调试信息。如果想让 Go toolchain 也生成 DWARF 调试信息，方便做相关研究时通过调试器跟踪，该怎么办？&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="版本检查和-isrelease-设置"&gt;版本检查和 isRelease 设置 &lt;a href="#%e7%89%88%e6%9c%ac%e6%a3%80%e6%9f%a5%e5%92%8c-isrelease-%e8%ae%be%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 &lt;code&gt;src/cmd/dist/build.go&lt;/code&gt; 第 272-273 行：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;goversion := findgoversion()
+isRelease = strings.HasPrefix(goversion, &amp;quot;release.&amp;quot;) || strings.HasPrefix(goversion, &amp;quot;go&amp;quot;)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="dwarf-调试信息禁用逻辑"&gt;DWARF 调试信息禁用逻辑 &lt;a href="#dwarf-%e8%b0%83%e8%af%95%e4%bf%a1%e6%81%af%e7%a6%81%e7%94%a8%e9%80%bb%e8%be%91" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;同一文件第 1346-1352 行：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;if isRelease || os.Getenv(&amp;quot;GO_BUILDER_NAME&amp;quot;) != &amp;quot;&amp;quot; {
+// Add -trimpath for reproducible builds of releases.
+// Include builders so that -trimpath is well-tested ahead of releases.
+// Do not include local development, so that people working in the
+// main branch for day-to-day work on the Go toolchain itself can
+// still have full paths for stack traces for compiler crashes and the like.
+env = append(env, &amp;quot;GOFLAGS=-trimpath -ldflags=-w -gcflags=cmd/...=-dwarf=false&amp;quot;)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="工作原理"&gt;工作原理 &lt;a href="#%e5%b7%a5%e4%bd%9c%e5%8e%9f%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;code&gt;findgoversion()&lt;/code&gt; 读取 &lt;code&gt;VERSION&lt;/code&gt; 文件的第一行作为版本字符串。&lt;/li&gt;
+&lt;li&gt;如果版本字符串以 &lt;code&gt;&amp;quot;release.&amp;quot;&lt;/code&gt; 或 &lt;code&gt;&amp;quot;go&amp;quot;&lt;/code&gt; 开头，&lt;code&gt;isRelease&lt;/code&gt; 被设为 &lt;code&gt;true&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;当 &lt;code&gt;isRelease&lt;/code&gt; 为 &lt;code&gt;true&lt;/code&gt; 时，会添加 &lt;code&gt;-dwarf=false&lt;/code&gt;，从而禁用 DWARF 调试信息。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id="绕过方法"&gt;绕过方法 &lt;a href="#%e7%bb%95%e8%bf%87%e6%96%b9%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 &lt;code&gt;VERSION&lt;/code&gt; 文件的第一行前加前缀（如 &lt;code&gt;&amp;quot;notes/&amp;quot;&lt;/code&gt; 或 &lt;code&gt;&amp;quot;tests/&amp;quot;&lt;/code&gt;），例如：&lt;/p&gt;</description></item><item><title>Go 1.24 vs Go 1.26 切片分配性能对比</title><link>/blog/2026-01-22-go-makeslice-faster/</link><pubDate>Thu, 22 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-22-go-makeslice-faster/</guid><description>&lt;h2 id="测试代码"&gt;测试代码 &lt;a href="#%e6%b5%8b%e8%af%95%e4%bb%a3%e7%a0%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;func allocate1() []byte {
+finalsize := 1024
+final := append([]byte(nil), make([]byte, finalsize)...)[:0]
+return final
+}
+func allocate2() []byte {
+finalsize := 1024
+final := make([]byte, 0, finalsize)
+return final
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="benchmark-结果"&gt;Benchmark 结果 &lt;a href="#benchmark-%e7%bb%93%e6%9e%9c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Go 版本&lt;/th&gt;
+&lt;th&gt;allocate1&lt;/th&gt;
+&lt;th&gt;allocate2&lt;/th&gt;
+&lt;th&gt;更快的方式&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;Go 1.24.1&lt;/td&gt;
+&lt;td&gt;~181 ns/op&lt;/td&gt;
+&lt;td&gt;~196 ns/op&lt;/td&gt;
+&lt;td&gt;allocate1 快 ~8%&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Go 1.26rc2&lt;/td&gt;
+&lt;td&gt;~237 ns/op&lt;/td&gt;
+&lt;td&gt;~191 ns/op&lt;/td&gt;
+&lt;td&gt;allocate2 快 ~19%&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="汇编分析"&gt;汇编分析 &lt;a href="#%e6%b1%87%e7%bc%96%e5%88%86%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="go-124"&gt;Go 1.24 &lt;a href="#go-124" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;函数&lt;/th&gt;
+&lt;th&gt;runtime 调用&lt;/th&gt;
+&lt;th&gt;清零方式&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;allocate1&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;growslice&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;duffzero&lt;/code&gt;（高度优化的展开循环）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;allocate2&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;makeslice&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;makeslice 内部清零&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id="go-126"&gt;Go 1.26 &lt;a href="#go-126" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;函数&lt;/th&gt;
+&lt;th&gt;runtime 调用&lt;/th&gt;
+&lt;th&gt;清零方式&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;allocate1&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;growslice&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;内联 MOVUPS 循环（16次×64字节）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;allocate2&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;makeslice&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;makeslice 内部清零（size-specialized 优化）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="原因分析"&gt;原因分析 &lt;a href="#%e5%8e%9f%e5%9b%a0%e5%88%86%e6%9e%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="为什么-go-124-中-allocate1-更快"&gt;为什么 Go 1.24 中 allocate1 更快？ &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88-go-124-%e4%b8%ad-allocate1-%e6%9b%b4%e5%bf%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;allocate1&lt;/code&gt; 使用了 &lt;code&gt;runtime.duffzero&lt;/code&gt;，这是基于 Duff&amp;rsquo;s device 技术的高度优化清零例程：&lt;/p&gt;</description></item><item><title>AI Agent 技术全景：规划、记忆、工具、多 Agent 与人机协同</title><link>/blog/2026-01-06-ai-agent-architecture/</link><pubDate>Tue, 06 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-06-ai-agent-architecture/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;AI Agent 是 2025-2026 年最热门的 AI 话题之一。它的核心公式很简单：&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;Agent = LLM + Planning + Memory + Tools
 &lt;/code&gt;&lt;/pre&gt;
@@ -2431,7 +2660,177 @@ decode → 再包装成 choices / delta 返回
 &lt;li&gt;&lt;strong&gt;任务分解（Task Decomposition）&lt;/strong&gt;：把复杂问题拆成 step-by-step 的子任务&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;自我反思与修正（Self-Reflection）&lt;/strong&gt;：观察中间结果，偏了就改计划&lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;工程上常见两条路径：&lt;/p&gt;</description></item><item><title>LLM 训练全景：从 GPT-1 到 o1 的进化与对齐</title><link>/blog/2025-12-31-llm-training-and-alignment/</link><pubDate>Wed, 31 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-31-llm-training-and-alignment/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;工程上常见两条路径：&lt;/p&gt;</description></item><item><title>Go 1.26 fmt.Errorf 性能优化：与 errors.New 再无差别</title><link>/blog/2026-01-06-go-fmt-errorf-optimization/</link><pubDate>Tue, 06 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-06-go-fmt-errorf-optimization/</guid><description>&lt;p&gt;以前我们会拿 &lt;code&gt;fmt.Errorf&lt;/code&gt; 的开销说事，来推荐大家在可以使用 &lt;code&gt;errors.New&lt;/code&gt; 的时候就不要用 &lt;code&gt;fmt.Errorf&lt;/code&gt;。这么做的原因还有一个就是可读性——没有占位符就不要用 &lt;code&gt;fmt.Errorf&lt;/code&gt; 了。&lt;/p&gt;
+&lt;p&gt;但从 Go 1.26 开始，情况发生了根本变化。现在统一使用 &lt;code&gt;fmt.Errorf&lt;/code&gt; 几乎没有性能损失，编译器会自动帮你做优化。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-性能鸿沟的消失"&gt;1. 性能鸿沟的消失 &lt;a href="#1-%e6%80%a7%e8%83%bd%e9%b8%bf%e6%b2%9f%e7%9a%84%e6%b6%88%e5%a4%b1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在旧版本（Go 1.25 及以前）中，即便你不使用任何占位符，&lt;code&gt;fmt.Errorf&lt;/code&gt; 也会执行一套沉重的流程：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;初始化：&lt;/strong&gt; &lt;code&gt;newPrinter()&lt;/code&gt; 获取打印对象。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;解析：&lt;/strong&gt; &lt;code&gt;doPrintf&lt;/code&gt; 扫描字符串查找 &lt;code&gt;%&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;分配：&lt;/strong&gt; 产生临时缓冲区 &lt;code&gt;p.buf&lt;/code&gt;，最后再通过 &lt;code&gt;errors.New(s)&lt;/code&gt; 转换，整个过程至少 2 次以上堆分配。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;Go 1.26 的革新：&lt;/strong&gt;
+通过将 &lt;code&gt;Errorf&lt;/code&gt; 拆分为可内联的轻量级函数，编译器在发现无格式化需求时，直接&amp;quot;跳级&amp;quot;调用 &lt;code&gt;errors.New&lt;/code&gt;。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Non-escaping（不逃逸）&lt;/strong&gt;：从 2 次分配降至 &lt;strong&gt;0 次&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Escaping（逃逸）&lt;/strong&gt;：从 2 次分配降至 &lt;strong&gt;1 次&lt;/strong&gt;（与 &lt;code&gt;errors.New&lt;/code&gt; 完全一致）。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="2-编程范式的统一"&gt;2. 编程范式的统一 &lt;a href="#2-%e7%bc%96%e7%a8%8b%e8%8c%83%e5%bc%8f%e7%9a%84%e7%bb%9f%e4%b8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;以前推荐 &lt;code&gt;errors.New&lt;/code&gt; 的理由通常有两个：&lt;strong&gt;性能&lt;/strong&gt;和&lt;strong&gt;语义清晰度&lt;/strong&gt;。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;性能层面&lt;/strong&gt;：现在这个理由已经不复存在。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;语义层面&lt;/strong&gt;：
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;旧观念&lt;/strong&gt;：用 &lt;code&gt;fmt.Errorf&lt;/code&gt; 意味着&amp;quot;我要格式化&amp;quot;，用 &lt;code&gt;errors.New&lt;/code&gt; 意味着&amp;quot;我是静态文本&amp;quot;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;新观念&lt;/strong&gt;：统一使用 &lt;code&gt;fmt.Errorf&lt;/code&gt; 可以减少心智负担。开发者不再需要纠结&amp;quot;我现在是否需要加个变量&amp;quot;，因为即使不加，性能也没有惩罚。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="3-错误管理的工程化"&gt;3. 错误管理的工程化 &lt;a href="#3-%e9%94%99%e8%af%af%e7%ae%a1%e7%90%86%e7%9a%84%e5%b7%a5%e7%a8%8b%e5%8c%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;统一使用 &lt;code&gt;fmt.Errorf&lt;/code&gt; 在大型项目中带来的好处：&lt;/p&gt;</description></item><item><title>Go 1.26 httptest.Server 的 example.com 拦截机制</title><link>/blog/2026-01-06-go-httptest-server/</link><pubDate>Tue, 06 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-06-go-httptest-server/</guid><description>&lt;p&gt;从 Go 1.26 开始，&lt;code&gt;httptest.NewTLSServer&lt;/code&gt;（以及启动了 TLS 的 &lt;code&gt;httptest.Server&lt;/code&gt;）默认会将其生成的自签名证书的 &lt;strong&gt;SAN (Subject Alternative Name)&lt;/strong&gt; 设置为 &lt;code&gt;example.com&lt;/code&gt;。同时，它会自动配置测试进程的默认 &lt;code&gt;http.Transport&lt;/code&gt;，将发往 &lt;code&gt;example.com&lt;/code&gt; 的请求拦截并重定向到这个本地测试服务器。&lt;/p&gt;
+&lt;p&gt;如果你在代码中尝试访问真正的 &lt;code&gt;https://example.com&lt;/code&gt;：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;拦截：&lt;/strong&gt; 请求会被导向你的本地 &lt;code&gt;httptest&lt;/code&gt; 服务器。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;证书错误：&lt;/strong&gt; 真正的 &lt;code&gt;example.com&lt;/code&gt; 应该有其权威证书，但测试服务器返回的是自签名证书，导致验证失败（报错）。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;h2 id="如果要访问真正的-examplecom-怎么办"&gt;如果要访问真正的 example.com 怎么办？ &lt;a href="#%e5%a6%82%e6%9e%9c%e8%a6%81%e8%ae%bf%e9%97%ae%e7%9c%9f%e6%ad%a3%e7%9a%84-examplecom-%e6%80%8e%e4%b9%88%e5%8a%9e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;如果你在测试中确实需要访问互联网上的真实 &lt;code&gt;example.com&lt;/code&gt;，有几种解决方法：&lt;/p&gt;
+&lt;h3 id="方法-a手动配置-transport推荐"&gt;方法 A：手动配置 Transport（推荐） &lt;a href="#%e6%96%b9%e6%b3%95-a%e6%89%8b%e5%8a%a8%e9%85%8d%e7%bd%ae-transport%e6%8e%a8%e8%8d%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;httptest&lt;/code&gt; 默认只修改全局的 &lt;code&gt;http.DefaultTransport&lt;/code&gt;。如果你手动创建一个不受测试环境干扰的 &lt;code&gt;Transport&lt;/code&gt;，就可以绕过这个特性。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;// 创建一个干净的 Transport，不使用 httptestServer.Client() 或 DefaultClient
+tr := &amp;amp;http.Transport{}
+client := &amp;amp;http.Client{Transport: tr}
+resp, err := client.Get(&amp;quot;https://example.com&amp;quot;) // 这将访问真实的互联网地址
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="方法-b暂时禁用该特性"&gt;方法 B：暂时禁用该特性 &lt;a href="#%e6%96%b9%e6%b3%95-b%e6%9a%82%e6%97%b6%e7%a6%81%e7%94%a8%e8%af%a5%e7%89%b9%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;你可以通过环境变量 &lt;code&gt;GODEBUG&lt;/code&gt; 来禁用这个新行为：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;GODEBUG=httptestlocal=0 go test ./...
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="方法-c使用不同的测试域名"&gt;方法 C：使用不同的测试域名 &lt;a href="#%e6%96%b9%e6%b3%95-c%e4%bd%bf%e7%94%a8%e4%b8%8d%e5%90%8c%e7%9a%84%e6%b5%8b%e8%af%95%e5%9f%9f%e5%90%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;如果你的代码是为了测试&amp;quot;请求外部域名&amp;quot;，尽量不要在测试用例中使用 &lt;code&gt;example.com&lt;/code&gt; 作为目标，改用其他合法的占位符，或者直接使用测试服务器提供的 &lt;code&gt;ts.URL&lt;/code&gt;。&lt;/p&gt;</description></item><item><title>Go 1.26 io.ReadAll 内存分配优化：从翻倍增长到平滑增长</title><link>/blog/2026-01-06-go-ioreadall-optimization/</link><pubDate>Tue, 06 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-06-go-ioreadall-optimization/</guid><description>&lt;p&gt;Go 1.26 中 &lt;code&gt;io.ReadAll&lt;/code&gt; 在内存分配方面做了重要优化，底层 slice 的分配不再是简单 2 倍增长，而是做了几个关键改进：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;过程中读满 buffer，不再对 buffer 原地 2 倍扩容，而是存储到 chunks 中，并记录实际读取大小；&lt;/li&gt;
+&lt;li&gt;需要扩容的时候按照 256B×(1.5^(i-1)) 新分配一块 buffer，i 为扩容次数；&lt;/li&gt;
+&lt;li&gt;最终将所有 chunks 和当前 buffer 中的数据重新放入一个 perfect-size 的 buffer 中。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这减少了内存突增、低效利用内存的问题，如果扩容次数多的话，减少了很多次拷贝——已读取的数据仅需要从 chunks 往最终 buffer 中拷贝一次。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-核心策略从单一切片翻倍变为多块链式增长"&gt;1. 核心策略：从&amp;quot;单一切片翻倍&amp;quot;变为&amp;quot;多块链式增长&amp;quot; &lt;a href="#1-%e6%a0%b8%e5%bf%83%e7%ad%96%e7%95%a5%e4%bb%8e%e5%8d%95%e4%b8%80%e5%88%87%e7%89%87%e7%bf%bb%e5%80%8d%e5%8f%98%e4%b8%ba%e5%a4%9a%e5%9d%97%e9%93%be%e5%bc%8f%e5%a2%9e%e9%95%bf" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;代码中不再是简单地对一个 &lt;code&gt;[]byte&lt;/code&gt; 进行 &lt;code&gt;append&lt;/code&gt;，而是引入了 &lt;code&gt;chunks [][]byte&lt;/code&gt;。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;避免大块内存搬迁&lt;/strong&gt;：传统的翻倍增长需要将旧数据 &lt;code&gt;copy&lt;/code&gt; 到新空间。而这里通过 &lt;code&gt;chunks&lt;/code&gt; 记录已经读满的切片，&lt;strong&gt;原地保留&lt;/strong&gt;旧数据，避免了频繁的巨额内存拷贝。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;指数级增长（但不是简单的 2 倍）&lt;/strong&gt;：
+&lt;ul&gt;
+&lt;li&gt;初始 &lt;code&gt;next&lt;/code&gt; 为 256。&lt;/li&gt;
+&lt;li&gt;增长公式为：&lt;code&gt;next += next / 2&lt;/code&gt;（即每次增长 1.5 倍）。&lt;/li&gt;
+&lt;li&gt;这种 1.5 倍的增长比 2 倍更温和，能有效降低内存利用率的浪费。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="2-详细流程分解"&gt;2. 详细流程分解 &lt;a href="#2-%e8%af%a6%e7%bb%86%e6%b5%81%e7%a8%8b%e5%88%86%e8%a7%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="第一阶段小额初始化"&gt;第一阶段：小额初始化 &lt;a href="#%e7%ac%ac%e4%b8%80%e9%98%b6%e6%ae%b5%e5%b0%8f%e9%a2%9d%e5%88%9d%e5%a7%8b%e5%8c%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;b := make([]byte, 0, 512) // 初始分配 512 字节
+next := 256 // 下一次扩容的预设增量
+chunks := make([][]byte, 0, 4) // 存储读满的切片
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;起步非常克制，这保护了那些只有几百字节的小数据读取任务，不会一上来就占用几 KB。&lt;/p&gt;</description></item><item><title>Go 1.26 os.ProcessHandle：进程管理的能力增强</title><link>/blog/2026-01-06-go-process-handle/</link><pubDate>Tue, 06 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-06-go-process-handle/</guid><description>&lt;p&gt;在 Go 1.26 中引入的 &lt;code&gt;os.ProcessHandle&lt;/code&gt; 是对进程管理能力的重大增强。在此之前，Go 对外部进程的控制主要依赖于进程 ID（PID），但在高并发或长运行的系统中，PID 存在**重用（Reuse）**的风险。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;ProcessHandle&lt;/code&gt; 的核心价值在于它提供了一个&lt;strong&gt;确定性的、受生命周期管理的句柄&lt;/strong&gt;，确保你操作的正是你启动的那个进程。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-processhandle-解决了什么痛点"&gt;1. ProcessHandle 解决了什么痛点？ &lt;a href="#1-processhandle-%e8%a7%a3%e5%86%b3%e4%ba%86%e4%bb%80%e4%b9%88%e7%97%9b%e7%82%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在旧版本中，我们通常这样操作：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;使用 &lt;code&gt;exec.Command&lt;/code&gt; 启动进程。&lt;/li&gt;
+&lt;li&gt;通过 &lt;code&gt;cmd.Process.Pid&lt;/code&gt; 获取 PID。&lt;/li&gt;
+&lt;li&gt;之后如果想给进程发信号，系统会根据 PID 查找。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;&lt;strong&gt;风险点：&lt;/strong&gt; 如果进程已经意外退出，而操作系统迅速将该 PID 分配给了另一个新进程（如浏览器或数据库），你此时调用 &lt;code&gt;process.Signal()&lt;/code&gt; 可能会误杀掉无关的系统进程。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;ProcessHandle&lt;/code&gt; 的优势：&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;句柄唯一性：&lt;/strong&gt; 它持有内核层面的句柄（如 Windows 的 HANDLE 或 Linux 的 PidFd）。只要句柄没释放，系统就不会重用该 PID。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;资源安全：&lt;/strong&gt; 通过 &lt;code&gt;WithHandle&lt;/code&gt; 机制，确保在你的逻辑执行完之前，句柄保持有效。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="2-你可以用它做什么"&gt;2. 你可以用它做什么？ &lt;a href="#2-%e4%bd%a0%e5%8f%af%e4%bb%a5%e7%94%a8%e5%ae%83%e5%81%9a%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="安全的多进程协作"&gt;安全的多进程协作 &lt;a href="#%e5%ae%89%e5%85%a8%e7%9a%84%e5%a4%9a%e8%bf%9b%e7%a8%8b%e5%8d%8f%e4%bd%9c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;如果你在开发一个 Master-Worker 架构的服务，Master 需要频繁监控和操作 Worker 进程。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;以前：&lt;/strong&gt; 担心 Worker 挂了后 PID 被别的程序占了。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;现在：&lt;/strong&gt; 持有 &lt;code&gt;ProcessHandle&lt;/code&gt;，你可以百分之百确定 &lt;code&gt;Signal&lt;/code&gt; 或 &lt;code&gt;Wait&lt;/code&gt; 作用的对象是正确的。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="跨进程句柄传递withhandle"&gt;跨进程句柄传递（WithHandle） &lt;a href="#%e8%b7%a8%e8%bf%9b%e7%a8%8b%e5%8f%a5%e6%9f%84%e4%bc%a0%e9%80%92withhandle" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;os.Process.WithHandle(f)&lt;/code&gt; 允许你将句柄的所有权逻辑封装起来。&lt;/p&gt;</description></item><item><title>Green Tea GC：Go 1.26 垃圾回收器升级详解</title><link>/blog/2026-01-06-go-greentea-gc/</link><pubDate>Tue, 06 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-06-go-greentea-gc/</guid><description>&lt;p&gt;在 Go 1.26 中，&lt;strong&gt;Green Tea GC&lt;/strong&gt; 正式成为了默认的垃圾回收器。这并非是一个推翻重建的算法，而是对 Go 长期使用的&amp;quot;三色并发标记-清除（Concurrent Mark-and-Sweep）&amp;ldquo;算法的一次&lt;strong&gt;底层架构升级&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;它并没有放弃可达性分析，核心提升点在于&lt;strong&gt;解决 CPU 等待内存导致的&amp;quot;访存墙（Memory Wall）&amp;ldquo;问题&lt;/strong&gt;。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-前代-gcobject-centric有什么问题"&gt;1. 前代 GC（Object-centric）有什么问题？ &lt;a href="#1-%e5%89%8d%e4%bb%a3-gcobject-centric%e6%9c%89%e4%bb%80%e4%b9%88%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 Go 1.26 之前，GC 是**以对象为中心（Object-centric）**的。当 GC 发现一个对象包含指针时，会立即将这些指针指向的&amp;quot;子对象&amp;quot;加入到工作队列中。&lt;/p&gt;
+&lt;p&gt;这种模式在现代高性能硬件上面临三个挑战：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;缓存命中率极低（Poor Locality）：&lt;/strong&gt; 指针指向的对象在内存中往往是随机分布的。GC 扫描器频繁地在堆中&amp;quot;跳跃&amp;rdquo;，导致大量的 L1/L2 Cache Miss，CPU 经常停顿（Stall）以等待内存数据加载。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;同步开销大（High Contention）：&lt;/strong&gt; 高并发环境下，成千上万个小对象的任务入队/出队会导致全局工作队列或 Work-stealing 机制产生严重的锁竞争。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;难以利用向量化指令（SIMD）：&lt;/strong&gt; 逐个扫描小对象是非常零碎的任务，无法使用现代 CPU 的 SIMD 指令进行批量并行化。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="2-green-tea-的核心改进从对象到页面"&gt;2. Green Tea 的核心改进：从&amp;quot;对象&amp;quot;到&amp;quot;页面&amp;rdquo; &lt;a href="#2-green-tea-%e7%9a%84%e6%a0%b8%e5%bf%83%e6%94%b9%e8%bf%9b%e4%bb%8e%e5%af%b9%e8%b1%a1%e5%88%b0%e9%a1%b5%e9%9d%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Green Tea 的核心理念是&lt;strong&gt;以存储块为中心（Memory-block-centric）&lt;/strong&gt;，主要针对**小对象（Small Objects，通常指 &amp;lt; 512 Bytes）**进行了优化。&lt;/p&gt;
+&lt;h3 id="关键技术差异对比"&gt;关键技术差异对比 &lt;a href="#%e5%85%b3%e9%94%ae%e6%8a%80%e6%9c%af%e5%b7%ae%e5%bc%82%e5%af%b9%e6%af%94" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;特性&lt;/th&gt;
+&lt;th&gt;前代 GC (Pre-1.26)&lt;/th&gt;
+&lt;th&gt;Green Tea GC (Go 1.26+)&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;操作单位&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;单个对象&lt;/strong&gt;（Object-based）&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;内存页/跨度&lt;/strong&gt;（Page/Span-based）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;任务调度&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;发现指针立即入队子对象&lt;/td&gt;
+&lt;td&gt;发现指针时标记所属的 &lt;strong&gt;Span&lt;/strong&gt;，延迟批量处理&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;扫描模式&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;随机、离散的指针追踪&lt;/td&gt;
+&lt;td&gt;&lt;strong&gt;顺序扫描&lt;/strong&gt;整个 8 KiB 的 Span&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;硬件利用&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;频繁触发 CPU Stalls 等待内存&lt;/td&gt;
+&lt;td&gt;利用 &lt;strong&gt;Cache Line&lt;/strong&gt; 预取，支持 &lt;strong&gt;SIMD&lt;/strong&gt; 加速&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;吞吐提升&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;-&lt;/td&gt;
+&lt;td&gt;GC 耗时降低 &lt;strong&gt;10%-40%&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h2 id="3-green-tea-是如何工作的"&gt;3. Green Tea 是如何工作的？ &lt;a href="#3-green-tea-%e6%98%af%e5%a6%82%e4%bd%95%e5%b7%a5%e4%bd%9c%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Green Tea 依然基于图的可达性分析（仍然是三色标记），但它改变了&amp;quot;遍历图的节奏&amp;quot;：&lt;/p&gt;</description></item><item><title>Green Tea 命名由来：Go GC 的「绿茶」梗</title><link>/blog/2026-01-06-go-greentea-naming/</link><pubDate>Tue, 06 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-06-go-greentea-naming/</guid><description>&lt;p&gt;在中文互联网语境下，&amp;ldquo;绿茶&amp;quot;这个词带有一种贬义的特定暗示。但对 Go 团队（主要是 Google 的工程师）来说，这个命名完全是另一种画风。&lt;/p&gt;
+&lt;h2 id="1-为什么叫-green-tea绿茶"&gt;1. 为什么叫 Green Tea（绿茶）？ &lt;a href="#1-%e4%b8%ba%e4%bb%80%e4%b9%88%e5%8f%ab-green-tea%e7%bb%bf%e8%8c%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;根据 Go 团队开发者在设计文档和技术博客中的描述，这个命名的由来非常简单直观，甚至带点程序员的&amp;quot;养生&amp;quot;幽默：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;放松与性能的平衡：&lt;/strong&gt; 官方曾提到，这个 GC 的设计目标是让程序运行得更&amp;quot;丝滑&amp;rdquo;、更高效，减少因内存压力导致的&amp;quot;焦虑&amp;quot;（Stall/停顿）。就像在紧张的工作间隙喝一杯温润的&lt;strong&gt;绿茶&lt;/strong&gt;，它不仅提神（提高吞吐量），还比浓咖啡（高压力的 GC 策略）更平和。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;致敬硬件：&lt;/strong&gt; Green Tea 的核心是 &lt;strong&gt;&amp;ldquo;Memory-aware（内存感知）&amp;rdquo;&lt;/strong&gt;。在西方文化中，绿茶常与&amp;quot;天然&amp;quot;、&amp;ldquo;有机&amp;rdquo;、&amp;ldquo;对环境友好&amp;quot;联系在一起。这里的&amp;quot;环境&amp;quot;指的是 CPU 的层级结构和缓存行（Cache Line）。它不再暴力地扫荡内存，而是优雅地顺着内存布局进行标记。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;内部代号习惯：&lt;/strong&gt; Go 团队内部喜欢用简单的食物或饮品给实验性功能起代号。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="2-关于中文含义的文化反差"&gt;2. 关于&amp;quot;中文含义&amp;quot;的文化反差 &lt;a href="#2-%e5%85%b3%e4%ba%8e%e4%b8%ad%e6%96%87%e5%90%ab%e4%b9%89%e7%9a%84%e6%96%87%e5%8c%96%e5%8f%8d%e5%b7%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;这个命名在进入中国开发者视野时确实产生了一些有趣的&amp;quot;化学反应&amp;rdquo;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;程序员的自嘲：&lt;/strong&gt; 很多国内开发者调侃说，这个 GC &lt;strong&gt;&amp;ldquo;看起来人畜无害（Pause 时间极短），背地里手段了得（后台偷偷重组扫描逻辑，疯狂优化 CPU 周期）&amp;rdquo;&lt;/strong&gt;。这倒是非常符合&amp;quot;绿茶&amp;quot;在中文里的另一层隐喻。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;翻译与本地化：&lt;/strong&gt; 尽管在中文里有歧义，但作为一个全球开源项目的技术名词，通常会直接保留原名（Green Tea）或直译。毕竟在计算机领域，能被命名为&amp;quot;茶&amp;quot;的算法，通常都暗示着它比前代更&amp;quot;轻盈&amp;quot;。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="3-一个冷知识"&gt;3. 一个冷知识 &lt;a href="#3-%e4%b8%80%e4%b8%aa%e5%86%b7%e7%9f%a5%e8%af%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;如果回头看 Go GC 的历史，你会发现这是一种**&amp;ldquo;颜色系列&amp;rdquo;&lt;strong&gt;的延续：
+Go 一直使用的是&lt;/strong&gt;三色标记法（Tri-color marking）**。原本的颜色只有&amp;quot;黑、灰、白&amp;quot;。现在引入了 &lt;strong&gt;&amp;ldquo;Green&amp;rdquo;&lt;/strong&gt;，在某种程度上也算是在三色模型的基础上，为这种&amp;quot;基于 Span 扫描&amp;quot;的新机制涂上了一种代表高效和清新的新底色。&lt;/p&gt;</description></item><item><title>LLM 训练全景：从 GPT-1 到 o1 的进化与对齐</title><link>/blog/2025-12-31-llm-training-and-alignment/</link><pubDate>Wed, 31 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-31-llm-training-and-alignment/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;Base model 为什么「知道很多事」却不太会聊天？SFT 之后为什么还要再对齐？LoRA 又是在动哪些参数？&lt;/p&gt;
 &lt;p&gt;这篇文章按一条主线串：&lt;strong&gt;能力主要在预训练，行为与偏好在后训练&lt;/strong&gt;；中间夹参数高效微调，最后补 2024–2025 的偏好优化演进和 o1「更会想」又是如何去做的。&lt;/p&gt;
 &lt;hr&gt;
@@ -2554,7 +2953,137 @@ decode → 再包装成 choices / delta 返回
 &lt;p&gt;所以段落表只适合当「解释面板」的素材，不适合当唯一规则引擎。&lt;/p&gt;
 &lt;hr&gt;
 &lt;h2 id="分数从哪来三条技术路线"&gt;分数从哪来：三条技术路线 &lt;a href="#%e5%88%86%e6%95%b0%e4%bb%8e%e5%93%aa%e6%9d%a5%e4%b8%89%e6%9d%a1%e6%8a%80%e6%9c%af%e8%b7%af%e7%ba%bf" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;要把「感觉像 AI」变成 0～1 的置信度，常见三条路，可叠加。&lt;/p&gt;</description></item><item><title>GoTalk - Go Execution Tracer</title><link>/blog/2025-11-08-go_execution_tracer/</link><pubDate>Sat, 08 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/2025-11-08-go_execution_tracer/</guid><description>&lt;style&gt;
+&lt;p&gt;要把「感觉像 AI」变成 0～1 的置信度，常见三条路，可叠加。&lt;/p&gt;</description></item><item><title>在业务层和基础设施层之间：错误处理与日志记录的分层原则</title><link>/blog/2025-12-27-go-error-handling-layers/</link><pubDate>Sat, 27 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-27-go-error-handling-layers/</guid><description>&lt;blockquote&gt;
+&lt;p&gt;代码片段（Redis &lt;code&gt;HMGet&lt;/code&gt;）：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;func HMGet(ctx context.Context, key string, fields []string) (any, error) {
+fullKey := &amp;quot;xxxxxxxxxxx&amp;quot;
+fields := []string{f1, f2, f3}
+result, err := redisClient.HMGet(ctx, fullKey, fields...).Result()
+if err != nil {
+log.ErrorContextf(ctx, &amp;quot;hmget failed. key: %s, err: %v&amp;quot;, fullKey, err)
+return nil, err
+}
+...
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这里的疑问是：
+&lt;em&gt;是&lt;/em&gt; 在 &lt;strong&gt;内部&lt;/strong&gt; 打印日志更合适，还是 &lt;strong&gt;返回包装好的错误&lt;/strong&gt; 让调用方自行打印？&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;本文给出一个 &lt;strong&gt;分层&lt;/strong&gt; 的错误与日志处理思路，帮助你在实际项目中做出更清晰、更易维护的决策。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-业务场景快速回顾"&gt;1. 业务场景快速回顾 &lt;a href="#1-%e4%b8%9a%e5%8a%a1%e5%9c%ba%e6%99%af%e5%bf%ab%e9%80%9f%e5%9b%9e%e9%a1%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;基础设施层&lt;/strong&gt;：Redis、数据库、第三方 SDK 等，负责与外部系统的交互。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;业务/服务层&lt;/strong&gt;：业务逻辑、HTTP 处理器、命令/查询处理器等，负责实现业务需求。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;工具/通用库&lt;/strong&gt;：可复用的代码段、工具函数，供多项目使用。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="2-错误与日志的职责拆分"&gt;2. 错误与日志的职责拆分 &lt;a href="#2-%e9%94%99%e8%af%af%e4%b8%8e%e6%97%a5%e5%bf%97%e7%9a%84%e8%81%8c%e8%b4%a3%e6%8b%86%e5%88%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;层次&lt;/th&gt;
+&lt;th&gt;负责什么&lt;/th&gt;
+&lt;th&gt;不能做什么&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;基础设施层&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;只负责执行操作、返回错误&lt;/td&gt;
+&lt;td&gt;打印业务级日志&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;业务层&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;记录错误、统一日志格式&lt;/td&gt;
+&lt;td&gt;随意包装错误（除非需要保留更多上下文）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;工具层&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;只返回错误，必要时做重试&lt;/td&gt;
+&lt;td&gt;打印日志&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;核心原则&lt;/strong&gt;：
+&lt;strong&gt;&amp;ldquo;谁知道错误最有意义？&amp;rdquo;&lt;/strong&gt;——
+业务层最清楚业务语义，基础设施层最清楚技术细节。&lt;/p&gt;</description></item><item><title>sync.Once：类型结构体中作为值字段还是指针字段？</title><link>/blog/2025-12-26-sync-once-value-vs-pointer/</link><pubDate>Fri, 26 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-26-sync-once-value-vs-pointer/</guid><description>&lt;h2 id="tldr"&gt;TL;DR &lt;a href="#tldr" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Embed &lt;code&gt;sync.Once&lt;/code&gt; by value&lt;/strong&gt; — 它是一个小结构体，零值即可使用。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;不要用 &lt;code&gt;*sync.Once&lt;/code&gt;&lt;/strong&gt; 除非你真的需要在多个结构体间共享同一个 &lt;code&gt;Once&lt;/code&gt;（或者你想避免复制整个结构体，但这种情况很少见）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;永远不要复制已经调用过 &lt;code&gt;Do&lt;/code&gt; 的结构体&lt;/strong&gt; — &lt;code&gt;sync.Once&lt;/code&gt; 在使用后就不再安全复制了。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="为什么-synconce-通常是值字段"&gt;为什么 sync.Once 通常是值字段 &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88-synconce-%e9%80%9a%e5%b8%b8%e6%98%af%e5%80%bc%e5%ad%97%e6%ae%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type MyService struct {
+once sync.Once
+// other fields …
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;sync.Once&lt;/code&gt; 只是一个小结构体（目前只有一个指向内部状态的指针），复制开销极低。&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;sync.Once&lt;/code&gt; 的零值已经是一个功能完备的&amp;quot;once&amp;quot;对象，不需要额外分配或初始化。&lt;/li&gt;
+&lt;li&gt;嵌入它（或作为命名字段）提供了地道的 &lt;code&gt;foo.once.Do(...)&lt;/code&gt; 用法。&lt;/li&gt;
+&lt;li&gt;Go 标准库和实际代码中的大多数示例都使用值类型。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="什么时候考虑用指针"&gt;什么时候考虑用指针 &lt;a href="#%e4%bb%80%e4%b9%88%e6%97%b6%e5%80%99%e8%80%83%e8%99%91%e7%94%a8%e6%8c%87%e9%92%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;场景&lt;/th&gt;
+&lt;th&gt;为什么用指针可能有帮助&lt;/th&gt;
+&lt;th&gt;代价&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;在多个结构体间共享同一个 Once&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;所有结构体都调用同一个 once 实例，初始化只运行一次&lt;/td&gt;
+&lt;td&gt;失去 &lt;code&gt;Do&lt;/code&gt; 的自动提升，需要管理指针的生命周期&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;避免复制包含 sync.Once 的结构体&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;如果复制了已调用过 &lt;code&gt;Do&lt;/code&gt; 的结构体，副本可能会再次运行初始化或导致竞态。使用指针可以保持单实例&lt;/td&gt;
+&lt;td&gt;仍要小心不要复制结构体本身；Once 的指针不会魔术般地让结构体安全复制&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;需要延迟创建 Once&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;*sync.Once&lt;/code&gt; 允许你在需要前设为 &lt;code&gt;nil&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;sync.Once&lt;/code&gt; 零值已经是可用的，很少需要这个&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;在绝大多数典型场景中，你都会看到 &lt;code&gt;sync.Once&lt;/code&gt; 作为值嵌入。&lt;/p&gt;</description></item><item><title>goto 语句的争议与实践：问题真的出在 goto 本身吗</title><link>/blog/2025-12-18-goto-statement/</link><pubDate>Thu, 18 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-18-goto-statement/</guid><description>&lt;h2 id="目录"&gt;目录 &lt;a href="#%e7%9b%ae%e5%bd%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;a href="#%E5%BC%95%E8%A8%80"&gt;引言&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#%E5%8E%86%E5%8F%B2%E8%83%8C%E6%99%AFgoto-%E4%BA%89%E8%AE%AE%E7%9A%84%E8%B5%B7%E6%BA%90"&gt;历史背景：goto 争议的起源&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#goto-%E7%9A%84%E4%BC%A0%E7%BB%9F%E5%9D%8F%E5%A4%84%E5%88%86%E6%9E%90"&gt;goto 的传统&amp;quot;坏处&amp;quot;分析&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#%E5%AE%9E%E8%B7%B5%E4%B8%AD%E7%9A%84-gotolinux-%E5%86%85%E6%A0%B8%E7%9A%84%E5%90%AF%E7%A4%BA"&gt;实践中的 goto：Linux 内核的启示&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#%E9%97%AE%E9%A2%98%E7%9A%84%E6%A0%B9%E6%BA%90%E6%98%AF-goto-%E8%BF%98%E6%98%AF%E4%BD%BF%E7%94%A8%E6%96%B9%E5%BC%8F"&gt;问题的根源：是 goto 还是使用方式？&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#goto-%E7%9A%84%E6%AD%A3%E7%A1%AE%E4%BD%BF%E7%94%A8%E6%A8%A1%E5%BC%8F"&gt;goto 的正确使用模式&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#goto-%E7%9A%84%E6%9B%BF%E4%BB%A3%E6%96%B9%E6%A1%88"&gt;goto 的替代方案&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#%E7%8E%B0%E4%BB%A3%E8%AF%AD%E8%A8%80%E4%B8%AD%E7%9A%84-goto"&gt;现代语言中的 goto&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#%E6%80%A7%E8%83%BD%E8%80%83%E9%87%8F"&gt;性能考量&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5%E4%B8%8E%E8%A7%84%E8%8C%83"&gt;最佳实践与规范&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="#%E7%BB%93%E8%AE%BA"&gt;结论&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;h2 id="引言"&gt;引言 &lt;a href="#%e5%bc%95%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在编程语言的发展历程中，很少有像 &lt;code&gt;goto&lt;/code&gt; 语句这样引发如此广泛争议的特性。1968年，计算机科学先驱 Edsger Dijkstra 发表了著名的论文《Go To Statement Considered Harmful》，将 &lt;code&gt;goto&lt;/code&gt; 推向了风口浪尖。自此，&lt;code&gt;goto&lt;/code&gt; 被贴上了&amp;quot;有害&amp;quot;、&amp;ldquo;过时&amp;rdquo;、&amp;ldquo;应该避免&amp;quot;的标签。&lt;/p&gt;
+&lt;p&gt;然而，当我们深入观察高质量的开源项目，特别是 Linux 内核、SQLite、Git 等知名项目时，会发现一个有趣的现象：这些项目不仅大量使用 &lt;code&gt;goto&lt;/code&gt;，而且将其视为&lt;strong&gt;最佳实践&lt;/strong&gt;。这不禁让人思考：&lt;code&gt;goto&lt;/code&gt; 引发的问题，真的是 &lt;code&gt;goto&lt;/code&gt; 本身引起的吗？还是其他代码设计、可读性差等问题被错误地归咎于 &lt;code&gt;goto&lt;/code&gt;？&lt;/p&gt;
+&lt;p&gt;本文将从历史背景、实际案例、代码对比等多个角度深入分析 &lt;code&gt;goto&lt;/code&gt; 的争议，探讨其真正的问题所在，并提供实用的最佳实践指南。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="历史背景goto-争议的起源"&gt;历史背景：goto 争议的起源 &lt;a href="#%e5%8e%86%e5%8f%b2%e8%83%8c%e6%99%afgoto-%e4%ba%89%e8%ae%ae%e7%9a%84%e8%b5%b7%e6%ba%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="dijkstra-的论文及其影响"&gt;Dijkstra 的论文及其影响 &lt;a href="#dijkstra-%e7%9a%84%e8%ae%ba%e6%96%87%e5%8f%8a%e5%85%b6%e5%bd%b1%e5%93%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;1968年，Edsger Dijkstra 在《Communications of the ACM》上发表了一封简短但影响深远的信件，标题是《Go To Statement Considered Harmful》。在这篇论文中，Dijkstra 提出了几个核心观点：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;程序的可理解性&lt;/strong&gt;：&lt;code&gt;goto&lt;/code&gt; 语句使得程序的控制流变得难以理解&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;程序正确性证明&lt;/strong&gt;：使用 &lt;code&gt;goto&lt;/code&gt; 的程序难以进行形式化证明&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;结构化编程&lt;/strong&gt;：程序应该由顺序、选择、循环三种基本结构组成&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Dijkstra 的论文发表后，引发了编程社区的大讨论。支持者认为：&lt;/p&gt;</description></item><item><title>GoTalk - Go Execution Tracer</title><link>/blog/2025-11-08-go_execution_tracer/</link><pubDate>Sat, 08 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/2025-11-08-go_execution_tracer/</guid><description>&lt;style&gt;
 .iframe-container {
 position: relative;
 height: 100vh;
@@ -2792,7 +3321,45 @@ A B
 &lt;pre&gt;&lt;code&gt;tag → commit → tree → blob
 → tree → blob
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;一层层拆开：&lt;/p&gt;</description></item><item><title>Git 浅克隆与部分克隆：原理与实践</title><link>/blog/2025-07-22-git-shallow-and-partial-clone/</link><pubDate>Tue, 22 Jul 2025 00:00:00 +0800</pubDate><guid>/blog/2025-07-22-git-shallow-and-partial-clone/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;一层层拆开：&lt;/p&gt;</description></item><item><title>math/rand/v2：ChaCha8 算法与并发安全详解</title><link>/blog/2025-08-04-go-math-rand-v2/</link><pubDate>Mon, 04 Aug 2025 00:00:00 +0800</pubDate><guid>/blog/2025-08-04-go-math-rand-v2/</guid><description>&lt;p&gt;Go 1.22 版本引入了新的 &lt;code&gt;math/rand/v2&lt;/code&gt; 包，这是一次旨在提升性能、随机性质量和开发者体验的现代化升级。其核心变化之一是采用 ChaCha8 算法作为其默认的伪随机数生成器（PRNG）。&lt;/p&gt;
+&lt;h2 id="1-chacha8-算法不是哈希而是流式密码"&gt;1. ChaCha8 算法：不是哈希，而是流式密码 &lt;a href="#1-chacha8-%e7%ae%97%e6%b3%95%e4%b8%8d%e6%98%af%e5%93%88%e5%b8%8c%e8%80%8c%e6%98%af%e6%b5%81%e5%bc%8f%e5%af%86%e7%a0%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;首先需要明确，ChaCha8 是一种&lt;strong&gt;流式密码（Stream Cipher）&lt;/strong&gt;，而非哈希算法。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;哈希算法（如 SHA-256）&lt;/strong&gt;：将任意长度的输入映射到固定长度的输出，用于数据完整性校验。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;流式密码（如 ChaCha8）&lt;/strong&gt;：使用一个短的密钥（Key）和一个初始值（Nonce/Counter）生成一个任意长的、高质量的伪随机数流。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="chacha8-的核心特点"&gt;ChaCha8 的核心特点 &lt;a href="#chacha8-%e7%9a%84%e6%a0%b8%e5%bf%83%e7%89%b9%e7%82%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;命名&lt;/strong&gt;：&amp;ldquo;ChaCha&amp;rdquo; 是算法名，&amp;ldquo;8&amp;rdquo; 代表其核心变换的&lt;strong&gt;轮数（Rounds）&lt;/strong&gt;。轮数越多，理论安全性越高，但性能会略微下降。对于非加密场景，8 轮足以提供极高质量的随机性。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;工作原理&lt;/strong&gt;：算法内部维护一个由密钥、计数器、Nonce 和常量组成的 4×4 矩阵状态。通过 8 轮高效的 &lt;strong&gt;ARX 操作（加法-旋转-异或）&lt;/strong&gt; 对该状态进行搅乱，然后生成一个伪随机输出块。通过递增计数器，可以持续不断地生成随机数流。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;优势&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;高性能&lt;/strong&gt;：ARX 操作在现代 CPU 上执行速度极快。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;高质量&lt;/strong&gt;：输出能通过所有已知的严格随机性测试。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;确定性与可复现性&lt;/strong&gt;：给定相同的种子（128 位），输出序列完全可复现。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;无&amp;quot;坏种子&amp;quot;&lt;/strong&gt;：不会像一些旧的 PRNG 那样因为特定的种子而导致输出质量下降。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id="2-并发安全演进v1-vs-v2"&gt;2. 并发安全演进（v1 vs v2） &lt;a href="#2-%e5%b9%b6%e5%8f%91%e5%ae%89%e5%85%a8%e6%bc%94%e8%bf%9bv1-vs-v2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="mathrand旧版v1"&gt;math/rand（旧版，v1） &lt;a href="#mathrand%e6%97%a7%e7%89%88v1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;rand.Source&lt;/code&gt;&lt;/strong&gt;：通过 &lt;code&gt;rand.NewSource()&lt;/code&gt; 创建的实例&lt;strong&gt;不是&lt;/strong&gt;并发安全的。多 goroutine 共享需加锁。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;顶层函数&lt;/strong&gt;：包级别的函数（如 &lt;code&gt;rand.Intn&lt;/code&gt;）&lt;strong&gt;是&lt;/strong&gt;并发安全的。内部使用一个全局 &lt;code&gt;sync.Mutex&lt;/code&gt; 对全局默认 Source 加锁保护。这保证了安全，但在高并发场景下，这个全局锁会成为性能瓶颈。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id="mathrandv2新版"&gt;math/rand/v2（新版） &lt;a href="#mathrandv2%e6%96%b0%e7%89%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;rand.Source&lt;/code&gt; 和 &lt;code&gt;rand.Rand&lt;/code&gt;&lt;/strong&gt;：被设计为&lt;strong&gt;一次只能由一个 goroutine 使用&lt;/strong&gt;，多 goroutine 共享需要外部同步。&lt;/p&gt;</description></item><item><title>Git 浅克隆与部分克隆：原理与实践</title><link>/blog/2025-07-22-git-shallow-and-partial-clone/</link><pubDate>Tue, 22 Jul 2025 00:00:00 +0800</pubDate><guid>/blog/2025-07-22-git-shallow-and-partial-clone/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;克隆一个大型仓库时，我们经常会遇到这样的问题：历史太深、对象太多，&lt;code&gt;git clone&lt;/code&gt; 慢得让人焦虑。团队仓库跑了好几年，tag 上百个，branch 几十条，&lt;code&gt;.git&lt;/code&gt; 动不动就上 GB——如果只是想把代码拉下来改两行提个 MR，等一个完整克隆实在太不划算了。&lt;/p&gt;
 &lt;p&gt;Git 提供了两类机制来解决这个问题：&lt;/p&gt;
 &lt;ul&gt;
@@ -2817,7 +3384,33 @@ git clone --shallow-exclude=&amp;quot;v2.0&amp;quot; &amp;lt;url&amp;gt;
 &lt;p&gt;这些选项可以组合。比如 &lt;code&gt;--depth 10 --shallow-since=&amp;quot;2024-06-01&amp;quot;&lt;/code&gt;，最终的提交数量就是两个条件的交集。&lt;/p&gt;
 &lt;h2 id="底层机制"&gt;底层机制 &lt;a href="#%e5%ba%95%e5%b1%82%e6%9c%ba%e5%88%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;h3 id="--depth-工作流程"&gt;&lt;code&gt;--depth&lt;/code&gt; 工作流程 &lt;a href="#--depth-%e5%b7%a5%e4%bd%9c%e6%b5%81%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;Shallow clone 的核心行为在 fetch 阶段。以 &lt;code&gt;git clone --depth 3&lt;/code&gt; 为例：&lt;/p&gt;</description></item><item><title>Delve checkpoint：调试时的存档与读档</title><link>/blog/2025-05-30-dlv-checkpoint/</link><pubDate>Fri, 30 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-30-dlv-checkpoint/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;Shallow clone 的核心行为在 fetch 阶段。以 &lt;code&gt;git clone --depth 3&lt;/code&gt; 为例：&lt;/p&gt;</description></item><item><title>理解 Go 逃逸分析：变量与值的区别</title><link>/blog/2025-07-18-go-escape-analysis/</link><pubDate>Fri, 18 Jul 2025 00:00:00 +0800</pubDate><guid>/blog/2025-07-18-go-escape-analysis/</guid><description>&lt;p&gt;一个常见的困惑点：当工具报告关于变量位置的矛盾信息时，到底哪个是对的？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;go build -gcflags '-m'&lt;/code&gt;&lt;/strong&gt; 可能报告 &lt;code&gt;variable escapes to heap&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;调试器 Delve&lt;/strong&gt; 可能报告同一个变量是 &lt;code&gt;stack allocated&lt;/code&gt;。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;两者都是对的。关键在于理解&lt;strong&gt;变量&lt;/strong&gt;（命名存储位置）和它持有的&lt;strong&gt;值&lt;/strong&gt;之间的区别。&lt;/p&gt;
+&lt;h2 id="1-变量栈上的一个位置"&gt;1. 变量：栈上的一个位置 &lt;a href="#1-%e5%8f%98%e9%87%8f%e6%a0%88%e4%b8%8a%e7%9a%84%e4%b8%80%e4%b8%aa%e4%bd%8d%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当你在函数中声明 &lt;code&gt;i := 0&lt;/code&gt; 时，Go 编译器默认会在该函数的&lt;strong&gt;栈帧&lt;/strong&gt;上分配空间。栈是管理函数局部变量的高效内存区域。&lt;/p&gt;
+&lt;p&gt;Delve 在运行时检查程序状态。当你 &lt;code&gt;watch i&lt;/code&gt; 时，它在当前作用域中找到命名的变量 &lt;code&gt;i&lt;/code&gt;，该变量物理上位于栈上。因此 Delve 正确地将其识别为&amp;quot;栈分配变量&amp;quot;。&lt;/p&gt;
+&lt;h2 id="2-值一个副本逃逸到堆上"&gt;2. 值：一个副本逃逸到堆上 &lt;a href="#2-%e5%80%bc%e4%b8%80%e4%b8%aa%e5%89%af%e6%9c%ac%e9%80%83%e9%80%b8%e5%88%b0%e5%a0%86%e4%b8%8a" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;编译器的逃逸分析消息不是由变量本身触发的，而是由它的&lt;strong&gt;值如何被使用&lt;/strong&gt;触发的。一个常见触发器是将值传递给接受 &lt;code&gt;interface{}&lt;/code&gt; 的函数，比如 &lt;code&gt;fmt.Println(...)&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;当调用 &lt;code&gt;fmt.Println(i)&lt;/code&gt; 时，运行时发生以下事情：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Go 需要将具体类型（&lt;code&gt;int&lt;/code&gt;）转换为 &lt;code&gt;interface{}&lt;/code&gt;。这个过程称为&lt;strong&gt;装箱（boxing）&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;为了&amp;quot;装箱&amp;quot;这个值，运行时在&lt;strong&gt;堆&lt;/strong&gt;上分配一小块内存。&lt;/li&gt;
+&lt;li&gt;然后将 &lt;code&gt;i&lt;/code&gt; 的值从栈&lt;strong&gt;复制&lt;/strong&gt;到这个新的堆分配中。&lt;/li&gt;
+&lt;li&gt;生成的 &lt;code&gt;interface{}&lt;/code&gt; 值包含指向这个堆副本的指针，这就是传给 &lt;code&gt;fmt.Println&lt;/code&gt; 的内容。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;编译器的逃逸分析在编译时检测到这个需求。它看到 &lt;code&gt;i&lt;/code&gt; 的值*必须*被复制到堆上才能满足调用。消息 &lt;code&gt;i escapes to heap&lt;/code&gt; 是编译器在说：&amp;ldquo;我已经生成了代码，将在此时为 &lt;code&gt;i&lt;/code&gt; 持有的值触发堆分配。&amp;rdquo;&lt;/p&gt;
+&lt;h3 id="类比便利贴和文件柜"&gt;类比：便利贴和文件柜 &lt;a href="#%e7%b1%bb%e6%af%94%e4%be%bf%e5%88%a9%e8%b4%b4%e5%92%8c%e6%96%87%e4%bb%b6%e6%9f%9c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;栈&lt;/strong&gt;是你的办公桌。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;变量 &lt;code&gt;i&lt;/code&gt;&lt;/strong&gt; 是桌上的便利贴。你在上面写了数字 &lt;code&gt;1&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;堆&lt;/strong&gt;是走廊对面的共享文件柜。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;fmt.Println&lt;/code&gt;&lt;/strong&gt; 是一个只接受文件柜中官方文件夹文档的同事。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;要传递这个数字给同事，你不能直接递给便利贴。你必须：&lt;/p&gt;</description></item><item><title>Delve checkpoint：调试时的存档与读档</title><link>/blog/2025-05-30-dlv-checkpoint/</link><pubDate>Fri, 30 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-30-dlv-checkpoint/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;调试复杂 bug 时，我们经常需要反复回到某个关键位置，尝试不同的执行路径来定位问题。传统做法是重新启动程序、重新设置断点、重新触发条件——这个机械性的重放过程既耗时又容易遗漏关键状态。Delve 的 checkpoint 功能正是为了解决这个问题而设计的：它允许你随时&amp;quot;存档&amp;quot;，并在需要时&amp;quot;读档&amp;quot;，回到之前的程序状态继续调试。&lt;/p&gt;
 &lt;h1 id="checkpoint-是什么"&gt;checkpoint 是什么 &lt;a href="#checkpoint-%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;在 Delve 中，&lt;strong&gt;checkpoint&lt;/strong&gt; 是一个调试时的&amp;quot;快照&amp;quot;功能：&lt;/p&gt;
@@ -2888,7 +3481,61 @@ git clone --shallow-exclude=&amp;quot;v2.0&amp;quot; &amp;lt;url&amp;gt;
 &lt;p&gt;第一个字符 &lt;code&gt;t&lt;/code&gt; 表示进程正被调试器跟踪（traced），或者处于停止状态（stopped）。在 Linux 中，这通常意味着进程通过 &lt;code&gt;ptrace(PTRACE_ATTACH, ...)&lt;/code&gt; 被附加到了一个 tracer 上，此时进程会收到 &lt;code&gt;SIGSTOP&lt;/code&gt; 并暂停。&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;&lt;code&gt;l&lt;/code&gt; — multi-threaded&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;第二个字符 &lt;code&gt;l&lt;/code&gt; 表示进程是多线程的（multi-threaded）。在 Linux 中，当进程创建了多个线程时，&lt;code&gt;ps&lt;/code&gt; 会在 STAT 中标记 &lt;code&gt;l&lt;/code&gt;。&lt;/p&gt;
-&lt;p&gt;这两个标志组合在一起，&lt;code&gt;tl&lt;/code&gt; 表示的就是：&lt;strong&gt;一个被调试器暂停的多线程进程&lt;/strong&gt;。在上面的例子中，进程名 &lt;code&gt;__debug_bin2092487096&lt;/code&gt; 也印证了这一点——这是调试器（如 Delve 或 gdb）生成的临时可执行文件。&lt;/p&gt;</description></item><item><title>Starlark 在 Delve 中的实战：从脚本编写到踩坑记录</title><link>/blog/2025-05-25-dlv-starlark2/</link><pubDate>Sun, 25 May 2025 01:00:00 +0800</pubDate><guid>/blog/2025-05-25-dlv-starlark2/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;这两个标志组合在一起，&lt;code&gt;tl&lt;/code&gt; 表示的就是：&lt;strong&gt;一个被调试器暂停的多线程进程&lt;/strong&gt;。在上面的例子中，进程名 &lt;code&gt;__debug_bin2092487096&lt;/code&gt; 也印证了这一点——这是调试器（如 Delve 或 gdb）生成的临时可执行文件。&lt;/p&gt;</description></item><item><title>Go 信号处理：同步信号与异步信号的区别</title><link>/blog/2025-05-26-go-signals/</link><pubDate>Mon, 26 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-26-go-signals/</guid><description>&lt;p&gt;Go 程序运行时经常会收到操作系统的信号，理解同步信号和异步信号的区别，对于编写健壮的程序非常重要。&lt;/p&gt;
+&lt;h2 id="1-同步信号synchronous-signal"&gt;1. 同步信号（Synchronous Signal） &lt;a href="#1-%e5%90%8c%e6%ad%a5%e4%bf%a1%e5%8f%b7synchronous-signal" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;同步信号由程序自身的执行直接触发，与特定指令的执行直接相关，在指令执行过程中立即发生。&lt;/p&gt;
+&lt;p&gt;常见的同步信号包括：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;SIGSEGV&lt;/strong&gt;（段错误）：访问非法内存地址&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;SIGFPE&lt;/strong&gt;（浮点异常）：除以零等算术错误&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;SIGILL&lt;/strong&gt;（非法指令）：执行了无效的机器指令&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些信号不能被普通的信号处理机制捕获，因为它们在指令执行过程中就发生了。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;并不是完全不能捕获——比如 Go runtime 就捕获并处理了这些信号，但普通用户不应自行捕获处理，因为处理不当可能导致更严重的问题。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="2-异步信号asynchronous-signal"&gt;2. 异步信号（Asynchronous Signal） &lt;a href="#2-%e5%bc%82%e6%ad%a5%e4%bf%a1%e5%8f%b7asynchronous-signal" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;异步信号由外部事件触发，与程序当前执行状态无关，可以在任何时候发生。&lt;/p&gt;
+&lt;p&gt;常见的异步信号包括：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;SIGINT&lt;/strong&gt;（中断信号）：通常由 Ctrl+C 触发&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;SIGTERM&lt;/strong&gt;（终止信号）：请求程序终止&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;SIGUSR1/SIGUSR2&lt;/strong&gt;（用户自定义信号）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些信号可以被 &lt;code&gt;signal.Notify&lt;/code&gt; 捕获和处理。&lt;/p&gt;
+&lt;h2 id="3-举例说明"&gt;3. 举例说明 &lt;a href="#3-%e4%b8%be%e4%be%8b%e8%af%b4%e6%98%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;// 异步信号可以被捕获
+c := make(chan os.Signal, 1)
+signal.Notify(c, syscall.SIGINT) // 可以捕获 Ctrl+C
+// 同步信号不能被普通方式捕获
+var s *struct{ Age int }
+println(s.Age) // 触发 SIGSEGV，不能被 signal.Notify 捕获
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="4-为什么会有这种区别"&gt;4. 为什么会有这种区别 &lt;a href="#4-%e4%b8%ba%e4%bb%80%e4%b9%88%e4%bc%9a%e6%9c%89%e8%bf%99%e7%a7%8d%e5%8c%ba%e5%88%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;同步信号表示程序执行出现了严重错误&lt;/li&gt;
+&lt;li&gt;这些错误通常意味着程序处于一个不可恢复的状态&lt;/li&gt;
+&lt;li&gt;允许程序处理这些信号可能会导致更多的问题&lt;/li&gt;
+&lt;li&gt;操作系统选择直接终止程序，而不是给程序处理的机会&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="5-实际应用中的处理方式"&gt;5. 实际应用中的处理方式 &lt;a href="#5-%e5%ae%9e%e9%99%85%e5%ba%94%e7%94%a8%e4%b8%ad%e7%9a%84%e5%a4%84%e7%90%86%e6%96%b9%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;对于同步信号（如 SIGSEGV）：&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>Go 空指针检查：从一行汇编指令到 SIGSEGV 的完整链路</title><link>/blog/2025-05-26-%E7%BC%96%E8%AF%91%E5%99%A8_%E7%A9%BA%E6%8C%87%E9%92%88%E6%A3%80%E6%9F%A5nilcheck/</link><pubDate>Mon, 26 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-26-%E7%BC%96%E8%AF%91%E5%99%A8_%E7%A9%BA%E6%8C%87%E9%92%88%E6%A3%80%E6%9F%A5nilcheck/</guid><description>&lt;h2 id="引出问题"&gt;引出问题 &lt;a href="#%e5%bc%95%e5%87%ba%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;前阵子写了一段简单的 Go 代码，反汇编后发现了一些不太一样的指令。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type Student struct {
+Age int
+}
+func main() {
+var s *Student
+println(s.Age) // s 是 nil，这里必然崩
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;对应的汇编代码中，&lt;code&gt;println(s.Age)&lt;/code&gt; 被编译为：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-asm"&gt;mov 0x48(%rsp), %rax ; 从栈上加载指针 s 到 rax
+test %al, (%rax) ; ★ 奇怪的指令
+mov (%rax), %rax ; 实际读取 s.Age（第一个字段偏移 0）
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;第三行的 &lt;code&gt;test %al, (%rax)&lt;/code&gt; 是干什么的？&lt;code&gt;test&lt;/code&gt; 在 x86 中是按位 AND，只设置标志位不写回结果，通常用于比较。但这里 &lt;code&gt;%al&lt;/code&gt; 是 AX 的低 8 位，&lt;code&gt;(%rax)&lt;/code&gt; 是 rax 指向的内存——把寄存器低字节和指针指向的内存做 AND，有什么意义？&lt;/p&gt;
+&lt;p&gt;答案是：&lt;strong&gt;它不关心 AND 的结果，而是想让 CPU 尝试读取 &lt;code&gt;(%rax)&lt;/code&gt; 指向的内存地址。&lt;/strong&gt; 如果 &lt;code&gt;rax&lt;/code&gt; 是 0（nil），访问地址 0 会立即触发 page fault → SIGSEGV。编译器在 &lt;strong&gt;实际读取字段值之前&lt;/strong&gt; 主动插入了一次地址 0 的试探访问，这就是 Go 编译器的显式 nil 检查。&lt;/p&gt;</description></item><item><title>Starlark 在 Delve 中的实战：从脚本编写到踩坑记录</title><link>/blog/2025-05-25-dlv-starlark2/</link><pubDate>Sun, 25 May 2025 01:00:00 +0800</pubDate><guid>/blog/2025-05-25-dlv-starlark2/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;&lt;a href="/blog/delve/2025-05-25-dlv-starlark"&gt;前一篇&lt;/a&gt; 介绍了 Delve Starlark 脚本系统的架构和内置函数。本文通过一个完整的实战示例，展示如何编写 Starlark 脚本来自动化调试流程，并记录编写过程中容易踩到的坑。&lt;/p&gt;
 &lt;h1 id="示例程序"&gt;示例程序 &lt;a href="#%e7%a4%ba%e4%be%8b%e7%a8%8b%e5%ba%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;假设我们要调试下面这个简单的 Go 程序：&lt;/p&gt;
@@ -3133,7 +3780,61 @@ ReportCrashes: true,
 &lt;li&gt;&lt;strong&gt;父进程&lt;/strong&gt;：即 Delve 主进程，负责在运行时通过 mmap 高效记录计数数据。这部分开销极小，不会影响调试性能&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;子进程&lt;/strong&gt;：独立进程，通过环境变量 &lt;code&gt;GO_TELEMETRY_CHILD&lt;/code&gt; 区分身份，负责读取 mmap 文件并将数据上报到 Go 遥测服务端&lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;这种分离的核心价值是：&lt;strong&gt;上报操作（网络 I/O、序列化、文件轮转）完全不影响主调试进程&lt;/strong&gt;。即使上报失败，也不会对调试会话产生任何副作用。&lt;/p&gt;</description></item><item><title>使用etcd做服务发现的13条教训</title><link>/blog/2025-04-25-%E5%BA%94%E7%94%A8%E5%AE%9E%E8%B7%B5_%E4%BD%BF%E7%94%A8etcd%E5%81%9A%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0%E7%9A%84%E6%95%99%E8%AE%AD/</link><pubDate>Fri, 25 Apr 2025 10:00:00 +0800</pubDate><guid>/blog/2025-04-25-%E5%BA%94%E7%94%A8%E5%AE%9E%E8%B7%B5_%E4%BD%BF%E7%94%A8etcd%E5%81%9A%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0%E7%9A%84%E6%95%99%E8%AE%AD/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;这种分离的核心价值是：&lt;strong&gt;上报操作（网络 I/O、序列化、文件轮转）完全不影响主调试进程&lt;/strong&gt;。即使上报失败，也不会对调试会话产生任何副作用。&lt;/p&gt;</description></item><item><title>Go runtime 中的 g0：调度器的特殊协程</title><link>/blog/2025-05-20-go-runtime-g0/</link><pubDate>Tue, 20 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-20-go-runtime-g0/</guid><description>&lt;p&gt;Go runtime 中的 g0 是不是就类似于 Linux 操作系统中的 idle 进程，它主要是用来做调度相关的工作，比如没有 goroutine 可执行时就切换到 g0，g0 执行调度相关的工作？&lt;/p&gt;
+&lt;p&gt;答案是肯定的。下面详细解释。&lt;/p&gt;
+&lt;h2 id="1-g0-与-idle-进程的相似之处"&gt;1. g0 与 idle 进程的相似之处 &lt;a href="#1-g0-%e4%b8%8e-idle-%e8%bf%9b%e7%a8%8b%e7%9a%84%e7%9b%b8%e4%bc%bc%e4%b9%8b%e5%a4%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;两者都是系统级别的&amp;quot;空闲&amp;quot;执行实体&lt;/li&gt;
+&lt;li&gt;都负责调度和系统级任务&lt;/li&gt;
+&lt;li&gt;当没有其他任务可执行时，都会切换到它们&lt;/li&gt;
+&lt;li&gt;都运行在特殊的系统栈上&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="2-g0-的主要职责"&gt;2. g0 的主要职责 &lt;a href="#2-g0-%e7%9a%84%e4%b8%bb%e8%a6%81%e8%81%8c%e8%b4%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;执行调度器逻辑，寻找下一个要运行的 goroutine&lt;/li&gt;
+&lt;li&gt;执行垃圾回收等系统级任务&lt;/li&gt;
+&lt;li&gt;处理系统调用&lt;/li&gt;
+&lt;li&gt;处理网络轮询&lt;/li&gt;
+&lt;li&gt;处理定时器&lt;/li&gt;
+&lt;li&gt;处理信号处理等&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="3-从代码中看-g0"&gt;3. 从代码中看 g0 &lt;a href="#3-%e4%bb%8e%e4%bb%a3%e7%a0%81%e4%b8%ad%e7%9c%8b-g0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;if g.ID == 0 {
+// The runtime uses a special goroutine with ID == 0 to mark that the
+// current goroutine is executing on the system stack (sometimes also
+// referred to as the g0 stack or scheduler stack).
+mvar, err := g.variable.structMember(&amp;quot;m&amp;quot;)
+if err != nil {
+return nil, err
+}
+curgvar, err := mvar.structMember(&amp;quot;curg&amp;quot;)
+if err != nil {
+return nil, err
+}
+g, err = curgvar.parseG()
+if err != nil {
+if _, ok := err.(ErrNoGoroutine); ok {
+err = ErrNoGoroutine{thread.ThreadID()}
+}
+return nil, err
+}
+g.SystemStack = true
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="4-主要区别"&gt;4. 主要区别 &lt;a href="#4-%e4%b8%bb%e8%a6%81%e5%8c%ba%e5%88%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;g0 是 Go runtime 层面的概念，而 idle 进程是操作系统层面的概念&lt;/li&gt;
+&lt;li&gt;g0 是每个 M（系统线程）都有的，而 idle 进程是系统全局的&lt;/li&gt;
+&lt;li&gt;g0 除了调度外还负责很多 Go runtime 特有的系统级任务&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="5-工作流程"&gt;5. 工作流程 &lt;a href="#5-%e5%b7%a5%e4%bd%9c%e6%b5%81%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;当没有用户 goroutine 可执行时，会切换到 g0&lt;/li&gt;
+&lt;li&gt;g0 执行调度器逻辑，寻找下一个可运行的 goroutine&lt;/li&gt;
+&lt;li&gt;如果找到可运行的 goroutine，则切换到该 goroutine&lt;/li&gt;
+&lt;li&gt;如果没找到，则继续执行 g0 的其他系统级任务&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;所以 g0 确实在 Go runtime 中扮演着类似操作系统 idle 进程的角色，是调度和系统级任务的核心执行实体。&lt;/p&gt;</description></item><item><title>使用etcd做服务发现的13条教训</title><link>/blog/2025-04-25-%E5%BA%94%E7%94%A8%E5%AE%9E%E8%B7%B5_%E4%BD%BF%E7%94%A8etcd%E5%81%9A%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0%E7%9A%84%E6%95%99%E8%AE%AD/</link><pubDate>Fri, 25 Apr 2025 10:00:00 +0800</pubDate><guid>/blog/2025-04-25-%E5%BA%94%E7%94%A8%E5%AE%9E%E8%B7%B5_%E4%BD%BF%E7%94%A8etcd%E5%81%9A%E6%9C%8D%E5%8A%A1%E5%8F%91%E7%8E%B0%E7%9A%84%E6%95%99%E8%AE%AD/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;在我们的项目中，我们使用ETCD作为我们的服务注册发现中心，在业务上线前的野蛮生长期，我们大部分时间用在开发产品功能上，对于真正的分布式系统层面可能面临的一些挑战，团队初期并没有花太多时间去打磨。在经历了很多轮的对外CE之后，其实用户量带来的性能层面的挑战极小，与之对应的部署的服务实例数量、机器数量在那个时候也没有构成太多挑战。&lt;/p&gt;
 &lt;p&gt;真正的挑战来自产品上线后，大量用户涌入，产品也成为了爆款，惊喜之余也发现了一些隐藏了很久没有被充分重视的性能缺陷，以及潜在的巨大风险点。可以说，在过去的实践中我们曾经犯过不少错误。如果你们也想在ETCD基础上构建可靠的、高可用的服务注册发现能力，你们需要注意避免犯相同的错误。&lt;/p&gt;
 &lt;h2 id="实践中的13条教训"&gt;实践中的13条教训 &lt;a href="#%e5%ae%9e%e8%b7%b5%e4%b8%ad%e7%9a%8413%e6%9d%a1%e6%95%99%e8%ae%ad" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
@@ -3649,7 +4350,29 @@ java -jar bfg.jar --strip-blobs-bigger-than 100M your-repo.git
 java -jar bfg.jar --delete-files '*.{jar,war,zip,tar.gz,tgz}' your-repo.git
 java -jar bfg.jar --delete-folders build your-repo.git
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;BFG 默认保护当前 HEAD 上的文件不会被删——这比 &lt;code&gt;git filter-branch&lt;/code&gt; 安全。&lt;/p&gt;</description></item><item><title>vscode-常规配置以及同步说明</title><link>/blog/2024-04-14-vscode_%E5%B8%B8%E8%A7%84%E9%85%8D%E7%BD%AE%E5%8F%8A%E5%90%8C%E6%AD%A5%E8%AF%B4%E6%98%8E/</link><pubDate>Sun, 14 Apr 2024 23:00:00 +0800</pubDate><guid>/blog/2024-04-14-vscode_%E5%B8%B8%E8%A7%84%E9%85%8D%E7%BD%AE%E5%8F%8A%E5%90%8C%E6%AD%A5%E8%AF%B4%E6%98%8E/</guid><description>&lt;h2 id="前言"&gt;前言 &lt;a href="#%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;BFG 默认保护当前 HEAD 上的文件不会被删——这比 &lt;code&gt;git filter-branch&lt;/code&gt; 安全。&lt;/p&gt;</description></item><item><title>Go 工具链中的 linker 与 ld</title><link>/blog/2024-04-15-go-linker/</link><pubDate>Mon, 15 Apr 2024 00:00:00 +0800</pubDate><guid>/blog/2024-04-15-go-linker/</guid><description>&lt;p&gt;&lt;code&gt;go build&lt;/code&gt; 命令在编译 Go 程序时会涉及到两个重要的步骤：编译（compile）和链接（link）。这两个步骤分别由编译器（compiler）和链接器（linker）完成。&lt;/p&gt;
+&lt;h2 id="编译器与链接器"&gt;编译器与链接器 &lt;a href="#%e7%bc%96%e8%af%91%e5%99%a8%e4%b8%8e%e9%93%be%e6%8e%a5%e5%99%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;编译器&lt;/strong&gt;的工作是将 Go 源代码转换为机器代码，但这些机器代码还不能直接运行，因为它们可能依赖于其他的包或者库。这就需要链接器来处理。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;链接器&lt;/strong&gt;的工作是将编译器生成的机器代码与它们所依赖的其他包或库链接起来，生成一个可以直接运行的程序。在 Go 语言中，链接器的工作是由 &lt;code&gt;go tool link&lt;/code&gt; 完成的。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="go-linker-vs-gnu-ld"&gt;Go linker vs GNU ld &lt;a href="#go-linker-vs-gnu-ld" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;ld&lt;/strong&gt; 是 Linux 系统中的一个工具，全称为 GNU linker，它也是一个链接器。&lt;/li&gt;
+&lt;li&gt;但在 Go 语言的编译过程中，Go 使用的是&lt;strong&gt;自己的链接器&lt;/strong&gt;，而不是 ld。&lt;/li&gt;
+&lt;li&gt;虽然 ld 和 Go 的链接器都是链接器，但它们是不同的工具。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Go 选择实现自己的链接器，主要是为了：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;更好地理解 Go 特有的数据结构（如 pclntab、栈映射等）&lt;/li&gt;
+&lt;li&gt;支持特定的优化（如死码消除、函数去重）&lt;/li&gt;
+&lt;li&gt;避免对外部工具链的依赖&lt;/li&gt;
+&lt;li&gt;提供更快的链接速度&lt;/li&gt;
+&lt;/ul&gt;</description></item><item><title>vscode-常规配置以及同步说明</title><link>/blog/2024-04-14-vscode_%E5%B8%B8%E8%A7%84%E9%85%8D%E7%BD%AE%E5%8F%8A%E5%90%8C%E6%AD%A5%E8%AF%B4%E6%98%8E/</link><pubDate>Sun, 14 Apr 2024 23:00:00 +0800</pubDate><guid>/blog/2024-04-14-vscode_%E5%B8%B8%E8%A7%84%E9%85%8D%E7%BD%AE%E5%8F%8A%E5%90%8C%E6%AD%A5%E8%AF%B4%E6%98%8E/</guid><description>&lt;h2 id="前言"&gt;前言 &lt;a href="#%e5%89%8d%e8%a8%80" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;我经常在项目开发过程中针对不同项目，甚至是相同项目的不同模块阶段，频繁调整配置以满足当时的需要，我觉得能够快速调整vscode配置满足开发人员需要，是一项必备技能。&lt;/p&gt;
 &lt;p&gt;这里就简单总结下vscode配置调整过程中，一些比较有价值的信息。&lt;/p&gt;
 &lt;h2 id="搜索配置项"&gt;搜索配置项 &lt;a href="#%e6%90%9c%e7%b4%a2%e9%85%8d%e7%bd%ae%e9%a1%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;

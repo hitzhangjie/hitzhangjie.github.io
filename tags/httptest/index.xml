@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Httptest on</title><link>/tags/httptest/</link><description>Recent content in Httptest on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Jan 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/httptest/index.xml" rel="self" type="application/rss+xml"/><item><title>Go 1.26 httptest.Server 的 example.com 拦截机制</title><link>/blog/2026-01-06-go-httptest-server/</link><pubDate>Tue, 06 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-06-go-httptest-server/</guid><description>&lt;p&gt;从 Go 1.26 开始，&lt;code&gt;httptest.NewTLSServer&lt;/code&gt;（以及启动了 TLS 的 &lt;code&gt;httptest.Server&lt;/code&gt;）默认会将其生成的自签名证书的 &lt;strong&gt;SAN (Subject Alternative Name)&lt;/strong&gt; 设置为 &lt;code&gt;example.com&lt;/code&gt;。同时，它会自动配置测试进程的默认 &lt;code&gt;http.Transport&lt;/code&gt;，将发往 &lt;code&gt;example.com&lt;/code&gt; 的请求拦截并重定向到这个本地测试服务器。&lt;/p&gt;
+&lt;p&gt;如果你在代码中尝试访问真正的 &lt;code&gt;https://example.com&lt;/code&gt;：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;拦截：&lt;/strong&gt; 请求会被导向你的本地 &lt;code&gt;httptest&lt;/code&gt; 服务器。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;证书错误：&lt;/strong&gt; 真正的 &lt;code&gt;example.com&lt;/code&gt; 应该有其权威证书，但测试服务器返回的是自签名证书，导致验证失败（报错）。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;h2 id="如果要访问真正的-examplecom-怎么办"&gt;如果要访问真正的 example.com 怎么办？ &lt;a href="#%e5%a6%82%e6%9e%9c%e8%a6%81%e8%ae%bf%e9%97%ae%e7%9c%9f%e6%ad%a3%e7%9a%84-examplecom-%e6%80%8e%e4%b9%88%e5%8a%9e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;如果你在测试中确实需要访问互联网上的真实 &lt;code&gt;example.com&lt;/code&gt;，有几种解决方法：&lt;/p&gt;
+&lt;h3 id="方法-a手动配置-transport推荐"&gt;方法 A：手动配置 Transport（推荐） &lt;a href="#%e6%96%b9%e6%b3%95-a%e6%89%8b%e5%8a%a8%e9%85%8d%e7%bd%ae-transport%e6%8e%a8%e8%8d%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;httptest&lt;/code&gt; 默认只修改全局的 &lt;code&gt;http.DefaultTransport&lt;/code&gt;。如果你手动创建一个不受测试环境干扰的 &lt;code&gt;Transport&lt;/code&gt;，就可以绕过这个特性。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;// 创建一个干净的 Transport，不使用 httptestServer.Client() 或 DefaultClient
+tr := &amp;amp;http.Transport{}
+client := &amp;amp;http.Client{Transport: tr}
+resp, err := client.Get(&amp;quot;https://example.com&amp;quot;) // 这将访问真实的互联网地址
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="方法-b暂时禁用该特性"&gt;方法 B：暂时禁用该特性 &lt;a href="#%e6%96%b9%e6%b3%95-b%e6%9a%82%e6%97%b6%e7%a6%81%e7%94%a8%e8%af%a5%e7%89%b9%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;你可以通过环境变量 &lt;code&gt;GODEBUG&lt;/code&gt; 来禁用这个新行为：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;GODEBUG=httptestlocal=0 go test ./...
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="方法-c使用不同的测试域名"&gt;方法 C：使用不同的测试域名 &lt;a href="#%e6%96%b9%e6%b3%95-c%e4%bd%bf%e7%94%a8%e4%b8%8d%e5%90%8c%e7%9a%84%e6%b5%8b%e8%af%95%e5%9f%9f%e5%90%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;如果你的代码是为了测试&amp;quot;请求外部域名&amp;quot;，尽量不要在测试用例中使用 &lt;code&gt;example.com&lt;/code&gt; 作为目标，改用其他合法的占位符，或者直接使用测试服务器提供的 &lt;code&gt;ts.URL&lt;/code&gt;。&lt;/p&gt;</description></item></channel></rss>

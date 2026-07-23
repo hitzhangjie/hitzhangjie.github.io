@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Compiler on</title><link>/tags/compiler/</link><description>Recent content in Compiler on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 23 Jan 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/compiler/index.xml" rel="self" type="application/rss+xml"/><item><title>Go 汇编语言详解</title><link>/blog/2026-01-23-go%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E8%AF%A6%E8%A7%A3/</link><pubDate>Fri, 23 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-23-go%E6%B1%87%E7%BC%96%E8%AF%AD%E8%A8%80%E8%AF%A6%E8%A7%A3/</guid><description>&lt;h2 id="引出问题"&gt;引出问题 &lt;a href="#%e5%bc%95%e5%87%ba%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;写 Go 的人，迟早会碰到需要读汇编的场景。比如用 pprof 做 CPU 分析，火焰图上函数名后面的指令你看不懂；比如你想搞清楚一个 channel 操作到底编译成了什么；比如 Go 编译器的 nil 检查到底长什么样。&lt;/p&gt;
+&lt;p&gt;Go 的汇编不是 x86 AT&amp;amp;T，也不是 Intel 语法——它基于 Plan 9 汇编，Go 编译器在此基础上做了大量定制。这篇文章的目标是让你读完能看懂 &lt;code&gt;go tool compile -S&lt;/code&gt; 的输出，也能自己写 &lt;code&gt;.s&lt;/code&gt; 文件。&lt;/p&gt;
+&lt;h2 id="go-assembly-是什么"&gt;Go Assembly 是什么 &lt;a href="#go-assembly-%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Go 编译器（&lt;code&gt;gc&lt;/code&gt;，不是 gccgo）的汇编器源自 Plan 9 操作系统的汇编器。Plan 9 是 Bell Labs 在 Unix 之后开发的操作系统，Go 的三位创始人（Rob Pike、Ken Thompson、Robert Griesemer）都曾在 Bell Labs 工作，他们在设计 Go 时沿用了 Plan 9 汇编的风格。&lt;/p&gt;
+&lt;p&gt;为什么要自己搞一套而不是直接用 AT&amp;amp;T 或 Intel 语法？核心原因是 &lt;strong&gt;可移植性&lt;/strong&gt;。Go 汇编本质上是一层&amp;quot;伪汇编&amp;quot;——它是&lt;strong&gt;架构无关&lt;/strong&gt;的中间表示。同一段 Go 汇编代码，经过不同架构的汇编器处理后，会生成对应的机器码。这一点和 LLVM IR 的思路类似，只不过 Go 汇编更贴近机器，保留了寄存器和具体指令，但用统一的助记符和操作数顺序屏蔽了平台差异。&lt;/p&gt;</description></item><item><title>Go 语言精确 GC 实现机制深度解析</title><link>/blog/2026-01-23-go-precise-gc/</link><pubDate>Fri, 23 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-23-go-precise-gc/</guid><description>&lt;h2 id="精确-gc-概述"&gt;精确 GC 概述 &lt;a href="#%e7%b2%be%e7%a1%ae-gc-%e6%a6%82%e8%bf%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;精确 GC（Precise Garbage Collection）是指垃圾收集器能够准确识别所有指针位置，不会将非指针数据当作指针，也不会漏掉任何指针。这与保守式 GC（Conservative GC）形成对比，保守式 GC 可能会将一些看起来像指针的值当作指针来处理，导致本该回收的对象不敢回收，该移动的对象不敢移动，造成内存碎片。&lt;/p&gt;
+&lt;h3 id="精确-gc-的优势"&gt;精确 GC 的优势 &lt;a href="#%e7%b2%be%e7%a1%ae-gc-%e7%9a%84%e4%bc%98%e5%8a%bf" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;准确性&lt;/strong&gt;：不会误标记非指针数据，避免内存泄漏或错误回收&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;性能&lt;/strong&gt;：不需要扫描所有可能是指针的数据，只扫描已知的指针位置&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;可预测性&lt;/strong&gt;：GC 行为更加可预测，便于调试和优化&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id="go-语言精确-gc-的实现方式"&gt;Go 语言精确 GC 的实现方式 &lt;a href="#go-%e8%af%ad%e8%a8%80%e7%b2%be%e7%a1%ae-gc-%e7%9a%84%e5%ae%9e%e7%8e%b0%e6%96%b9%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Go 语言通过以下机制实现精确 GC：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;pclntab&lt;/strong&gt;：记录程序计数器（PC）与各种元信息的映射关系&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;栈映射表（Stack Map）&lt;/strong&gt;：记录函数栈帧中哪些位置包含指针&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;参数映射表（Args Map）&lt;/strong&gt;：记录函数参数中哪些位置包含指针&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;PCDATA 指令&lt;/strong&gt;：在汇编代码中标记 PC 相关的数据变化&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;FUNCDATA 指令&lt;/strong&gt;：在汇编代码中标记函数级别的元数据&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;h2 id="pclntab-详解"&gt;pclntab 详解 &lt;a href="#pclntab-%e8%af%a6%e8%a7%a3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;pclntab（Program Counter Line Table）是 Go 运行时系统中的重要数据结构，记录了 PC 与多种元信息的映射关系，包括函数信息、行号信息、文件信息、栈映射信息和 GC 相关信息。&lt;/p&gt;
+&lt;h3 id="pclntab-的结构"&gt;pclntab 的结构 &lt;a href="#pclntab-%e7%9a%84%e7%bb%93%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;根据 &lt;code&gt;src/cmd/link/internal/ld/pcln.go&lt;/code&gt;，pclntab 的布局如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.gopclntab/__gopclntab [elf/macho section]
+runtime.pclntab
+runtime.pcheader (8-byte magic, nfunc, offsets)
+runtime.funcnametab (null terminated function names)
+runtime.cutab (CU file index mapping)
+runtime.filetab (null terminated filename strings)
+runtime.pctab (deduplicated pc data)
+runtime.functab (function table with PC and func struct offsets)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="_func-结构体"&gt;_func 结构体 &lt;a href="#_func-%e7%bb%93%e6%9e%84%e4%bd%93" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type _func struct {
+entryOff uint32 // start pc offset
+nameOff int32 // function name index
+args int32 // in/out args size
+deferreturn uint32
+pcsp uint32 // stack pointer delta table
+pcfile uint32 // file number table
+pcln uint32 // line number table
+npcdata uint32
+cuOffset uint32
+startLine int32
+funcID abi.FuncID
+flag abi.FuncFlag
+nfuncdata uint8
+// followed by pcdata[npcdata]uint32 and funcdata[nfuncdata]uint32
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;hr&gt;
+&lt;h2 id="pcdata-和-funcdata-指令"&gt;PCDATA 和 FUNCDATA 指令 &lt;a href="#pcdata-%e5%92%8c-funcdata-%e6%8c%87%e4%bb%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;PCDATA 和 FUNCDATA 是 Go 编译器生成的伪指令，不会生成实际的机器指令，而是为链接器提供元数据信息。&lt;/p&gt;</description></item><item><title>如何让 Go 工具链生成 DWARF 调试信息</title><link>/blog/2026-01-23-go-toolchain-dwarf/</link><pubDate>Fri, 23 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-23-go-toolchain-dwarf/</guid><description>&lt;p&gt;如果你想调试 Go 编译工具链本身，会发现默认的 Go 正式版在构建 &lt;code&gt;go/src/cmd/...&lt;/code&gt; 时不会生成 DWARF 调试信息。如果想让 Go toolchain 也生成 DWARF 调试信息，方便做相关研究时通过调试器跟踪，该怎么办？&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="版本检查和-isrelease-设置"&gt;版本检查和 isRelease 设置 &lt;a href="#%e7%89%88%e6%9c%ac%e6%a3%80%e6%9f%a5%e5%92%8c-isrelease-%e8%ae%be%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 &lt;code&gt;src/cmd/dist/build.go&lt;/code&gt; 第 272-273 行：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;goversion := findgoversion()
+isRelease = strings.HasPrefix(goversion, &amp;quot;release.&amp;quot;) || strings.HasPrefix(goversion, &amp;quot;go&amp;quot;)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="dwarf-调试信息禁用逻辑"&gt;DWARF 调试信息禁用逻辑 &lt;a href="#dwarf-%e8%b0%83%e8%af%95%e4%bf%a1%e6%81%af%e7%a6%81%e7%94%a8%e9%80%bb%e8%be%91" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;同一文件第 1346-1352 行：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;if isRelease || os.Getenv(&amp;quot;GO_BUILDER_NAME&amp;quot;) != &amp;quot;&amp;quot; {
+// Add -trimpath for reproducible builds of releases.
+// Include builders so that -trimpath is well-tested ahead of releases.
+// Do not include local development, so that people working in the
+// main branch for day-to-day work on the Go toolchain itself can
+// still have full paths for stack traces for compiler crashes and the like.
+env = append(env, &amp;quot;GOFLAGS=-trimpath -ldflags=-w -gcflags=cmd/...=-dwarf=false&amp;quot;)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="工作原理"&gt;工作原理 &lt;a href="#%e5%b7%a5%e4%bd%9c%e5%8e%9f%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;code&gt;findgoversion()&lt;/code&gt; 读取 &lt;code&gt;VERSION&lt;/code&gt; 文件的第一行作为版本字符串。&lt;/li&gt;
+&lt;li&gt;如果版本字符串以 &lt;code&gt;&amp;quot;release.&amp;quot;&lt;/code&gt; 或 &lt;code&gt;&amp;quot;go&amp;quot;&lt;/code&gt; 开头，&lt;code&gt;isRelease&lt;/code&gt; 被设为 &lt;code&gt;true&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;当 &lt;code&gt;isRelease&lt;/code&gt; 为 &lt;code&gt;true&lt;/code&gt; 时，会添加 &lt;code&gt;-dwarf=false&lt;/code&gt;，从而禁用 DWARF 调试信息。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id="绕过方法"&gt;绕过方法 &lt;a href="#%e7%bb%95%e8%bf%87%e6%96%b9%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 &lt;code&gt;VERSION&lt;/code&gt; 文件的第一行前加前缀（如 &lt;code&gt;&amp;quot;notes/&amp;quot;&lt;/code&gt; 或 &lt;code&gt;&amp;quot;tests/&amp;quot;&lt;/code&gt;），例如：&lt;/p&gt;</description></item><item><title>理解 Go 逃逸分析：变量与值的区别</title><link>/blog/2025-07-18-go-escape-analysis/</link><pubDate>Fri, 18 Jul 2025 00:00:00 +0800</pubDate><guid>/blog/2025-07-18-go-escape-analysis/</guid><description>&lt;p&gt;一个常见的困惑点：当工具报告关于变量位置的矛盾信息时，到底哪个是对的？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;go build -gcflags '-m'&lt;/code&gt;&lt;/strong&gt; 可能报告 &lt;code&gt;variable escapes to heap&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;调试器 Delve&lt;/strong&gt; 可能报告同一个变量是 &lt;code&gt;stack allocated&lt;/code&gt;。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;两者都是对的。关键在于理解&lt;strong&gt;变量&lt;/strong&gt;（命名存储位置）和它持有的&lt;strong&gt;值&lt;/strong&gt;之间的区别。&lt;/p&gt;
+&lt;h2 id="1-变量栈上的一个位置"&gt;1. 变量：栈上的一个位置 &lt;a href="#1-%e5%8f%98%e9%87%8f%e6%a0%88%e4%b8%8a%e7%9a%84%e4%b8%80%e4%b8%aa%e4%bd%8d%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当你在函数中声明 &lt;code&gt;i := 0&lt;/code&gt; 时，Go 编译器默认会在该函数的&lt;strong&gt;栈帧&lt;/strong&gt;上分配空间。栈是管理函数局部变量的高效内存区域。&lt;/p&gt;
+&lt;p&gt;Delve 在运行时检查程序状态。当你 &lt;code&gt;watch i&lt;/code&gt; 时，它在当前作用域中找到命名的变量 &lt;code&gt;i&lt;/code&gt;，该变量物理上位于栈上。因此 Delve 正确地将其识别为&amp;quot;栈分配变量&amp;quot;。&lt;/p&gt;
+&lt;h2 id="2-值一个副本逃逸到堆上"&gt;2. 值：一个副本逃逸到堆上 &lt;a href="#2-%e5%80%bc%e4%b8%80%e4%b8%aa%e5%89%af%e6%9c%ac%e9%80%83%e9%80%b8%e5%88%b0%e5%a0%86%e4%b8%8a" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;编译器的逃逸分析消息不是由变量本身触发的，而是由它的&lt;strong&gt;值如何被使用&lt;/strong&gt;触发的。一个常见触发器是将值传递给接受 &lt;code&gt;interface{}&lt;/code&gt; 的函数，比如 &lt;code&gt;fmt.Println(...)&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;当调用 &lt;code&gt;fmt.Println(i)&lt;/code&gt; 时，运行时发生以下事情：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Go 需要将具体类型（&lt;code&gt;int&lt;/code&gt;）转换为 &lt;code&gt;interface{}&lt;/code&gt;。这个过程称为&lt;strong&gt;装箱（boxing）&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;为了&amp;quot;装箱&amp;quot;这个值，运行时在&lt;strong&gt;堆&lt;/strong&gt;上分配一小块内存。&lt;/li&gt;
+&lt;li&gt;然后将 &lt;code&gt;i&lt;/code&gt; 的值从栈&lt;strong&gt;复制&lt;/strong&gt;到这个新的堆分配中。&lt;/li&gt;
+&lt;li&gt;生成的 &lt;code&gt;interface{}&lt;/code&gt; 值包含指向这个堆副本的指针，这就是传给 &lt;code&gt;fmt.Println&lt;/code&gt; 的内容。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;编译器的逃逸分析在编译时检测到这个需求。它看到 &lt;code&gt;i&lt;/code&gt; 的值*必须*被复制到堆上才能满足调用。消息 &lt;code&gt;i escapes to heap&lt;/code&gt; 是编译器在说：&amp;ldquo;我已经生成了代码，将在此时为 &lt;code&gt;i&lt;/code&gt; 持有的值触发堆分配。&amp;rdquo;&lt;/p&gt;
+&lt;h3 id="类比便利贴和文件柜"&gt;类比：便利贴和文件柜 &lt;a href="#%e7%b1%bb%e6%af%94%e4%be%bf%e5%88%a9%e8%b4%b4%e5%92%8c%e6%96%87%e4%bb%b6%e6%9f%9c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;栈&lt;/strong&gt;是你的办公桌。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;变量 &lt;code&gt;i&lt;/code&gt;&lt;/strong&gt; 是桌上的便利贴。你在上面写了数字 &lt;code&gt;1&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;堆&lt;/strong&gt;是走廊对面的共享文件柜。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;&lt;code&gt;fmt.Println&lt;/code&gt;&lt;/strong&gt; 是一个只接受文件柜中官方文件夹文档的同事。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;要传递这个数字给同事，你不能直接递给便利贴。你必须：&lt;/p&gt;</description></item><item><title>Go 空指针检查：从一行汇编指令到 SIGSEGV 的完整链路</title><link>/blog/2025-05-26-%E7%BC%96%E8%AF%91%E5%99%A8_%E7%A9%BA%E6%8C%87%E9%92%88%E6%A3%80%E6%9F%A5nilcheck/</link><pubDate>Mon, 26 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-26-%E7%BC%96%E8%AF%91%E5%99%A8_%E7%A9%BA%E6%8C%87%E9%92%88%E6%A3%80%E6%9F%A5nilcheck/</guid><description>&lt;h2 id="引出问题"&gt;引出问题 &lt;a href="#%e5%bc%95%e5%87%ba%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;前阵子写了一段简单的 Go 代码，反汇编后发现了一些不太一样的指令。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type Student struct {
+Age int
+}
+func main() {
+var s *Student
+println(s.Age) // s 是 nil，这里必然崩
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;对应的汇编代码中，&lt;code&gt;println(s.Age)&lt;/code&gt; 被编译为：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-asm"&gt;mov 0x48(%rsp), %rax ; 从栈上加载指针 s 到 rax
+test %al, (%rax) ; ★ 奇怪的指令
+mov (%rax), %rax ; 实际读取 s.Age（第一个字段偏移 0）
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;第三行的 &lt;code&gt;test %al, (%rax)&lt;/code&gt; 是干什么的？&lt;code&gt;test&lt;/code&gt; 在 x86 中是按位 AND，只设置标志位不写回结果，通常用于比较。但这里 &lt;code&gt;%al&lt;/code&gt; 是 AX 的低 8 位，&lt;code&gt;(%rax)&lt;/code&gt; 是 rax 指向的内存——把寄存器低字节和指针指向的内存做 AND，有什么意义？&lt;/p&gt;
+&lt;p&gt;答案是：&lt;strong&gt;它不关心 AND 的结果，而是想让 CPU 尝试读取 &lt;code&gt;(%rax)&lt;/code&gt; 指向的内存地址。&lt;/strong&gt; 如果 &lt;code&gt;rax&lt;/code&gt; 是 0（nil），访问地址 0 会立即触发 page fault → SIGSEGV。编译器在 &lt;strong&gt;实际读取字段值之前&lt;/strong&gt; 主动插入了一次地址 0 的试探访问，这就是 Go 编译器的显式 nil 检查。&lt;/p&gt;</description></item></channel></rss>

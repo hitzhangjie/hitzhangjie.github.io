@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Gopls on</title><link>/tags/gopls/</link><description>Recent content in Gopls on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 26 Mar 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/gopls/index.xml" rel="self" type="application/rss+xml"/><item><title>为什么 vscode-go 无法正确处理嵌套子测试</title><link>/blog/2026-03-26-vscode-go-nested-subtests/</link><pubDate>Thu, 26 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-26-vscode-go-nested-subtests/</guid><description>&lt;h2 id="问题描述"&gt;问题描述 &lt;a href="#%e9%97%ae%e9%a2%98%e6%8f%8f%e8%bf%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Go 测试文件中，常用 &lt;code&gt;t.Run&lt;/code&gt; 来组织子测试。vscode-go 的 CodeLens 功能会为每个 &lt;code&gt;t.Run&lt;/code&gt; 生成对应的 &lt;code&gt;go test -run&lt;/code&gt; 命令。但当嵌套超过 2 层时，生成的命令是错误的：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;实际生成&lt;/strong&gt;：&lt;code&gt;go test -run=^TestXXX$/^t2$&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;正确应为&lt;/strong&gt;：&lt;code&gt;go test -run=^TestXXX$/^t1$/^t2$&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;中间的层级 &lt;code&gt;t1&lt;/code&gt; 被漏掉了。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="问题定位"&gt;问题定位 &lt;a href="#%e9%97%ae%e9%a2%98%e5%ae%9a%e4%bd%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Bug 在 &lt;code&gt;extension/src/goRunTestCodelens.ts&lt;/code&gt; 第 112-153 行：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-typescript"&gt;const simpleRunRegex = /t.Run\(&amp;quot;([^&amp;quot;]+)&amp;quot;,/;
+for (let i = f.range.start.line; i &amp;lt; f.range.end.line; i++) {
+const line = document.lineAt(i);
+const simpleMatch = line.text.match(simpleRunRegex);
+// BUG: this does not handle nested subtests. This should
+// be solved once codelens is handled by gopls and not by
+// vscode.
+if (simpleMatch) {
+const subTestName = simpleMatch[1];
+// ... 只记录了名称，不知道嵌套层级
+}
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;代码里甚至有明确的 &lt;code&gt;BUG&lt;/code&gt; 注释，承认这个问题。&lt;/p&gt;</description></item></channel></rss>

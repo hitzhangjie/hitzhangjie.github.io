@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Sync.Once on</title><link>/tags/sync.once/</link><description>Recent content in Sync.Once on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 26 Dec 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/sync.once/index.xml" rel="self" type="application/rss+xml"/><item><title>sync.Once：类型结构体中作为值字段还是指针字段？</title><link>/blog/2025-12-26-sync-once-value-vs-pointer/</link><pubDate>Fri, 26 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-26-sync-once-value-vs-pointer/</guid><description>&lt;h2 id="tldr"&gt;TL;DR &lt;a href="#tldr" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Embed &lt;code&gt;sync.Once&lt;/code&gt; by value&lt;/strong&gt; — 它是一个小结构体，零值即可使用。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;不要用 &lt;code&gt;*sync.Once&lt;/code&gt;&lt;/strong&gt; 除非你真的需要在多个结构体间共享同一个 &lt;code&gt;Once&lt;/code&gt;（或者你想避免复制整个结构体，但这种情况很少见）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;永远不要复制已经调用过 &lt;code&gt;Do&lt;/code&gt; 的结构体&lt;/strong&gt; — &lt;code&gt;sync.Once&lt;/code&gt; 在使用后就不再安全复制了。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="为什么-synconce-通常是值字段"&gt;为什么 sync.Once 通常是值字段 &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88-synconce-%e9%80%9a%e5%b8%b8%e6%98%af%e5%80%bc%e5%ad%97%e6%ae%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;type MyService struct {
+once sync.Once
+// other fields …
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;sync.Once&lt;/code&gt; 只是一个小结构体（目前只有一个指向内部状态的指针），复制开销极低。&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;sync.Once&lt;/code&gt; 的零值已经是一个功能完备的&amp;quot;once&amp;quot;对象，不需要额外分配或初始化。&lt;/li&gt;
+&lt;li&gt;嵌入它（或作为命名字段）提供了地道的 &lt;code&gt;foo.once.Do(...)&lt;/code&gt; 用法。&lt;/li&gt;
+&lt;li&gt;Go 标准库和实际代码中的大多数示例都使用值类型。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="什么时候考虑用指针"&gt;什么时候考虑用指针 &lt;a href="#%e4%bb%80%e4%b9%88%e6%97%b6%e5%80%99%e8%80%83%e8%99%91%e7%94%a8%e6%8c%87%e9%92%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;场景&lt;/th&gt;
+&lt;th&gt;为什么用指针可能有帮助&lt;/th&gt;
+&lt;th&gt;代价&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;在多个结构体间共享同一个 Once&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;所有结构体都调用同一个 once 实例，初始化只运行一次&lt;/td&gt;
+&lt;td&gt;失去 &lt;code&gt;Do&lt;/code&gt; 的自动提升，需要管理指针的生命周期&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;避免复制包含 sync.Once 的结构体&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;如果复制了已调用过 &lt;code&gt;Do&lt;/code&gt; 的结构体，副本可能会再次运行初始化或导致竞态。使用指针可以保持单实例&lt;/td&gt;
+&lt;td&gt;仍要小心不要复制结构体本身；Once 的指针不会魔术般地让结构体安全复制&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;需要延迟创建 Once&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;*sync.Once&lt;/code&gt; 允许你在需要前设为 &lt;code&gt;nil&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;sync.Once&lt;/code&gt; 零值已经是可用的，很少需要这个&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;在绝大多数典型场景中，你都会看到 &lt;code&gt;sync.Once&lt;/code&gt; 作为值嵌入。&lt;/p&gt;</description></item></channel></rss>

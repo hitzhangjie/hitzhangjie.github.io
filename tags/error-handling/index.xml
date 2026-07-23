@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Error-Handling on</title><link>/tags/error-handling/</link><description>Recent content in Error-Handling on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 27 Dec 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/error-handling/index.xml" rel="self" type="application/rss+xml"/><item><title>在业务层和基础设施层之间：错误处理与日志记录的分层原则</title><link>/blog/2025-12-27-go-error-handling-layers/</link><pubDate>Sat, 27 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-27-go-error-handling-layers/</guid><description>&lt;blockquote&gt;
+&lt;p&gt;代码片段（Redis &lt;code&gt;HMGet&lt;/code&gt;）：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;func HMGet(ctx context.Context, key string, fields []string) (any, error) {
+fullKey := &amp;quot;xxxxxxxxxxx&amp;quot;
+fields := []string{f1, f2, f3}
+result, err := redisClient.HMGet(ctx, fullKey, fields...).Result()
+if err != nil {
+log.ErrorContextf(ctx, &amp;quot;hmget failed. key: %s, err: %v&amp;quot;, fullKey, err)
+return nil, err
+}
+...
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这里的疑问是：
+&lt;em&gt;是&lt;/em&gt; 在 &lt;strong&gt;内部&lt;/strong&gt; 打印日志更合适，还是 &lt;strong&gt;返回包装好的错误&lt;/strong&gt; 让调用方自行打印？&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;本文给出一个 &lt;strong&gt;分层&lt;/strong&gt; 的错误与日志处理思路，帮助你在实际项目中做出更清晰、更易维护的决策。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-业务场景快速回顾"&gt;1. 业务场景快速回顾 &lt;a href="#1-%e4%b8%9a%e5%8a%a1%e5%9c%ba%e6%99%af%e5%bf%ab%e9%80%9f%e5%9b%9e%e9%a1%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;基础设施层&lt;/strong&gt;：Redis、数据库、第三方 SDK 等，负责与外部系统的交互。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;业务/服务层&lt;/strong&gt;：业务逻辑、HTTP 处理器、命令/查询处理器等，负责实现业务需求。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;工具/通用库&lt;/strong&gt;：可复用的代码段、工具函数，供多项目使用。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="2-错误与日志的职责拆分"&gt;2. 错误与日志的职责拆分 &lt;a href="#2-%e9%94%99%e8%af%af%e4%b8%8e%e6%97%a5%e5%bf%97%e7%9a%84%e8%81%8c%e8%b4%a3%e6%8b%86%e5%88%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;层次&lt;/th&gt;
+&lt;th&gt;负责什么&lt;/th&gt;
+&lt;th&gt;不能做什么&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;基础设施层&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;只负责执行操作、返回错误&lt;/td&gt;
+&lt;td&gt;打印业务级日志&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;业务层&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;记录错误、统一日志格式&lt;/td&gt;
+&lt;td&gt;随意包装错误（除非需要保留更多上下文）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;工具层&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;只返回错误，必要时做重试&lt;/td&gt;
+&lt;td&gt;打印日志&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;核心原则&lt;/strong&gt;：
+&lt;strong&gt;&amp;ldquo;谁知道错误最有意义？&amp;rdquo;&lt;/strong&gt;——
+业务层最清楚业务语义，基础设施层最清楚技术细节。&lt;/p&gt;</description></item></channel></rss>

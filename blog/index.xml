@@ -91,7 +91,16 @@
 &lt;/ul&gt;
 &lt;h2 id="核心计算引擎特性"&gt;核心计算引擎特性 &lt;a href="#%e6%a0%b8%e5%bf%83%e8%ae%a1%e7%ae%97%e5%bc%95%e6%93%8e%e7%89%b9%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;h3 id="mpp大规模并行处理"&gt;MPP（大规模并行处理） &lt;a href="#mpp%e5%a4%a7%e8%a7%84%e6%a8%a1%e5%b9%b6%e8%a1%8c%e5%a4%84%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;查询被分解为多个子查询，分发到各计算节点并行执行，各节点只处理自己分片内的数据，最后汇总。&lt;/p&gt;</description></item><item><title>版本控制系统选型：Git、Git-LFS 与 Perforce 的综合对比</title><link>/blog/2026-07-22-vcs-comparison-git-lfs-perforce/</link><pubDate>Wed, 22 Jul 2026 08:19:30 +0800</pubDate><guid>/blog/2026-07-22-vcs-comparison-git-lfs-perforce/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;查询被分解为多个子查询，分发到各计算节点并行执行，各节点只处理自己分片内的数据，最后汇总。&lt;/p&gt;</description></item><item><title>当监控数据'说谎'：Split Lock 引发的 CPU 计量失真</title><link>/blog/2026-07-24-cpu-accounting-splitlock/</link><pubDate>Fri, 24 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/2026-07-24-cpu-accounting-splitlock/</guid><description>&lt;p&gt;那次线上告警，除了 &lt;a href="/blog/linux/processor/2025-12-22-cpu-splitlock-avoidance/"&gt;CPU 飙高和 IRQ 突增&lt;/a&gt;，还观察到另一个更反常的现象：&lt;strong&gt;gopsutil 报告的进程单核 CPU 使用率达到了 350%+&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;单核，除以了核数的，理论上不可能超过 100%。&lt;/p&gt;
+&lt;p&gt;这件事困扰了我很久。和 gopsutil 的开发者讨论过，当时我描述了我的timer irq catchup可能导致导致cpu使用率统计出错的想法，see: &lt;a href="https://github.com/shirou/gopsutil/issues/1978"&gt;#1978 VM stealtime&amp;gt;0, process.Percent(0) / cpu.Counts(true) is higher than 100%&lt;/a&gt;。 作者后来专门提交了一个commit，将最大单核CPU使用率锁定在了100%，see: &lt;a href="https://github.com/shirou/gopsutil/commit/38d13964276ced5230d6c8861b39acdd716151c8"&gt;[process]: clamp Percent() to prevent values exceeding 100% per CPU
+&lt;/a&gt;。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;[process]: clamp Percent() to prevent values exceeding 100% per CPU
+In VM environments with steal time or clock skew, CPU jiffies can
+advance faster than wall-clock time, causing process.Percent() to
+return values greater than numcpu * 100%. Clamp the result using
+math.Min, matching the behavior of cpu.calculateBusy().&lt;/p&gt;</description></item><item><title>版本控制系统选型：Git、Git-LFS 与 Perforce 的综合对比</title><link>/blog/2026-07-22-vcs-comparison-git-lfs-perforce/</link><pubDate>Wed, 22 Jul 2026 08:19:30 +0800</pubDate><guid>/blog/2026-07-22-vcs-comparison-git-lfs-perforce/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;团队项目最初用 SVN 管理游戏代码和资产，后来 SVN 频繁出问题，评估后切到了 Perforce。我没有直接参与这个过程，但对背后的选型逻辑很好奇：为什么不用 Git？Git-LFS 能不能解决二进制资产管理的问题？如果 Git 不适合，Perforce 又做对了什么？&lt;/p&gt;
 &lt;p&gt;这些问题其实指向一个更大的话题：&lt;strong&gt;不同版本控制系统各自的设计哲学和权衡&lt;/strong&gt;。Git 诞生于 Linux 内核社区——海量贡献者、文本为主、分布式协作；Perforce 脱胎于游戏和大型企业——巨型仓库、二进制资产、集中式管控。它们在各自的土壤里长成了完全不同的东西。&lt;/p&gt;
 &lt;p&gt;本文尝试从多个维度梳理 Git、Git-LFS 和 Perforce 的设计差异，也顺带提一下 SVN 和一些大型公司的自研方案，希望能提供一个相对完整的视角。&lt;/p&gt;
@@ -5205,7 +5214,7 @@ cargo install git-delta --locked
 delta 0.17.0
 &lt;/code&gt;&lt;/pre&gt;
 &lt;h2 id="配置为-git-pager"&gt;配置为 Git Pager &lt;a href="#%e9%85%8d%e7%bd%ae%e4%b8%ba-git-pager" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;delta 最常用的姿势是替代默认的 &lt;code&gt;less&lt;/code&gt; 作为 git 的 pager。在 &lt;code&gt;~/.gitconfig&lt;/code&gt; 里加几行：&lt;/p&gt;</description></item><item><title>Bash常用命令</title><link>/blog/linux-bash%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/</link><pubDate>Sun, 19 May 2024 09:10:25 +0800</pubDate><guid>/blog/linux-bash%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是一些日常高频使用的Linux命令。&lt;/p&gt;
+&lt;p&gt;delta 最常用的姿势是替代默认的 &lt;code&gt;less&lt;/code&gt; 作为 git 的 pager。在 &lt;code&gt;~/.gitconfig&lt;/code&gt; 里加几行：&lt;/p&gt;</description></item><item><title>Bash常用命令</title><link>/blog/linux-commands/</link><pubDate>Sun, 19 May 2024 09:10:25 +0800</pubDate><guid>/blog/linux-commands/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是一些日常高频使用的Linux命令。&lt;/p&gt;
 &lt;h2 id="navigation"&gt;Navigation &lt;a href="#navigation" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;code&gt;pwd&lt;/code&gt;: print current workdir, &lt;code&gt;print -P&lt;/code&gt; print workdir and resolves symbolic link&lt;/li&gt;
@@ -16418,7 +16427,50 @@ return ! (i &amp;amp; (i-1));
 &lt;hr&gt;
 &lt;h2 id="2-学习资源分级"&gt;2. 学习资源分级 &lt;a href="#2-%e5%ad%a6%e4%b9%a0%e8%b5%84%e6%ba%90%e5%88%86%e7%ba%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;h3 id="21-第一站boom-文档建立-ooo-心智模型"&gt;2.1 第一站：BOOM 文档（建立 OoO 心智模型） &lt;a href="#21-%e7%ac%ac%e4%b8%80%e7%ab%99boom-%e6%96%87%e6%a1%a3%e5%bb%ba%e7%ab%8b-ooo-%e5%bf%83%e6%99%ba%e6%a8%a1%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;精读顺序及重点：&lt;/p&gt;</description></item><item><title/><link>/blog/2018-07-31-mysql%E8%AF%AD%E5%8F%A5/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/blog/2018-07-31-mysql%E8%AF%AD%E5%8F%A5/</guid><description>&lt;p&gt;// TODO 检查是否有保留的必要性&lt;/p&gt;
+&lt;p&gt;精读顺序及重点：&lt;/p&gt;</description></item><item><title/><link>/blog/readme/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/blog/readme/</guid><description>&lt;h1 id="split-lock--cpu-计量失真复现"&gt;Split Lock → CPU 计量失真复现 &lt;a href="#split-lock--cpu-%e8%ae%a1%e9%87%8f%e5%a4%b1%e7%9c%9f%e5%a4%8d%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;线上观察到 gopsutil 报告&lt;strong&gt;单核 CPU 使用率 350%+&lt;/strong&gt;，理论上除以核数后不应超过 100%。
+该异常与同母机另一台 VM 的 split-lock 问题时间点吻合。&lt;/p&gt;
+&lt;h2 id="假说"&gt;假说 &lt;a href="#%e5%81%87%e8%af%b4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;Split-lock → 母机资源争抢 → 我们的 vCPU 被反复 deschedule/resume → guest 内核 timer catchup 补偿 → &lt;code&gt;/proc/[pid]/stat&lt;/code&gt; 的进程 CPU 时间增量与 &lt;code&gt;clock_gettime&lt;/code&gt; 墙钟增量失配 → 单核使用率计算破 100%。&lt;/strong&gt;&lt;/p&gt;
+&lt;h2 id="文件说明"&gt;文件说明 &lt;a href="#%e6%96%87%e4%bb%b6%e8%af%b4%e6%98%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;文件&lt;/th&gt;
+&lt;th&gt;说明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;splitlock.c&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;C 语言 split-lock 触发程序（跨 cache line 的 lock add）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;main.go&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Go 语言 CPU 监控程序（复现 gopsutil 的计算逻辑）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;Dockerfile&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;Docker 环境（演示用，不会复现 350% 异常）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;vm-setup.sh&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;QEMU/KVM 完整复现脚本（需要真实 VM）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;Makefile&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;构建脚本&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="快速开始"&gt;快速开始 &lt;a href="#%e5%bf%ab%e9%80%9f%e5%bc%80%e5%a7%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="1-本地编译运行不触发-split-lock"&gt;1. 本地编译运行（不触发 split-lock） &lt;a href="#1-%e6%9c%ac%e5%9c%b0%e7%bc%96%e8%af%91%e8%bf%90%e8%a1%8c%e4%b8%8d%e8%a7%a6%e5%8f%91-split-lock" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;make all # 编译
+./splitlock 2 &amp;amp; # 后台启动 split-lock（2 线程）
+./cpumon $(pgrep splitlock) # 监控其 CPU 使用率
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;在裸机/Docker 上，PerCore% 始终 ≤ 100%，这是&lt;strong&gt;正常基线&lt;/strong&gt;。&lt;/p&gt;</description></item><item><title/><link>/blog/2018-07-31-mysql%E8%AF%AD%E5%8F%A5/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/blog/2018-07-31-mysql%E8%AF%AD%E5%8F%A5/</guid><description>&lt;p&gt;// TODO 检查是否有保留的必要性&lt;/p&gt;
 &lt;h5 id="1-连接一个数据库"&gt;1 连接一个数据库 &lt;a href="#1-%e8%bf%9e%e6%8e%a5%e4%b8%80%e4%b8%aa%e6%95%b0%e6%8d%ae%e5%ba%93" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h5&gt;
 &lt;p&gt;&lt;code&gt;mysql -h{host} -P{port} -D{dbname} -u{user} -p&lt;/code&gt;，然后回车根据提示输入密码即可。&lt;/p&gt;
 &lt;h5 id="2-执行系统命令"&gt;2 执行系统命令 &lt;a href="#2-%e6%89%a7%e8%a1%8c%e7%b3%bb%e7%bb%9f%e5%91%bd%e4%bb%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h5&gt;

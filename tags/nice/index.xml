@@ -50,4 +50,23 @@
 &lt;li&gt;Linux Scheduler History, https://ops-class.org/slides/2017-03-03-schedulingstory/&lt;/li&gt;
 &lt;li&gt;Linux Scheduler: the very first schedulerhttps://dev.to/satorutakeuchi/a-brief-history-of-the-linux-kernel-s-process-scheduler-the-very-first-scheduler-v0-01-9e4&lt;/li&gt;
 &lt;li&gt;v0.0.1内核源码解析，https://github.com/hitzhangjie/linux-0.0.1-learning/blob/master/linux-0.0.1/kernel/sched.c#L82&lt;/li&gt;
-&lt;/ol&gt;</description></item></channel></rss>
+&lt;/ol&gt;</description></item></channel></rss>%9f%e5%88%97%e4%b8%ad%e7%a7%bb%e5%8a%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;O(1)调度器使用的runqueue是个支持优先级的多级任务队列，本质上还是个多级反馈队列。意味着其优先级会被调整，任务会在多个队列中移来移去，这也是为了解决公平性、交互性方面的问题。&lt;/p&gt;
+&lt;p&gt;1、如果一个进程P刚开始处于最高优先级队列中，它的时间片为T，如果P被调度了，其执行一段时间后，假设时钟中断来，调度器需要检查是否应该调度另一个进程时。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;如果发现P仍然是当前最高优先级的进程，且其时间片没有用完，那么会继续执行P；&lt;/li&gt;
+&lt;li&gt;如果发现有更高优先级的进程等着被调度，且支持抢占的话，那么P可能会被抢占；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;2、实际上P在执行的过程中，它的优先级是会被动态调整的，比如它做了些IO类的操作：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;执行IO密集型操作，恢复后时间片T没耗光，内核会认为这是一个响应式任务，会奖励它，优先级会被调高；&lt;/li&gt;
+&lt;li&gt;执行IO密集型操作，恢复后时间片T耗光，会认为这不是一个响应式任务，会惩罚它，优先级被调低或者没变化；&lt;/li&gt;
+&lt;li&gt;执行CPU密集型操作，会认为这不是一个响应式任务，会惩罚它，优先级被调低或者没变化；&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;3、当其优先级调整后，它就会被移动到对应优先级的任务队列中，等待下一轮被调度。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;ps：时间片只有在运行时才会被计数、扣减，陷入IO等待的任务是不会被扣减时间片的。、&lt;/p&gt;
+&lt;p&gt;为什么将IO完成后还剩余时间片的看做是响应式任务、而剩余时间片为0的就不是呢？执行完IO后，如果此时没有时间片了，因为IO时不消耗时间片，时间片用光只能说还需要更多的CPU时间做CPU密集型任务，所以这不是一个响应式任务。响应式任务的特点就是有明显的IO操作带来的延迟，但是一旦IO完成就能靠很少的CPU时间完成处理。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h4 id="避免进程被饿死"&gt;避免进程被饿死 &lt;a href="#%e9%81%bf%e5%85%8d%e8%bf%9b%e7%a8%8b%e8%a2%ab%e9%a5%bf%e6%ad%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h4&gt;
+&lt;p&gt;当某个进程的时间片耗尽时，它会被从active移动到expire中。active、expire是数据结构完全相同的多级运行队列，见下面的prio_array，加入到新队列之前会重新设定它的优先级、时间片，但是expire中的不会参与调度。当active中没有可调度的进程时，就会将active、expire直接交换，这样又开始了下一轮的调度。&lt;/p&gt;</description></item></channel></rss>

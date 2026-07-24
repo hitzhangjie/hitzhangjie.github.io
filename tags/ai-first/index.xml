@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Ai First on</title><link>/tags/ai-first/</link><description>Recent content in Ai First on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 12 Mar 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/ai-first/index.xml" rel="self" type="application/rss+xml"/><item><title>从 AI Assist 到 AI First：可验证循环驱动的范式升级</title><link>/blog/2026-03-12-ai-assist-to-ai-first/</link><pubDate>Thu, 12 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-12-ai-assist-to-ai-first/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;过去一年多，AI coding 工具的能力提升是肉眼可见的。从最早的代码补全，到现在的 Agent 自主写代码、修 bug、做重构——工具越来越强，写代码越来越快。但如果只停留在&amp;quot;用 AI 写得快&amp;quot;这个层面，团队很快就会撞上一堵墙：&lt;strong&gt;代码量膨胀了，质量却没有跟上&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;我一直在思考一个问题：同样是使用 AI coding 工具，为什么有些团队的体验是&amp;quot;AI 帮我们写了很多代码，但也制造了更多 bug&amp;quot;，而另一些团队却能做到&amp;quot;AI 帮我们既提效又提质&amp;quot;？&lt;/p&gt;
+&lt;p&gt;答案在于一个被很多人忽视的东西：&lt;strong&gt;可验证循环（verifiable loop）&lt;/strong&gt;。&lt;/p&gt;
+&lt;h2 id="ai-assist-与-ai-first-的本质区别"&gt;AI Assist 与 AI First 的本质区别 &lt;a href="#ai-assist-%e4%b8%8e-ai-first-%e7%9a%84%e6%9c%ac%e8%b4%a8%e5%8c%ba%e5%88%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在讨论可验证循环之前，先定义两个模式：&lt;/p&gt;
+&lt;h3 id="ai-assist-模式"&gt;AI Assist 模式 &lt;a href="#ai-assist-%e6%a8%a1%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;这是目前大多数团队的状态：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;人类写需求 → AI 生成代码 → 人类手动验证 → 人类修改 → 合入
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;AI 充当的是&amp;quot;高级代码补全器&amp;quot;，写得快，但验证的责任全在人身上。人类必须仔细阅读每一行 AI 生成的代码，确保正确性、安全性、性能都过关。&lt;strong&gt;AI 提效了编码环节，但验证环节的成本并没有降低&lt;/strong&gt;——它只是从&amp;quot;自己写&amp;quot;变成了&amp;quot;审查 AI 写的&amp;quot;。&lt;/p&gt;
+&lt;h3 id="ai-first-模式"&gt;AI First 模式 &lt;a href="#ai-first-%e6%a8%a1%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;这是我们想要达到的状态：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;人类确认需求 → AI 生成方案 + 代码 → 自动化验证 → 人类聚焦审查关键决策 → 合入
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;在 AI First 模式下，验证环节被大幅自动化了。AI 生成的代码会先经过&lt;strong&gt;自动化测试、静态分析、安全扫描、性能基准&lt;/strong&gt;等层层检查，只有通过了这些检查的代码，才进入人类审查环节。人类的注意力不再消耗在&amp;quot;这段代码有没有低级错误&amp;quot;上，而是聚焦在&amp;quot;这个方案的设计是否合理&amp;quot;&amp;ldquo;业务逻辑是否正确&amp;quot;这些更高层次的问题上。&lt;/p&gt;</description></item></channel></rss>

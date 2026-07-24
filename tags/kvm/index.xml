@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>KVM on</title><link>/tags/kvm/</link><description>Recent content in KVM on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 22 Dec 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/kvm/index.xml" rel="self" type="application/rss+xml"/><item><title>Split Lock 压垮母机：一次CPU飙升的线上排查</title><link>/blog/2025-12-22-cpu-splitlock-avoidance/</link><pubDate>Mon, 22 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-22-cpu-splitlock-avoidance/</guid><description>&lt;p&gt;那天业务告警响了：服务延迟飙高，吞吐量断崖式下跌。&lt;/p&gt;
+&lt;p&gt;打开监控一看，CPU 使用率瞬间拉满。再看 atop，CPU 飙高的同时，IRQ（硬中断）处理量也同步暴增——两者的曲线几乎完全吻合。第一反应是网卡中断风暴或者定时器异常，但仔细看了中断分布，并没有哪个设备的中断计数特别高。问题出在别的地方。&lt;/p&gt;
+&lt;p&gt;后来才了解到，我们业务所在母机上的&lt;strong&gt;另一台子机&lt;/strong&gt;存在严重的 Split Lock 问题——那台问题子机持续触发总线锁，把母机 CPU 资源拖垮了。母机调度器在资源争抢之下，很长一段时间没调度到我们的子机，等到终于调度上时，积压的中断一次性涌入，触发了所谓的&amp;quot;IRQ catchup&amp;quot;。表现出来的就是我们的子机上 CPU 和 IRQ 同时飙升。&lt;/p&gt;
+&lt;p&gt;所以这次事件的根因不是 IRQ catchup 本身——它只是&amp;quot;果&amp;quot;——真正的&amp;quot;因&amp;quot;是同一母机上那台问题子机的 Split Lock，持续消耗物理 CPU 资源，间接把我们的子机也拖下了水。&lt;/p&gt;
+&lt;h2 id="split-lock-是什么"&gt;Split Lock 是什么 &lt;a href="#split-lock-%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;x86 架构下，当一条原子指令（比如 &lt;code&gt;lock cmpxchg&lt;/code&gt;）操作的内存地址跨越了两个 Cache Line（缓存行）边界时，CPU 无法在缓存内部保证原子性，只能锁住整个内存总线来完成操作。&lt;/p&gt;
+&lt;p&gt;正常的一次加法指令可能只消耗不到 10 个时钟周期。而一次 Split Lock 锁住总线的时间可以达到 &lt;strong&gt;1000 个时钟周期&lt;/strong&gt;——是正常操作的 100 倍以上。&lt;/p&gt;
+&lt;p&gt;在这 1000 个周期里，其他 CPU 核心无法访问内存。不是&amp;quot;慢了一点&amp;quot;，是整个总线的使用权被独占。&lt;/p&gt;
+&lt;p&gt;常见的触发场景：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;数据结构设计不当，原子操作的字段刚好跨了 64 字节边界&lt;/li&gt;
+&lt;li&gt;内存未对齐，比如在一个非 4 字节对齐的地址上做 &lt;code&gt;lock cmpxchg&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;编译器或运行时没有做 cache line padding&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;ps: Cache Line 在 x86 上通常是 64 字节。一个 8 字节的原子变量如果起始地址是 60（mod 64），就会跨越两个 Cache Line，触发 Split Lock。&lt;/p&gt;</description></item></channel></rss>

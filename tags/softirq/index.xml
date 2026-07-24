@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Softirq on</title><link>/tags/softirq/</link><description>Recent content in Softirq on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 25 Jul 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/softirq/index.xml" rel="self" type="application/rss+xml"/><item><title>CPU软中断与硬中断：从INT指令到硬件中断的完整路径</title><link>/blog/2025-07-25-cpu-soft-and-hard-interrupts/</link><pubDate>Fri, 25 Jul 2025 00:00:00 +0800</pubDate><guid>/blog/2025-07-25-cpu-soft-and-hard-interrupts/</guid><description>&lt;p&gt;INT n 是一条指令，定时器中断是一个外部信号——来源完全不同，但 CPU 处理它们的流程为什么是一样的？&lt;/p&gt;
+&lt;p&gt;这个问题触及了 CPU 硬件设计里一个很精妙的地方：&lt;strong&gt;不同的前端接入方式，汇聚到同一个后端处理流程&lt;/strong&gt;。&lt;/p&gt;
+&lt;h2 id="一个类比ceo-和紧急电话"&gt;一个类比：CEO 和紧急电话 &lt;a href="#%e4%b8%80%e4%b8%aa%e7%b1%bb%e6%af%94ceo-%e5%92%8c%e7%b4%a7%e6%80%a5%e7%94%b5%e8%af%9d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;把 CPU 想象成一个正在专注处理工作清单的 CEO：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;软件中断（INT n）&lt;/strong&gt;：CEO 在清单上读到一行&amp;quot;立即给安全部门打电话报告内部问题&amp;quot;。这是&lt;strong&gt;计划内的、同步的&lt;/strong&gt;，写在工作流里。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;硬件中断（网卡收到包）&lt;/strong&gt;：桌上的红色紧急电话响了。这是&lt;strong&gt;计划外的、异步的&lt;/strong&gt;，随时可能发生。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;关键在于：不管是 CEO 主动打电话，还是接起紧急电话，&lt;strong&gt;后续动作完全一样&lt;/strong&gt;——记下当前工作进度（保存现场），处理电话（执行 ISR），翻开笔记本继续之前的工作（恢复现场）。&lt;/p&gt;
+&lt;p&gt;CPU 硬件设计遵循的就是这个逻辑。&lt;/p&gt;
+&lt;h2 id="三个硬件模块各司其职"&gt;三个硬件模块，各司其职 &lt;a href="#%e4%b8%89%e4%b8%aa%e7%a1%ac%e4%bb%b6%e6%a8%a1%e5%9d%97%e5%90%84%e5%8f%b8%e5%85%b6%e8%81%8c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="1-外部信号接收中断控制器apic"&gt;1. 外部信号接收：中断控制器（APIC） &lt;a href="#1-%e5%a4%96%e9%83%a8%e4%bf%a1%e5%8f%b7%e6%8e%a5%e6%94%b6%e4%b8%ad%e6%96%ad%e6%8e%a7%e5%88%b6%e5%99%a8apic" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;CPU 不会给每个设备（键盘、网卡、硬盘、定时器）都留一个引脚——太多了。实际架构是：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;早期&lt;/strong&gt;：独立芯片 8259A PIC，像电话总机一样汇集所有 IRQ，通过一根 INTR 引脚通知 CPU。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;现代&lt;/strong&gt;：APIC（Advanced Programmable Interrupt Controller），集成在 CPU 内部（Local APIC），通过系统总线与 I/O APIC 通信，支持多核路由和 MSI（Message Signaled Interrupts）。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;流程：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;网卡收包 → 通过 I/O APIC 发送中断信号&lt;/li&gt;
+&lt;li&gt;I/O APIC → Local APIC（优先级排序、决定是否打扰 CPU）&lt;/li&gt;
+&lt;li&gt;Local APIC → 通过内部总线向 CPU 核心发送中断消息&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id="2-指令解码控制单元cu"&gt;2. 指令解码：控制单元（CU） &lt;a href="#2-%e6%8c%87%e4%bb%a4%e8%a7%a3%e7%a0%81%e6%8e%a7%e5%88%b6%e5%8d%95%e5%85%83cu" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;控制单元在同一时刻只能感知一种中断来源：&lt;/p&gt;</description></item></channel></rss>

@@ -10,4 +10,83 @@
 &lt;p&gt;ps: 这不是 AI 的&amp;quot;错&amp;quot;。这些问题本质上不是代码生成的问题，而是&lt;strong&gt;理解问题域&lt;/strong&gt;的问题。AI 不知道你的业务上下文、你的用户行为模式、你的运维约束——除非你用 prompt 把这些全部喂给它。但如果你能把这些全部精确地描述清楚，你实际上已经完成了软件工程中最难的部分。&lt;/p&gt;
 &lt;h2 id="修一个-bug引入两个新-bug"&gt;修一个 bug，引入两个新 bug &lt;a href="#%e4%bf%ae%e4%b8%80%e4%b8%aa-bug%e5%bc%95%e5%85%a5%e4%b8%a4%e4%b8%aa%e6%96%b0-bug" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;Vibe coding 的另一个典型陷阱是&amp;quot;让它先跑起来&amp;quot;的心态。这在小项目上没问题，但在长期维护的项目上会积累惊人的技术债务。&lt;/p&gt;
-&lt;p&gt;AI 修 bug 的方式很有意思——它倾向于&amp;quot;打补丁&amp;quot;而非&amp;quot;治根&amp;quot;。你告诉它这里有个 null pointer，它就在那里加个 nil check；你告诉它这里并发有问题，它就加个锁。至于这个 nil 是从哪里来的、为什么会有并发冲突、整个数据流是不是设计上就有问题——它不关心。它只解决你描述的那个症状。&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;AI 修 bug 的方式很有意思——它倾向于&amp;quot;打补丁&amp;quot;而非&amp;quot;治根&amp;quot;。你告诉它这里有个 null pointer，它就在那里加个 nil check；你告诉它这里并发有问题，它就加个锁。至于这个 nil 是从哪里来的、为什么会有并发冲突、整个数据流是不是设计上就有问题——它不关心。它只解决你描述的那个症状。&lt;/p&gt;</description></item><item><title>从 AI Assist 到 AI First：可验证循环驱动的范式升级</title><link>/blog/2026-03-12-ai-assist-to-ai-first/</link><pubDate>Thu, 12 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-12-ai-assist-to-ai-first/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;过去一年多，AI coding 工具的能力提升是肉眼可见的。从最早的代码补全，到现在的 Agent 自主写代码、修 bug、做重构——工具越来越强，写代码越来越快。但如果只停留在&amp;quot;用 AI 写得快&amp;quot;这个层面，团队很快就会撞上一堵墙：&lt;strong&gt;代码量膨胀了，质量却没有跟上&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;我一直在思考一个问题：同样是使用 AI coding 工具，为什么有些团队的体验是&amp;quot;AI 帮我们写了很多代码，但也制造了更多 bug&amp;quot;，而另一些团队却能做到&amp;quot;AI 帮我们既提效又提质&amp;quot;？&lt;/p&gt;
+&lt;p&gt;答案在于一个被很多人忽视的东西：&lt;strong&gt;可验证循环（verifiable loop）&lt;/strong&gt;。&lt;/p&gt;
+&lt;h2 id="ai-assist-与-ai-first-的本质区别"&gt;AI Assist 与 AI First 的本质区别 &lt;a href="#ai-assist-%e4%b8%8e-ai-first-%e7%9a%84%e6%9c%ac%e8%b4%a8%e5%8c%ba%e5%88%ab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在讨论可验证循环之前，先定义两个模式：&lt;/p&gt;
+&lt;h3 id="ai-assist-模式"&gt;AI Assist 模式 &lt;a href="#ai-assist-%e6%a8%a1%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;这是目前大多数团队的状态：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;人类写需求 → AI 生成代码 → 人类手动验证 → 人类修改 → 合入
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;AI 充当的是&amp;quot;高级代码补全器&amp;quot;，写得快，但验证的责任全在人身上。人类必须仔细阅读每一行 AI 生成的代码，确保正确性、安全性、性能都过关。&lt;strong&gt;AI 提效了编码环节，但验证环节的成本并没有降低&lt;/strong&gt;——它只是从&amp;quot;自己写&amp;quot;变成了&amp;quot;审查 AI 写的&amp;quot;。&lt;/p&gt;
+&lt;h3 id="ai-first-模式"&gt;AI First 模式 &lt;a href="#ai-first-%e6%a8%a1%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;这是我们想要达到的状态：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;人类确认需求 → AI 生成方案 + 代码 → 自动化验证 → 人类聚焦审查关键决策 → 合入
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;在 AI First 模式下，验证环节被大幅自动化了。AI 生成的代码会先经过&lt;strong&gt;自动化测试、静态分析、安全扫描、性能基准&lt;/strong&gt;等层层检查，只有通过了这些检查的代码，才进入人类审查环节。人类的注意力不再消耗在&amp;quot;这段代码有没有低级错误&amp;quot;上，而是聚焦在&amp;quot;这个方案的设计是否合理&amp;quot;&amp;ldquo;业务逻辑是否正确&amp;quot;这些更高层次的问题上。&lt;/p&gt;</description></item><item><title>给 AI 立规矩：Harness Engineering 的落地实践</title><link>/blog/2026-03-12-harness-engineering-rules/</link><pubDate>Thu, 12 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-12-harness-engineering-rules/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;上一篇文章聊了&lt;a href="/blog/ai/coding/2026-03-12-ai-assist-to-ai-first/"&gt;可验证循环&lt;/a&gt;——它是从 AI Assist 进化到 AI First 的核心机制。但要让这个循环真正转起来，团队面临一个更实际的问题：&lt;strong&gt;怎么把工程经验告诉 AI，让它持续稳定地产出符合团队标准的代码？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这就是 Harness Engineering 要解决的问题。&lt;/p&gt;
+&lt;h2 id="从-prompt-engineering-到-harness-engineering"&gt;从 Prompt Engineering 到 Harness Engineering &lt;a href="#%e4%bb%8e-prompt-engineering-%e5%88%b0-harness-engineering" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;回顾一下 AI coding 领域的概念演进：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Prompt Engineering (2023)
+&amp;quot;如何写好提示词让 AI 给出好回答&amp;quot;
+问题：每次都要重写，无法复用，效果不稳定
+│
+▼
+Context Engineering (2024)
+&amp;quot;如何组织好上下文让 AI 理解完整信息&amp;quot;
+问题：上下文组织有了章法，但仍然是被动的
+│
+▼
+Harness Engineering (2025-2026)
+&amp;quot;如何系统性地约束、引导、驾驭 AI 的完整行为&amp;quot;
+核心：从&amp;quot;每次手动告诉 AI&amp;quot;变成&amp;quot;建立一套可复用的约束体系&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Harness Engineering 的本质&lt;/strong&gt;：把团队积累的工程经验、编码规范、领域知识，编码为 AI IDE 可以自动加载和执行的规则。这些规则不依赖单次提示词的质量，而是在每次 AI 生成代码时自动生效。&lt;/p&gt;
+&lt;p&gt;可以这样理解三者的区别：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;&lt;/th&gt;
+&lt;th&gt;Prompt Engineering&lt;/th&gt;
+&lt;th&gt;Context Engineering&lt;/th&gt;
+&lt;th&gt;Harness Engineering&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;核心动作&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;写好单条提示词&lt;/td&gt;
+&lt;td&gt;组织好对话上下文&lt;/td&gt;
+&lt;td&gt;建立规则体系&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;生效范围&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;单次对话&lt;/td&gt;
+&lt;td&gt;单次会话&lt;/td&gt;
+&lt;td&gt;持续、跨会话&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;复用性&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;低（每次手写）&lt;/td&gt;
+&lt;td&gt;中（模板化）&lt;/td&gt;
+&lt;td&gt;高（自动加载）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;对人的要求&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;写好提示词&lt;/td&gt;
+&lt;td&gt;组织好信息&lt;/td&gt;
+&lt;td&gt;设计好规则&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;对 AI 的约束&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;软约束（靠措辞）&lt;/td&gt;
+&lt;td&gt;中约束（靠信息完整度）&lt;/td&gt;
+&lt;td&gt;硬约束（靠规则强制）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="harness-engineering-的三层组件"&gt;Harness Engineering 的三层组件 &lt;a href="#harness-engineering-%e7%9a%84%e4%b8%89%e5%b1%82%e7%bb%84%e4%bb%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在落地 Harness Engineering 时，我们可以把约束分为三个层次：&lt;/p&gt;</description></item></channel></rss>

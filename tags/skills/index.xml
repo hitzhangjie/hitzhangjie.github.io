@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Skills on</title><link>/tags/skills/</link><description>Recent content in Skills on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 12 Mar 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/skills/index.xml" rel="self" type="application/rss+xml"/><item><title>给 AI 立规矩：Harness Engineering 的落地实践</title><link>/blog/2026-03-12-harness-engineering-rules/</link><pubDate>Thu, 12 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-12-harness-engineering-rules/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;上一篇文章聊了&lt;a href="/blog/ai/coding/2026-03-12-ai-assist-to-ai-first/"&gt;可验证循环&lt;/a&gt;——它是从 AI Assist 进化到 AI First 的核心机制。但要让这个循环真正转起来，团队面临一个更实际的问题：&lt;strong&gt;怎么把工程经验告诉 AI，让它持续稳定地产出符合团队标准的代码？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这就是 Harness Engineering 要解决的问题。&lt;/p&gt;
+&lt;h2 id="从-prompt-engineering-到-harness-engineering"&gt;从 Prompt Engineering 到 Harness Engineering &lt;a href="#%e4%bb%8e-prompt-engineering-%e5%88%b0-harness-engineering" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;回顾一下 AI coding 领域的概念演进：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Prompt Engineering (2023)
+&amp;quot;如何写好提示词让 AI 给出好回答&amp;quot;
+问题：每次都要重写，无法复用，效果不稳定
+│
+▼
+Context Engineering (2024)
+&amp;quot;如何组织好上下文让 AI 理解完整信息&amp;quot;
+问题：上下文组织有了章法，但仍然是被动的
+│
+▼
+Harness Engineering (2025-2026)
+&amp;quot;如何系统性地约束、引导、驾驭 AI 的完整行为&amp;quot;
+核心：从&amp;quot;每次手动告诉 AI&amp;quot;变成&amp;quot;建立一套可复用的约束体系&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;Harness Engineering 的本质&lt;/strong&gt;：把团队积累的工程经验、编码规范、领域知识，编码为 AI IDE 可以自动加载和执行的规则。这些规则不依赖单次提示词的质量，而是在每次 AI 生成代码时自动生效。&lt;/p&gt;
+&lt;p&gt;可以这样理解三者的区别：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;&lt;/th&gt;
+&lt;th&gt;Prompt Engineering&lt;/th&gt;
+&lt;th&gt;Context Engineering&lt;/th&gt;
+&lt;th&gt;Harness Engineering&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;核心动作&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;写好单条提示词&lt;/td&gt;
+&lt;td&gt;组织好对话上下文&lt;/td&gt;
+&lt;td&gt;建立规则体系&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;生效范围&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;单次对话&lt;/td&gt;
+&lt;td&gt;单次会话&lt;/td&gt;
+&lt;td&gt;持续、跨会话&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;复用性&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;低（每次手写）&lt;/td&gt;
+&lt;td&gt;中（模板化）&lt;/td&gt;
+&lt;td&gt;高（自动加载）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;对人的要求&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;写好提示词&lt;/td&gt;
+&lt;td&gt;组织好信息&lt;/td&gt;
+&lt;td&gt;设计好规则&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;对 AI 的约束&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;软约束（靠措辞）&lt;/td&gt;
+&lt;td&gt;中约束（靠信息完整度）&lt;/td&gt;
+&lt;td&gt;硬约束（靠规则强制）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="harness-engineering-的三层组件"&gt;Harness Engineering 的三层组件 &lt;a href="#harness-engineering-%e7%9a%84%e4%b8%89%e5%b1%82%e7%bb%84%e4%bb%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在落地 Harness Engineering 时，我们可以把约束分为三个层次：&lt;/p&gt;</description></item></channel></rss>

@@ -1,4 +1,43 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>分布式系统 on</title><link>/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/</link><description>Recent content in 分布式系统 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 19 Jul 2026 11:00:00 +0800</lastBuildDate><atom:link href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/index.xml" rel="self" type="application/rss+xml"/><item><title>Etcd 线性一致性读与串行化读深度解析</title><link>/blog/2026-07-19-%E8%AF%BB%E5%86%99%E4%B8%80%E8%87%B4%E6%80%A7_etcd%E7%BA%BF%E6%80%A7%E4%B8%80%E8%87%B4%E6%80%A7%E8%AF%BB%E4%B8%8E%E4%B8%B2%E8%A1%8C%E5%8C%96%E8%AF%BB%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/</link><pubDate>Sun, 19 Jul 2026 11:00:00 +0800</pubDate><guid>/blog/2026-07-19-%E8%AF%BB%E5%86%99%E4%B8%80%E8%87%B4%E6%80%A7_etcd%E7%BA%BF%E6%80%A7%E4%B8%80%E8%87%B4%E6%80%A7%E8%AF%BB%E4%B8%8E%E4%B8%B2%E8%A1%8C%E5%8C%96%E8%AF%BB%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>分布式系统 on</title><link>/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/</link><description>Recent content in 分布式系统 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 24 Jul 2026 08:23:55 +0800</lastBuildDate><atom:link href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/index.xml" rel="self" type="application/rss+xml"/><item><title>微服务架构设计模式速查手册</title><link>/blog/2026-07-24-microservices-patterns-cheatsheet/</link><pubDate>Fri, 24 Jul 2026 08:23:55 +0800</pubDate><guid>/blog/2026-07-24-microservices-patterns-cheatsheet/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;微服务架构不是银弹。它解决了一部分问题（独立部署、团队自治、技术异构），同时引入了另一批问题（分布式事务、服务发现、数据一致性、调试困难）。Chris Richardson 在《Microservices Patterns》中系统化地整理了 40+ 种设计模式，构成了一门&lt;strong&gt;模式语言&lt;/strong&gt;（Pattern Language）——模式不是孤立存在的，它们互相支撑、互相弥补。&lt;/p&gt;
+&lt;p&gt;本文的目标是给你一张&amp;quot;地图&amp;quot;，让你在架构设计时：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;知道面对什么问题该参考哪个模式&lt;/li&gt;
+&lt;li&gt;理解模式之间的依赖和替代关系&lt;/li&gt;
+&lt;li&gt;建立起&lt;strong&gt;上帝视角&lt;/strong&gt;：让不可见的系统行为变得可见&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;本文的 pattern 分类体系参考了 Chris Richardson 的 &lt;a href="https://microservices.io/patterns/index.html"&gt;microservices.io&lt;/a&gt; 和《Microservices Patterns》一书，结合了实际工程中的落地经验。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h1 id="一模式全景图"&gt;一、模式全景图 &lt;a href="#%e4%b8%80%e6%a8%a1%e5%bc%8f%e5%85%a8%e6%99%af%e5%9b%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="11-分层视图"&gt;1.1 分层视图 &lt;a href="#11-%e5%88%86%e5%b1%82%e8%a7%86%e5%9b%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;微服务模式可以分为五个层次，从底层的基础设施到顶层的业务决策：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;┌──────────────────────────────────────────────────────────────┐
+│ 第 5 层 · 业务决策层 │
+│ 架构风格选择 → 拆分策略 → 迁移策略 │
+│ (Monolith vs Microservice → DDD/业务能力 → Strangler Fig) │
+├──────────────────────────────────────────────────────────────┤
+│ 第 4 层 · 服务协作层 │
+│ 通信方式 → API 网关 → 服务发现 → 数据一致性 │
+│ (RPI/Messaging → Gateway/BFF → Registry → Saga/CQRS) │
+├──────────────────────────────────────────────────────────────┤
+│ 第 3 层 · 韧性与安全层 │
+│ 熔断降级 → 限流过载保护 → 认证授权 │
+│ (Circuit Breaker → Rate Limiting → Access Token) │
+├──────────────────────────────────────────────────────────────┤
+│ 第 2 层 · 可观测性层 │
+│ 日志聚合 → 指标采集 → 分布式追踪 → 健康检查 → 告警 │
+│ (Logging → Metrics → Tracing → Health Check → Alerting) │
+├──────────────────────────────────────────────────────────────┤
+│ 第 1 层 · 基础设施层 │
+│ 部署方式 → 配置管理 → 服务框架 → 测试策略 │
+│ (Container/K8s → Config → Chassis → Test Pyramid) │
+└──────────────────────────────────────────────────────────────┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="12-完整模式清单"&gt;1.2 完整模式清单 &lt;a href="#12-%e5%ae%8c%e6%95%b4%e6%a8%a1%e5%bc%8f%e6%b8%85%e5%8d%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;标记说明：⭐ = 核心必知模式，🔗 = 模式间有依赖关系&lt;/p&gt;</description></item><item><title>Etcd 线性一致性读与串行化读深度解析</title><link>/blog/2026-07-19-%E8%AF%BB%E5%86%99%E4%B8%80%E8%87%B4%E6%80%A7_etcd%E7%BA%BF%E6%80%A7%E4%B8%80%E8%87%B4%E6%80%A7%E8%AF%BB%E4%B8%8E%E4%B8%B2%E8%A1%8C%E5%8C%96%E8%AF%BB%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/</link><pubDate>Sun, 19 Jul 2026 11:00:00 +0800</pubDate><guid>/blog/2026-07-19-%E8%AF%BB%E5%86%99%E4%B8%80%E8%87%B4%E6%80%A7_etcd%E7%BA%BF%E6%80%A7%E4%B8%80%E8%87%B4%E6%80%A7%E8%AF%BB%E4%B8%8E%E4%B8%B2%E8%A1%8C%E5%8C%96%E8%AF%BB%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;在分布式系统中，&amp;ldquo;写进去什么&amp;quot;只是问题的一半，**&amp;ldquo;读出来什么&amp;rdquo;**才是真正的考验。&lt;/p&gt;
 &lt;p&gt;想象一个场景：你往 Etcd 写入了一条配置 &lt;code&gt;cluster_mode: production&lt;/code&gt;，紧接着另一个服务读取这个配置。它读到的是你刚写的新值，还是之前的旧值？这取决于你用的是哪种读模式。&lt;/p&gt;
 &lt;p&gt;Etcd 提供了两种读一致性级别：&lt;/p&gt;

@@ -1,4 +1,59 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Ptrace on</title><link>/tags/ptrace/</link><description>Recent content in Ptrace on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 27 May 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/ptrace/index.xml" rel="self" type="application/rss+xml"/><item><title>深入理解 ptrace：进程的 tl 状态与运行中 tracee 的控制</title><link>/blog/2025-05-27-dlv-addbreakpoints-to-running-tracee/</link><pubDate>Tue, 27 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-27-dlv-addbreakpoints-to-running-tracee/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Ptrace on</title><link>/tags/ptrace/</link><description>Recent content in Ptrace on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 12 Sep 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/ptrace/index.xml" rel="self" type="application/rss+xml"/><item><title>Linux 信号传递中的线程选择机制</title><link>/blog/2025-09-12-signal-delivery-thread-selection/</link><pubDate>Fri, 12 Sep 2025 00:00:00 +0800</pubDate><guid>/blog/2025-09-12-signal-delivery-thread-selection/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在多线程程序中，当向一个进程发送信号时，你可能会想：信号会被哪个线程处理？答案是内核会根据发送方式的不同，将信号放入不同的队列，并智能地选择一个合适的线程来处理。&lt;/p&gt;
+&lt;p&gt;这背后的实现涉及 &lt;code&gt;send_signal&lt;/code&gt;、&lt;code&gt;complete_signal&lt;/code&gt; 等关键函数，以及 &lt;code&gt;PIDTYPE_TGID&lt;/code&gt; 与 &lt;code&gt;PIDTYPE_PID&lt;/code&gt; 两种信号目标类型的区分。本文从内核源码层面梳理这个机制。&lt;/p&gt;
+&lt;h1 id="信号发送路径"&gt;信号发送路径 &lt;a href="#%e4%bf%a1%e5%8f%b7%e5%8f%91%e9%80%81%e8%b7%af%e5%be%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;以子进程状态变化导致父进程收到 &lt;code&gt;SIGCHLD&lt;/code&gt; 为例，完整的内核调用路径如下：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;do_notify_parent_cldstop()
+-&amp;gt; __group_send_sig_info(SIGCHLD, &amp;amp;info, parent)
+-&amp;gt; send_signal(sig, info, p, PIDTYPE_TGID)
+-&amp;gt; __send_signal(sig, info, t, type, force)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id="信号队列的选择共享-vs-私有"&gt;信号队列的选择：共享 vs 私有 &lt;a href="#%e4%bf%a1%e5%8f%b7%e9%98%9f%e5%88%97%e7%9a%84%e9%80%89%e6%8b%a9%e5%85%b1%e4%ba%ab-vs-%e7%a7%81%e6%9c%89" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在 &lt;code&gt;__send_signal&lt;/code&gt; 中，根据信号的目标类型决定将信号放入哪个队列：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;pending = (type != PIDTYPE_PID) ? &amp;amp;t-&amp;gt;signal-&amp;gt;shared_pending :
+&amp;amp;t-&amp;gt;pending;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;两类队列的区别：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;目标类型&lt;/th&gt;
+&lt;th&gt;信号队列&lt;/th&gt;
+&lt;th&gt;含义&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;PIDTYPE_PID&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;t-&amp;gt;pending&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;发送给&lt;strong&gt;特定线程&lt;/strong&gt;，放入线程私有的 pending 队列&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;PIDTYPE_TGID&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;t-&amp;gt;signal-&amp;gt;shared_pending&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;发送给&lt;strong&gt;整个进程&lt;/strong&gt;（线程组），放入进程共享的 pending 队列&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;而在 &lt;code&gt;__group_send_sig_info&lt;/code&gt; 中明确使用了 &lt;code&gt;PIDTYPE_TGID&lt;/code&gt;：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;return send_signal(sig, info, p, PIDTYPE_TGID);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这意味着对于 &lt;code&gt;SIGCHLD&lt;/code&gt; 这类进程级信号，会被放入共享队列 &lt;code&gt;signal-&amp;gt;shared_pending&lt;/code&gt;，&lt;strong&gt;进程中的任意线程&lt;/strong&gt;都可以处理它。&lt;/p&gt;</description></item><item><title>wait4 的线程无关性与 ptrace 机制浅析</title><link>/blog/2025-09-12-wait4-thread-agnostic-and-ptrace/</link><pubDate>Fri, 12 Sep 2025 00:00:00 +0800</pubDate><guid>/blog/2025-09-12-wait4-thread-agnostic-and-ptrace/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在使用 ptrace 编写调试器或相关工具时，有一个常被忽视但很重要的设计细节：&lt;strong&gt;&lt;code&gt;wait4&lt;/code&gt; 系统调用并不需要发生在与 ptrace attach 相同的线程上&lt;/strong&gt;。与之形成对比的是，后续所有的 &lt;code&gt;ptrace&lt;/code&gt; requests（如 &lt;code&gt;PTRACE_CONT&lt;/code&gt;、&lt;code&gt;PTRACE_GETREGS&lt;/code&gt; 等）却必须在 tracer 线程上执行。&lt;/p&gt;
+&lt;p&gt;这种看似不一致的设计背后，是内核对等待队列的精心设计。本文分析这个机制。&lt;/p&gt;
+&lt;h2 id="实践中的体现go-调试器的线程模型"&gt;实践中的体现：Go 调试器的线程模型 &lt;a href="#%e5%ae%9e%e8%b7%b5%e4%b8%ad%e7%9a%84%e4%bd%93%e7%8e%b0go-%e8%b0%83%e8%af%95%e5%99%a8%e7%9a%84%e7%ba%bf%e7%a8%8b%e6%a8%a1%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;以 Go 语言编写的调试器（如 Delve）为例，这个设计差异直接影响了 goroutine 的编排方式：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;所有 &lt;code&gt;ptrace&lt;/code&gt; 操作请求会被集中到一个专用的 goroutine 中，该 goroutine 通过 &lt;code&gt;runtime.LockOSThread()&lt;/code&gt; 绑定到固定的 OS 线程，确保所有 ptrace 系统调用都从同一个 tracer 线程发出。&lt;/li&gt;
+&lt;li&gt;而 &lt;code&gt;wait4&lt;/code&gt; / &lt;code&gt;waitpid&lt;/code&gt; 则可以从&lt;strong&gt;任意 goroutine&lt;/strong&gt; 调用，因为它只需要把自己挂到进程共享的等待队列上即可。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这一点在实际开发中很容易踩坑：如果误把 &lt;code&gt;wait4&lt;/code&gt; 也锁在 tracer goroutine 里，虽然能正常工作，但会不必要地阻塞 tracer 线程；反过来，如果把 &lt;code&gt;ptrace&lt;/code&gt; 请求放到其他 goroutine 去执行，内核会直接拒绝并返回错误。&lt;/p&gt;
+&lt;h1 id="wait4-的线程无关性"&gt;wait4 的线程无关性 &lt;a href="#wait4-%e7%9a%84%e7%ba%bf%e7%a8%8b%e6%97%a0%e5%85%b3%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="等待队列是进程级别的"&gt;等待队列是进程级别的 &lt;a href="#%e7%ad%89%e5%be%85%e9%98%9f%e5%88%97%e6%98%af%e8%bf%9b%e7%a8%8b%e7%ba%a7%e5%88%ab%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;查看内核 &lt;code&gt;do_wait&lt;/code&gt; 的实现：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-c"&gt;add_wait_queue(&amp;amp;current-&amp;gt;signal-&amp;gt;wait_chldexit, &amp;amp;wo-&amp;gt;child_wait);
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;这里 &lt;code&gt;current-&amp;gt;signal-&amp;gt;wait_chldexit&lt;/code&gt; 是关键——它是 &lt;strong&gt;进程级别&lt;/strong&gt; 的等待队列，位于 &lt;code&gt;signal_struct&lt;/code&gt; 中，被同一进程的所有线程共享。&lt;/p&gt;</description></item><item><title>深入理解 ptrace：进程的 tl 状态与运行中 tracee 的控制</title><link>/blog/2025-05-27-dlv-addbreakpoints-to-running-tracee/</link><pubDate>Tue, 27 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-27-dlv-addbreakpoints-to-running-tracee/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;在使用调试器时，我们经常会通过 &lt;code&gt;ps&lt;/code&gt; 查看被调试进程的状态。比如下面这个输出：&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;root 3859551 0.0 0.0 1225560 2004 pts/12 tl 18:17 0:00 /root/test/debug/__debug_bin2092487096
 &lt;/code&gt;&lt;/pre&gt;

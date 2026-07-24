@@ -1,0 +1,445 @@
+<!doctype html><html lang=en-US><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-regular.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-500.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-700.woff2 type=font/woff2 crossorigin><script>window.__LAYOUT_WIDTH_DEFAULT__="standard"</script><script>(()=>{(function(){var t,n={compact:1,standard:1,wide:1,fullscreen:1},s="layout-width-v",o="3",e=null,i=null;try{e=localStorage.getItem("layout-width"),i=localStorage.getItem(s)}catch{}if(i!==o){e==="standard"?e="compact":e==="compact"?e="standard":e==="normal"?e="compact":e==="reading"&&(e="wide");try{e&&localStorage.setItem("layout-width",e),localStorage.setItem(s,o)}catch{}}t=window.__LAYOUT_WIDTH_DEFAULT__||"standard",n[t]||(t="standard"),e&&!n[e]&&(e=null),document.documentElement.setAttribute("data-layout-width",e||t)})()})()</script><link rel=stylesheet href=/main.cde382bea941f65cd0e61bbe8e85d0a8d492d0968649070e9ec5be6a5230474db9f86f82c26c5e4e97f68dd8fc4906c261d28e8abafcc5a50ecc27393f253ead.css integrity="sha512-zeOCvqlB9lzQ5hu+joXQqNSS0JaGSQcOnsW+alIwR025+G+CwmxeTpf2jdj8SQbCYdKOirr8xaUOzCc5PyU+rQ==" crossorigin=anonymous><noscript><style>img.lazyload{display:none}</style></noscript><meta name=robots content="index, follow"><meta name=googlebot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><meta name=bingbot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><title>Open WebUI 核心工作流程分析 - MySpace</title><meta name=description content="深入分析 Open WebUI 的前后端分离架构、FastAPI 路由设计、Ollama 代理集成、RAG 检索增强、MCP 工具扩展以及 WebSocket 实时通信机制。"><link rel=canonical href=/blog/2026-01-08-how-openwebui-works/><meta property="og:locale" content="en_US"><meta property="og:type" content="article"><meta property="og:title" content="Open WebUI 核心工作流程分析"><meta property="og:description" content="深入分析 Open WebUI 的前后端分离架构、FastAPI 路由设计、Ollama 代理集成、RAG 检索增强、MCP 工具扩展以及 WebSocket 实时通信机制。"><meta property="og:url" content="/blog/2026-01-08-how-openwebui-works/"><meta property="og:site_name" content="MySpace"><meta property="article:published_time" content="2026-01-08T00:00:00+08:00"><meta property="article:modified_time" content="2026-07-24T00:00:00+08:00"><meta property="og:image" content="/doks.png"><meta property="og:image:alt" content="MySpace"><meta name=twitter:card content="summary_large_image"><meta name=twitter:site content="@hitzhangjie"><meta name=twitter:creator content="@hitzhangjie"><meta name=twitter:title content="Open WebUI 核心工作流程分析"><meta name=twitter:description content="深入分析 Open WebUI 的前后端分离架构、FastAPI 路由设计、Ollama 代理集成、RAG 检索增强、MCP 工具扩展以及 WebSocket 实时通信机制。"><meta name=twitter:image content="/doks.png"><meta name=twitter:image:alt content="Open WebUI 核心工作流程分析"><script type=application/ld+json>{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/1","name":"","url":"/","sameAs":["https://twitter.com/hitzhangjie","https://www.linkedin.com/in/hitzhangjie/","https://github.com/hitzhangjie"],"image":{"@type":"ImageObject","@id":"/#/schema/image/1","url":"/\u003cnil\u003e","width":null,"height":null,"caption":""}},{"@type":"WebSite","@id":"/#/schema/website/1","url":"/","name":"MySpace","description":"MySpace is a hitzhangjie\u0027s personal space, for blogs, books, journey, thinkings.","publisher":{"@id":"/#/schema/person/1"}},{"@type":"WebPage","@id":"/blog/2026-01-08-how-openwebui-works/","url":"/blog/2026-01-08-how-openwebui-works/","name":"Open WebUI 核心工作流程分析","description":"深入分析 Open WebUI 的前后端分离架构、FastAPI 路由设计、Ollama 代理集成、RAG 检索增强、MCP 工具扩展以及 WebSocket 实时通信机制。","isPartOf":{"@id":"/#/schema/website/1"},"about":{"@id":"/#/schema/person/1"},"datePublished":"2026-01-08T00:00:00CET","dateModified":"2026-07-24T00:00:00CET","breadcrumb":{"@id":"/blog/2026-01-08-how-openwebui-works/#/schema/breadcrumb/1"},"primaryImageOfPage":{"@id":"/blog/2026-01-08-how-openwebui-works/#/schema/image/2"},"inLanguage":"","potentialAction":[{"@type":"ReadAction","target":["/blog/2026-01-08-how-openwebui-works/"]}]},{"@type":"BreadcrumbList","@id":"/blog/2026-01-08-how-openwebui-works/#/schema/breadcrumb/1","name":"Breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"item":{"@type":"WebPage","@id":"/","url":"/","name":"Home"}},{"@type":"ListItem","position":2,"item":{"@id":"/blog2026-01-08-how-openwebui-works/"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Article","@id":"/#/schema/article/1","headline":"Open WebUI 核心工作流程分析","description":"深入分析 Open WebUI 的前后端分离架构、FastAPI 路由设计、Ollama 代理集成、RAG 检索增强、MCP 工具扩展以及 WebSocket 实时通信机制。","isPartOf":{"@id":"/blog/2026-01-08-how-openwebui-works/"},"mainEntityOfPage":{"@id":"/blog/2026-01-08-how-openwebui-works/"},"datePublished":"2026-01-08T00:00:00CET","dateModified":"2026-07-24T00:00:00CET","author":{"@id":"/#/schema/person/2"},"publisher":{"@id":"/#/schema/person/1"},"image":{"@id":"/blog/2026-01-08-how-openwebui-works/#/schema/image/2"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/2","name":null,"sameAs":[]}]},{"@context":"https://schema.org","@graph":[{"@type":"ImageObject","@id":"/blog/2026-01-08-how-openwebui-works/#/schema/image/2","url":"/doks.png","contentUrl":"/doks.png","caption":"Open WebUI 核心工作流程分析"}]}]}</script><meta name=theme-color content="#fff"><link rel=icon href=/favicon.ico sizes=any><link rel=icon type=image/svg+xml href=/favicon.svg><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest crossorigin=use-credentials href=/site.webmanifest><script type=text/javascript src='https://platform-api.sharethis.com/js/sharethis.js#property=607868a58d7101001829a8df&product=sop' async></script><style>[alt~=sharing]{border:0;box-shadow:none}div#st-1{text-align:unset}div#st-1 .st-btn{height:24px;padding:0 4px}div#st-1 .st-btn>img{top:4.2px}div#st-2 .st-btn{height:24px;padding:0 4px}div#st-2 .st-btn>img{top:4.2px}</style><script async src="https://www.googletagmanager.com/gtag/js?id=UA-168027530-1"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","UA-168027530-1")</script></head><body class="blog single d-flex flex-column min-vh-100"><div class=sticky-top><div class=header-bar></div><header class="navbar navbar-expand-lg navbar-light doks-navbar"><nav class="container-xxl flex-wrap flex-lg-nowrap" aria-label="Main navigation"><a class="navbar-brand order-0" href=/ aria-label=MySpace>MySpace
+</a><button class="btn btn-menu order-2 d-block d-lg-none" type=button data-bs-toggle=offcanvas data-bs-target=#offcanvasDoks aria-controls=offcanvasDoks aria-label="Open main menu">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div class="offcanvas offcanvas-end border-0 py-lg-1" tabindex=-1 id=offcanvasDoks data-bs-backdrop=true aria-labelledby=offcanvasDoksLabel><div class="header-bar d-lg-none"></div><div class="offcanvas-header d-lg-none"><h2 class="h5 offcanvas-title ps-2" id=offcanvasDoksLabel><a class=text-dark href=/>MySpace</a></h2><button type=button class="btn-close text-reset me-2" data-bs-dismiss=offcanvas aria-label="Close main menu"></button></div><div class="offcanvas-body p-4 p-lg-0"><ul class="nav flex-column flex-lg-row align-items-lg-center mt-2 mt-lg-0 ms-lg-2 me-lg-auto"><li class=nav-item><a class="nav-link ps-0 py-1 active" href=/blog/>Blog</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/books/>Books</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/landscape>Landscape</a></li></ul><hr class="text-black-50 my-4 d-lg-none"><form class="doks-search position-relative flex-grow-1 ms-lg-auto me-lg-2"><input id=search class="form-control is-search" type=search placeholder="Search docs..." aria-label="Search docs..." autocomplete=off><div id=suggestions class="shadow bg-white rounded d-none"></div></form><hr class="text-black-50 my-4 d-lg-none"><ul class="nav flex-column flex-lg-row"><li class=nav-item><a class="nav-link social-link" href=https://twitter.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg><small class="ms-2 d-lg-none">Twitter</small></a></li><li class=nav-item><a class="nav-link social-link" href=https://github.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37.0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44.0 0020 4.77 5.07 5.07.0 0019.91 1S18.73.65 16 2.48a13.38 13.38.0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07.0 005 4.77 5.44 5.44.0 003.5 8.55c0 5.42 3.3 6.61 6.44 7A3.37 3.37.0 009 18.13V22"/></svg><small class="ms-2 d-lg-none">GitHub</small></a></li><li class="nav-item layout-width-dropdown"><a class="nav-link layout-width-dropdown-btn" href=# data-bs-toggle=dropdown aria-expanded=false aria-label=切换布局宽度 title=切换布局宽度><span class=lw-icon-standard><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-compact><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-wide><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span><span class=lw-icon-fullscreen><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg></span></a><ul class="dropdown-menu dropdown-menu-end"><li><button class="dropdown-item layout-width-option" data-layout-value=compact>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span>紧凑布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=standard>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>标准布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=wide>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span>宽松布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=fullscreen>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>全屏布局</button></li></ul></li></ul></div></div></nav></header></div><div class="wrap container-xxl" role=document><div class=content><div class="row flex-xl-nowrap" data-layout-width=standard><div class="col-lg-4 col-xl-3 docs-sidebar"><nav class=docs-links aria-label="Main navigation"><h3>Tag List</h3><ol><li><a href=/tags/open-webui/>open-webui</a></li><li><a href=/tags/llm/>llm</a></li><li><a href=/tags/rag/>rag</a></li><li><a href=/tags/fastapi/>fastapi</a></li><li><a href=/tags/svelte/>svelte</a></li></ol></nav></div><main class="docs-content col-lg-12 col-xl-10"><h1>Open WebUI 核心工作流程分析</h1><p><small>Posted 2026-01-08 00:00 +0800 by <a class="stretched-link position-relative" href>ZhangJie</a>&nbsp;&dash;&nbsp;<strong>6&nbsp;min read</strong></small><p><div style=display:flex><div>分享:&nbsp;&nbsp;</div><div><div class=sharethis-inline-share-buttons></div></div></div><hr><p class=lead></p><p>本文深入分析 Open WebUI 的核心架构和工作流程，帮助理解这个 AI 平台的设计原理。</p><h2 id=系统架构概览>系统架构概览 <a href=#%e7%b3%bb%e7%bb%9f%e6%9e%b6%e6%9e%84%e6%a6%82%e8%a7%88 class=anchor aria-hidden=true>#</a><a href=#系统架构概览 class=anchor aria-hidden=true>#</a></h2><p>Open WebUI 是一个全栈 AI 平台，采用前后端分离架构：</p><pre><code class=language-text>┌─────────────────────────────────────────┐
+│         Frontend (Svelte)               │
+│      (src/lib/components/)              │
+│  - Chat Interface                       │
+│  - Model Management                     │
+│  - Knowledge Base UI                     │
+└──────────────┬──────────────────────────┘
+               │ HTTP/WebSocket
+┌──────────────▼──────────────────────────┐
+│      FastAPI Backend                    │
+│      (backend/open_webui/)              │
+│  - API Routes                           │
+│  - Authentication                       │
+│  - Business Logic                       │
+└──────────────┬──────────────────────────┘
+               │
+       ┌───────┴───────┐
+       │               │
+┌──────▼──────┐  ┌─────▼──────┐
+│  Ollama    │  │  Vector DB  │
+│  API       │  │  (RAG)      │
+└────────────┘  └─────────────┘
+</code></pre><h3 id=核心组件>核心组件 <a href=#%e6%a0%b8%e5%bf%83%e7%bb%84%e4%bb%b6 class=anchor aria-hidden=true>#</a><a href=#核心组件 class=anchor aria-hidden=true>#</a></h3><ol><li><strong>前端 (Svelte)</strong>：用户界面，基于 SvelteKit</li><li><strong>后端 (FastAPI)</strong>：Python 异步 Web 框架</li><li><strong>数据库</strong>：SQLite/PostgreSQL 存储用户数据</li><li><strong>向量数据库</strong>：支持多种向量数据库（Chroma, Qdrant, Milvus 等）</li><li><strong>Ollama 集成</strong>：代理 Ollama API 请求</li></ol><h2 id=启动流程>启动流程 <a href=#%e5%90%af%e5%8a%a8%e6%b5%81%e7%a8%8b class=anchor aria-hidden=true>#</a><a href=#启动流程 class=anchor aria-hidden=true>#</a></h2><h3 id=入口点>入口点 <a href=#%e5%85%a5%e5%8f%a3%e7%82%b9 class=anchor aria-hidden=true>#</a><a href=#入口点 class=anchor aria-hidden=true>#</a></h3><p>Open WebUI 的启动从 <code>backend/open_webui/__init__.py</code> 开始：</p><pre><code class=language-python>@app.command()
+def serve(
+    host: str = &quot;0.0.0.0&quot;,
+    port: int = 8080,
+):
+    # 1. 设置环境变量
+    os.environ[&quot;FROM_INIT_PY&quot;] = &quot;true&quot;
+
+    # 2. 加载或生成密钥
+    if os.getenv(&quot;WEBUI_SECRET_KEY&quot;) is None:
+        if not KEY_FILE.exists():
+            KEY_FILE.write_bytes(base64.b64encode(random.randbytes(12)))
+        os.environ[&quot;WEBUI_SECRET_KEY&quot;] = KEY_FILE.read_text()
+
+    # 3. 启动 Uvicorn 服务器
+    import open_webui.main
+    uvicorn.run(
+        &quot;open_webui.main:app&quot;,
+        host=host,
+        port=port,
+        forwarded_allow_ips=&quot;*&quot;,
+        workers=UVICORN_WORKERS,
+    )
+</code></pre><h3 id=应用初始化>应用初始化 <a href=#%e5%ba%94%e7%94%a8%e5%88%9d%e5%a7%8b%e5%8c%96 class=anchor aria-hidden=true>#</a><a href=#应用初始化 class=anchor aria-hidden=true>#</a></h3><p><code>backend/open_webui/main.py</code> 初始化 FastAPI 应用：</p><pre><code class=language-python>app = FastAPI(
+    title=&quot;Open WebUI API&quot;,
+    description=&quot;Open WebUI API for OpenAI-compatible chat completions&quot;,
+    version=VERSION,
+)
+
+# 1. 中间件配置
+app.add_middleware(CORSMiddleware, ...)
+app.add_middleware(SessionMiddleware, ...)
+app.add_middleware(AuditLoggingMiddleware, ...)
+
+# 2. 静态文件服务
+app.mount(&quot;/static&quot;, StaticFiles(directory=STATIC_DIR), name=&quot;static&quot;)
+
+# 3. WebSocket 支持
+app.mount(&quot;/ws&quot;, socket_app)
+
+# 4. 路由注册
+app.include_router(ollama.router, prefix=&quot;/ollama&quot;, tags=[&quot;ollama&quot;])
+app.include_router(openai.router, prefix=&quot;/openai&quot;, tags=[&quot;openai&quot;])
+app.include_router(chats.router, prefix=&quot;/api/v1/chats&quot;, tags=[&quot;chats&quot;])
+app.include_router(retrieval.router, prefix=&quot;/api/v1/retrieval&quot;, tags=[&quot;retrieval&quot;])
+# ... 更多路由
+</code></pre><h3 id=启动流程图>启动流程图 <a href=#%e5%90%af%e5%8a%a8%e6%b5%81%e7%a8%8b%e5%9b%be class=anchor aria-hidden=true>#</a><a href=#启动流程图 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-mermaid>flowchart TD
+    A[启动命令] --&gt; B[加载配置]
+    B --&gt; C[初始化数据库]
+    C --&gt; D[初始化向量数据库]
+    D --&gt; E[加载模型列表]
+    E --&gt; F[启动 FastAPI]
+    F --&gt; G[注册路由]
+    G --&gt; H[启动 WebSocket]
+    H --&gt; I[服务就绪]
+</code></pre><h2 id=前端架构>前端架构 <a href=#%e5%89%8d%e7%ab%af%e6%9e%b6%e6%9e%84 class=anchor aria-hidden=true>#</a><a href=#前端架构 class=anchor aria-hidden=true>#</a></h2><h3 id=svelte-应用结构>Svelte 应用结构 <a href=#svelte-%e5%ba%94%e7%94%a8%e7%bb%93%e6%9e%84 class=anchor aria-hidden=true>#</a><a href=#svelte-应用结构 class=anchor aria-hidden=true>#</a></h3><p>Open WebUI 前端使用 SvelteKit 构建：</p><pre><code class=language-text>src/
+├── lib/
+│   ├── components/        # UI 组件
+│   │   └── chat/         # 聊天组件
+│   ├── apis/             # API 客户端
+│   │   └── ollama/       # Ollama API
+│   └── stores/           # 状态管理
+├── routes/               # 页面路由
+└── app.html              # HTML 模板
+</code></pre><h3 id=聊天界面>聊天界面 <a href=#%e8%81%8a%e5%a4%a9%e7%95%8c%e9%9d%a2 class=anchor aria-hidden=true>#</a><a href=#聊天界面 class=anchor aria-hidden=true>#</a></h3><p><code>src/lib/components/chat/Chat.svelte</code> 是核心聊天组件：</p><pre><code class=language-typescript>// 发送消息
+async function sendMessage() {
+    const res = await generateOpenAIChatCompletion(
+        localStorage.token,
+        {
+            stream: stream,
+            model: model.id,
+            messages: messages,
+            params: {...settings?.params, ...params},
+            files: files,
+            tool_ids: toolIds,
+            tool_servers: toolServers,
+            // ...
+        },
+        `${WEBUI_BASE_URL}/api`
+    );
+
+    // 处理流式响应
+    if (stream) {
+        for await (const chunk of res) {
+            // 更新 UI
+            updateMessage(chunk);
+        }
+    }
+}
+</code></pre><h3 id=api-客户端>API 客户端 <a href=#api-%e5%ae%a2%e6%88%b7%e7%ab%af class=anchor aria-hidden=true>#</a><a href=#api-客户端 class=anchor aria-hidden=true>#</a></h3><p><code>src/lib/apis/ollama/index.ts</code> 封装 Ollama API：</p><pre><code class=language-typescript>export const generateChatCompletion = async (
+    token: string = '',
+    body: object
+) =&gt; {
+    const res = await fetch(`${OLLAMA_API_BASE_URL}/api/chat`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+    });
+
+    return res;
+};
+</code></pre><h2 id=后端架构>后端架构 <a href=#%e5%90%8e%e7%ab%af%e6%9e%b6%e6%9e%84 class=anchor aria-hidden=true>#</a><a href=#后端架构 class=anchor aria-hidden=true>#</a></h2><h3 id=路由组织>路由组织 <a href=#%e8%b7%af%e7%94%b1%e7%bb%84%e7%bb%87 class=anchor aria-hidden=true>#</a><a href=#路由组织 class=anchor aria-hidden=true>#</a></h3><p>后端采用模块化路由设计：</p><pre><code class=language-text>backend/open_webui/routers/
+├── ollama.py          # Ollama API 代理
+├── openai.py          # OpenAI 兼容 API
+├── chats.py           # 聊天管理
+├── retrieval.py       # RAG 功能
+├── knowledge.py       # 知识库管理
+├── tools.py           # 工具管理
+└── ...
+</code></pre><h3 id=请求处理流程>请求处理流程 <a href=#%e8%af%b7%e6%b1%82%e5%a4%84%e7%90%86%e6%b5%81%e7%a8%8b class=anchor aria-hidden=true>#</a><a href=#请求处理流程 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-mermaid>sequenceDiagram
+    participant Client
+    participant FastAPI
+    participant Middleware
+    participant Router
+    participant Ollama
+
+    Client-&gt;&gt;FastAPI: HTTP Request
+    FastAPI-&gt;&gt;Middleware: CORS/Auth/Session
+    Middleware-&gt;&gt;Router: Processed Request
+    Router-&gt;&gt;Ollama: Proxy Request
+    Ollama-&gt;&gt;Router: Response
+    Router-&gt;&gt;Client: Stream Response
+</code></pre><h3 id=认证和授权>认证和授权 <a href=#%e8%ae%a4%e8%af%81%e5%92%8c%e6%8e%88%e6%9d%83 class=anchor aria-hidden=true>#</a><a href=#认证和授权 class=anchor aria-hidden=true>#</a></h3><p><code>backend/open_webui/utils/auth.py</code> 处理认证：</p><pre><code class=language-python>async def get_verified_user(
+    token: str = Depends(get_token),
+    db: Session = Depends(get_db),
+) -&gt; UserModel:
+    &quot;&quot;&quot;验证用户 token 并返回用户对象&quot;&quot;&quot;
+    try:
+        payload = decode_token(token)
+        user_id = payload.get(&quot;id&quot;)
+        user = Users.get_user_by_id(db, user_id)
+        if not user:
+            raise HTTPException(status_code=401, detail=&quot;Invalid authentication&quot;)
+        return user
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=&quot;Invalid authentication&quot;)
+</code></pre><h2 id=ollama-集成>Ollama 集成 <a href=#ollama-%e9%9b%86%e6%88%90 class=anchor aria-hidden=true>#</a><a href=#ollama-集成 class=anchor aria-hidden=true>#</a></h2><h3 id=api-代理>API 代理 <a href=#api-%e4%bb%a3%e7%90%86 class=anchor aria-hidden=true>#</a><a href=#api-代理 class=anchor aria-hidden=true>#</a></h3><p>Open WebUI 作为 Ollama 的代理层，提供统一的 API 接口。</p><p><code>backend/open_webui/routers/ollama.py</code> 实现代理：</p><pre><code class=language-python>@router.post(&quot;/api/chat&quot;)
+@router.post(&quot;/api/chat/{url_idx}&quot;)
+async def chat_completion(
+    request: Request,
+    form_data: ChatCompletionForm,
+    url_idx: Optional[int] = None,
+    user=Depends(get_verified_user),
+):
+    # 1. 获取模型列表
+    if url_idx is None:
+        await get_all_models(request, user=user)
+        models = request.app.state.OLLAMA_MODELS
+        model = form_data.model
+
+        # 2. 选择后端 URL
+        if model in models:
+            url_idx = random.choice(models[model][&quot;urls&quot;])
+        else:
+            raise HTTPException(status_code=400, detail=&quot;Model not found&quot;)
+
+    # 3. 获取配置
+    url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
+    api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(str(url_idx), {})
+
+    # 4. 处理前缀
+    prefix_id = api_config.get(&quot;prefix_id&quot;, None)
+    if prefix_id:
+        form_data.model = form_data.model.replace(f&quot;{prefix_id}.&quot;, &quot;&quot;)
+
+    # 5. 转发请求
+    return await send_post_request(
+        url=f&quot;{url}/api/chat&quot;,
+        payload=form_data.model_dump_json(exclude_none=True).encode(),
+        key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
+        user=user,
+    )
+</code></pre><h3 id=请求转换>请求转换 <a href=#%e8%af%b7%e6%b1%82%e8%bd%ac%e6%8d%a2 class=anchor aria-hidden=true>#</a><a href=#请求转换 class=anchor aria-hidden=true>#</a></h3><p><code>backend/open_webui/utils/chat.py</code> 处理格式转换：</p><pre><code class=language-python>async def generate_chat_completion(
+    request: Request,
+    form_data: dict,
+    user: Any,
+    bypass_filter: bool = False,
+):
+    # 1. 获取模型信息
+    models = await get_all_models(request, user=user)
+    model = models.get(form_data.get(&quot;model&quot;))
+
+    # 2. 判断模型类型
+    if model.get(&quot;owned_by&quot;) == &quot;ollama&quot;:
+        # 转换为 Ollama 格式
+        form_data = convert_payload_openai_to_ollama(form_data)
+        response = await generate_ollama_chat_completion(
+            request=request,
+            form_data=form_data,
+            user=user,
+            bypass_filter=bypass_filter,
+        )
+
+        # 3. 转换响应格式
+        if form_data.get(&quot;stream&quot;):
+            return StreamingResponse(
+                convert_streaming_response_ollama_to_openai(response),
+                headers=dict(response.headers),
+            )
+        else:
+            return convert_response_ollama_to_openai(response)
+    else:
+        # OpenAI 兼容 API
+        return await generate_openai_chat_completion(...)
+</code></pre><h3 id=流式响应处理>流式响应处理 <a href=#%e6%b5%81%e5%bc%8f%e5%93%8d%e5%ba%94%e5%a4%84%e7%90%86 class=anchor aria-hidden=true>#</a><a href=#流式响应处理 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-python>async def send_post_request(
+    url: str,
+    payload: Union[str, bytes],
+    stream: bool = True,
+    ...
+):
+    session = aiohttp.ClientSession(timeout=...)
+
+    r = await session.post(url, data=payload, headers=headers)
+
+    if stream:
+        # 流式响应
+        return StreamingResponse(
+            r.content,  # 异步迭代器
+            status_code=r.status,
+            headers=response_headers,
+            background=BackgroundTask(cleanup_response, response=r, session=session),
+        )
+    else:
+        # 非流式响应
+        res = await r.json()
+        return res
+</code></pre><h2 id=rag-功能>RAG 功能 <a href=#rag-%e5%8a%9f%e8%83%bd class=anchor aria-hidden=true>#</a><a href=#rag-功能 class=anchor aria-hidden=true>#</a></h2><h3 id=向量数据库集成>向量数据库集成 <a href=#%e5%90%91%e9%87%8f%e6%95%b0%e6%8d%ae%e5%ba%93%e9%9b%86%e6%88%90 class=anchor aria-hidden=true>#</a><a href=#向量数据库集成 class=anchor aria-hidden=true>#</a></h3><p>Open WebUI 支持多种向量数据库：</p><p><code>backend/open_webui/retrieval/vector/factory.py</code> 使用工厂模式：</p><pre><code class=language-python>class Vector:
+    @staticmethod
+    def get_vector(vector_type: str) -&gt; VectorDBBase:
+        &quot;&quot;&quot;根据类型获取向量数据库实例&quot;&quot;&quot;
+        match vector_type:
+            case VectorType.CHROMA:
+                return ChromaClient()
+            case VectorType.QDRANT:
+                return QdrantClient()
+            case VectorType.MILVUS:
+                return MilvusClient()
+            case VectorType.PGVECTOR:
+                return PgvectorClient()
+            # ... 更多支持
+</code></pre><h3 id=文档检索流程>文档检索流程 <a href=#%e6%96%87%e6%a1%a3%e6%a3%80%e7%b4%a2%e6%b5%81%e7%a8%8b class=anchor aria-hidden=true>#</a><a href=#文档检索流程 class=anchor aria-hidden=true>#</a></h3><p><code>backend/open_webui/routers/retrieval.py</code> 实现 RAG：</p><pre><code class=language-python>@router.post(&quot;/query/doc&quot;)
+async def query_doc_handler(
+    request: Request,
+    form_data: QueryDocForm,
+    user=Depends(get_verified_user),
+):
+    # 1. 获取集合信息
+    collection_results = VECTOR_DB_CLIENT.get(
+        collection_name=form_data.collection_name
+    )
+
+    # 2. 混合搜索（如果启用）
+    if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
+        return await query_doc_with_hybrid_search(
+            collection_name=form_data.collection_name,
+            collection_result=collection_results,
+            query=form_data.query,
+            embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                query, prefix=prefix, user=user
+            ),
+            k=form_data.k,
+            reranking_function=request.app.state.RERANKING_FUNCTION,
+            ...
+        )
+    else:
+        # 3. 纯向量搜索
+        query_embedding = await request.app.state.EMBEDDING_FUNCTION(
+            form_data.query, prefix=RAG_EMBEDDING_QUERY_PREFIX, user=user
+        )
+
+        result = VECTOR_DB_CLIENT.search(
+            collection_name=form_data.collection_name,
+            vectors=[query_embedding],
+            limit=form_data.k,
+        )
+
+        return result
+</code></pre><h3 id=文档处理流程>文档处理流程 <a href=#%e6%96%87%e6%a1%a3%e5%a4%84%e7%90%86%e6%b5%81%e7%a8%8b class=anchor aria-hidden=true>#</a><a href=#文档处理流程 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-mermaid>flowchart TD
+    A[上传文档] --&gt; B[文档解析]
+    B --&gt; C[文本分块]
+    C --&gt; D[生成嵌入]
+    D --&gt; E[存储到向量数据库]
+    E --&gt; F[建立索引]
+
+    G[用户查询] --&gt; H[生成查询嵌入]
+    H --&gt; I[向量搜索]
+    I --&gt; J[重排序]
+    J --&gt; K[返回相关文档]
+    K --&gt; L[注入到 Prompt]
+    L --&gt; M[LLM 生成回答]
+</code></pre><h3 id=嵌入函数>嵌入函数 <a href=#%e5%b5%8c%e5%85%a5%e5%87%bd%e6%95%b0 class=anchor aria-hidden=true>#</a><a href=#嵌入函数 class=anchor aria-hidden=true>#</a></h3><p><code>backend/open_webui/retrieval/utils.py</code> 定义嵌入函数：</p><pre><code class=language-python>def get_embedding_function():
+    &quot;&quot;&quot;获取嵌入函数&quot;&quot;&quot;
+    embedding_engine = os.getenv(&quot;RAG_EMBEDDING_ENGINE&quot;, &quot;ollama&quot;)
+
+    if embedding_engine == &quot;ollama&quot;:
+        return ollama_embedding_function
+    elif embedding_engine == &quot;openai&quot;:
+        return openai_embedding_function
+    # ... 更多引擎
+</code></pre><h2 id=工具集成>工具集成 <a href=#%e5%b7%a5%e5%85%b7%e9%9b%86%e6%88%90 class=anchor aria-hidden=true>#</a><a href=#工具集成 class=anchor aria-hidden=true>#</a></h2><h3 id=函数调用>函数调用 <a href=#%e5%87%bd%e6%95%b0%e8%b0%83%e7%94%a8 class=anchor aria-hidden=true>#</a><a href=#函数调用 class=anchor aria-hidden=true>#</a></h3><p>Open WebUI 支持 Python 函数调用：</p><p><code>backend/open_webui/routers/functions.py</code> 管理函数：</p><pre><code class=language-python>@router.post(&quot;/execute&quot;)
+async def execute_function(
+    request: Request,
+    form_data: ExecuteFunctionForm,
+    user=Depends(get_verified_user),
+):
+    # 1. 获取函数定义
+    function = Functions.get_function_by_id(db, form_data.function_id)
+
+    # 2. 执行函数
+    result = execute_python_function(
+        code=function.code,
+        arguments=form_data.arguments,
+    )
+
+    return {&quot;result&quot;: result}
+</code></pre><h3 id=mcp-服务器集成>MCP 服务器集成 <a href=#mcp-%e6%9c%8d%e5%8a%a1%e5%99%a8%e9%9b%86%e6%88%90 class=anchor aria-hidden=true>#</a><a href=#mcp-服务器集成 class=anchor aria-hidden=true>#</a></h3><p>Open WebUI 支持 Model Context Protocol (MCP) 服务器：</p><pre><code class=language-python># MCP 工具注册
+if tool_servers:
+    for server in tool_servers:
+        # 连接到 MCP 服务器
+        mcp_client = MCPClient(server.url)
+
+        # 获取可用工具
+        tools = await mcp_client.list_tools()
+
+        # 注册工具
+        registered_tools.extend(tools)
+</code></pre><h3 id=工具调用流程>工具调用流程 <a href=#%e5%b7%a5%e5%85%b7%e8%b0%83%e7%94%a8%e6%b5%81%e7%a8%8b class=anchor aria-hidden=true>#</a><a href=#工具调用流程 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-mermaid>sequenceDiagram
+    participant User
+    participant WebUI
+    participant LLM
+    participant Tools
+
+    User-&gt;&gt;WebUI: 发送消息（含工具）
+    WebUI-&gt;&gt;LLM: 生成请求（工具定义）
+    LLM-&gt;&gt;WebUI: 返回工具调用
+    WebUI-&gt;&gt;Tools: 执行工具
+    Tools-&gt;&gt;WebUI: 返回结果
+    WebUI-&gt;&gt;LLM: 生成最终回答
+    LLM-&gt;&gt;WebUI: 返回回答
+    WebUI-&gt;&gt;User: 显示结果
+</code></pre><h2 id=websocket-实时通信>WebSocket 实时通信 <a href=#websocket-%e5%ae%9e%e6%97%b6%e9%80%9a%e4%bf%a1 class=anchor aria-hidden=true>#</a><a href=#websocket-实时通信 class=anchor aria-hidden=true>#</a></h2><h3 id=socketio-集成>Socket.IO 集成 <a href=#socketio-%e9%9b%86%e6%88%90 class=anchor aria-hidden=true>#</a><a href=#socketio-集成 class=anchor aria-hidden=true>#</a></h3><p><code>backend/open_webui/socket/main.py</code> 实现 WebSocket：</p><pre><code class=language-python># 初始化 Socket.IO 服务器
+if WEBSOCKET_MANAGER == &quot;redis&quot;:
+    # 使用 Redis 管理多实例
+    mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
+    sio = socketio.AsyncServer(
+        cors_allowed_origins=SOCKETIO_CORS_ORIGINS,
+        async_mode=&quot;asgi&quot;,
+        client_manager=mgr,
+    )
+else:
+    # 单实例模式
+    sio = socketio.AsyncServer(
+        cors_allowed_origins=SOCKETIO_CORS_ORIGINS,
+        async_mode=&quot;asgi&quot;,
+    )
+
+# 连接事件
+@sio.on(&quot;connect&quot;)
+async def connect(sid, environ, auth):
+    &quot;&quot;&quot;处理客户端连接&quot;&quot;&quot;
+    token = auth.get(&quot;token&quot;) if auth else None
+    user = await get_user_from_token(token)
+
+    # 加入用户房间
+    await sio.enter_room(sid, f&quot;user:{user.id}&quot;)
+
+    return True
+
+# 消息事件
+@sio.on(&quot;message&quot;)
+async def handle_message(sid, data):
+    &quot;&quot;&quot;处理实时消息&quot;&quot;&quot;
+    # 广播到房间
+    await sio.emit(&quot;response&quot;, data, room=f&quot;user:{user.id}&quot;)
+</code></pre><h3 id=实时更新>实时更新 <a href=#%e5%ae%9e%e6%97%b6%e6%9b%b4%e6%96%b0 class=anchor aria-hidden=true>#</a><a href=#实时更新 class=anchor aria-hidden=true>#</a></h3><p>WebSocket 用于：</p><ul><li>实时聊天消息</li><li>模型状态更新</li><li>文件上传进度</li><li>系统通知</li></ul><h2 id=关键技术点>关键技术点 <a href=#%e5%85%b3%e9%94%ae%e6%8a%80%e6%9c%af%e7%82%b9 class=anchor aria-hidden=true>#</a><a href=#关键技术点 class=anchor aria-hidden=true>#</a></h2><h3 id=1-异步处理>1. 异步处理 <a href=#1-%e5%bc%82%e6%ad%a5%e5%a4%84%e7%90%86 class=anchor aria-hidden=true>#</a><a href=#1-异步处理 class=anchor aria-hidden=true>#</a></h3><p>Open WebUI 大量使用异步编程：</p><pre><code class=language-python>async def process_chat(request, form_data, user):
+    # 异步数据库操作
+    chat = await Chats.get_chat_by_id(db, chat_id)
+
+    # 异步 API 调用
+    response = await send_post_request(url, payload)
+
+    # 异步向量搜索
+    results = await vector_db.search(query)
+</code></pre><h3 id=2-多后端支持>2. 多后端支持 <a href=#2-%e5%a4%9a%e5%90%8e%e7%ab%af%e6%94%af%e6%8c%81 class=anchor aria-hidden=true>#</a><a href=#2-多后端支持 class=anchor aria-hidden=true>#</a></h3><p>支持多个 Ollama 实例：</p><pre><code class=language-python>OLLAMA_BASE_URLS = [
+    &quot;http://localhost:11434&quot;,
+    &quot;http://gpu-server:11434&quot;,
+]
+
+# 负载均衡
+url_idx = random.choice(models[model][&quot;urls&quot;])
+</code></pre><h3 id=3-缓存策略>3. 缓存策略 <a href=#3-%e7%bc%93%e5%ad%98%e7%ad%96%e7%95%a5 class=anchor aria-hidden=true>#</a><a href=#3-缓存策略 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-python>@cached(ttl=MODELS_CACHE_TTL)
+async def get_all_models(request, user):
+    &quot;&quot;&quot;缓存模型列表&quot;&quot;&quot;
+    # 从 Ollama 获取模型
+    models = await fetch_models_from_ollama()
+    return models
+</code></pre><h3 id=4-错误处理>4. 错误处理 <a href=#4-%e9%94%99%e8%af%af%e5%a4%84%e7%90%86 class=anchor aria-hidden=true>#</a><a href=#4-错误处理 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-python>try:
+    response = await send_post_request(url, payload)
+except HTTPException as e:
+    # 处理 HTTP 错误
+    raise e
+except Exception as e:
+    # 处理其他错误
+    log.error(f&quot;Error: {e}&quot;)
+    raise HTTPException(status_code=500, detail=str(e))
+</code></pre><h2 id=总结>总结 <a href=#%e6%80%bb%e7%bb%93 class=anchor aria-hidden=true>#</a><a href=#总结 class=anchor aria-hidden=true>#</a></h2><p>Open WebUI 的核心设计理念：</p><ol><li><strong>API 网关</strong>：统一接口，支持多种后端</li><li><strong>模块化设计</strong>：清晰的路由和功能分离</li><li><strong>异步优先</strong>：充分利用 Python 异步能力</li><li><strong>可扩展性</strong>：支持插件、工具、MCP 服务器</li><li><strong>用户体验</strong>：实时通信、流式响应、丰富的 UI</li></ol><p>这种架构使得 Open WebUI 能够作为强大的 AI 平台，同时保持灵活性和可扩展性。</p><div class=edit-page><a href=https://github.com/hitzhangjie/myspace/blob/master/content/blog/ai/product/2026-01-08-how-openwebui-works.md><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2"><path d="M17 3a2.828 2.828.0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+Edit this page on GitHub</a></div><div class="docs-navigation d-flex justify-content-between"><a href=/blog/2026-01-08-how-ollama-works/><div class="card my-1"><div class="card-body py-2">&larr; Ollama 核心工作流程分析</div></div></a><a class=ms-auto href=/blog/2026-01-08-howto-develop-your-own-ai/><div class="card my-1"><div class="card-body py-2">如何开发自己的 AI 助手 &rarr;</div></div></a></div></main><div class="docs-toc d-none d-xl-block col-xl-3"><nav class=docs-toc-inner aria-label="Secondary navigation"><div class=page-links><h3>On this page</h3><nav id=TableOfContents><ul><li><ul><li><a href=#系统架构概览>系统架构概览</a><ul><li><a href=#核心组件>核心组件</a></li></ul></li><li><a href=#启动流程>启动流程</a><ul><li><a href=#入口点>入口点</a></li><li><a href=#应用初始化>应用初始化</a></li><li><a href=#启动流程图>启动流程图</a></li></ul></li><li><a href=#前端架构>前端架构</a><ul><li><a href=#svelte-应用结构>Svelte 应用结构</a></li><li><a href=#聊天界面>聊天界面</a></li><li><a href=#api-客户端>API 客户端</a></li></ul></li><li><a href=#后端架构>后端架构</a><ul><li><a href=#路由组织>路由组织</a></li><li><a href=#请求处理流程>请求处理流程</a></li><li><a href=#认证和授权>认证和授权</a></li></ul></li><li><a href=#ollama-集成>Ollama 集成</a><ul><li><a href=#api-代理>API 代理</a></li><li><a href=#请求转换>请求转换</a></li><li><a href=#流式响应处理>流式响应处理</a></li></ul></li><li><a href=#rag-功能>RAG 功能</a><ul><li><a href=#向量数据库集成>向量数据库集成</a></li><li><a href=#文档检索流程>文档检索流程</a></li><li><a href=#文档处理流程>文档处理流程</a></li><li><a href=#嵌入函数>嵌入函数</a></li></ul></li><li><a href=#工具集成>工具集成</a><ul><li><a href=#函数调用>函数调用</a></li><li><a href=#mcp-服务器集成>MCP 服务器集成</a></li><li><a href=#工具调用流程>工具调用流程</a></li></ul></li><li><a href=#websocket-实时通信>WebSocket 实时通信</a><ul><li><a href=#socketio-集成>Socket.IO 集成</a></li><li><a href=#实时更新>实时更新</a></li></ul></li><li><a href=#关键技术点>关键技术点</a><ul><li><a href=#1-异步处理>1. 异步处理</a></li><li><a href=#2-多后端支持>2. 多后端支持</a></li><li><a href=#3-缓存策略>3. 缓存策略</a></li><li><a href=#4-错误处理>4. 错误处理</a></li></ul></li><li><a href=#总结>总结</a></li></ul></li></ul></nav></div></nav></div></div></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.b49b5c2c44fdca07ee730ad1196420771d2a94176c7d367b414fb2e23f6a0ac3fbae11c2a6263392f17450f222ec2b518586e8ea96e23c361eb3ee8a255e145c.js integrity="sha512-tJtcLET9ygfucwrRGWQgdx0qlBdsfTZ7QU+y4j9qCsP7rhHCpiYzkvF0UPIi7CtRhYbo6pbiPDYes+6KJV4UXA==" crossorigin=anonymous defer></script><script src=/js/highlight.min.1a731f820940167b6fd11a8540a1ae7c4627f4009b13e229c411e9d890612a3f6b618133d96477c2cf238d6faaa28d745cd5141e443aa34f62785510dc873430.js integrity="sha512-GnMfgglAFntv0RqFQKGufEYn9ACbE+IpxBHp2JBhKj9rYYEz2WR3ws8jjW+qoo10XNUUHkQ6o09ieFUQ3Ic0MA==" crossorigin=anonymous defer></script><script src=/main.min.73590f96e7a5ed9da2e1ad1da72ba9c04c0ff23af7819f8c705c6687e670fb1f1cb7cbcee4edc071e8c1357054b9f1d5072c15ffb5c9b1d2b75002acd5e61c97.js integrity="sha512-c1kPluel7Z2i4a0dpyupwEwP8jr3gZ+McFxmh+Zw+x8ct8vO5O3AcejBNXBUufHVBywV/7XJsdK3UAKs1eYclw==" crossorigin=anonymous defer></script><script src=/index.min.f5d68ca2568af7ccf94959393ffe43b848df48e081b2bcf4cbfc4b7cda9fbe3f23968ff0d2a28c2ca939def9382edcefc6e7ff0d11d82067ae396cdc51e1cf67.js integrity="sha512-9daMolaK98z5SVk5P/5DuEjfSOCBsrz0y/xLfNqfvj8jlo/w0qKMLKk53vk4Ltzvxuf/DRHYIGeuOWzcUeHPZw==" crossorigin=anonymous defer></script></body></html>

@@ -1,0 +1,694 @@
+<!doctype html><html lang=en-US><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-regular.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-500.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-700.woff2 type=font/woff2 crossorigin><script>window.__LAYOUT_WIDTH_DEFAULT__="standard"</script><script>(()=>{(function(){var t,n={compact:1,standard:1,wide:1,fullscreen:1},s="layout-width-v",o="3",e=null,i=null;try{e=localStorage.getItem("layout-width"),i=localStorage.getItem(s)}catch{}if(i!==o){e==="standard"?e="compact":e==="compact"?e="standard":e==="normal"?e="compact":e==="reading"&&(e="wide");try{e&&localStorage.setItem("layout-width",e),localStorage.setItem(s,o)}catch{}}t=window.__LAYOUT_WIDTH_DEFAULT__||"standard",n[t]||(t="standard"),e&&!n[e]&&(e=null),document.documentElement.setAttribute("data-layout-width",e||t)})()})()</script><link rel=stylesheet href=/main.cde382bea941f65cd0e61bbe8e85d0a8d492d0968649070e9ec5be6a5230474db9f86f82c26c5e4e97f68dd8fc4906c261d28e8abafcc5a50ecc27393f253ead.css integrity="sha512-zeOCvqlB9lzQ5hu+joXQqNSS0JaGSQcOnsW+alIwR025+G+CwmxeTpf2jdj8SQbCYdKOirr8xaUOzCc5PyU+rQ==" crossorigin=anonymous><noscript><style>img.lazyload{display:none}</style></noscript><meta name=robots content="index, follow"><meta name=googlebot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><meta name=bingbot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><title>如何开发自己的 AI 助手 - MySpace</title><meta name=description content="从模型文件格式、加载推理、Go 语言集成到系统架构设计，全面解析构建类似 Ollama 和 Open WebUI 的 AI 系统所需的核心技术。"><link rel=canonical href=/blog/2026-01-08-howto-develop-your-own-ai/><meta property="og:locale" content="en_US"><meta property="og:type" content="article"><meta property="og:title" content="如何开发自己的 AI 助手"><meta property="og:description" content="从模型文件格式、加载推理、Go 语言集成到系统架构设计，全面解析构建类似 Ollama 和 Open WebUI 的 AI 系统所需的核心技术。"><meta property="og:url" content="/blog/2026-01-08-howto-develop-your-own-ai/"><meta property="og:site_name" content="MySpace"><meta property="article:published_time" content="2026-01-08T00:00:00+08:00"><meta property="article:modified_time" content="2026-07-24T00:00:00+08:00"><meta property="og:image" content="/doks.png"><meta property="og:image:alt" content="MySpace"><meta name=twitter:card content="summary_large_image"><meta name=twitter:site content="@hitzhangjie"><meta name=twitter:creator content="@hitzhangjie"><meta name=twitter:title content="如何开发自己的 AI 助手"><meta name=twitter:description content="从模型文件格式、加载推理、Go 语言集成到系统架构设计，全面解析构建类似 Ollama 和 Open WebUI 的 AI 系统所需的核心技术。"><meta name=twitter:image content="/doks.png"><meta name=twitter:image:alt content="如何开发自己的 AI 助手"><script type=application/ld+json>{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/1","name":"","url":"/","sameAs":["https://twitter.com/hitzhangjie","https://www.linkedin.com/in/hitzhangjie/","https://github.com/hitzhangjie"],"image":{"@type":"ImageObject","@id":"/#/schema/image/1","url":"/\u003cnil\u003e","width":null,"height":null,"caption":""}},{"@type":"WebSite","@id":"/#/schema/website/1","url":"/","name":"MySpace","description":"MySpace is a hitzhangjie\u0027s personal space, for blogs, books, journey, thinkings.","publisher":{"@id":"/#/schema/person/1"}},{"@type":"WebPage","@id":"/blog/2026-01-08-howto-develop-your-own-ai/","url":"/blog/2026-01-08-howto-develop-your-own-ai/","name":"如何开发自己的 AI 助手","description":"从模型文件格式、加载推理、Go 语言集成到系统架构设计，全面解析构建类似 Ollama 和 Open WebUI 的 AI 系统所需的核心技术。","isPartOf":{"@id":"/#/schema/website/1"},"about":{"@id":"/#/schema/person/1"},"datePublished":"2026-01-08T00:00:00CET","dateModified":"2026-07-24T00:00:00CET","breadcrumb":{"@id":"/blog/2026-01-08-howto-develop-your-own-ai/#/schema/breadcrumb/1"},"primaryImageOfPage":{"@id":"/blog/2026-01-08-howto-develop-your-own-ai/#/schema/image/2"},"inLanguage":"","potentialAction":[{"@type":"ReadAction","target":["/blog/2026-01-08-howto-develop-your-own-ai/"]}]},{"@type":"BreadcrumbList","@id":"/blog/2026-01-08-howto-develop-your-own-ai/#/schema/breadcrumb/1","name":"Breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"item":{"@type":"WebPage","@id":"/","url":"/","name":"Home"}},{"@type":"ListItem","position":2,"item":{"@id":"/blog2026-01-08-howto-develop-your-own-ai/"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Article","@id":"/#/schema/article/1","headline":"如何开发自己的 AI 助手","description":"从模型文件格式、加载推理、Go 语言集成到系统架构设计，全面解析构建类似 Ollama 和 Open WebUI 的 AI 系统所需的核心技术。","isPartOf":{"@id":"/blog/2026-01-08-howto-develop-your-own-ai/"},"mainEntityOfPage":{"@id":"/blog/2026-01-08-howto-develop-your-own-ai/"},"datePublished":"2026-01-08T00:00:00CET","dateModified":"2026-07-24T00:00:00CET","author":{"@id":"/#/schema/person/2"},"publisher":{"@id":"/#/schema/person/1"},"image":{"@id":"/blog/2026-01-08-howto-develop-your-own-ai/#/schema/image/2"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/2","name":null,"sameAs":[]}]},{"@context":"https://schema.org","@graph":[{"@type":"ImageObject","@id":"/blog/2026-01-08-howto-develop-your-own-ai/#/schema/image/2","url":"/doks.png","contentUrl":"/doks.png","caption":"如何开发自己的 AI 助手"}]}]}</script><meta name=theme-color content="#fff"><link rel=icon href=/favicon.ico sizes=any><link rel=icon type=image/svg+xml href=/favicon.svg><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest crossorigin=use-credentials href=/site.webmanifest><script type=text/javascript src='https://platform-api.sharethis.com/js/sharethis.js#property=607868a58d7101001829a8df&product=sop' async></script><style>[alt~=sharing]{border:0;box-shadow:none}div#st-1{text-align:unset}div#st-1 .st-btn{height:24px;padding:0 4px}div#st-1 .st-btn>img{top:4.2px}div#st-2 .st-btn{height:24px;padding:0 4px}div#st-2 .st-btn>img{top:4.2px}</style><script async src="https://www.googletagmanager.com/gtag/js?id=UA-168027530-1"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","UA-168027530-1")</script></head><body class="blog single d-flex flex-column min-vh-100"><div class=sticky-top><div class=header-bar></div><header class="navbar navbar-expand-lg navbar-light doks-navbar"><nav class="container-xxl flex-wrap flex-lg-nowrap" aria-label="Main navigation"><a class="navbar-brand order-0" href=/ aria-label=MySpace>MySpace
+</a><button class="btn btn-menu order-2 d-block d-lg-none" type=button data-bs-toggle=offcanvas data-bs-target=#offcanvasDoks aria-controls=offcanvasDoks aria-label="Open main menu">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div class="offcanvas offcanvas-end border-0 py-lg-1" tabindex=-1 id=offcanvasDoks data-bs-backdrop=true aria-labelledby=offcanvasDoksLabel><div class="header-bar d-lg-none"></div><div class="offcanvas-header d-lg-none"><h2 class="h5 offcanvas-title ps-2" id=offcanvasDoksLabel><a class=text-dark href=/>MySpace</a></h2><button type=button class="btn-close text-reset me-2" data-bs-dismiss=offcanvas aria-label="Close main menu"></button></div><div class="offcanvas-body p-4 p-lg-0"><ul class="nav flex-column flex-lg-row align-items-lg-center mt-2 mt-lg-0 ms-lg-2 me-lg-auto"><li class=nav-item><a class="nav-link ps-0 py-1 active" href=/blog/>Blog</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/books/>Books</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/landscape>Landscape</a></li></ul><hr class="text-black-50 my-4 d-lg-none"><form class="doks-search position-relative flex-grow-1 ms-lg-auto me-lg-2"><input id=search class="form-control is-search" type=search placeholder="Search docs..." aria-label="Search docs..." autocomplete=off><div id=suggestions class="shadow bg-white rounded d-none"></div></form><hr class="text-black-50 my-4 d-lg-none"><ul class="nav flex-column flex-lg-row"><li class=nav-item><a class="nav-link social-link" href=https://twitter.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg><small class="ms-2 d-lg-none">Twitter</small></a></li><li class=nav-item><a class="nav-link social-link" href=https://github.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37.0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44.0 0020 4.77 5.07 5.07.0 0019.91 1S18.73.65 16 2.48a13.38 13.38.0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07.0 005 4.77 5.44 5.44.0 003.5 8.55c0 5.42 3.3 6.61 6.44 7A3.37 3.37.0 009 18.13V22"/></svg><small class="ms-2 d-lg-none">GitHub</small></a></li><li class="nav-item layout-width-dropdown"><a class="nav-link layout-width-dropdown-btn" href=# data-bs-toggle=dropdown aria-expanded=false aria-label=切换布局宽度 title=切换布局宽度><span class=lw-icon-standard><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-compact><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-wide><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span><span class=lw-icon-fullscreen><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg></span></a><ul class="dropdown-menu dropdown-menu-end"><li><button class="dropdown-item layout-width-option" data-layout-value=compact>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span>紧凑布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=standard>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>标准布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=wide>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span>宽松布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=fullscreen>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>全屏布局</button></li></ul></li></ul></div></div></nav></header></div><div class="wrap container-xxl" role=document><div class=content><div class="row flex-xl-nowrap" data-layout-width=standard><div class="col-lg-4 col-xl-3 docs-sidebar"><nav class=docs-links aria-label="Main navigation"><h3>Tag List</h3><ol><li><a href=/tags/llm/>llm</a></li><li><a href=/tags/gguf/>gguf</a></li><li><a href=/tags/ollama/>ollama</a></li><li><a href=/tags/inference/>inference</a></li><li><a href=/tags/go/>go</a></li></ol></nav></div><main class="docs-content col-lg-12 col-xl-10"><h1>如何开发自己的 AI 助手</h1><p><small>Posted 2026-01-08 00:00 +0800 by <a class="stretched-link position-relative" href>ZhangJie</a>&nbsp;&dash;&nbsp;<strong>12&nbsp;min read</strong></small><p><div style=display:flex><div>分享:&nbsp;&nbsp;</div><div><div class=sharethis-inline-share-buttons></div></div></div><hr><p class=lead></p><p>本文回答关于大模型开发的核心问题，帮助你理解如何构建类似 Ollama 和 Open WebUI 的 AI 系统。</p><h2 id=大模型文件格式和创建>大模型文件格式和创建 <a href=#%e5%a4%a7%e6%a8%a1%e5%9e%8b%e6%96%87%e4%bb%b6%e6%a0%bc%e5%bc%8f%e5%92%8c%e5%88%9b%e5%bb%ba class=anchor aria-hidden=true>#</a><a href=#大模型文件格式和创建 class=anchor aria-hidden=true>#</a></h2><h3 id=1-大模型文件是什么>1. 大模型文件是什么？ <a href=#1-%e5%a4%a7%e6%a8%a1%e5%9e%8b%e6%96%87%e4%bb%b6%e6%98%af%e4%bb%80%e4%b9%88 class=anchor aria-hidden=true>#</a><a href=#1-大模型文件是什么 class=anchor aria-hidden=true>#</a></h3><p>大模型文件是经过训练的神经网络权重集合，包含了模型的所有参数。这些参数决定了模型的行为和能力。</p><h4 id=模型文件包含的内容>模型文件包含的内容 <a href=#%e6%a8%a1%e5%9e%8b%e6%96%87%e4%bb%b6%e5%8c%85%e5%90%ab%e7%9a%84%e5%86%85%e5%ae%b9 class=anchor aria-hidden=true>#</a><a href=#模型文件包含的内容 class=anchor aria-hidden=true>#</a></h4><ol><li><p><strong>权重（Weights）</strong>：神经网络的参数矩阵</p><ul><li>注意力层权重（Attention weights）</li><li>前馈网络权重（FFN weights）</li><li>嵌入层权重（Embedding weights）</li><li>输出层权重（Output weights）</li></ul></li><li><p><strong>配置信息（Config）</strong>：</p><ul><li>模型架构（Architecture）</li><li>层数（Layers）</li><li>隐藏层维度（Hidden size）</li><li>注意力头数（Attention heads）</li><li>词汇表大小（Vocab size）</li></ul></li><li><p><strong>Tokenizer 信息</strong>：</p><ul><li>词汇表（Vocabulary）</li><li>特殊 token（Special tokens）</li><li>合并规则（Merge rules）</li></ul></li><li><p><strong>元数据（Metadata）</strong>：</p><ul><li>模型名称、描述</li><li>训练信息</li><li>量化信息</li></ul></li></ol><h3 id=2-gguf-格式详解>2. GGUF 格式详解 <a href=#2-gguf-%e6%a0%bc%e5%bc%8f%e8%af%a6%e8%a7%a3 class=anchor aria-hidden=true>#</a><a href=#2-gguf-格式详解 class=anchor aria-hidden=true>#</a></h3><p>GGUF (GPT-Generated Unified Format) 是 Ollama 使用的二进制格式，由 llama.cpp 项目开发。</p><h4 id=gguf-文件结构>GGUF 文件结构 <a href=#gguf-%e6%96%87%e4%bb%b6%e7%bb%93%e6%9e%84 class=anchor aria-hidden=true>#</a><a href=#gguf-文件结构 class=anchor aria-hidden=true>#</a></h4><pre><code class=language-text>┌─────────────────────────────────────┐
+│  Magic: &quot;GGUF&quot; (4 bytes)            │
+├─────────────────────────────────────┤
+│  Version: uint32                    │
+├─────────────────────────────────────┤
+│  Num Tensors: uint64                │
+├─────────────────────────────────────┤
+│  Num KV Pairs: uint64               │
+├─────────────────────────────────────┤
+│  Key-Value Pairs                    │
+│  ┌───────────────────────────────┐ │
+│  │ Key: string (length + data)    │ │
+│  │ Value Type: uint32              │ │
+│  │ Value: (根据类型)               │ │
+│  └───────────────────────────────┘ │
+│  ...                                │
+├─────────────────────────────────────┤
+│  Tensors                             │
+│  ┌───────────────────────────────┐ │
+│  │ Name: string                   │ │
+│  │ Dimensions: uint32             │ │
+│  │ Shape: int64[]                 │ │
+│  │ Type: uint32 (ggml_type)        │ │
+│  │ Offset: uint64                 │ │
+│  └───────────────────────────────┘ │
+│  ...                                │
+├─────────────────────────────────────┤
+│  Tensor Data (对齐存储)              │
+│  ┌───────────────────────────────┐ │
+│  │ Weight data (二进制)           │ │
+│  └───────────────────────────────┘ │
+└─────────────────────────────────────┘
+</code></pre><h4 id=关键元数据字段>关键元数据字段 <a href=#%e5%85%b3%e9%94%ae%e5%85%83%e6%95%b0%e6%8d%ae%e5%ad%97%e6%ae%b5 class=anchor aria-hidden=true>#</a><a href=#关键元数据字段 class=anchor aria-hidden=true>#</a></h4><pre><code class=language-go>// 通用配置
+&quot;general.architecture&quot;: &quot;llama&quot;           // 模型架构
+&quot;general.file_type&quot;: uint32               // 文件类型（量化级别）
+&quot;general.parameter_count&quot;: uint64         // 参数量
+&quot;general.quantization_version&quot;: uint32    // 量化版本
+
+// Tokenizer 配置
+&quot;tokenizer.ggml.model&quot;: string            // Tokenizer 类型
+&quot;tokenizer.ggml.tokens&quot;: []string         // 词汇表
+&quot;tokenizer.ggml.scores&quot;: []float32        // Token 分数
+&quot;tokenizer.ggml.merges&quot;: []string         // BPE 合并规则
+
+// 模型配置
+&quot;llama.block_count&quot;: uint32               // Transformer 块数
+&quot;llama.attention.head_count&quot;: uint32      // 注意力头数
+&quot;llama.attention.head_count_kv&quot;: uint32   // KV 头数
+&quot;llama.context_length&quot;: uint32            // 上下文长度
+&quot;llama.embedding_length&quot;: uint32          // 嵌入维度
+</code></pre><h3 id=3-模型创建流程>3. 模型创建流程 <a href=#3-%e6%a8%a1%e5%9e%8b%e5%88%9b%e5%bb%ba%e6%b5%81%e7%a8%8b class=anchor aria-hidden=true>#</a><a href=#3-模型创建流程 class=anchor aria-hidden=true>#</a></h3><h4 id=从-pytorchsafetensors-转换>从 PyTorch/Safetensors 转换 <a href=#%e4%bb%8e-pytorchsafetensors-%e8%bd%ac%e6%8d%a2 class=anchor aria-hidden=true>#</a><a href=#从-pytorchsafetensors-转换 class=anchor aria-hidden=true>#</a></h4><p>Ollama 使用 <code>convert</code> 包将 HuggingFace 格式转换为 GGUF：</p><pre><code class=language-go>// ollama/convert/convert.go
+func ConvertModel(fsys fs.FS, f *os.File) error {
+    // 1. 读取配置文件
+    bts, err := fs.ReadFile(fsys, &quot;config.json&quot;)
+    var p ModelParameters
+    json.Unmarshal(bts, &amp;p)
+
+    // 2. 根据架构选择转换器
+    var conv ModelConverter
+    switch p.Architectures[0] {
+    case &quot;LlamaForCausalLM&quot;:
+        conv = &amp;llamaModel{}
+    case &quot;MistralForCausalLM&quot;:
+        conv = &amp;mistralModel{}
+    // ... 更多架构
+    }
+
+    // 3. 解析张量
+    ts, err := parseTensors(fsys, strings.NewReplacer(conv.Replacements()...))
+
+    // 4. 转换并写入
+    return writeFile(f, conv.KV(tokenizer), conv.Tensors(ts))
+}
+</code></pre><h4 id=转换步骤>转换步骤 <a href=#%e8%bd%ac%e6%8d%a2%e6%ad%a5%e9%aa%a4 class=anchor aria-hidden=true>#</a><a href=#转换步骤 class=anchor aria-hidden=true>#</a></h4><ol><li><p><strong>读取源模型</strong>：</p><pre><code class=language-go>// 支持 Safetensors 和 PyTorch 格式
+tensors, err := parseSafetensors(fsys, matches...)
+// 或
+tensors, err := parseTorch(fsys, matches...)
+</code></pre></li><li><p><strong>映射张量名称</strong>：</p><pre><code class=language-go>// HuggingFace 格式 → GGUF 格式
+// &quot;model.layers.0.self_attn.q_proj.weight&quot;
+// → &quot;blk.0.attn_q.weight&quot;
+replacer := strings.NewReplacer(conv.Replacements()...)
+</code></pre></li><li><p><strong>转换数据类型</strong>：</p><pre><code class=language-go>// FP32/FP16 → 量化类型（Q4_0, Q8_0 等）
+quantized := ggml.Quantize(targetType, f32Data, shape)
+</code></pre></li><li><p><strong>写入 GGUF</strong>：</p><pre><code class=language-go>fsggml.WriteGGUF(out, kv, tensors)
+</code></pre></li></ol><h4 id=使用-ollama-转换>使用 Ollama 转换 <a href=#%e4%bd%bf%e7%94%a8-ollama-%e8%bd%ac%e6%8d%a2 class=anchor aria-hidden=true>#</a><a href=#使用-ollama-转换 class=anchor aria-hidden=true>#</a></h4><pre><code class=language-bash># 创建 Modelfile
+cat &gt; Modelfile &lt;&lt; EOF
+FROM /path/to/safetensors/directory
+EOF
+
+# 转换并创建模型
+ollama create my-model -f Modelfile
+
+# 量化模型
+ollama create my-model-q4 -f Modelfile --quantize q4_0
+</code></pre><h3 id=4-量化技术>4. 量化技术 <a href=#4-%e9%87%8f%e5%8c%96%e6%8a%80%e6%9c%af class=anchor aria-hidden=true>#</a><a href=#4-量化技术 class=anchor aria-hidden=true>#</a></h3><p>量化是将模型从高精度（FP32/FP16）转换为低精度（INT8/INT4）的过程，以减少内存占用和提高推理速度。</p><h4 id=量化级别>量化级别 <a href=#%e9%87%8f%e5%8c%96%e7%ba%a7%e5%88%ab class=anchor aria-hidden=true>#</a><a href=#量化级别 class=anchor aria-hidden=true>#</a></h4><table><thead><tr><th>类型</th><th>位宽</th><th>内存减少</th><th>质量损失</th></tr></thead><tbody><tr><td>F32</td><td>32</td><td>1x</td><td>无</td></tr><tr><td>F16</td><td>16</td><td>2x</td><td>极小</td></tr><tr><td>Q8_0</td><td>8</td><td>4x</td><td>小</td></tr><tr><td>Q4_0</td><td>4</td><td>8x</td><td>中等</td></tr><tr><td>Q4_1</td><td>4</td><td>8x</td><td>中等</td></tr><tr><td>Q3_K</td><td>3</td><td>~10x</td><td>较大</td></tr><tr><td>Q2_K</td><td>2</td><td>~16x</td><td>大</td></tr></tbody></table><h4 id=量化实现>量化实现 <a href=#%e9%87%8f%e5%8c%96%e5%ae%9e%e7%8e%b0 class=anchor aria-hidden=true>#</a><a href=#量化实现 class=anchor aria-hidden=true>#</a></h4><pre><code class=language-go>// ollama/ml/backend/ggml/quantization.go
+func Quantize(dstType TensorType, src []float32, shape []uint64) []byte {
+    switch dstType {
+    case TensorTypeQ4_0:
+        return quantizeQ4_0(src, shape)
+    case TensorTypeQ8_0:
+        return quantizeQ8_0(src, shape)
+    // ... 更多量化类型
+    }
+}
+
+// Q4_0 量化：每个权重用 4 位表示
+// 使用块量化：每 32 个值共享一个 scale
+func quantizeQ4_0(data []float32, shape []uint64) []byte {
+    blockSize := 32
+    blocks := len(data) / blockSize
+
+    result := make([]byte, blocks*(2+blockSize/2)) // scale(2) + qs(16)
+
+    for i := 0; i &lt; blocks; i++ {
+        block := data[i*blockSize : (i+1)*blockSize]
+
+        // 计算 scale
+        max := float32(0)
+        for _, v := range block {
+            if abs(v) &gt; max {
+                max = abs(v)
+            }
+        }
+        scale := max / 7.0 // Q4 范围是 -7 到 7
+
+        // 量化
+        for j, v := range block {
+            q := int8(v / scale)
+            // 打包到 4 位
+            result[offset+j/2] |= byte(q&amp;0xF) &lt;&lt; (4 * (j % 2))
+        }
+    }
+
+    return result
+}
+</code></pre><h2 id=模型加载和推理>模型加载和推理 <a href=#%e6%a8%a1%e5%9e%8b%e5%8a%a0%e8%bd%bd%e5%92%8c%e6%8e%a8%e7%90%86 class=anchor aria-hidden=true>#</a><a href=#模型加载和推理 class=anchor aria-hidden=true>#</a></h2><h3 id=1-模型加载流程>1. 模型加载流程 <a href=#1-%e6%a8%a1%e5%9e%8b%e5%8a%a0%e8%bd%bd%e6%b5%81%e7%a8%8b class=anchor aria-hidden=true>#</a><a href=#1-模型加载流程 class=anchor aria-hidden=true>#</a></h3><h4 id=内存分配策略>内存分配策略 <a href=#%e5%86%85%e5%ad%98%e5%88%86%e9%85%8d%e7%ad%96%e7%95%a5 class=anchor aria-hidden=true>#</a><a href=#内存分配策略 class=anchor aria-hidden=true>#</a></h4><p>Ollama 使用智能内存分配，优先使用 GPU，不足时回退到 CPU：</p><pre><code class=language-go>// ollama/llm/server.go::Load()
+func (s *llamaServer) Load(ctx context.Context, systemInfo ml.SystemInfo,
+    systemGPUs []ml.DeviceInfo, requireFull bool) ([]ml.DeviceID, error) {
+
+    // 1. 初始化内存结构
+    s.mem = &amp;ml.BackendMemory{
+        CPU: ml.DeviceMemory{Weights: make([]uint64, layers)},
+        GPUs: make([]ml.DeviceMemory, len(gpus)),
+    }
+
+    // 2. 计算图大小（KV Cache + 计算图）
+    kv, graphPartial, graphFull := s.ggml.GraphSize(
+        uint64(s.options.NumCtx),
+        uint64(batchSize),
+        parallel,
+        kvCacheType,
+        flashAttention,
+    )
+
+    // 3. 分配层到设备
+    gpuLayers := assignLayers(layers, gpus, requireFull, numGPU)
+
+    // 4. 加载模型
+    resp, err := s.initModel(ctx, s.loadRequest, LoadOperationCommit)
+
+    return gpuIDs, s.WaitUntilRunning(ctx)
+}
+</code></pre><h4 id=层分配算法>层分配算法 <a href=#%e5%b1%82%e5%88%86%e9%85%8d%e7%ae%97%e6%b3%95 class=anchor aria-hidden=true>#</a><a href=#层分配算法 class=anchor aria-hidden=true>#</a></h4><pre><code class=language-go>// ollama/llm/server.go::assignLayers()
+func assignLayers(layers []uint64, gpus []ml.DeviceInfo,
+    requireFull bool, requestedLayers int) ml.GPULayersList {
+
+    // 1. 按性能排序 GPU
+    sortedGPUs := ml.ByPerformance(gpus)
+
+    // 2. 贪心分配
+    gpuLayers := greedyFit(layers, sortedGPUs, capacity, requestedLayers)
+
+    return gpuLayers
+}
+
+// 贪心算法：从后往前分配层（后面的层更重要）
+func greedyFit(layers []uint64, gpus []ml.DeviceInfo,
+    capacity float32, requestedLayers int) ml.GPULayersList {
+
+    device := len(gpus) - 1
+    freeSpace := uint64(float32(gpus[device].FreeMemory) * capacity)
+
+    for i := len(layers) - 1; i &gt;= 0; i-- {
+        if layers[i] &lt;= freeSpace {
+            // 分配到当前 GPU
+            gpuLayers[0].Layers = append([]int{i}, gpuLayers[0].Layers...)
+            freeSpace -= layers[i]
+        } else {
+            // 切换到下一个 GPU
+            device--
+            if device &lt; 0 {
+                break // CPU 回退
+            }
+            freeSpace = uint64(float32(gpus[device].FreeMemory) * capacity)
+        }
+    }
+
+    return gpuLayers
+}
+</code></pre><h3 id=2-推理执行流程>2. 推理执行流程 <a href=#2-%e6%8e%a8%e7%90%86%e6%89%a7%e8%a1%8c%e6%b5%81%e7%a8%8b class=anchor aria-hidden=true>#</a><a href=#2-推理执行流程 class=anchor aria-hidden=true>#</a></h3><h4 id=前向传播>前向传播 <a href=#%e5%89%8d%e5%90%91%e4%bc%a0%e6%92%ad class=anchor aria-hidden=true>#</a><a href=#前向传播 class=anchor aria-hidden=true>#</a></h4><pre><code class=language-go>// ollama/model/model.go::Forward()
+func Forward(ctx ml.Context, m Model, batch input.Batch) (ml.Tensor, error) {
+    // 1. 启动 KV Cache
+    if cache != nil {
+        err := cache.StartForward(ctx, batch, false)
+    }
+
+    // 2. 执行前向传播
+    t, err := m.Forward(ctx, batch)
+
+    // 3. 更新上下文
+    ctx.Forward(t)
+
+    return t, nil
+}
+</code></pre><h4 id=推理循环>推理循环 <a href=#%e6%8e%a8%e7%90%86%e5%be%aa%e7%8e%af class=anchor aria-hidden=true>#</a><a href=#推理循环 class=anchor aria-hidden=true>#</a></h4><pre><code class=language-go>// ollama/runner/ollamarunner/runner.go::Sequence.Run()
+func (seq *Sequence) Run() {
+    for {
+        // 1. 准备批次
+        batch := seq.prepareBatch()
+
+        // 2. 前向传播
+        logits, err := model.Forward(ctx, batch)
+
+        // 3. 采样下一个 token
+        token, logprobs := seq.sampler.Sample(logits)
+
+        // 4. 解码
+        text := seq.model.Decode(token)
+
+        // 5. 检查停止条件
+        if seq.shouldStop(text) {
+            break
+        }
+
+        // 6. 发送响应
+        seq.responses &lt;- response{content: text, logprobs: logprobs}
+
+        // 7. 更新输入
+        seq.inputs = append(seq.inputs, &amp;input.Input{
+            Tokens: []int{token},
+        })
+    }
+}
+</code></pre><h4 id=采样策略>采样策略 <a href=#%e9%87%87%e6%a0%b7%e7%ad%96%e7%95%a5 class=anchor aria-hidden=true>#</a><a href=#采样策略 class=anchor aria-hidden=true>#</a></h4><pre><code class=language-go>// ollama/sample/sampler.go
+type Sampler struct {
+    temperature float32
+    topK        int
+    topP        float32
+    minP        float32
+    seed        int64
+}
+
+func (s *Sampler) Sample(logits ml.Tensor) (int, []Logprob) {
+    // 1. 应用 temperature
+    if s.temperature &gt; 0 {
+        logits = applyTemperature(logits, s.temperature)
+    }
+
+    // 2. Top-K 采样
+    if s.topK &gt; 0 {
+        logits = applyTopK(logits, s.topK)
+    }
+
+    // 3. Top-P (nucleus) 采样
+    if s.topP &lt; 1.0 {
+        logits = applyTopP(logits, s.topP)
+    }
+
+    // 4. 最小概率过滤
+    if s.minP &gt; 0 {
+        logits = applyMinP(logits, s.minP)
+    }
+
+    // 5. Softmax
+    probs := softmax(logits)
+
+    // 6. 采样
+    token := sampleFromDistribution(probs, s.seed)
+
+    return token, logprobs
+}
+</code></pre><h3 id=3-与普通-go-服务的差异>3. 与普通 Go 服务的差异 <a href=#3-%e4%b8%8e%e6%99%ae%e9%80%9a-go-%e6%9c%8d%e5%8a%a1%e7%9a%84%e5%b7%ae%e5%bc%82 class=anchor aria-hidden=true>#</a><a href=#3-与普通-go-服务的差异 class=anchor aria-hidden=true>#</a></h3><h4 id=1-cgo-调用>1. CGO 调用 <a href=#1-cgo-%e8%b0%83%e7%94%a8 class=anchor aria-hidden=true>#</a><a href=#1-cgo-调用 class=anchor aria-hidden=true>#</a></h4><p>Ollama 通过 CGO 调用 llama.cpp：</p><pre><code class=language-go>// ollama/ml/backend/ggml/ggml.go
+// #cgo CFLAGS: -I${SRCDIR}/ggml/include
+// #cgo LDFLAGS: -lggml -lstdc++
+// #include &quot;ggml.h&quot;
+import &quot;C&quot;
+
+// 调用 C 函数
+func (b *Backend) Load(ctx context.Context, progressFn func(float32)) error {
+    // CGO 调用
+    model := C.ggml_model_load(
+        C.CString(b.modelPath),
+        // ... 参数
+    )
+
+    return nil
+}
+</code></pre><p><strong>注意事项</strong>：</p><ul><li>CGO 调用有性能开销</li><li>需要管理 C 内存</li><li>跨平台编译复杂</li></ul><h4 id=2-内存密集型操作>2. 内存密集型操作 <a href=#2-%e5%86%85%e5%ad%98%e5%af%86%e9%9b%86%e5%9e%8b%e6%93%8d%e4%bd%9c class=anchor aria-hidden=true>#</a><a href=#2-内存密集型操作 class=anchor aria-hidden=true>#</a></h4><p>大模型需要大量内存：</p><pre><code class=language-go>// 7B 模型大约需要：
+// - FP16: 14GB
+// - Q4_0: 4GB
+// - Q8_0: 7GB
+
+// 需要预分配大块内存
+weights := make([]float32, 7_000_000_000) // 7B 参数
+</code></pre><p><strong>优化策略</strong>：</p><ul><li>使用 mmap 延迟加载</li><li>分块加载</li><li>量化减少内存</li></ul><h4 id=3-gpu-计算>3. GPU 计算 <a href=#3-gpu-%e8%ae%a1%e7%ae%97 class=anchor aria-hidden=true>#</a><a href=#3-gpu-计算 class=anchor aria-hidden=true>#</a></h4><p>需要 GPU 加速：</p><pre><code class=language-go>// ollama/ml/backend/ggml/ggml.go
+func initDevices() {
+    // 初始化 GPU 后端
+    for i := range C.ggml_backend_dev_count() {
+        d := C.ggml_backend_dev_get(i)
+
+        switch C.ggml_backend_dev_type(d) {
+        case C.GGML_BACKEND_DEVICE_TYPE_GPU:
+            gpus = append(gpus, d)
+            backends[d] = C.ggml_backend_dev_init(d, nil)
+        }
+    }
+}
+</code></pre><p><strong>GPU 库支持</strong>：</p><ul><li>CUDA (NVIDIA)</li><li>ROCm (AMD)</li><li>Metal (Apple)</li><li>Vulkan (跨平台)</li></ul><h4 id=4-长时间运行任务>4. 长时间运行任务 <a href=#4-%e9%95%bf%e6%97%b6%e9%97%b4%e8%bf%90%e8%a1%8c%e4%bb%bb%e5%8a%a1 class=anchor aria-hidden=true>#</a><a href=#4-长时间运行任务 class=anchor aria-hidden=true>#</a></h4><p>推理是长时间运行的任务：</p><pre><code class=language-go>// 使用 context 管理超时和取消
+ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+defer cancel()
+
+// 流式返回结果
+for {
+    select {
+    case &lt;-ctx.Done():
+        return ctx.Err()
+    case token := &lt;-tokens:
+        // 发送 token
+    }
+}
+</code></pre><h3 id=4-优化技术>4. 优化技术 <a href=#4-%e4%bc%98%e5%8c%96%e6%8a%80%e6%9c%af class=anchor aria-hidden=true>#</a><a href=#4-优化技术 class=anchor aria-hidden=true>#</a></h3><h4 id=flash-attention>Flash Attention <a href=#flash-attention class=anchor aria-hidden=true>#</a><a href=#flash-attention class=anchor aria-hidden=true>#</a></h4><p>加速注意力计算：</p><pre><code class=language-go>// ollama/ml/backend/ggml/ggml.go
+if flashAttention != ml.FlashAttentionNone {
+    // 使用 Flash Attention
+    C.ggml_set_flash_attention(flashAttention)
+}
+</code></pre><h4 id=批处理优化>批处理优化 <a href=#%e6%89%b9%e5%a4%84%e7%90%86%e4%bc%98%e5%8c%96 class=anchor aria-hidden=true>#</a><a href=#批处理优化 class=anchor aria-hidden=true>#</a></h4><pre><code class=language-go>// 批处理多个序列
+batch := input.Batch{
+    Sequences: []*Sequence{seq1, seq2, seq3},
+    Positions: []int{pos1, pos2, pos3},
+}
+
+// 一次前向传播处理多个序列
+logits := model.Forward(ctx, batch)
+</code></pre><h4 id=并行推理>并行推理 <a href=#%e5%b9%b6%e8%a1%8c%e6%8e%a8%e7%90%86 class=anchor aria-hidden=true>#</a><a href=#并行推理 class=anchor aria-hidden=true>#</a></h4><pre><code class=language-go>// ollama/runner/ollamarunner/runner.go
+s.parallel = parallel
+s.seqs = make([]*Sequence, s.parallel)
+s.seqsSem = semaphore.NewWeighted(int64(s.parallel))
+
+// 多个序列并行处理
+for i := 0; i &lt; parallel; i++ {
+    go seqs[i].Run()
+}
+</code></pre><h2 id=go-语言集成>Go 语言集成 <a href=#go-%e8%af%ad%e8%a8%80%e9%9b%86%e6%88%90 class=anchor aria-hidden=true>#</a><a href=#go-语言集成 class=anchor aria-hidden=true>#</a></h2><h3 id=1-使用-ollama-的模型加载能力>1. 使用 Ollama 的模型加载能力 <a href=#1-%e4%bd%bf%e7%94%a8-ollama-%e7%9a%84%e6%a8%a1%e5%9e%8b%e5%8a%a0%e8%bd%bd%e8%83%bd%e5%8a%9b class=anchor aria-hidden=true>#</a><a href=#1-使用-ollama-的模型加载能力 class=anchor aria-hidden=true>#</a></h3><h4 id=方式一直接调用-llm-server>方式一：直接调用 LLM Server <a href=#%e6%96%b9%e5%bc%8f%e4%b8%80%e7%9b%b4%e6%8e%a5%e8%b0%83%e7%94%a8-llm-server class=anchor aria-hidden=true>#</a><a href=#方式一直接调用-llm-server class=anchor aria-hidden=true>#</a></h4><pre><code class=language-go>import (
+    &quot;github.com/ollama/ollama/llm&quot;
+    &quot;github.com/ollama/ollama/ml&quot;
+    &quot;github.com/ollama/ollama/discover&quot;
+)
+
+// 1. 获取系统信息
+systemInfo := discover.GetSystemInfo()
+gpus := discover.GPUDevices(ctx, nil)
+
+// 2. 创建 LLM Server
+server, err := llm.NewLlamaServer(
+    systemInfo,
+    gpus,
+    modelPath,
+    &amp;ggml.GGML{},
+    nil, // adapters
+    nil, // projectors
+    api.Options{
+        NumCtx: 4096,
+        NumGPU: 35,
+    },
+    1, // parallel
+)
+
+// 3. 加载模型
+gpuIDs, err := server.Load(ctx, systemInfo, gpus, true)
+
+// 4. 执行推理
+err := server.Completion(ctx, llm.CompletionRequest{
+    Prompt:  &quot;Hello, world!&quot;,
+    Options: &amp;api.Options{},
+}, func(resp llm.CompletionResponse) {
+    fmt.Print(resp.Content)
+})
+</code></pre><h4 id=方式二使用-runner-进程模式>方式二：使用 Runner 进程模式 <a href=#%e6%96%b9%e5%bc%8f%e4%ba%8c%e4%bd%bf%e7%94%a8-runner-%e8%bf%9b%e7%a8%8b%e6%a8%a1%e5%bc%8f class=anchor aria-hidden=true>#</a><a href=#方式二使用-runner-进程模式 class=anchor aria-hidden=true>#</a></h4><pre><code class=language-go>// 启动 runner 进程
+cmd, port, err := llm.StartRunner(
+    true,  // ollamaEngine
+    modelPath,
+    gpuLibs,
+    os.Stderr,
+    nil,
+)
+
+// 通过 HTTP 调用
+endpoint := fmt.Sprintf(&quot;http://127.0.0.1:%d/completion&quot;, port)
+req, _ := http.NewRequestWithContext(ctx, &quot;POST&quot;, endpoint, body)
+resp, _ := http.DefaultClient.Do(req)
+</code></pre><h4 id=方式三通过-http-api>方式三：通过 HTTP API <a href=#%e6%96%b9%e5%bc%8f%e4%b8%89%e9%80%9a%e8%bf%87-http-api class=anchor aria-hidden=true>#</a><a href=#方式三通过-http-api class=anchor aria-hidden=true>#</a></h4><pre><code class=language-go>// 调用 Ollama API
+client := &amp;http.Client{}
+req, _ := http.NewRequest(&quot;POST&quot;, &quot;http://localhost:11434/api/generate&quot;,
+    strings.NewReader(`{
+        &quot;model&quot;: &quot;llama3.2&quot;,
+        &quot;prompt&quot;: &quot;Hello, world!&quot;
+    }`))
+
+resp, _ := client.Do(req)
+</code></pre><h3 id=2-仅使用推理能力不使用工具调用>2. 仅使用推理能力，不使用工具调用 <a href=#2-%e4%bb%85%e4%bd%bf%e7%94%a8%e6%8e%a8%e7%90%86%e8%83%bd%e5%8a%9b%e4%b8%8d%e4%bd%bf%e7%94%a8%e5%b7%a5%e5%85%b7%e8%b0%83%e7%94%a8 class=anchor aria-hidden=true>#</a><a href=#2-仅使用推理能力不使用工具调用 class=anchor aria-hidden=true>#</a></h3><h4 id=直接调用-completion>直接调用 Completion <a href=#%e7%9b%b4%e6%8e%a5%e8%b0%83%e7%94%a8-completion class=anchor aria-hidden=true>#</a><a href=#直接调用-completion class=anchor aria-hidden=true>#</a></h4><pre><code class=language-go>// 绕过工具注册，直接调用推理
+err := server.Completion(ctx, llm.CompletionRequest{
+    Prompt:  prompt,
+    Options: opts,
+    // 不提供 Tools 参数
+}, func(resp llm.CompletionResponse) {
+    // 处理响应
+    fmt.Print(resp.Content)
+})
+</code></pre><h4 id=自定义推理流程>自定义推理流程 <a href=#%e8%87%aa%e5%ae%9a%e4%b9%89%e6%8e%a8%e7%90%86%e6%b5%81%e7%a8%8b class=anchor aria-hidden=true>#</a><a href=#自定义推理流程 class=anchor aria-hidden=true>#</a></h4><pre><code class=language-go>// 创建自定义推理函数
+func customInference(
+    model Model,
+    prompt string,
+    opts api.Options,
+) (string, error) {
+    // 1. Tokenize
+    tokens, err := model.Tokenize(prompt)
+
+    // 2. 创建批次
+    batch := input.Batch{
+        Sequences: []*input.Input{
+            {Tokens: tokens},
+        },
+        Positions: []int{0},
+    }
+
+    // 3. 前向传播
+    ctx := ml.NewContext()
+    logits, err := model.Forward(ctx, batch)
+
+    // 4. 采样
+    sampler := sample.NewSampler(opts.Temperature, opts.TopK, opts.TopP, ...)
+    token, _ := sampler.Sample(logits)
+
+    // 5. 解码
+    text := model.Decode(token)
+
+    return text, nil
+}
+</code></pre><h3 id=3-集成示例>3. 集成示例 <a href=#3-%e9%9b%86%e6%88%90%e7%a4%ba%e4%be%8b class=anchor aria-hidden=true>#</a><a href=#3-集成示例 class=anchor aria-hidden=true>#</a></h3><h4 id=最小化集成>最小化集成 <a href=#%e6%9c%80%e5%b0%8f%e5%8c%96%e9%9b%86%e6%88%90 class=anchor aria-hidden=true>#</a><a href=#最小化集成 class=anchor aria-hidden=true>#</a></h4><pre><code class=language-go>package main
+
+import (
+    &quot;context&quot;
+    &quot;fmt&quot;
+    &quot;github.com/ollama/ollama/llm&quot;
+    &quot;github.com/ollama/ollama/api&quot;
+    &quot;github.com/ollama/ollama/discover&quot;
+)
+
+func main() {
+    ctx := context.Background()
+
+    // 1. 初始化
+    systemInfo := discover.GetSystemInfo()
+    gpus := discover.GPUDevices(ctx, nil)
+
+    // 2. 创建服务器
+    server, err := llm.NewLlamaServer(
+        systemInfo,
+        gpus,
+        &quot;/path/to/model.gguf&quot;,
+        nil, nil, nil,
+        api.Options{NumCtx: 4096},
+        1,
+    )
+    if err != nil {
+        panic(err)
+    }
+
+    // 3. 加载模型
+    _, err = server.Load(ctx, systemInfo, gpus, true)
+    if err != nil {
+        panic(err)
+    }
+
+    // 4. 推理
+    err = server.Completion(ctx, llm.CompletionRequest{
+        Prompt: &quot;What is AI?&quot;,
+        Options: &amp;api.Options{},
+    }, func(resp llm.CompletionResponse) {
+        fmt.Print(resp.Content)
+        if resp.Done {
+            fmt.Println()
+        }
+    })
+
+    if err != nil {
+        panic(err)
+    }
+}
+</code></pre><h2 id=开发挑战>开发挑战 <a href=#%e5%bc%80%e5%8f%91%e6%8c%91%e6%88%98 class=anchor aria-hidden=true>#</a><a href=#开发挑战 class=anchor aria-hidden=true>#</a></h2><h3 id=1-技术挑战>1. 技术挑战 <a href=#1-%e6%8a%80%e6%9c%af%e6%8c%91%e6%88%98 class=anchor aria-hidden=true>#</a><a href=#1-技术挑战 class=anchor aria-hidden=true>#</a></h3><h4 id=内存管理>内存管理 <a href=#%e5%86%85%e5%ad%98%e7%ae%a1%e7%90%86 class=anchor aria-hidden=true>#</a><a href=#内存管理 class=anchor aria-hidden=true>#</a></h4><p><strong>挑战</strong>：</p><ul><li>大模型需要大量内存（7B 模型需要 4-14GB）</li><li>GPU 内存有限</li><li>多模型并发需要更多内存</li></ul><p><strong>解决方案</strong>：</p><pre><code class=language-go>// 1. 智能内存分配
+gpuLayers := assignLayers(layers, gpus, requireFull, numGPU)
+
+// 2. 模型卸载
+if keepAlive == 0 {
+    server.Unload()
+}
+
+// 3. 内存映射
+if useMMap {
+    model := mmapModel(modelPath)
+}
+</code></pre><h4 id=gpu-资源调度>GPU 资源调度 <a href=#gpu-%e8%b5%84%e6%ba%90%e8%b0%83%e5%ba%a6 class=anchor aria-hidden=true>#</a><a href=#gpu-资源调度 class=anchor aria-hidden=true>#</a></h4><p><strong>挑战</strong>：</p><ul><li>多个模型竞争 GPU</li><li>需要动态分配</li><li>避免 OOM</li></ul><p><strong>解决方案</strong>：</p><pre><code class=language-go>// 调度器管理 GPU 资源
+type Scheduler struct {
+    loaded map[string]*runnerRef
+    activeLoading llm.LlamaServer
+}
+
+// 检查 GPU 可用性
+available := gpu.FreeMemory - overhead - minimum
+if available &lt; required {
+    // 卸载其他模型或回退到 CPU
+}
+</code></pre><h4 id=并发推理管理>并发推理管理 <a href=#%e5%b9%b6%e5%8f%91%e6%8e%a8%e7%90%86%e7%ae%a1%e7%90%86 class=anchor aria-hidden=true>#</a><a href=#并发推理管理 class=anchor aria-hidden=true>#</a></h4><p><strong>挑战</strong>：</p><ul><li>多个请求同时推理</li><li>需要共享模型权重</li><li>独立的 KV Cache</li></ul><p><strong>解决方案</strong>：</p><pre><code class=language-go>// 使用信号量控制并发
+sem := semaphore.NewWeighted(int64(parallel))
+
+// 每个序列独立的 KV Cache
+seqs := make([]*Sequence, parallel)
+for i := range seqs {
+    seqs[i].cache = cache.NewSlot(i)
+}
+</code></pre><h4 id=模型版本管理>模型版本管理 <a href=#%e6%a8%a1%e5%9e%8b%e7%89%88%e6%9c%ac%e7%ae%a1%e7%90%86 class=anchor aria-hidden=true>#</a><a href=#模型版本管理 class=anchor aria-hidden=true>#</a></h4><p><strong>挑战</strong>：</p><ul><li>模型格式变化</li><li>兼容性问题</li><li>版本迁移</li></ul><p><strong>解决方案</strong>：</p><pre><code class=language-go>// 检查模型兼容性
+version := model.KV().Uint(&quot;general.quantization_version&quot;)
+if version &gt; supportedVersion {
+    return errors.New(&quot;unsupported model version&quot;)
+}
+</code></pre><h3 id=2-架构挑战>2. 架构挑战 <a href=#2-%e6%9e%b6%e6%9e%84%e6%8c%91%e6%88%98 class=anchor aria-hidden=true>#</a><a href=#2-架构挑战 class=anchor aria-hidden=true>#</a></h3><h4 id=可扩展性设计>可扩展性设计 <a href=#%e5%8f%af%e6%89%a9%e5%b1%95%e6%80%a7%e8%ae%be%e8%ae%a1 class=anchor aria-hidden=true>#</a><a href=#可扩展性设计 class=anchor aria-hidden=true>#</a></h4><p><strong>挑战</strong>：</p><ul><li>支持多模型</li><li>水平扩展</li><li>负载均衡</li></ul><p><strong>解决方案</strong>：</p><pre><code class=language-go>// 多模型支持
+type ModelManager struct {
+    models map[string]*ModelInstance
+    scheduler *Scheduler
+}
+
+// 水平扩展
+type ClusterManager struct {
+    nodes []Node
+    loadBalancer LoadBalancer
+}
+</code></pre><h4 id=流式响应处理>流式响应处理 <a href=#%e6%b5%81%e5%bc%8f%e5%93%8d%e5%ba%94%e5%a4%84%e7%90%86 class=anchor aria-hidden=true>#</a><a href=#流式响应处理 class=anchor aria-hidden=true>#</a></h4><p><strong>挑战</strong>：</p><ul><li>实时返回 token</li><li>连接管理</li><li>错误恢复</li></ul><p><strong>解决方案</strong>：</p><pre><code class=language-go>// Server-Sent Events
+func streamResponse(w http.ResponseWriter, tokens &lt;-chan string) {
+    flusher := w.(http.Flusher)
+    for token := range tokens {
+        fmt.Fprintf(w, &quot;data: %s\n\n&quot;, token)
+        flusher.Flush()
+    }
+}
+</code></pre><h4 id=错误恢复机制>错误恢复机制 <a href=#%e9%94%99%e8%af%af%e6%81%a2%e5%a4%8d%e6%9c%ba%e5%88%b6 class=anchor aria-hidden=true>#</a><a href=#错误恢复机制 class=anchor aria-hidden=true>#</a></h4><p><strong>挑战</strong>：</p><ul><li>Runner 进程崩溃</li><li>网络中断</li><li>模型加载失败</li></ul><p><strong>解决方案</strong>：</p><pre><code class=language-go>// 监控 runner 进程
+go func() {
+    err := cmd.Wait()
+    if err != nil {
+        // 重启 runner
+        restartRunner()
+    }
+}()
+
+// 重试机制
+for retries := 0; retries &lt; maxRetries; retries++ {
+    err := loadModel()
+    if err == nil {
+        break
+    }
+    time.Sleep(time.Second * time.Duration(retries))
+}
+</code></pre><h3 id=3-集成挑战>3. 集成挑战 <a href=#3-%e9%9b%86%e6%88%90%e6%8c%91%e6%88%98 class=anchor aria-hidden=true>#</a><a href=#3-集成挑战 class=anchor aria-hidden=true>#</a></h3><h4 id=mcp-服务器集成>MCP 服务器集成 <a href=#mcp-%e6%9c%8d%e5%8a%a1%e5%99%a8%e9%9b%86%e6%88%90 class=anchor aria-hidden=true>#</a><a href=#mcp-服务器集成 class=anchor aria-hidden=true>#</a></h4><p><strong>挑战</strong>：</p><ul><li>协议实现</li><li>工具注册</li><li>安全控制</li></ul><p><strong>解决方案</strong>：</p><pre><code class=language-go>// MCP 客户端
+type MCPClient struct {
+    url string
+    tools map[string]Tool
+}
+
+func (c *MCPClient) ListTools() ([]Tool, error) {
+    // 调用 MCP 服务器
+    resp, err := http.Get(c.url + &quot;/tools&quot;)
+    // 解析工具定义
+    return tools, nil
+}
+
+func (c *MCPClient) CallTool(name string, args map[string]any) (string, error) {
+    // 执行工具调用
+    resp, err := http.Post(c.url + &quot;/tools/&quot; + name, ...)
+    return result, nil
+}
+</code></pre><h4 id=知识库构建>知识库构建 <a href=#%e7%9f%a5%e8%af%86%e5%ba%93%e6%9e%84%e5%bb%ba class=anchor aria-hidden=true>#</a><a href=#知识库构建 class=anchor aria-hidden=true>#</a></h4><p><strong>挑战</strong>：</p><ul><li>文档解析</li><li>向量化</li><li>检索策略</li></ul><p><strong>解决方案</strong>：</p><pre><code class=language-go>// 文档处理流程
+func buildKnowledgeBase(docs []Document) error {
+    // 1. 解析文档
+    chunks := parseDocuments(docs)
+
+    // 2. 生成嵌入
+    embeddings := generateEmbeddings(chunks)
+
+    // 3. 存储到向量数据库
+    vectorDB.upsert(embeddings, chunks)
+
+    return nil
+}
+
+// 检索
+func retrieve(query string, k int) ([]Document, error) {
+    // 1. 生成查询嵌入
+    queryEmbedding := generateEmbedding(query)
+
+    // 2. 向量搜索
+    results := vectorDB.search(queryEmbedding, k)
+
+    // 3. 重排序（可选）
+    results = rerank(query, results)
+
+    return results, nil
+}
+</code></pre><h4 id=多模态支持>多模态支持 <a href=#%e5%a4%9a%e6%a8%a1%e6%80%81%e6%94%af%e6%8c%81 class=anchor aria-hidden=true>#</a><a href=#多模态支持 class=anchor aria-hidden=true>#</a></h4><p><strong>挑战</strong>：</p><ul><li>图像处理</li><li>多模态编码</li><li>对齐处理</li></ul><p><strong>解决方案</strong>：</p><pre><code class=language-go>// 多模态编码
+type MultimodalProcessor interface {
+    EncodeMultimodal(ctx ml.Context, data []byte) ([]input.Multimodal, error)
+    PostTokenize(inputs []*input.Input) ([]*input.Input, error)
+}
+
+// 图像编码
+func (m *VisionModel) EncodeMultimodal(ctx ml.Context, imageData []byte) ([]input.Multimodal, error) {
+    // 1. 解码图像
+    img, err := decodeImage(imageData)
+
+    // 2. 预处理
+    img = preprocessImage(img)
+
+    // 3. 通过视觉编码器
+    features := m.visionEncoder.Forward(ctx, img)
+
+    return features, nil
+}
+</code></pre><h2 id=系统差异分析>系统差异分析 <a href=#%e7%b3%bb%e7%bb%9f%e5%b7%ae%e5%bc%82%e5%88%86%e6%9e%90 class=anchor aria-hidden=true>#</a><a href=#系统差异分析 class=anchor aria-hidden=true>#</a></h2><h3 id=架构对比>架构对比 <a href=#%e6%9e%b6%e6%9e%84%e5%af%b9%e6%af%94 class=anchor aria-hidden=true>#</a><a href=#架构对比 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-mermaid>graph TB
+    subgraph Ollama[&quot;Ollama&quot;]
+        O1[HTTP API]
+        O2[Scheduler]
+        O3[Runner Process]
+        O4[Model Backend]
+        O1 --&gt; O2
+        O2 --&gt; O3
+        O3 --&gt; O4
+    end
+
+    subgraph OpenWebUI[&quot;Open WebUI&quot;]
+        W1[Frontend]
+        W2[FastAPI Backend]
+        W3[Ollama Proxy]
+        W4[Vector DB]
+        W1 --&gt; W2
+        W2 --&gt; W3
+        W2 --&gt; W4
+    end
+
+    subgraph Dify[&quot;Dify - AI Workflow&quot;]
+        D1[Workflow Engine]
+        D2[Node System]
+        D3[LLM Provider]
+        D1 --&gt; D2
+        D2 --&gt; D3
+    end
+
+    subgraph Cursor[&quot;Cursor - AI Agent&quot;]
+        C1[Code Editor]
+        C2[Agent Loop]
+        C3[Tool Execution]
+        C1 --&gt; C2
+        C2 --&gt; C3
+    end
+
+    subgraph Manus[&quot;Manus - AGI Agent&quot;]
+        M1[Planning System]
+        M2[Multi-Agent]
+        M3[Long-term Memory]
+        M1 --&gt; M2
+        M2 --&gt; M3
+    end
+</code></pre><h3 id=详细对比>详细对比 <a href=#%e8%af%a6%e7%bb%86%e5%af%b9%e6%af%94 class=anchor aria-hidden=true>#</a><a href=#详细对比 class=anchor aria-hidden=true>#</a></h3><table><thead><tr><th>特性</th><th>Ollama</th><th>Open WebUI</th><th>Dify</th><th>Cursor</th><th>Manus</th></tr></thead><tbody><tr><td><strong>定位</strong></td><td>模型运行引擎</td><td>Web 界面平台</td><td>工作流编排</td><td>代码助手</td><td>AGI 代理</td></tr><tr><td><strong>核心功能</strong></td><td>模型加载/推理</td><td>UI/API 网关</td><td>工作流设计</td><td>代码生成</td><td>自主决策</td></tr><tr><td><strong>模型管理</strong></td><td>✅ 本地模型</td><td>✅ 代理多后端</td><td>✅ 多提供商</td><td>✅ 集成模型</td><td>✅ 多模型</td></tr><tr><td><strong>工具调用</strong></td><td>✅ 基础工具</td><td>✅ 函数/MCP</td><td>✅ 节点工具</td><td>✅ 代码工具</td><td>✅ 丰富工具</td></tr><tr><td><strong>知识库</strong></td><td>❌</td><td>✅ RAG</td><td>✅ RAG</td><td>❌</td><td>✅ 长期记忆</td></tr><tr><td><strong>工作流</strong></td><td>❌</td><td>❌</td><td>✅ 可视化</td><td>❌</td><td>✅ 复杂规划</td></tr><tr><td><strong>多模态</strong></td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr><tr><td><strong>部署</strong></td><td>本地/服务器</td><td>Web 应用</td><td>SaaS/自托管</td><td>桌面应用</td><td>云端服务</td></tr></tbody></table><h3 id=1-ollama>1. Ollama <a href=#1-ollama class=anchor aria-hidden=true>#</a><a href=#1-ollama class=anchor aria-hidden=true>#</a></h3><p><strong>定位</strong>：本地大模型运行引擎</p><p><strong>特点</strong>：</p><ul><li>专注于模型加载和推理</li><li>高效的资源管理</li><li>简单的 API 接口</li><li>支持多种量化格式</li></ul><p><strong>适用场景</strong>：</p><ul><li>本地模型运行</li><li>作为其他应用的后端</li><li>模型测试和开发</li></ul><h3 id=2-open-webui>2. Open WebUI <a href=#2-open-webui class=anchor aria-hidden=true>#</a><a href=#2-open-webui class=anchor aria-hidden=true>#</a></h3><p><strong>定位</strong>：AI 平台的 Web 界面和 API 网关</p><p><strong>特点</strong>：</p><ul><li>丰富的用户界面</li><li>多后端支持（Ollama、OpenAI 等）</li><li>RAG 功能</li><li>工具集成（函数调用、MCP）</li></ul><p><strong>适用场景</strong>：</p><ul><li>团队协作</li><li>知识库管理</li><li>多模型切换</li><li>企业部署</li></ul><h3 id=3-dify-ai-workflow>3. Dify (AI Workflow) <a href=#3-dify-ai-workflow class=anchor aria-hidden=true>#</a><a href=#3-dify-ai-workflow class=anchor aria-hidden=true>#</a></h3><p><strong>定位</strong>：工作流编排平台</p><p><strong>特点</strong>：</p><ul><li>可视化工作流设计</li><li>多步骤 AI 任务</li><li>数据管道</li><li>模板市场</li></ul><p><strong>适用场景</strong>：</p><ul><li>复杂 AI 应用</li><li>自动化流程</li><li>数据处理管道</li><li>业务自动化</li></ul><h3 id=4-cursor-ai-agent>4. Cursor (AI Agent) <a href=#4-cursor-ai-agent class=anchor aria-hidden=true>#</a><a href=#4-cursor-ai-agent class=anchor aria-hidden=true>#</a></h3><p><strong>定位</strong>：代码助手</p><p><strong>特点</strong>：</p><ul><li>代码生成和编辑</li><li>上下文理解</li><li>多文件操作</li><li>IDE 集成</li></ul><p><strong>适用场景</strong>：</p><ul><li>代码开发</li><li>重构和优化</li><li>代码审查</li><li>学习编程</li></ul><h3 id=5-manus-agi-agent>5. Manus (AGI Agent) <a href=#5-manus-agi-agent class=anchor aria-hidden=true>#</a><a href=#5-manus-agi-agent class=anchor aria-hidden=true>#</a></h3><p><strong>定位</strong>：通用 AI 代理</p><p><strong>特点</strong>：</p><ul><li>自主决策能力</li><li>长期记忆</li><li>多代理协作</li><li>复杂规划</li></ul><p><strong>适用场景</strong>：</p><ul><li>复杂任务自动化</li><li>长期项目管理</li><li>多步骤推理</li><li>AGI 研究</li></ul><h2 id=总结>总结 <a href=#%e6%80%bb%e7%bb%93 class=anchor aria-hidden=true>#</a><a href=#总结 class=anchor aria-hidden=true>#</a></h2><p>开发自己的 AI 助手需要理解：</p><ol><li><strong>模型格式</strong>：GGUF 是高效的本地模型格式</li><li><strong>推理引擎</strong>：需要 CGO 调用底层库（llama.cpp）</li><li><strong>资源管理</strong>：智能的 GPU/CPU 内存分配</li><li><strong>架构设计</strong>：模块化、可扩展的设计</li><li><strong>集成能力</strong>：工具调用、RAG、多模态支持</li></ol><p>选择合适的架构取决于你的需求：</p><ul><li><strong>仅需推理</strong>：使用 Ollama 的 API 或直接集成</li><li><strong>需要 UI</strong>：参考 Open WebUI 的前后端分离</li><li><strong>复杂工作流</strong>：参考 Dify 的节点系统</li><li><strong>代码助手</strong>：参考 Cursor 的上下文管理</li><li><strong>AGI 代理</strong>：参考 Manus 的规划系统</li></ul><p>关键是要理解每个组件的职责，然后根据需求组合使用。</p><div class=edit-page><a href=https://github.com/hitzhangjie/myspace/blob/master/content/blog/ai/product/2026-01-08-howto-develop-your-own-ai.md><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2"><path d="M17 3a2.828 2.828.0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+Edit this page on GitHub</a></div><div class="docs-navigation d-flex justify-content-between"><a href=/blog/2026-01-08-how-openwebui-works/><div class="card my-1"><div class="card-body py-2">&larr; Open WebUI 核心工作流程分析</div></div></a><a class=ms-auto href=/blog/2026-01-06-ai-agent-architecture/><div class="card my-1"><div class="card-body py-2">AI Agent 技术全景：规划、记忆、工具、多 Agent 与人机协同 &rarr;</div></div></a></div></main><div class="docs-toc d-none d-xl-block col-xl-3"><nav class=docs-toc-inner aria-label="Secondary navigation"><div class=page-links><h3>On this page</h3><nav id=TableOfContents><ul><li><ul><li><a href=#大模型文件格式和创建>大模型文件格式和创建</a><ul><li><a href=#1-大模型文件是什么>1. 大模型文件是什么？</a><ul><li><a href=#模型文件包含的内容>模型文件包含的内容</a></li></ul></li><li><a href=#2-gguf-格式详解>2. GGUF 格式详解</a><ul><li><a href=#gguf-文件结构>GGUF 文件结构</a></li><li><a href=#关键元数据字段>关键元数据字段</a></li></ul></li><li><a href=#3-模型创建流程>3. 模型创建流程</a><ul><li><a href=#从-pytorchsafetensors-转换>从 PyTorch/Safetensors 转换</a></li><li><a href=#转换步骤>转换步骤</a></li><li><a href=#使用-ollama-转换>使用 Ollama 转换</a></li></ul></li><li><a href=#4-量化技术>4. 量化技术</a><ul><li><a href=#量化级别>量化级别</a></li><li><a href=#量化实现>量化实现</a></li></ul></li></ul></li><li><a href=#模型加载和推理>模型加载和推理</a><ul><li><a href=#1-模型加载流程>1. 模型加载流程</a><ul><li><a href=#内存分配策略>内存分配策略</a></li><li><a href=#层分配算法>层分配算法</a></li></ul></li><li><a href=#2-推理执行流程>2. 推理执行流程</a><ul><li><a href=#前向传播>前向传播</a></li><li><a href=#推理循环>推理循环</a></li><li><a href=#采样策略>采样策略</a></li></ul></li><li><a href=#3-与普通-go-服务的差异>3. 与普通 Go 服务的差异</a><ul><li><a href=#1-cgo-调用>1. CGO 调用</a></li><li><a href=#2-内存密集型操作>2. 内存密集型操作</a></li><li><a href=#3-gpu-计算>3. GPU 计算</a></li><li><a href=#4-长时间运行任务>4. 长时间运行任务</a></li></ul></li><li><a href=#4-优化技术>4. 优化技术</a><ul><li><a href=#flash-attention>Flash Attention</a></li><li><a href=#批处理优化>批处理优化</a></li><li><a href=#并行推理>并行推理</a></li></ul></li></ul></li><li><a href=#go-语言集成>Go 语言集成</a><ul><li><a href=#1-使用-ollama-的模型加载能力>1. 使用 Ollama 的模型加载能力</a><ul><li><a href=#方式一直接调用-llm-server>方式一：直接调用 LLM Server</a></li><li><a href=#方式二使用-runner-进程模式>方式二：使用 Runner 进程模式</a></li><li><a href=#方式三通过-http-api>方式三：通过 HTTP API</a></li></ul></li><li><a href=#2-仅使用推理能力不使用工具调用>2. 仅使用推理能力，不使用工具调用</a><ul><li><a href=#直接调用-completion>直接调用 Completion</a></li><li><a href=#自定义推理流程>自定义推理流程</a></li></ul></li><li><a href=#3-集成示例>3. 集成示例</a><ul><li><a href=#最小化集成>最小化集成</a></li></ul></li></ul></li><li><a href=#开发挑战>开发挑战</a><ul><li><a href=#1-技术挑战>1. 技术挑战</a><ul><li><a href=#内存管理>内存管理</a></li><li><a href=#gpu-资源调度>GPU 资源调度</a></li><li><a href=#并发推理管理>并发推理管理</a></li><li><a href=#模型版本管理>模型版本管理</a></li></ul></li><li><a href=#2-架构挑战>2. 架构挑战</a><ul><li><a href=#可扩展性设计>可扩展性设计</a></li><li><a href=#流式响应处理>流式响应处理</a></li><li><a href=#错误恢复机制>错误恢复机制</a></li></ul></li><li><a href=#3-集成挑战>3. 集成挑战</a><ul><li><a href=#mcp-服务器集成>MCP 服务器集成</a></li><li><a href=#知识库构建>知识库构建</a></li><li><a href=#多模态支持>多模态支持</a></li></ul></li></ul></li><li><a href=#系统差异分析>系统差异分析</a><ul><li><a href=#架构对比>架构对比</a></li><li><a href=#详细对比>详细对比</a></li><li><a href=#1-ollama>1. Ollama</a></li><li><a href=#2-open-webui>2. Open WebUI</a></li><li><a href=#3-dify-ai-workflow>3. Dify (AI Workflow)</a></li><li><a href=#4-cursor-ai-agent>4. Cursor (AI Agent)</a></li><li><a href=#5-manus-agi-agent>5. Manus (AGI Agent)</a></li></ul></li><li><a href=#总结>总结</a></li></ul></li></ul></nav></div></nav></div></div></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.b49b5c2c44fdca07ee730ad1196420771d2a94176c7d367b414fb2e23f6a0ac3fbae11c2a6263392f17450f222ec2b518586e8ea96e23c361eb3ee8a255e145c.js integrity="sha512-tJtcLET9ygfucwrRGWQgdx0qlBdsfTZ7QU+y4j9qCsP7rhHCpiYzkvF0UPIi7CtRhYbo6pbiPDYes+6KJV4UXA==" crossorigin=anonymous defer></script><script src=/js/highlight.min.1a731f820940167b6fd11a8540a1ae7c4627f4009b13e229c411e9d890612a3f6b618133d96477c2cf238d6faaa28d745cd5141e443aa34f62785510dc873430.js integrity="sha512-GnMfgglAFntv0RqFQKGufEYn9ACbE+IpxBHp2JBhKj9rYYEz2WR3ws8jjW+qoo10XNUUHkQ6o09ieFUQ3Ic0MA==" crossorigin=anonymous defer></script><script src=/main.min.73590f96e7a5ed9da2e1ad1da72ba9c04c0ff23af7819f8c705c6687e670fb1f1cb7cbcee4edc071e8c1357054b9f1d5072c15ffb5c9b1d2b75002acd5e61c97.js integrity="sha512-c1kPluel7Z2i4a0dpyupwEwP8jr3gZ+McFxmh+Zw+x8ct8vO5O3AcejBNXBUufHVBywV/7XJsdK3UAKs1eYclw==" crossorigin=anonymous defer></script><script src=/index.min.f5d68ca2568af7ccf94959393ffe43b848df48e081b2bcf4cbfc4b7cda9fbe3f23968ff0d2a28c2ca939def9382edcefc6e7ff0d11d82067ae396cdc51e1cf67.js integrity="sha512-9daMolaK98z5SVk5P/5DuEjfSOCBsrz0y/xLfNqfvj8jlo/w0qKMLKk53vk4Ltzvxuf/DRHYIGeuOWzcUeHPZw==" crossorigin=anonymous defer></script></body></html>

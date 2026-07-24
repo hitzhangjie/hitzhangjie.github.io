@@ -1,4 +1,61 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Protobuf on</title><link>/tags/protobuf/</link><description>Recent content in Protobuf on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 04 Nov 2018 14:32:38 +0800</lastBuildDate><atom:link href="/tags/protobuf/index.xml" rel="self" type="application/rss+xml"/><item><title>Go Protobuf 解析与开发环境</title><link>/blog/2018-11-04-go-protobuf/</link><pubDate>Sun, 04 Nov 2018 14:32:38 +0800</pubDate><guid>/blog/2018-11-04-go-protobuf/</guid><description>&lt;blockquote&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Protobuf on</title><link>/tags/protobuf/</link><description>Recent content in Protobuf on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 22 May 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/protobuf/index.xml" rel="self" type="application/rss+xml"/><item><title>理解 Protobuf 的 proto.Size 与非最小化编码</title><link>/blog/2025-05-22-protobuf-protosize/</link><pubDate>Thu, 22 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-22-protobuf-protosize/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在使用 Go 的 Protobuf 库时，&lt;code&gt;proto.Size(m)&lt;/code&gt; 是一个常用的辅助函数，用于预先计算某个 message 序列化后占用的字节数。但官方文档特别提醒：&lt;code&gt;proto.Size&lt;/code&gt; 的返回值&lt;strong&gt;可能比实际序列化后的数据更大&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;这听起来有些反直觉——为什么要返回一个偏大的值？这涉及到 Protobuf wire format 中&amp;quot;非最小化编码&amp;quot;（non-minimal wire format）的概念。&lt;/p&gt;
+&lt;h1 id="protosize-返回更大值的原因"&gt;proto.Size 返回更大值的原因 &lt;a href="#protosize-%e8%bf%94%e5%9b%9e%e6%9b%b4%e5%a4%a7%e5%80%bc%e7%9a%84%e5%8e%9f%e5%9b%a0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="1-varint-的非最小化编码"&gt;1. Varint 的非最小化编码 &lt;a href="#1-varint-%e7%9a%84%e9%9d%9e%e6%9c%80%e5%b0%8f%e5%8c%96%e7%bc%96%e7%a0%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Protobuf 使用 varint 编码整数。同一个数值可以用多种不同长度的字节序列表示：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;数字 1 的 varint 编码：
+- 最小化编码：0x01 （1 字节）
+- 非最小化： 0x81 0x00 （2 字节）
+- 非最小化： 0x81 0x80 0x00 （3 字节）
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;proto.Size()&lt;/code&gt; 在计算时可能采用非最小化编码的尺寸，而实际 marshal 过程会使用最小化编码，导致 &lt;code&gt;Size&lt;/code&gt; 返回值偏大。&lt;/p&gt;
+&lt;h2 id="2-repeated-字段的-packed-vs-unpacked"&gt;2. Repeated 字段的 packed vs unpacked &lt;a href="#2-repeated-%e5%ad%97%e6%ae%b5%e7%9a%84-packed-vs-unpacked" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Repeated 字段有两种序列化方式：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-protobuf"&gt;message Example {
+repeated int32 values = 1;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;对于 &lt;code&gt;values = [1, 2, 3]&lt;/code&gt;：&lt;/p&gt;</description></item><item><title>Protobuf 中的嵌套消息与枚举类型</title><link>/blog/2024-04-01-protobuf-nested/</link><pubDate>Mon, 01 Apr 2024 00:00:00 +0800</pubDate><guid>/blog/2024-04-01-protobuf-nested/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在设计 Protobuf 消息结构时，有些类型天然只属于某个特定的父 message，在其他上下文中没有独立存在的意义。比如 &lt;code&gt;Address&lt;/code&gt; 可能在 &lt;code&gt;UserInfo&lt;/code&gt; 和 &lt;code&gt;OrderInfo&lt;/code&gt; 中都有，但各自的地址结构可能不同。&lt;/p&gt;
+&lt;p&gt;在这种情况下，如果将所有 message 和 enum 都定义为顶层类型，会导致命名空间污染，也失去了语义上的归属关系。Protobuf 支持嵌套类型来解决这个问题。&lt;/p&gt;
+&lt;h1 id="嵌套-message"&gt;嵌套 Message &lt;a href="#%e5%b5%8c%e5%a5%97-message" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="基本语法"&gt;基本语法 &lt;a href="#%e5%9f%ba%e6%9c%ac%e8%af%ad%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 message 内部直接定义另一个 message：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-protobuf"&gt;message UserInfo {
+string name = 1;
+int32 age = 2;
+// 嵌套 message：地址信息仅用于 UserInfo
+message Address {
+string country = 1;
+string province = 2;
+string city = 3;
+string detail = 4;
+}
+Address address = 3;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="在外部引用嵌套-message"&gt;在外部引用嵌套 Message &lt;a href="#%e5%9c%a8%e5%a4%96%e9%83%a8%e5%bc%95%e7%94%a8%e5%b5%8c%e5%a5%97-message" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;嵌套类型可以在父 message 外部通过层级路径引用：&lt;/p&gt;</description></item><item><title>Protobuf 中如何标记废弃的 Message 和字段</title><link>/blog/2024-03-13-protobuf-deprecated/</link><pubDate>Wed, 13 Mar 2024 00:00:00 +0800</pubDate><guid>/blog/2024-03-13-protobuf-deprecated/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在项目迭代过程中，Protocol Buffers 的 message 定义难免会发生变化。某些字段或整个 message 可能不再使用，但又不能直接删除——下游服务可能还在引用旧版本的 proto 定义。这时候就需要一种机制来标记&amp;quot;这个定义已经废弃了，请不要再使用&amp;quot;，同时保持向后兼容。&lt;/p&gt;
+&lt;p&gt;Protobuf 提供了 &lt;code&gt;deprecated&lt;/code&gt; 选项来满足这个需求。&lt;/p&gt;
+&lt;h1 id="用法"&gt;用法 &lt;a href="#%e7%94%a8%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="标记废弃的-message"&gt;标记废弃的 Message &lt;a href="#%e6%a0%87%e8%ae%b0%e5%ba%9f%e5%bc%83%e7%9a%84-message" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 message 定义内部使用 &lt;code&gt;option deprecated = true;&lt;/code&gt; 即可标记整个 message 为废弃状态：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-protobuf"&gt;message OldMessage {
+option deprecated = true;
+string old_field = 1;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="标记废弃的字段"&gt;标记废弃的字段 &lt;a href="#%e6%a0%87%e8%ae%b0%e5%ba%9f%e5%bc%83%e7%9a%84%e5%ad%97%e6%ae%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;更常见的场景是标记单个字段为废弃。在字段定义的末尾添加 &lt;code&gt;[deprecated = true]&lt;/code&gt; 选项：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-protobuf"&gt;message UserInfo {
+string nickname = 1 [deprecated = true]; // 已废弃，请使用 display_name
+string display_name = 2;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="废弃标记的其他适用对象"&gt;废弃标记的其他适用对象 &lt;a href="#%e5%ba%9f%e5%bc%83%e6%a0%87%e8%ae%b0%e7%9a%84%e5%85%b6%e4%bb%96%e9%80%82%e7%94%a8%e5%af%b9%e8%b1%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;除了 message 和 field，&lt;code&gt;deprecated&lt;/code&gt; 选项同样可以用于：&lt;/p&gt;</description></item><item><title>Go Protobuf 解析与开发环境</title><link>/blog/2018-11-04-go-protobuf/</link><pubDate>Sun, 04 Nov 2018 14:32:38 +0800</pubDate><guid>/blog/2018-11-04-go-protobuf/</guid><description>&lt;blockquote&gt;
 &lt;p&gt;本文由 notes &lt;code&gt;__代码大全__&lt;/code&gt; 下 &lt;code&gt;go - proto.md&lt;/code&gt; 与 &lt;code&gt;pb - 开发环境搭建.md&lt;/code&gt; 合并迁移。myspace 已有若干 protobuf/protoc 专题文，本稿偏解析库用法，主题相邻待决。&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;h1 id="开发环境搭建"&gt;开发环境搭建 &lt;a href="#%e5%bc%80%e5%8f%91%e7%8e%af%e5%a2%83%e6%90%ad%e5%bb%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;

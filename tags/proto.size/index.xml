@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Proto.Size on</title><link>/tags/proto.size/</link><description>Recent content in Proto.Size on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 22 May 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/proto.size/index.xml" rel="self" type="application/rss+xml"/><item><title>理解 Protobuf 的 proto.Size 与非最小化编码</title><link>/blog/2025-05-22-protobuf-protosize/</link><pubDate>Thu, 22 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-22-protobuf-protosize/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在使用 Go 的 Protobuf 库时，&lt;code&gt;proto.Size(m)&lt;/code&gt; 是一个常用的辅助函数，用于预先计算某个 message 序列化后占用的字节数。但官方文档特别提醒：&lt;code&gt;proto.Size&lt;/code&gt; 的返回值&lt;strong&gt;可能比实际序列化后的数据更大&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;这听起来有些反直觉——为什么要返回一个偏大的值？这涉及到 Protobuf wire format 中&amp;quot;非最小化编码&amp;quot;（non-minimal wire format）的概念。&lt;/p&gt;
+&lt;h1 id="protosize-返回更大值的原因"&gt;proto.Size 返回更大值的原因 &lt;a href="#protosize-%e8%bf%94%e5%9b%9e%e6%9b%b4%e5%a4%a7%e5%80%bc%e7%9a%84%e5%8e%9f%e5%9b%a0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="1-varint-的非最小化编码"&gt;1. Varint 的非最小化编码 &lt;a href="#1-varint-%e7%9a%84%e9%9d%9e%e6%9c%80%e5%b0%8f%e5%8c%96%e7%bc%96%e7%a0%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Protobuf 使用 varint 编码整数。同一个数值可以用多种不同长度的字节序列表示：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;数字 1 的 varint 编码：
+- 最小化编码：0x01 （1 字节）
+- 非最小化： 0x81 0x00 （2 字节）
+- 非最小化： 0x81 0x80 0x00 （3 字节）
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;proto.Size()&lt;/code&gt; 在计算时可能采用非最小化编码的尺寸，而实际 marshal 过程会使用最小化编码，导致 &lt;code&gt;Size&lt;/code&gt; 返回值偏大。&lt;/p&gt;
+&lt;h2 id="2-repeated-字段的-packed-vs-unpacked"&gt;2. Repeated 字段的 packed vs unpacked &lt;a href="#2-repeated-%e5%ad%97%e6%ae%b5%e7%9a%84-packed-vs-unpacked" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Repeated 字段有两种序列化方式：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-protobuf"&gt;message Example {
+repeated int32 values = 1;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;对于 &lt;code&gt;values = [1, 2, 3]&lt;/code&gt;：&lt;/p&gt;</description></item></channel></rss>

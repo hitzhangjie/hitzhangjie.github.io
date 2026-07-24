@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Serverless on</title><link>/tags/serverless/</link><description>Recent content in Serverless on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 25 Dec 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/serverless/index.xml" rel="self" type="application/rss+xml"/><item><title>云计算领域速查手册</title><link>/blog/2025-12-25-cloud-computing-cheatsheet/</link><pubDate>Thu, 25 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-25-cloud-computing-cheatsheet/</guid><description>&lt;h1 id="云计算领域速查手册"&gt;云计算领域速查手册 &lt;a href="#%e4%ba%91%e8%ae%a1%e7%ae%97%e9%a2%86%e5%9f%9f%e9%80%9f%e6%9f%a5%e6%89%8b%e5%86%8c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;面向架构师的结构化参考，覆盖从虚拟化到云原生的核心技术概念、对比与选型决策。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="1-概念层次与演进关系"&gt;1. 概念层次与演进关系 &lt;a href="#1-%e6%a6%82%e5%bf%b5%e5%b1%82%e6%ac%a1%e4%b8%8e%e6%bc%94%e8%bf%9b%e5%85%b3%e7%b3%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;pre&gt;&lt;code&gt;物理机（Bare Metal）
+└─ 虚拟化（Virtualization）── 资源抽象，提高利用率
+└─ 云计算（Cloud Computing）── 服务化、按需付费的商业模式
+├─ 传统云上应用（Lift &amp;amp; Shift）
+└─ 云原生（Cloud Native）── 为云设计的架构方法论
+&lt;/code&gt;&lt;/pre&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;层次&lt;/th&gt;
+&lt;th&gt;核心问题&lt;/th&gt;
+&lt;th&gt;代表技术&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;虚拟化&lt;/td&gt;
+&lt;td&gt;如何把一台物理机当多台用？&lt;/td&gt;
+&lt;td&gt;KVM, VMware, Hyper-V&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;云计算&lt;/td&gt;
+&lt;td&gt;如何以服务形式交付 IT 资源？&lt;/td&gt;
+&lt;td&gt;AWS, Azure, OpenStack&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;云原生&lt;/td&gt;
+&lt;td&gt;如何最大化利用云的优势？&lt;/td&gt;
+&lt;td&gt;Docker, Kubernetes, Serverless&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;blockquote&gt;
+&lt;p&gt;类比：虚拟化 = 一户多本房产证；云计算 = 连锁酒店租赁平台；云原生 = 为酒店生活方式设计的全新建筑理念。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;hr&gt;
+&lt;h2 id="2-服务模型"&gt;2. 服务模型 &lt;a href="#2-%e6%9c%8d%e5%8a%a1%e6%a8%a1%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="21-模型总览"&gt;2.1 模型总览 &lt;a href="#21-%e6%a8%a1%e5%9e%8b%e6%80%bb%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;模型&lt;/th&gt;
+&lt;th&gt;全称&lt;/th&gt;
+&lt;th&gt;你管什么&lt;/th&gt;
+&lt;th&gt;云管什么&lt;/th&gt;
+&lt;th&gt;典型产品&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;IaaS&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Infrastructure as a Service&lt;/td&gt;
+&lt;td&gt;应用、数据、运行时、OS&lt;/td&gt;
+&lt;td&gt;虚拟化、服务器、存储、网络&lt;/td&gt;
+&lt;td&gt;AWS EC2, 阿里云 ECS, OpenStack&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;CaaS&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Container as a Service&lt;/td&gt;
+&lt;td&gt;应用、数据&lt;/td&gt;
+&lt;td&gt;容器运行时、编排、基础设施&lt;/td&gt;
+&lt;td&gt;GKE, AKS, EKS, 阿里云 ACK&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;PaaS&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Platform as a Service&lt;/td&gt;
+&lt;td&gt;应用代码、数据&lt;/td&gt;
+&lt;td&gt;OS、运行时、中间件、基础设施&lt;/td&gt;
+&lt;td&gt;Heroku, Google App Engine, OpenShift&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;FaaS&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Function as a Service&lt;/td&gt;
+&lt;td&gt;函数代码&lt;/td&gt;
+&lt;td&gt;全部运行时和基础设施&lt;/td&gt;
+&lt;td&gt;AWS Lambda, 阿里云函数计算&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;SaaS&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;Software as a Service&lt;/td&gt;
+&lt;td&gt;配置和数据&lt;/td&gt;
+&lt;td&gt;一切&lt;/td&gt;
+&lt;td&gt;Gmail, Salesforce, 钉钉&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id="22-选型决策指南"&gt;2.2 选型决策指南 &lt;a href="#22-%e9%80%89%e5%9e%8b%e5%86%b3%e7%ad%96%e6%8c%87%e5%8d%97" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;是否需要完全控制基础设施？
+├─ 是 → 需要自定义 OS/网络/存储？ → IaaS（ECS/EC2）
+└─ 否 → 是否需要长期运行的服务？
+├─ 是 → 需要容器编排？ → CaaS（K8s 托管集群）
+│ └─ 不需要 → PaaS（Heroku/OpenShift）
+└─ 否 → 事件驱动/短期任务？ → FaaS（Lambda）
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;关键权衡：控制力 vs 运维负担&lt;/strong&gt;&lt;/p&gt;</description></item></channel></rss>

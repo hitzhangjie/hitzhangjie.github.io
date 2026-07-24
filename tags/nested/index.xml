@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Nested on</title><link>/tags/nested/</link><description>Recent content in Nested on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 01 Apr 2024 00:00:00 +0800</lastBuildDate><atom:link href="/tags/nested/index.xml" rel="self" type="application/rss+xml"/><item><title>Protobuf 中的嵌套消息与枚举类型</title><link>/blog/2024-04-01-protobuf-nested/</link><pubDate>Mon, 01 Apr 2024 00:00:00 +0800</pubDate><guid>/blog/2024-04-01-protobuf-nested/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在设计 Protobuf 消息结构时，有些类型天然只属于某个特定的父 message，在其他上下文中没有独立存在的意义。比如 &lt;code&gt;Address&lt;/code&gt; 可能在 &lt;code&gt;UserInfo&lt;/code&gt; 和 &lt;code&gt;OrderInfo&lt;/code&gt; 中都有，但各自的地址结构可能不同。&lt;/p&gt;
+&lt;p&gt;在这种情况下，如果将所有 message 和 enum 都定义为顶层类型，会导致命名空间污染，也失去了语义上的归属关系。Protobuf 支持嵌套类型来解决这个问题。&lt;/p&gt;
+&lt;h1 id="嵌套-message"&gt;嵌套 Message &lt;a href="#%e5%b5%8c%e5%a5%97-message" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="基本语法"&gt;基本语法 &lt;a href="#%e5%9f%ba%e6%9c%ac%e8%af%ad%e6%b3%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 message 内部直接定义另一个 message：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-protobuf"&gt;message UserInfo {
+string name = 1;
+int32 age = 2;
+// 嵌套 message：地址信息仅用于 UserInfo
+message Address {
+string country = 1;
+string province = 2;
+string city = 3;
+string detail = 4;
+}
+Address address = 3;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="在外部引用嵌套-message"&gt;在外部引用嵌套 Message &lt;a href="#%e5%9c%a8%e5%a4%96%e9%83%a8%e5%bc%95%e7%94%a8%e5%b5%8c%e5%a5%97-message" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;嵌套类型可以在父 message 外部通过层级路径引用：&lt;/p&gt;</description></item></channel></rss>

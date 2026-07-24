@@ -38,4 +38,40 @@
 &lt;li&gt;不携带任何语义信息，纯粹是一个&amp;quot;排他性编号&amp;rdquo;&lt;/li&gt;
 &lt;/ul&gt;
 &lt;h3 id="embedding可训练的语义查找表"&gt;Embedding：可训练的语义查找表 &lt;a href="#embedding%e5%8f%af%e8%ae%ad%e7%bb%83%e7%9a%84%e8%af%ad%e4%b9%89%e6%9f%a5%e6%89%be%e8%a1%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;Embedding 的本质是一个&lt;strong&gt;可训练的查找表&lt;/strong&gt;。以 Word2Vec 为例：&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;Embedding 的本质是一个&lt;strong&gt;可训练的查找表&lt;/strong&gt;。以 Word2Vec 为例：&lt;/p&gt;</description></item><item><title>Open WebUI 核心工作流程分析</title><link>/blog/2026-01-08-how-openwebui-works/</link><pubDate>Thu, 08 Jan 2026 00:00:00 +0800</pubDate><guid>/blog/2026-01-08-how-openwebui-works/</guid><description>&lt;p&gt;本文深入分析 Open WebUI 的核心架构和工作流程，帮助理解这个 AI 平台的设计原理。&lt;/p&gt;
+&lt;h2 id="系统架构概览"&gt;系统架构概览 &lt;a href="#%e7%b3%bb%e7%bb%9f%e6%9e%b6%e6%9e%84%e6%a6%82%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Open WebUI 是一个全栈 AI 平台，采用前后端分离架构：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;┌─────────────────────────────────────────┐
+│ Frontend (Svelte) │
+│ (src/lib/components/) │
+│ - Chat Interface │
+│ - Model Management │
+│ - Knowledge Base UI │
+└──────────────┬──────────────────────────┘
+│ HTTP/WebSocket
+┌──────────────▼──────────────────────────┐
+│ FastAPI Backend │
+│ (backend/open_webui/) │
+│ - API Routes │
+│ - Authentication │
+│ - Business Logic │
+└──────────────┬──────────────────────────┘
+│
+┌───────┴───────┐
+│ │
+┌──────▼──────┐ ┌─────▼──────┐
+│ Ollama │ │ Vector DB │
+│ API │ │ (RAG) │
+└────────────┘ └─────────────┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id="核心组件"&gt;核心组件 &lt;a href="#%e6%a0%b8%e5%bf%83%e7%bb%84%e4%bb%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;前端 (Svelte)&lt;/strong&gt;：用户界面，基于 SvelteKit&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;后端 (FastAPI)&lt;/strong&gt;：Python 异步 Web 框架&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;数据库&lt;/strong&gt;：SQLite/PostgreSQL 存储用户数据&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;向量数据库&lt;/strong&gt;：支持多种向量数据库（Chroma, Qdrant, Milvus 等）&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Ollama 集成&lt;/strong&gt;：代理 Ollama API 请求&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id="启动流程"&gt;启动流程 &lt;a href="#%e5%90%af%e5%8a%a8%e6%b5%81%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="入口点"&gt;入口点 &lt;a href="#%e5%85%a5%e5%8f%a3%e7%82%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Open WebUI 的启动从 &lt;code&gt;backend/open_webui/__init__.py&lt;/code&gt; 开始：&lt;/p&gt;</description></item></channel></rss>

@@ -6,7 +6,7 @@
 本分类<span class=category-scope-btn__count>0</span>
 </button>
 <button type=button class=category-scope-btn data-scope=aggregated aria-pressed=false>
-含子分类<span class=category-scope-btn__count>81</span></button></div></div><div data-scope-panel=aggregated hidden><div class=category-tag-filter data-tag-filter-scope=aggregated><button class="category-tag-filter__all is-active" data-tag=all>全部</button>
+含子分类<span class=category-scope-btn__count>82</span></button></div></div><div data-scope-panel=aggregated hidden><div class=category-tag-filter data-tag-filter-scope=aggregated><button class="category-tag-filter__all is-active" data-tag=all>全部</button>
 <button class=category-tag-chip data-tag=linux>linux<sup>28</sup></button>
 <button class=category-tag-chip data-tag=tcp>tcp<sup>10</sup></button>
 <button class=category-tag-chip data-tag=scheduler>scheduler<sup>10</sup></button>
@@ -19,14 +19,15 @@
 <button class=category-tag-chip data-tag=atomic>atomic<sup>5</sup></button>
 <button class=category-tag-chip data-tag=signal>signal<sup>5</sup></button>
 <button class=category-tag-chip data-tag=fair>fair<sup>5</sup></button>
+<button class=category-tag-chip data-tag=虚拟化>虚拟化<sup>4</sup></button>
+<button class=category-tag-chip data-tag=KVM>KVM<sup>4</sup></button>
 <button class=category-tag-chip data-tag=rst>rst<sup>4</sup></button>
 <button class=category-tag-chip data-tag=volatile>volatile<sup>4</sup></button>
 <button class=category-tag-chip data-tag=interrupt>interrupt<sup>4</sup></button>
 <button class=category-tag-chip data-tag=vruntime>vruntime<sup>4</sup></button>
 <button class=category-tag-chip data-tag=unix>unix<sup>4</sup></button>
+<button class=category-tag-chip data-tag=irq>irq<sup>3</sup></button>
 <button class=category-tag-chip data-tag="split lock">split lock<sup>3</sup></button>
-<button class=category-tag-chip data-tag=虚拟化>虚拟化<sup>3</sup></button>
-<button class=category-tag-chip data-tag=KVM>KVM<sup>3</sup></button>
 <button class=category-tag-chip data-tag=fin>fin<sup>3</sup></button>
 <button class=category-tag-chip data-tag=socket>socket<sup>3</sup></button>
 <button class=category-tag-chip data-tag=c/c++>c/c++<sup>3</sup></button>
@@ -62,10 +63,17 @@
 <button class=category-tag-chip data-tag=timeslice>timeslice<sup>2</sup></button>
 <button class=category-tag-chip data-tag=priority>priority<sup>2</sup></button>
 <button class=category-tag-chip data-tag=interactivity>interactivity<sup>2</sup></button>
-<button class=category-tag-chip data-tag=irq>irq<sup>2</sup></button>
 <button class=category-tag-chip data-tag=top>top<sup>2</sup></button>
 <button class=category-tag-chip data-tag=int80>int80<sup>2</sup></button>
 <button class=category-tag-chip data-tag=process-state>process-state<sup>2</sup></button>
+<button class=category-tag-chip data-tag=CPU>CPU<sup>1</sup></button>
+<button class=category-tag-chip data-tag=accounting>accounting<sup>1</sup></button>
+<button class=category-tag-chip data-tag=CFS>CFS<sup>1</sup></button>
+<button class=category-tag-chip data-tag=tick>tick<sup>1</sup></button>
+<button class=category-tag-chip data-tag=cputime>cputime<sup>1</sup></button>
+<button class=category-tag-chip data-tag=sum_exec_runtime>sum_exec_runtime<sup>1</sup></button>
+<button class=category-tag-chip data-tag=catchup>catchup<sup>1</sup></button>
+<button class=category-tag-chip data-tag=TSC>TSC<sup>1</sup></button>
 <button class=category-tag-chip data-tag=cpu>cpu<sup>1</sup></button>
 <button class=category-tag-chip data-tag=gopsutil>gopsutil<sup>1</sup></button>
 <button class=category-tag-chip data-tag=/proc/stat>/proc/stat<sup>1</sup></button>
@@ -253,7 +261,18 @@
 <button class=category-tag-chip data-tag=yum>yum<sup>1</sup></button>
 <button class=category-tag-chip data-tag=dnf>dnf<sup>1</sup></button>
 <button class=category-tag-chip data-tag=mirror>mirror<sup>1</sup></button>
-<button class=category-tag-filter__toggle hidden>展开全部</button></div><article class=blog-list-entry data-tags='["cpu","gopsutil","/proc/stat","steal time","split lock","虚拟化","KVM","监控"]'><div class=blog-list-entry__date><time datetime=2026-07-24>2026/07/24</time></div><div class=blog-list-entry__title><a href=/blog/2026-07-24-cpu-accounting-splitlock/>当监控数据'说谎'：Split Lock 引发的 CPU 计量失真</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/cpu>cpu</a>
+<button class=category-tag-filter__toggle hidden>展开全部</button></div><article class=blog-list-entry data-tags='["CPU","accounting","CFS","tick","cputime","sum_exec_runtime","虚拟化","KVM","irq","catchup","TSC"]'><div class=blog-list-entry__date><time datetime=2026-07-26>2026/07/26</time></div><div class=blog-list-entry__title><a href=/blog/2026-07-26-linux_%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8Acpu%E5%8D%A0%E7%94%A8%E6%AD%A3%E7%A1%AE%E7%BB%9F%E8%AE%A1%E5%A7%BF%E5%8A%BF/>Linux 进程 CPU 时间：调度器统计、tick 采样与虚拟化 timer 补偿</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/cpu>CPU</a>
+<a href=/tags/accounting>accounting</a>
+<a href=/tags/cfs>CFS</a>
+<a href=/tags/tick>tick</a>
+<a href=/tags/cputime>cputime</a>
+<span class=tag-more-wrap><span class=tag-more>+6</span>
+<span class=tag-tooltip><a href=/tags/sum_exec_runtime>sum_exec_runtime</a>
+<a href=/tags/%E8%99%9A%E6%8B%9F%E5%8C%96>虚拟化</a>
+<a href=/tags/kvm>KVM</a>
+<a href=/tags/irq>irq</a>
+<a href=/tags/catchup>catchup</a>
+<a href=/tags/tsc>TSC</a></span></span></div></div></div></div><p class=blog-list-entry__desc>介绍 Linux 进程 CPU 时间的两套记账机制：CFS 的 sum_exec_runtime 与 tick 侧 utime/stime，以及 …</p></article><article class=blog-list-entry data-tags='["cpu","gopsutil","/proc/stat","steal time","split lock","虚拟化","KVM","监控"]'><div class=blog-list-entry__date><time datetime=2026-07-24>2026/07/24</time></div><div class=blog-list-entry__title><a href=/blog/2026-07-24-cpu-accounting-splitlock/>当监控数据'说谎'：Split Lock 引发的 CPU 计量失真</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/cpu>cpu</a>
 <a href=/tags/gopsutil>gopsutil</a>
 <a href=/tags//proc/stat>/proc/stat</a>
 <a href=/tags/steal-time>steal time</a>
@@ -344,7 +363,7 @@
 <a href=/tags/network>network</a>
 <a href=/tags/distributed-systems>distributed-systems</a>
 <a href=/tags/go>go</a>
-<a href=/tags/rpc>rpc</a></div></div></div></div><p class=blog-list-entry__desc>拆解一个常见的认知误区：系统调用 write/send 返回成功，并不能保证对端进程收到了数据。本文从操作系统缓冲机制、TCP 协议设计、连接池幽灵连接、进程退 …</p></article><article class=blog-list-entry data-tags='["split lock","KVM","cache line","atomic","IRQ","性能排查","虚拟化"]'><div class=blog-list-entry__date><time datetime=2025-12-22>2025/12/22</time></div><div class=blog-list-entry__title><a href=/blog/2025-12-22-%E8%99%9A%E6%8B%9F%E5%8C%96%E5%9C%BA%E6%99%AF_cpu%E5%8D%A0%E7%94%A8%E9%A3%99%E5%8D%871/>1 · Split Lock 压垮母机：一次 CPU 飙升的线上排查</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/split-lock>split lock</a>
+<a href=/tags/rpc>rpc</a></div></div></div></div><p class=blog-list-entry__desc>拆解一个常见的认知误区：系统调用 write/send 返回成功，并不能保证对端进程收到了数据。本文从操作系统缓冲机制、TCP 协议设计、连接池幽灵连接、进程退 …</p></article><article class=blog-list-entry data-tags='["split lock","KVM","cache line","atomic","IRQ","性能排查","虚拟化"]'><div class=blog-list-entry__date><time datetime=2025-12-22>2025/12/22</time></div><div class=blog-list-entry__title><a href=/blog/2025-12-22-linux_splitlock%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8cpu%E5%8D%A0%E7%94%A8358/>1 · Split Lock 压垮母机：一次 CPU 飙升的线上排查</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/split-lock>split lock</a>
 <a href=/tags/kvm>KVM</a>
 <a href=/tags/cache-line>cache line</a>
 <a href=/tags/atomic>atomic</a>
@@ -602,4 +621,4 @@
 <a href=/tags/yum>yum</a>
 <a href=/tags/dnf>dnf</a>
 <span class=tag-more-wrap><span class=tag-more>+1</span>
-<span class=tag-tooltip><a href=/tags/mirror>mirror</a></span></span></div></div></div></div><p class=blog-list-entry__desc>对比 Debian 系（dpkg/apt）与 RHEL 系（rpm/yum/dnf）的包管理体系，并介绍如何切换清华大学镜像源加速软件安装。</p></article></div><div data-scope-panel=direct></div></div></div></div><br></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.2d163d4ded59a8c0f3da8841b92ed2d9704c8b95f58f2b2a155c22cdd00435156a85dae6d60e99bc99453a696faf91eadef75e33b2957a5731188122af562691.js integrity="sha512-LRY9Te1ZqMDz2ohBuS7S2XBMi5X1jysqFVwizdAENRVqhdrm1g6ZvJlFOmlvr5Hq3vdeM7KVelcxGIEir1YmkQ==" crossorigin=anonymous defer></script><script src=/js/highlight.min.1a731f820940167b6fd11a8540a1ae7c4627f4009b13e229c411e9d890612a3f6b618133d96477c2cf238d6faaa28d745cd5141e443aa34f62785510dc873430.js integrity="sha512-GnMfgglAFntv0RqFQKGufEYn9ACbE+IpxBHp2JBhKj9rYYEz2WR3ws8jjW+qoo10XNUUHkQ6o09ieFUQ3Ic0MA==" crossorigin=anonymous defer></script><script src=/main.min.2fdcd2feaeefdcd1d76985a93bfd15acc4b71558ca9abb33d68c4775bdc24e5d186d989f836740e6ec7618f0d57901e8c92b97cfaec51958e6344476865c21ba.js integrity="sha512-L9zS/q7v3NHXaYWpO/0VrMS3FVjKmrsz1oxHdb3CTl0YbZifg2dA5ux2GPDVeQHoySuXz67FGVjmNER2hlwhug==" crossorigin=anonymous defer></script><script src=/index.min.f6d77379b7262f1e4d4de57519d4a2d674077b4a4afd7c3220524f6ffeebc4434e9a90325d1d0b56f4f6aba71327aad1a2fda7b50677cd721331539e3c85f28a.js integrity="sha512-9tdzebcmLx5NTeV1GdSi1nQHe0pK/XwyIFJPb/7rxENOmpAyXR0LVvT2q6cTJ6rRov2ntQZ3zXITMVOePIXyig==" crossorigin=anonymous defer></script></body></html>
+<span class=tag-tooltip><a href=/tags/mirror>mirror</a></span></span></div></div></div></div><p class=blog-list-entry__desc>对比 Debian 系（dpkg/apt）与 RHEL 系（rpm/yum/dnf）的包管理体系，并介绍如何切换清华大学镜像源加速软件安装。</p></article></div><div data-scope-panel=direct></div></div></div></div><br></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.2d163d4ded59a8c0f3da8841b92ed2d9704c8b95f58f2b2a155c22cdd00435156a85dae6d60e99bc99453a696faf91eadef75e33b2957a5731188122af562691.js integrity="sha512-LRY9Te1ZqMDz2ohBuS7S2XBMi5X1jysqFVwizdAENRVqhdrm1g6ZvJlFOmlvr5Hq3vdeM7KVelcxGIEir1YmkQ==" crossorigin=anonymous defer></script><script src=/js/highlight.min.1a731f820940167b6fd11a8540a1ae7c4627f4009b13e229c411e9d890612a3f6b618133d96477c2cf238d6faaa28d745cd5141e443aa34f62785510dc873430.js integrity="sha512-GnMfgglAFntv0RqFQKGufEYn9ACbE+IpxBHp2JBhKj9rYYEz2WR3ws8jjW+qoo10XNUUHkQ6o09ieFUQ3Ic0MA==" crossorigin=anonymous defer></script><script src=/main.min.2fdcd2feaeefdcd1d76985a93bfd15acc4b71558ca9abb33d68c4775bdc24e5d186d989f836740e6ec7618f0d57901e8c92b97cfaec51958e6344476865c21ba.js integrity="sha512-L9zS/q7v3NHXaYWpO/0VrMS3FVjKmrsz1oxHdb3CTl0YbZifg2dA5ux2GPDVeQHoySuXz67FGVjmNER2hlwhug==" crossorigin=anonymous defer></script><script src=/index.min.a8aac3feb68a74af68cbbe5b54cc705c315c2605b5e153e3ac8287a074703d85b40e6e64706552e3152854116a7ccbb47cfaf57f808326da56d40ffa38c42623.js integrity="sha512-qKrD/raKdK9oy75bVMxwXDFcJgW14VPjrIKHoHRwPYW0Dm5kcGVS4xUoVBFqfMu0fPr1f4CDJtpW1A/6OMQmIw==" crossorigin=anonymous defer></script></body></html>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>大模型 on</title><link>/tags/%E5%A4%A7%E6%A8%A1%E5%9E%8B/</link><description>Recent content in 大模型 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 20 Jul 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/%E5%A4%A7%E6%A8%A1%E5%9E%8B/index.xml" rel="self" type="application/rss+xml"/><item><title>腾讯云 AI 解决方案全景：从底层算力到行业应用</title><link>/blog/2026-07-20-tencentcloud-ai-solutions/</link><pubDate>Mon, 20 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/2026-07-20-tencentcloud-ai-solutions/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;最近在调研云厂商的 AI 能力时，顺手整理了一份腾讯云 AI 相关解决方案的全景图。从底层的 GPU 裸金属到上层的大模型 API，腾讯云的 AI 产品矩阵覆盖面相当广，而且很多能力已经渗透到行业场景中（医疗、金融、制造等）。&lt;/p&gt;
+&lt;p&gt;写这篇文章的目的很简单：给需要选型或者了解腾讯云 AI 能力的同学一个快速索引。内容按层次组织，从 IaaS 到 SaaS，从通用能力到行业方案，尽量做到不重不漏。&lt;/p&gt;
+&lt;h1 id="一ai-核心大模型服务"&gt;一、AI 核心大模型服务 &lt;a href="#%e4%b8%80ai-%e6%a0%b8%e5%bf%83%e5%a4%a7%e6%a8%a1%e5%9e%8b%e6%9c%8d%e5%8a%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;这是离开发者最近的入口——直接调 API 就能用。&lt;/p&gt;
+&lt;h2 id="1-腾讯混元大模型tencent-hunyuan"&gt;1. 腾讯混元大模型（Tencent Hunyuan） &lt;a href="#1-%e8%85%be%e8%ae%af%e6%b7%b7%e5%85%83%e5%a4%a7%e6%a8%a1%e5%9e%8btencent-hunyuan" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;混元是腾讯自研的大模型系列，目前已经发展出多个版本：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;混元生文&lt;/strong&gt;：&lt;code&gt;hunyuan-large&lt;/code&gt;、&lt;code&gt;hunyuan-pro&lt;/code&gt;、&lt;code&gt;hunyuan-turbo&lt;/code&gt; 等多个规格，覆盖不同性价比需求&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;混元生图&lt;/strong&gt;：文生图服务，适合内容创作场景&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;混元 Vision&lt;/strong&gt;：多模态模型，支持图文理解&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;API 层面兼容 OpenAI 接口格式，迁移成本比较低。典型场景包括对话、翻译、内容创作、拍照解题、群聊摘要等。&lt;/p&gt;
+&lt;h2 id="2-腾讯元器平台"&gt;2. 腾讯元器平台 &lt;a href="#2-%e8%85%be%e8%ae%af%e5%85%83%e5%99%a8%e5%b9%b3%e5%8f%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;面向非开发者的智能体搭建平台，拖拽式配置，不需要写代码就能做出一个能对话、能调用工具、能接入知识库的 AI 应用。适合快速验证想法或者做一些内部提效的小工具。&lt;/p&gt;
+&lt;h1 id="二ai-训练与推理平台"&gt;二、AI 训练与推理平台 &lt;a href="#%e4%ba%8cai-%e8%ae%ad%e7%bb%83%e4%b8%8e%e6%8e%a8%e7%90%86%e5%b9%b3%e5%8f%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;如果不想从裸机开始搭训练环境，可以用平台层的托管服务。&lt;/p&gt;
+&lt;h2 id="1-ti-one-训练平台"&gt;1. TI-ONE 训练平台 &lt;a href="#1-ti-one-%e8%ae%ad%e7%bb%83%e5%b9%b3%e5%8f%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;一站式机器学习 / 深度学习平台，核心能力包括：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;框架支持&lt;/strong&gt;：TensorFlow、PyTorch、PySpark 等主流框架开箱即用&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;AutoML&lt;/strong&gt;：自动机器学习，适合不想手动调参的场景&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;数据标注&lt;/strong&gt;：支持 LLM 和 MLLM 数据标注，可自定义 Schema，覆盖文本、图片、视频等数据类型&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;大模型精调&lt;/strong&gt;：支持在基座模型上做 SFT 和 RLHF&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;模型部署与推理&lt;/strong&gt;：训练好的模型可以直接在平台上部署上线&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;从数据标注→训练→部署，一条链路走通，不需要在各个系统之间搬运数据和模型。&lt;/p&gt;</description></item></channel></rss>

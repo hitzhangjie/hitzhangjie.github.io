@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Alerting on</title><link>/tags/alerting/</link><description>Recent content in Alerting on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 29 Jul 2026 12:00:00 +0800</lastBuildDate><atom:link href="/tags/alerting/index.xml" rel="self" type="application/rss+xml"/><item><title>SigNoz 整体架构：一个基于 OpenTelemetry 的开源可观测性平台</title><link>/blog/2026-07-29-signoz-architecture/</link><pubDate>Wed, 29 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-29-signoz-architecture/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;a href="/blog/2026-07-29-opentelemetry-introduction/"&gt;上一篇文章&lt;/a&gt; 里我们系统梳理了 OpenTelemetry 的核心概念。OTel 解决的是&amp;quot;数据怎么采、怎么传&amp;quot;的问题，但它不解决&amp;quot;数据怎么存、怎么查、怎么告警&amp;quot;的问题。你需要一个后端。&lt;/p&gt;
+&lt;p&gt;后端的选择其实不少：Jaeger（专注 Tracing）、Prometheus + Grafana（专注 Metrics）、ELK（专注 Logging），更不用提 Datadog、New Relic 这些商业 SaaS。但三件套拼在一起有几个痛点：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;数据孤岛&lt;/strong&gt;：Traces 在 Jaeger、Metrics 在 Prometheus、Logs 在 Elasticsearch，查问题时要在三套系统间跳来跳去。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;基础设施碎片化&lt;/strong&gt;：每套系统有自己的部署、配置、升级节奏，运维成本随套数线性增长。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;告警能力割裂&lt;/strong&gt;：没法在一个地方同时基于 Metrics 阈值和 Trace 延迟来定义告警规则。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;SigNoz 试图用一个统一平台解决这些痛点。它是 CNCF 生态下的开源项目，原生基于 OpenTelemetry，将三大信号的存储、查询、可视化和告警整合到一起。下面拆解它的整体架构。&lt;/p&gt;
+&lt;h1 id="整体架构"&gt;整体架构 &lt;a href="#%e6%95%b4%e4%bd%93%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;SigNoz 的架构可以从三个层次来理解：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt; ┌──────────────────────┐
+│ Applications │
+│ (OTel SDK / Agent) │
+└────────┬─────────────┘
+│ OTLP (gRPC :4317 / HTTP :4318)
+┌────────▼─────────────┐
+│ OTel Collector │
+│ (signal-collector) │
+│ - Receivers │
+│ - Processors │
+│ - Exporters │
+└────────┬─────────────┘
+│
+┌──────────────┼──────────────┐
+│ │ │
+┌────────▼─────┐ ┌──────▼──────┐ ┌─────▼──────┐
+│ ClickHouse │ │ SQLite │ │ Dashboards│
+│ (traces, │ │ (metadata, │ │ (JSON │
+│ metrics, │ │ alerts, │ │ files) │
+│ logs) │ │ users) │ │ │
+└────────┬──────┘ └──────┬──────┘ └─────┬──────┘
+│ │ │
+└───────────────┼───────────────┘
+│
+┌─────────▼──────────┐
+│ SigNoz Server │
+│ (Query + Alert) │
+│ - Query Service │
+│ - Alert Manager │
+│ - Web UI │
+└─────────┬───────────┘
+│
+┌─────────▼──────────┐
+│ Alert Channels │
+│ Slack / Email / │
+│ Webhook / Teams │
+└────────────────────┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;下面逐层拆解每个组件。&lt;/p&gt;</description></item></channel></rss>

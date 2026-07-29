@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Entropy on</title><link>/tags/entropy/</link><description>Recent content in Entropy on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 30 Apr 2024 00:00:00 +0800</lastBuildDate><atom:link href="/tags/entropy/index.xml" rel="self" type="application/rss+xml"/><item><title>Linux 随机数是怎么生成的：从熵到 /dev/random</title><link>/blog/2024-04-30-rand-devrandom/</link><pubDate>Tue, 30 Apr 2024 00:00:00 +0800</pubDate><guid>/blog/2024-04-30-rand-devrandom/</guid><description>&lt;p&gt;写代码时用到随机数的场景太多了：生成 session ID、洗牌、密码学 nonce、测试数据构造。大多数时候就是调一下 &lt;code&gt;rand.Intn()&lt;/code&gt; 或者 &lt;code&gt;crypto/rand.Read()&lt;/code&gt;，能用就行。但你有没有想过，这些随机数到底是哪来的？&lt;/p&gt;
+&lt;p&gt;答案分两层：&lt;strong&gt;伪随机&lt;/strong&gt;和&lt;strong&gt;真随机&lt;/strong&gt;。应用层常用的 &lt;code&gt;math/rand&lt;/code&gt; 是伪随机——给定一个 seed，后面的序列就是确定的。但如果 seed 被人猜到，整个序列就透明了。所以安全场景需要&amp;quot;真随机&amp;quot;——不可预测、不可重现。&lt;/p&gt;
+&lt;p&gt;但&amp;quot;真随机&amp;quot;也是个相对概念。计算机是确定性的机器，它自己产生不了真正的随机。Linux 的做法是从物理世界&amp;quot;偷&amp;quot;随机性——也就是&lt;strong&gt;熵（entropy）&lt;/strong&gt;——然后通过 CSPRNG 把它变成可用的随机字节流。&lt;/p&gt;
+&lt;h2 id="熵从哪来"&gt;熵从哪来 &lt;a href="#%e7%86%b5%e4%bb%8e%e5%93%aa%e6%9d%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;熵的来源是系统中各种不可预测的硬件事件：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;键盘和鼠标的敲击时机&lt;/li&gt;
+&lt;li&gt;网卡中断的时间间隔&lt;/li&gt;
+&lt;li&gt;磁盘 I/O 完成的抖动&lt;/li&gt;
+&lt;li&gt;定时器中断的微小偏差&lt;/li&gt;
+&lt;li&gt;某些 CPU 提供的硬件随机数指令（RDRAND / RDSEED）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些事件的共同特点是：&lt;strong&gt;两次事件之间的时间间隔在微秒甚至纳秒级别是不可预测的&lt;/strong&gt;。内核把这些时间戳混入熵池（entropy pool），作为随机性的原材料。&lt;/p&gt;
+&lt;p&gt;内核维护一个熵的&amp;quot;水位线&amp;quot;——&lt;code&gt;entropy_avail&lt;/code&gt;。可以通过 &lt;code&gt;/proc/sys/kernel/random/entropy_avail&lt;/code&gt; 查看当前熵池还剩多少：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;cat /proc/sys/kernel/random/entropy_avail
+# 输出类似: 256
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="devrandom-vs-devurandom"&gt;/dev/random vs /dev/urandom &lt;a href="#devrandom-vs-devurandom" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;这是最容易搞混的地方。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;/dev/random&lt;/code&gt;&lt;/strong&gt;：阻塞读。如果熵池中的熵不够，&lt;code&gt;read()&lt;/code&gt; 会一直阻塞，直到收集到足够的熵才返回。设计意图是保证返回的每一个字节都有充分的熵支撑，适合生成长期密钥等对安全性要求极高的场景。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;/dev/urandom&lt;/code&gt;&lt;/strong&gt;：非阻塞读。即使熵池空了也会立即返回数据。它在熵不够时会退回到 CSPRNG 的输出——虽然不是&amp;quot;每字节都有熵保证&amp;quot;，但 CSPRNG 的安全性已经足够应对绝大多数场景。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;实际上，Linux 内核从 5.4 开始，&lt;code&gt;/dev/random&lt;/code&gt; 也不再无条件阻塞了——只在 CRNG（Cryptographic Random Number Generator）未初始化时阻塞。初始化完成后，&lt;code&gt;/dev/random&lt;/code&gt; 和 &lt;code&gt;/dev/urandom&lt;/code&gt; 的行为基本一致。所以现在纠结 &lt;code&gt;/dev/random&lt;/code&gt; 还是 &lt;code&gt;/dev/urandom&lt;/code&gt; 的意义已经不大，真正重要的是&lt;strong&gt;不要用应用层的伪随机来做安全相关的事&lt;/strong&gt;。&lt;/p&gt;</description></item></channel></rss>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Fps on</title><link>/tags/fps/</link><description>Recent content in Fps on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 25 Dec 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/fps/index.xml" rel="self" type="application/rss+xml"/><item><title>FPS 匹配系统设计：从 ELO 到行为分，多因素如何平衡</title><link>/blog/fps%E5%8C%B9%E9%85%8D_%E5%8C%B9%E9%85%8D%E7%AD%96%E7%95%A5%E8%80%83%E8%99%91%E5%9B%A0%E7%B4%A0/</link><pubDate>Thu, 25 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/fps%E5%8C%B9%E9%85%8D_%E5%8C%B9%E9%85%8D%E7%AD%96%E7%95%A5%E8%80%83%E8%99%91%E5%9B%A0%E7%B4%A0/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;做 FPS 的匹配系统，表面看是把一群人凑到一起开一局。实际上是在多个互相矛盾的目标之间做折中：延迟要低、技能要对等、不能等太久、别把喷子和正常玩家混在一起。每个因素单独看都有道理，但堆在一起就会互相打架。&lt;/p&gt;
+&lt;p&gt;这篇文章把 FPS 匹配系统的主要因素逐个拆一遍——它们分别解决什么问题、和哪些因素冲突、以及常见的取舍策略。&lt;/p&gt;
+&lt;h1 id="核心因素"&gt;核心因素 &lt;a href="#%e6%a0%b8%e5%bf%83%e5%9b%a0%e7%b4%a0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="技能匹配sbmm"&gt;技能匹配（SBMM） &lt;a href="#%e6%8a%80%e8%83%bd%e5%8c%b9%e9%85%8dsbmm" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;技能匹配是整个系统里争议最大、也最关键的模块。底层通常是一个评分系统——&lt;strong&gt;Elo&lt;/strong&gt;、&lt;strong&gt;Glicko&lt;/strong&gt;、&lt;strong&gt;TrueSkill&lt;/strong&gt;，或者各家自研的 &lt;strong&gt;MMR&lt;/strong&gt;（Matchmaking Rating）。&lt;/p&gt;
+&lt;p&gt;核心逻辑不复杂：每个玩家有一个隐藏分，赢了加分、输了扣分，加减幅度取决于对手的评分——赢比自己分高的加得多，输给比自己分低的扣得多。系统在匹配时把评分接近的玩家凑到一起，保证对局不会一边倒。&lt;/p&gt;
+&lt;p&gt;问题出在&amp;quot;评分接近&amp;quot;这个约束有多紧。约束太紧，匹配时间拉长，玩家等着不耐烦。约束太松，高低分段混在一起，低分段玩家体验极差——这也是 SBMM 被社区诟病最多的地方：&lt;strong&gt;不是 SBMM 本身有问题，是约束收紧的程度和社区的期望对不上。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;ps:&lt;/code&gt; Microsoft 的 TrueSkill 在 Halo 和 Gears of War 系列中大规模使用，它基于贝叶斯推断，除了技能均值还维护一个不确定性参数。新手的不确定性高，分数变化快；老玩家的不确定性低，分数趋于稳定。这个设计比纯 Elo 更适合有大量新玩家的 FPS。&lt;/p&gt;
+&lt;h2 id="延迟与地理位置"&gt;延迟与地理位置 &lt;a href="#%e5%bb%b6%e8%bf%9f%e4%b8%8e%e5%9c%b0%e7%90%86%e4%bd%8d%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;FPS 对延迟的容忍度比其他游戏类型低得多。MOBA 几十毫秒延迟还能操作，FPS 里 50ms 以上的延迟就能体感到&amp;quot;明明瞄中了但没判定&amp;quot;。&lt;/p&gt;
+&lt;p&gt;所以匹配系统的第一步通常是&lt;strong&gt;圈定延迟范围&lt;/strong&gt;——只在玩家能接受的延迟区间内搜索对手。做法上一般是维护一个数据中心列表，玩家先连到最近的测速节点，系统得到一个延迟矩阵，然后匹配时优先选延迟最低的数据中心。&lt;/p&gt;
+&lt;p&gt;和技能匹配的冲突在于：高分段玩家本来就少，再圈上严格的延迟范围，匹配池会急剧缩小。常见的折中是 &lt;strong&gt;Delta Ping&lt;/strong&gt; 策略：允许匹配到次优数据中心，但延迟增量控制在可接受范围内（比如不超过 15ms）。CoD 的 &amp;ldquo;Ping is King&amp;rdquo; 思路就是把这个优先级写死——先保延迟，再谈公平。&lt;/p&gt;
+&lt;h2 id="组队与队伍平衡"&gt;组队与队伍平衡 &lt;a href="#%e7%bb%84%e9%98%9f%e4%b8%8e%e9%98%9f%e4%bc%8d%e5%b9%b3%e8%a1%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;组队匹配比单人匹配多一层复杂度：系统不仅要给队伍找对手，还要在&lt;strong&gt;队伍内部&lt;/strong&gt;做平衡。&lt;/p&gt;
+&lt;p&gt;典型的做法是取队伍的&lt;strong&gt;加权平均 MMR&lt;/strong&gt;（高分段玩家权重更高，防止&amp;quot;带老板&amp;quot;——一个高分段拖几个低分段小号拉低平均分）。对方队伍也按同样逻辑匹配，保证两队平均分相当。&lt;/p&gt;
+&lt;p&gt;队伍平衡（Team Balancing）是另一层：匹配完成后，把 10 个玩家分成两个 5 人队。目标不是让两队平均分相等，而是让双方的&lt;strong&gt;战力分布&lt;/strong&gt;接近——比如两边各放一个高分段带四个中分段，而不是把所有高分段堆在一边。Valorant 和 Overwatch 的 MMR 系统在这方面做得比较细。&lt;/p&gt;</description></item></channel></rss>

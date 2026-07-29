@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Operations on</title><link>/tags/operations/</link><description>Recent content in Operations on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 15 Jul 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/operations/index.xml" rel="self" type="application/rss+xml"/><item><title>网络割接：核心路由器的"心脏搭桥手术"</title><link>/blog/2025-07-15-network-cutover/</link><pubDate>Tue, 15 Jul 2025 00:00:00 +0800</pubDate><guid>/blog/2025-07-15-network-cutover/</guid><description>&lt;p&gt;网络割接（Network Cutover），简单说就是把正在运行的网络设备、线路或业务从旧系统&amp;quot;割断&amp;quot;，再&amp;quot;接入&amp;quot;到新系统上。&lt;/p&gt;
+&lt;p&gt;打个比方：给正在行驶的火车换一段铁轨——先让火车减速或短暂停下，快速换好，再恢复正常行驶。对核心路由器做割接，就是网络运维里风险最高的一类操作，堪称&amp;quot;网络世界的心脏搭桥手术&amp;quot;。&lt;/p&gt;
+&lt;p&gt;英文里最专业、最常用的对应术语就是 &lt;strong&gt;Network Cutover&lt;/strong&gt;。其他相关说法有 Network Migration（侧重整个迁移过程）、System Upgrade（目的，不是动作本身）、Planned Network Maintenance（更宽泛的说法，割接是其中一种）。&lt;/p&gt;
+&lt;p&gt;下面以核心路由器的割接为例，拆解整个流程。&lt;/p&gt;
+&lt;h2 id="核心理念"&gt;核心理念 &lt;a href="#%e6%a0%b8%e5%bf%83%e7%90%86%e5%bf%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;动手之前，先搞清楚三条底线：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;万无一失&lt;/strong&gt;：核心路由器是网络骨干，长时间中断意味着大面积瘫痪，没有试错空间。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;影响最小化&lt;/strong&gt;：所有操作的目标是把业务中断时间压缩到秒级甚至毫秒级。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;随时可回退&lt;/strong&gt;：任何一步出错，必须在几分钟内恢复到割接前的状态。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这三条决定了割接不是&amp;quot;上去改一下配置&amp;quot;这么简单，而是一套严密的工程流程。&lt;/p&gt;
+&lt;h2 id="阶段一割接前准备与规划"&gt;阶段一：割接前——准备与规划 &lt;a href="#%e9%98%b6%e6%ae%b5%e4%b8%80%e5%89%b2%e6%8e%a5%e5%89%8d%e5%87%86%e5%a4%87%e4%b8%8e%e8%a7%84%e5%88%92" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;准备阶段花的时间最长，也最重要。准备越充分，割接窗口里的操作越顺利。&lt;/p&gt;
+&lt;h3 id="1-制定-mopmethod-of-procedure"&gt;1. 制定 MOP（Method of Procedure） &lt;a href="#1-%e5%88%b6%e5%ae%9a-mopmethod-of-procedure" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;MOP 是割接的&amp;quot;剧本&amp;quot;，精确到每一条命令、每一个端口、每一个负责人、每一个时间点。它不是大纲，是指令集——执行者拿到手就能照着敲，不需要临场判断。&lt;/p&gt;
+&lt;h3 id="2-技术勘察"&gt;2. 技术勘察 &lt;a href="#2-%e6%8a%80%e6%9c%af%e5%8b%98%e5%af%9f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;分两层：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;物理层&lt;/strong&gt;：机房空间够不够、电源接口对不对、光纤类型和长度匹不匹配、端口型号兼不兼容。这些看起来琐碎，但任何一项出问题都会让割接窗口直接报废。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;逻辑层&lt;/strong&gt;：梳理这台路由器连接了哪些设备、承载了哪些业务（专线、互联网出口等）、跑了哪些路由协议（BGP、OSPF、IS-IS）和策略。漏掉任何一条，割接后可能就是业务断连。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="3-准备新设备--配置"&gt;3. 准备新设备 / 配置 &lt;a href="#3-%e5%87%86%e5%a4%87%e6%96%b0%e8%ae%be%e5%a4%87--%e9%85%8d%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;如果是换硬件，新设备先在 Lab 环境里完成完整配置和测试，模拟生产环境的流量和协议行为。不要相信&amp;quot;配置一样直接上线就行&amp;quot;，生产环境的 corner case 只有跑过才知道。&lt;/p&gt;
+&lt;p&gt;如果是软件升级或配置变更，新的配置文件必须提前写好、经过 Peer Review，并且做语法检查。&lt;/p&gt;
+&lt;h3 id="4-备份"&gt;4. 备份 &lt;a href="#4-%e5%a4%87%e4%bb%bd" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;备份当前 &lt;code&gt;running-config&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;备份 License（如果有的话）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这一步不花多少时间，但救命的概率不低。&lt;/p&gt;
+&lt;h3 id="5-采集基线数据"&gt;5. 采集基线数据 &lt;a href="#5-%e9%87%87%e9%9b%86%e5%9f%ba%e7%ba%bf%e6%95%b0%e6%8d%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;割接前记录下网络&amp;quot;健康&amp;quot;状态，作为割接后对比的依据：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;show ip route # 路由表
+show bgp summary # BGP 邻居状态
+show interfaces # 接口状态和流量
+show ip traffic # IP 流量统计
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;还要记录设备的 CPU、内存使用率，以及 &lt;code&gt;ping&lt;/code&gt;、&lt;code&gt;traceroute&lt;/code&gt; 关键业务地址的延迟。&lt;/p&gt;</description></item></channel></rss>

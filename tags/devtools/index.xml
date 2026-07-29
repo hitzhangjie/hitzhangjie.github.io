@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Devtools on</title><link>/tags/devtools/</link><description>Recent content in Devtools on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 19 Nov 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/devtools/index.xml" rel="self" type="application/rss+xml"/><item><title>Docker Context：一套 CLI，切换多个容器运行时</title><link>/blog/2025-11-19-docker-context/</link><pubDate>Wed, 19 Nov 2025 00:00:00 +0800</pubDate><guid>/blog/2025-11-19-docker-context/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;如果你在 macOS 上用过 Docker，大概率不止用过一种方案。最早可能是 Docker Desktop，后来因为资源占用换了 Colima，又听说过 Podman 和 Lima，甚至在不同项目间来回切换。每换一次就要改 &lt;code&gt;DOCKER_HOST&lt;/code&gt; 环境变量、改 socket 路径，一不留神就连不上 daemon，然后对着 &lt;code&gt;Cannot connect to the Docker daemon&lt;/code&gt; 发呆。&lt;/p&gt;
+&lt;p&gt;其实 Docker 官方早就提供了一个机制来管理这种多后端切换——&lt;strong&gt;Docker Context&lt;/strong&gt;。一个 context 本质上就是一组 Docker daemon 的连接配置，&lt;code&gt;docker context&lt;/code&gt; 子命令让你可以在不同 daemon 之间一键切换，不用再手动折腾环境变量。&lt;/p&gt;
+&lt;h1 id="docker-context-是什么"&gt;Docker Context 是什么 &lt;a href="#docker-context-%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;简单说，一个 Docker Context 保存了：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Docker daemon 的连接地址（socket 路径或 TCP 地址）&lt;/li&gt;
+&lt;li&gt;TLS 配置（是否需要验证、CA 证书等）&lt;/li&gt;
+&lt;li&gt;可选的描述信息&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;用 &lt;code&gt;docker context ls&lt;/code&gt; 可以看到当前所有可用的 context：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;$ docker context ls
+NAME TYPE DESCRIPTION DOCKER ENDPOINT
+colima * moby colima unix:///Users/zhangjie/.colima/default/docker.sock
+default moby Current DOCKER_HOST based... unix:///var/run/docker.sock
+desktop-linux moby Docker Desktop unix:///Users/zhangjie/.docker/run/docker.sock
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;带 &lt;code&gt;*&lt;/code&gt; 的是当前激活的 context。切换只需要一行：&lt;/p&gt;</description></item></channel></rss>

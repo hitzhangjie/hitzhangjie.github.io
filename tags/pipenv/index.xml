@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Pipenv on</title><link>/tags/pipenv/</link><description>Recent content in Pipenv on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 13 Apr 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/pipenv/index.xml" rel="self" type="application/rss+xml"/><item><title>Python 项目依赖管理：工具选型与最佳实践</title><link>/blog/2025-04-13-python-pkg-management/</link><pubDate>Sun, 13 Apr 2025 00:00:00 +0800</pubDate><guid>/blog/2025-04-13-python-pkg-management/</guid><description>&lt;h2 id="问题"&gt;问题 &lt;a href="#%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Python 的依赖管理工具太多了。&lt;/p&gt;
+&lt;p&gt;刚接触 Python 的人大概率会遇到这种情况：克隆一个项目，&lt;code&gt;pip install -r requirements.txt&lt;/code&gt;，然后发现装不上——缺系统库、Python 版本不对、依赖冲突。折腾半天终于装好了，跑起来报 &lt;code&gt;ModuleNotFoundError&lt;/code&gt;，因为全局环境和另一个项目搅在了一起。&lt;/p&gt;
+&lt;p&gt;这不是新人的问题。Python 的打包和依赖管理经历了漫长的碎片化演进，同一个需求有多个工具在竞争，每个工具的文档都在讲&amp;quot;用我就对了&amp;quot;，但很少有人说清楚&amp;quot;什么场景该用哪个&amp;quot;。&lt;/p&gt;
+&lt;p&gt;本文把我实际用过的工具和组合整理出来，给不同项目类型一个明确的推荐。&lt;/p&gt;
+&lt;h2 id="虚拟环境先隔离再说"&gt;虚拟环境：先隔离再说 &lt;a href="#%e8%99%9a%e6%8b%9f%e7%8e%af%e5%a2%83%e5%85%88%e9%9a%94%e7%a6%bb%e5%86%8d%e8%af%b4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;第一步必须做的是隔离。每个项目要有自己独立的 Python 环境，不然依赖之间早晚打架。&lt;/p&gt;
+&lt;h3 id="venvpython-33-内置"&gt;venv（Python 3.3+ 内置） &lt;a href="#venvpython-33-%e5%86%85%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;如果你只需要隔离依赖，venv 够用了。它是 Python 自带的，不需要额外安装。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;python -m venv .venv
+source .venv/bin/activate # Linux/macOS
+.venv\Scripts\activate # Windows
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;优点是没有外部依赖，和 Python 版本绑定，不存在兼容问题。缺点是功能有限——只管隔离，不管依赖解析和锁定。&lt;/p&gt;
+&lt;h3 id="virtualenv"&gt;virtualenv &lt;a href="#virtualenv" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;virtualenv 是 venv 的前身，功能更强但需要单独安装：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;pip install virtualenv
+virtualenv .venv
+source .venv/bin/activate
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;比 venv 多的能力包括：更快（通过缓存和 AppData 种子）、支持 bootstrap 脚本、可指定任意 Python 解释器创建环境。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;ps: 新项目直接用 venv 就好。virtualenv 的优势主要在旧版本 Python（3.3 以前）或需要自定义创建流程的场景，日常开发不需要专门装它。&lt;/p&gt;</description></item></channel></rss>

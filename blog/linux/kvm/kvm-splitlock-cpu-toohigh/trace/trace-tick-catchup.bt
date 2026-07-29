@@ -1,0 +1,158 @@
+#!/usr/bin/env bpftrace
+/*
+ * trace-tick-catchup.bt
+ *
+ * 观察单次 timer IRQ 上的 periodic catchup：
+ *   - 补偿了多少次 tick（tick_periodic 调用次数）
+ *   - 其中有多少次真正走进进程时间记账（account_user/system_time）
+ *   - 有多少次记到 idle / 被 steal 路径碰过
+ *
+ * 需要：较新内核 + bpftrace + root。3.10 请用 trace-tick-catchup-ftrace.sh
+ *
+ * 用法：
+ *   sudo bpftrace trace-tick-catchup.bt
+ *   sudo bpftrace -c '' trace-tick-catchup.bt   # 同
+ *
+ * 环境变量式过滤请改下面 MIN_TICKS（默认 2：只打印有补偿的 IRQ）
+ *
+ * 输出字段（每次 CATCHUP 一行）：
+ *   cpu              逻辑 CPU
+ *   ticks            本次 tick_handle_periodic 内 tick_periodic 次数（= 处理的 tick 总数）
+ *   lost_extra       ticks-1，相对「只处理当前这 1 个 IRQ」多补偿的次数
+ *   upt              update_process_times 次数（应 ≈ ticks）
+ *   user/sys/idle    account_*_time 次数（真正改 cputime 桶的次数）
+ *   est_ms           按 HZ=1000 粗算 ticks 对应毫秒（HZ≠1000 时仅供参考）
+ *   current          当时 current 的 comm/pid（catchup 记账会落到它头上）
+ */
+
+BEGIN
+{
+	printf("trace-tick-catchup: printing per-IRQ catchup when ticks>=2\n");
+	printf("format: CATCHUP cpu= ticks= lost_extra= upt= user= sys= idle= est_ms~ current=\n\n");
+}
+
+/* ---- 进入 / 退出 handler：一次 IRQ 一个窗口 ---- */
+kprobe:tick_handle_periodic
+{
+	@in[cpu] = 1;
+	@ticks[cpu] = 0;
+	@upt[cpu] = 0;
+	@user[cpu] = 0;
+	@sys[cpu] = 0;
+	@idle[cpu] = 0;
+	@thp = count();
+}
+
+kprobe:tick_periodic
+{
+	if (@in[cpu] == 1) {
+		@ticks[cpu]++;
+	}
+	@tp_total = count();
+}
+
+kprobe:update_process_times
+{
+	if (@in[cpu] == 1) {
+		@upt[cpu]++;
+	}
+	@upt_total = count();
+}
+
+/* 真正给进程/ idle 加时间的路径（比 update_process_times 更贴近 utime/stime） */
+kprobe:account_user_time
+{
+	if (@in[cpu] == 1) {
+		@user[cpu]++;
+	}
+}
+
+kprobe:account_system_time
+{
+	if (@in[cpu] == 1) {
+		@sys[cpu]++;
+	}
+}
+
+kprobe:account_idle_time
+{
+	if (@in[cpu] == 1) {
+		@idle[cpu]++;
+	}
+}
+
+/* 对照：若大量走 hrtimer，说明不是 periodic catchup 路径 */
+kprobe:hrtimer_interrupt
+{
+	@hrtimer = count();
+}
+
+kretprobe:tick_handle_periodic
+{
+	$t = @ticks[cpu];
+	$u = @upt[cpu];
+	$usr = @user[cpu];
+	$sys = @sys[cpu];
+	$idl = @idle[cpu];
+
+	/* ticks>=2：软件循环补偿了至少 1 个额外 tick */
+	if ($t >= 2) {
+		$lost = $t - 1;
+		/* 假定 HZ=1000 → 1 tick = 1ms；仅估计 */
+		printf("CATCHUP cpu=%d ticks=%d lost_extra=%d upt=%d user=%d sys=%d idle=%d est_ms~%d current=%s/%d\n",
+			cpu, $t, $lost, $u, $usr, $sys, $idl, $t, comm, pid);
+
+		@catchup_events = count();
+		@hist_ticks = hist($t);
+		@hist_lost = hist($lost);
+		@sum_ticks += $t;
+		@sum_lost += $lost;
+		@sum_user += $usr;
+		@sum_sys += $sys;
+		@sum_idle += $idl;
+
+		/* 进程记账次数 vs tick 次数：若 user+sys << ticks，多半被 steal/idle 吃掉 */
+		$charged = $usr + $sys;
+		if ($charged < $t) {
+			@under_charge = count();
+		}
+	}
+
+	@in[cpu] = 0;
+	delete(@ticks[cpu]);
+	delete(@upt[cpu]);
+	delete(@user[cpu]);
+	delete(@sys[cpu]);
+	delete(@idle[cpu]);
+}
+
+/* 每秒：只打摘要，避免刷屏 */
+interval:s:1
+{
+	printf("--- 1s: handlers=%@  tick_periodic=%@  upt=%@  hrtimer=%@  catchup_irqs=%@  under_charge_irqs=%@ ---\n",
+		@thp, @tp_total, @upt_total, @hrtimer, @catchup_events, @under_charge);
+	clear(@thp);
+	clear(@tp_total);
+	clear(@upt_total);
+	clear(@hrtimer);
+	/* catchup_* 累计保留到 END */
+}
+
+END
+{
+	printf("\n======== summary ========\n");
+	printf("CATCHUP IRQ count:\n");
+	print(@catchup_events);
+	printf("ticks per CATCHUP (hist):\n");
+	print(@hist_ticks);
+	printf("lost_extra per CATCHUP (hist):\n");
+	print(@hist_lost);
+	printf("sum ticks / lost / user / sys / idle (over all CATCHUP IRQs):\n");
+	print(@sum_ticks);
+	print(@sum_lost);
+	print(@sum_user);
+	print(@sum_sys);
+	print(@sum_idle);
+	printf("IRQs where user+sys < ticks (possible steal/idle absorption):\n");
+	print(@under_charge);
+}

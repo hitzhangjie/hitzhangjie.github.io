@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Ds on</title><link>/tags/ds/</link><description>Recent content in Ds on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 25 Dec 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/ds/index.xml" rel="self" type="application/rss+xml"/><item><title>使命召唤DS负载均衡：遥测、Delta Ping与一致性哈希</title><link>/blog/ds%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1_cod%E6%88%98%E6%96%97%E6%9C%8D%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1/</link><pubDate>Thu, 25 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/ds%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1_cod%E6%88%98%E6%96%97%E6%9C%8D%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;大型 FPS 的后端架构里，最吃资源的就是 DS（Dedicated Server）。每个对局跑在一个 DS 实例上，模拟枪线、弹道、物理、AI 全部在服务端计算。玩家量一大，DS 集群的负载调度就成了核心问题——调度不好，要么浪费机器，要么玩家顶着高延迟进对局。&lt;/p&gt;
+&lt;p&gt;CoD 的 DS 基础设施是 Activision 和 Demonware 一起维护的，跑在 AWS / Google Cloud / Azure 混合云上。这篇文章拆一下他们怎么检测 DS 负载、怎么做跨数据中心调度。&lt;/p&gt;
+&lt;h1 id="ds-负载检测遥测健康检查一致性哈希"&gt;DS 负载检测：遥测、健康检查、一致性哈希 &lt;a href="#ds-%e8%b4%9f%e8%bd%bd%e6%a3%80%e6%b5%8b%e9%81%a5%e6%b5%8b%e5%81%a5%e5%ba%b7%e6%a3%80%e6%9f%a5%e4%b8%80%e8%87%b4%e6%80%a7%e5%93%88%e5%b8%8c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="遥测上报"&gt;遥测上报 &lt;a href="#%e9%81%a5%e6%b5%8b%e4%b8%8a%e6%8a%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;每个 DS 实例持续向中心管理系统（Demonware 维护）上报三类指标：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;CPU 使用率&lt;/strong&gt;：对局内的物理模拟、命中检测都是 CPU 密集型，CPU 是最直接的饱和度信号。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;RAM 利用率&lt;/strong&gt;：地图资源、玩家状态、对局上下文都在内存里，内存不够就直接 OOM。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;网络吞吐量&lt;/strong&gt;：每个 tick 要向所有玩家同步状态，64 人对局的包量不小。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些数据实时汇聚到中心系统，作为调度决策的输入。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;ps:&lt;/code&gt; 具体采集粒度没公开，但按 FPS 的 tick rate（通常 20Hz–60Hz）推测，负载采样间隔应该在秒级，不会逐 tick 上报——那会把管理通道打满。&lt;/p&gt;
+&lt;h2 id="健康检查"&gt;健康检查 &lt;a href="#%e5%81%a5%e5%ba%b7%e6%a3%80%e6%9f%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;负载均衡器对每个 DS 的应用端口做周期性健康检查。和普通 Web 服务的健康检查逻辑差不多，但阈值更保守：服务器容量超过 &lt;strong&gt;90%&lt;/strong&gt; 就标记为 &lt;code&gt;busy&lt;/code&gt;，不再分配新对局；彻底不响应则标记 &lt;code&gt;down&lt;/code&gt;，从调度池中摘除。&lt;/p&gt;</description></item></channel></rss>

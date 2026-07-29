@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Dsr on</title><link>/tags/dsr/</link><description>Recent content in Dsr on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 01 Jul 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/dsr/index.xml" rel="self" type="application/rss+xml"/><item><title>GRE、IP-in-IP 隧道协议与 CLB 的 DSR 架构</title><link>/blog/2025-07-01-gre-ipinip-dsr-loadbalancer/</link><pubDate>Tue, 01 Jul 2025 00:00:00 +0800</pubDate><guid>/blog/2025-07-01-gre-ipinip-dsr-loadbalancer/</guid><description>&lt;h2 id="问题游戏测速为什么不准确"&gt;问题：游戏测速为什么不准确？ &lt;a href="#%e9%97%ae%e9%a2%98%e6%b8%b8%e6%88%8f%e6%b5%8b%e9%80%9f%e4%b8%ba%e4%bb%80%e4%b9%88%e4%b8%8d%e5%87%86%e7%a1%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;游戏客户端上线前，通常会做一次测速——通过域名解析到 CLB，然后 UDP 测速流量经过 CLB 转发到后端测速服务。理想情况下，测速服务器回包沿原路返回，客户端就能拿到准确的延迟数据，从而选择最优的游戏服务器。&lt;/p&gt;
+&lt;p&gt;但实际不是这样。&lt;/p&gt;
+&lt;p&gt;客户端请求进来时，可能走电信、联通、移动中的某一条线路——这是 DNS 智能解析的结果，保证入口最优。但测速服务器回包时，因为 CLB 采用了 GRE 封装 + DSR（Direct Server Return）架构，&lt;strong&gt;回包不经过 CLB，直接从服务器路由回客户端&lt;/strong&gt;。这导致回包路径和来包路径可能不同：来的时候走电信，回的时候可能走了联通。&lt;/p&gt;
+&lt;p&gt;路径不对称，测出来的延迟就不准。玩家基于这个数据选游戏服务器，就可能选到非最优的节点，游戏体验直接受影响。&lt;/p&gt;
+&lt;p&gt;这个问题背后，核心是 GRE 隧道协议和 DSR 架构的组合。要理解它为什么会发生，得先把 GRE 和 IP-in-IP 这两个隧道协议搞清楚。&lt;/p&gt;
+&lt;h2 id="gre-隧道协议"&gt;GRE 隧道协议 &lt;a href="#gre-%e9%9a%a7%e9%81%93%e5%8d%8f%e8%ae%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;GRE（Generic Routing Encapsulation）定义在 RFC 2784 和 RFC 2890 中。它做的事情很简单：把一种协议的数据包封装在另一种协议里传输。&lt;/p&gt;
+&lt;h3 id="封装格式"&gt;封装格式 &lt;a href="#%e5%b0%81%e8%a3%85%e6%a0%bc%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;原始数据包经过 GRE 封装后变成这样：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;┌─────────────────┐
+│ 外层 IP 头部 │ ← 隧道端点 IP（源和目标）
+├─────────────────┤
+│ GRE 头部 │ ← 协议类型、可选字段
+├─────────────────┤
+│ 原始 IP 头部 │ ← 原始数据包完整保留
+├─────────────────┤
+│ 原始数据 │
+└─────────────────┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;封装带来的额外开销是 GRE 头部（4～16 字节，取决于可选字段）加上外层 IP 头部（20 字节），总共 24～36 字节。&lt;/p&gt;</description></item></channel></rss>

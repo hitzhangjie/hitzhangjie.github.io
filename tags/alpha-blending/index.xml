@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Alpha-Blending on</title><link>/tags/alpha-blending/</link><description>Recent content in Alpha-Blending on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 17 Apr 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/alpha-blending/index.xml" rel="self" type="application/rss+xml"/><item><title>告别 CPU 排序：深度解析顺序无关透明渲染（OIT）</title><link>/blog/%E6%B8%B2%E6%9F%93_%E9%A1%BA%E5%BA%8F%E6%97%A0%E5%85%B3%E9%80%8F%E6%98%8E%E6%B8%B2%E6%9F%93oit/</link><pubDate>Fri, 17 Apr 2026 00:00:00 +0800</pubDate><guid>/blog/%E6%B8%B2%E6%9F%93_%E9%A1%BA%E5%BA%8F%E6%97%A0%E5%85%B3%E9%80%8F%E6%98%8E%E6%B8%B2%E6%9F%93oit/</guid><description>&lt;p&gt;在实时渲染领域，透明物体的渲染一直是个棘手的问题。传统的透明度混合（Alpha Blending）要求片元必须按照**由远及近（Back-to-Front）**的顺序进行绘制，否则就会出现遮挡错误。这种对&amp;quot;顺序&amp;quot;的执着，给开发者带来了巨大的性能挑战。&lt;/p&gt;
+&lt;h2 id="1-传统方案的痛点cpu-是如何被拖死的"&gt;1. 传统方案的痛点：CPU 是如何被&amp;quot;拖死&amp;quot;的？ &lt;a href="#1-%e4%bc%a0%e7%bb%9f%e6%96%b9%e6%a1%88%e7%9a%84%e7%97%9b%e7%82%b9cpu-%e6%98%af%e5%a6%82%e4%bd%95%e8%a2%ab%e6%8b%96%e6%ad%bb%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在没有 OIT 支持的情况下，渲染器通常采用&lt;strong&gt;画家算法（Painter&amp;rsquo;s Algorithm）&lt;/strong&gt;。这意味着：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;物体级排序：&lt;/strong&gt; CPU 每一帧都要计算所有透明物体与相机的距离并排序。当场景中有成千上万个透明物件时，这部分开销非常可观。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;无法处理交叉：&lt;/strong&gt; 当两个透明物体互相穿插（例如水面下的水草，或交叉的烟雾粒子）时，物体级的排序失效。除非在 CPU 端将模型拆解到三角面片级进行排序，但这对于实时渲染来说简直是性能灾难。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Draw Call 压力：&lt;/strong&gt; 为了保证顺序，往往无法进行有效的批处理，导致 Draw Call 数量飙升。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="2-oit-的核心思路压力下放权力下放"&gt;2. OIT 的核心思路：压力下放，权力下放 &lt;a href="#2-oit-%e7%9a%84%e6%a0%b8%e5%bf%83%e6%80%9d%e8%b7%af%e5%8e%8b%e5%8a%9b%e4%b8%8b%e6%94%be%e6%9d%83%e5%8a%9b%e4%b8%8b%e6%94%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;OIT（Order-Independent Transparency）的核心思路非常直观：&lt;strong&gt;既然 CPU 很难在&amp;quot;宏观层面&amp;quot;排好序，那就干脆不排了，直接交给 GPU 在&amp;quot;像素层面&amp;quot;去解决。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;它的核心逻辑可以概括为两个阶段：&lt;/p&gt;
+&lt;h3 id="第一阶段信息收集accumulation"&gt;第一阶段：信息收集（Accumulation） &lt;a href="#%e7%ac%ac%e4%b8%80%e9%98%b6%e6%ae%b5%e4%bf%a1%e6%81%af%e6%94%b6%e9%9b%86accumulation" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;CPU 像对待不透明物体一样，直接把所有透明几何体一股脑扔给 GPU。GPU 在绘制每个像素时，不再直接写入颜色，而是利用原子操作（Atomic Operations）在显存中开辟一块空间，将该像素位置下所有覆盖到的片元信息（颜色、深度、透明度）像&amp;quot;存钱&amp;quot;一样存入一个**像素链表（Linked List）**中。&lt;/p&gt;
+&lt;h3 id="第二阶段像素合成composition"&gt;第二阶段：像素合成（Composition） &lt;a href="#%e7%ac%ac%e4%ba%8c%e9%98%b6%e6%ae%b5%e5%83%8f%e7%b4%a0%e5%90%88%e6%88%90composition" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;当所有透明几何体都绘制完成后，GPU 启动一个后处理阶段。针对屏幕上的每一个像素，遍历它对应的链表：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;取出该像素位置积累的所有片元。&lt;/li&gt;
+&lt;li&gt;按照深度（Z 值）进行局部排序。&lt;/li&gt;
+&lt;li&gt;严格执行由远及近的 Alpha Blending 混合公式。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;h2 id="3-进阶方案加权平均wboit"&gt;3. 进阶方案：加权平均（WBOIT） &lt;a href="#3-%e8%bf%9b%e9%98%b6%e6%96%b9%e6%a1%88%e5%8a%a0%e6%9d%83%e5%b9%b3%e5%9d%87wboit" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;虽然基于链表的 OIT 非常精确，但它对显存和带宽的消耗巨大。为了平衡性能，业界常用 &lt;strong&gt;Weighted Blended OIT (WBOIT)&lt;/strong&gt; 这种近似方案。&lt;/p&gt;
+&lt;p&gt;它通过数学加权模拟遮挡关系，完全避免了物理排序。其最终像素颜色的混合公式如下：&lt;/p&gt;
+&lt;p&gt;$$
+C_{final} = \frac{\sum (C_i \cdot \alpha_i \cdot w(z_i))}{\sum (\alpha_i \cdot w(z_i))} \cdot (1 - \prod (1 - \alpha_i))
+$$&lt;/p&gt;</description></item></channel></rss>

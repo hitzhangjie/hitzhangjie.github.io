@@ -1,10 +1,75 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>/Proc/Stat on</title><link>/tags//proc/stat/</link><description>Recent content in /Proc/Stat on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 24 Jul 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags//proc/stat/index.xml" rel="self" type="application/rss+xml"/><item><title>当监控数据'说谎'：Split Lock 引发的 CPU 计量失真</title><link>/blog/2026-07-24-cpu-accounting-splitlock/</link><pubDate>Fri, 24 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/2026-07-24-cpu-accounting-splitlock/</guid><description>&lt;p&gt;那次线上告警，除了 &lt;a href="/blog/linux/processor/2025-12-22-cpu-splitlock-avoidance/"&gt;CPU 飙高和 IRQ 突增&lt;/a&gt;，还观察到另一个更反常的现象：&lt;strong&gt;gopsutil 报告的进程单核 CPU 使用率达到了 350%+&lt;/strong&gt;。&lt;/p&gt;
-&lt;p&gt;单核，除以了核数的，理论上不可能超过 100%。&lt;/p&gt;
-&lt;p&gt;这件事困扰了我很久。和 gopsutil 的开发者讨论过，当时我描述了我的timer irq catchup可能导致导致cpu使用率统计出错的想法，see: &lt;a href="https://github.com/shirou/gopsutil/issues/1978"&gt;#1978 VM stealtime&amp;gt;0, process.Percent(0) / cpu.Counts(true) is higher than 100%&lt;/a&gt;。 作者后来专门提交了一个commit，将最大单核CPU使用率锁定在了100%，see: &lt;a href="https://github.com/shirou/gopsutil/commit/38d13964276ced5230d6c8861b39acdd716151c8"&gt;[process]: clamp Percent() to prevent values exceeding 100% per CPU
-&lt;/a&gt;。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>/Proc/Stat on</title><link>/tags//proc/stat/</link><description>Recent content in /Proc/Stat on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 21 Jun 2024 00:00:00 +0800</lastBuildDate><atom:link href="/tags//proc/stat/index.xml" rel="self" type="application/rss+xml"/><item><title>Linux /proc/stat：CPU 字段含义与更新方式</title><link>/blog/2024-06-21-linux_proc_stat/</link><pubDate>Fri, 21 Jun 2024 00:00:00 +0800</pubDate><guid>/blog/2024-06-21-linux_proc_stat/</guid><description>&lt;p&gt;&lt;code&gt;top&lt;/code&gt;、&lt;code&gt;mpstat&lt;/code&gt;、各类 agent 算 CPU 利用率，几乎都绕不开 &lt;code&gt;/proc/stat&lt;/code&gt;。字段看着简单，顺序一旦记错，steal 和 softirq 就会对调；更新机制若理解成「定时器 250Hz 写文件」，后面排障也会偏。&lt;/p&gt;
+&lt;p&gt;本文只盯 &lt;strong&gt;&lt;code&gt;cpu&lt;/code&gt; / &lt;code&gt;cpuN&lt;/code&gt; 行&lt;/strong&gt;：各列是什么、内核在哪记账、读路径怎么吐出来，以及虚拟化下的 &lt;code&gt;steal&lt;/code&gt;。&lt;/p&gt;
 &lt;blockquote&gt;
-&lt;p&gt;[process]: clamp Percent() to prevent values exceeding 100% per CPU
-In VM environments with steal time or clock skew, CPU jiffies can
-advance faster than wall-clock time, causing process.Percent() to
-return values greater than numcpu * 100%. Clamp the result using
-math.Min, matching the behavior of cpu.calculateBusy().&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;进程级 &lt;code&gt;utime/stime&lt;/code&gt;、tick catchup 与 &lt;code&gt;sum_exec_runtime&lt;/code&gt; 的关系，见 &lt;a href="/blog/linux/processor/2026-07-26-linux_%E8%BF%9B%E7%A8%8Bcpu%E6%97%B6%E9%97%B4%E8%AE%B0%E8%B4%A6/"&gt;Linux 进程 CPU 时间记账&lt;/a&gt;。这里只讲&lt;strong&gt;整机 / 每核&lt;/strong&gt;那本账。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id="一字段十列从左到右"&gt;一、字段：十列从左到右 &lt;a href="#%e4%b8%80%e5%ad%97%e6%ae%b5%e5%8d%81%e5%88%97%e4%bb%8e%e5%b7%a6%e5%88%b0%e5%8f%b3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;示例：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;$ cat /proc/stat
+cpu 3528219 41639 1261361 2231716632 130444 0 261512 0 0 0
+cpu0 143880 243 62282 92967749 9757 0 193767 0 0 0
+...
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;cpu&lt;/code&gt; 是所有逻辑核累加；&lt;code&gt;cpuN&lt;/code&gt; 是单核。单位是 &lt;strong&gt;jiffies&lt;/strong&gt;（累计值，从开机起加，不归零）。列顺序固定：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;列序&lt;/th&gt;
+&lt;th&gt;名字&lt;/th&gt;
+&lt;th&gt;含义&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;user&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;用户态（nice 优先级正常）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;nice&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;用户态且 nice &amp;gt; 0&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;system&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;内核态（不含单独拆出的 irq/softirq）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;idle&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;空闲&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;5&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;iowait&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;有任务在等 IO 时的 idle（语义有历史包袱，见下）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;6&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;irq&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;硬中断处理&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;7&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;softirq&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;软中断处理&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;8&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;steal&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;虚拟化下被 hypervisor 偷走、本 guest 用不了的时间&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;9&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;guest&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;跑 guest 虚拟机（KVM 等）的用户态时间&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;10&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;guest_nice&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;guest 且 nice 的时间&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;对上面那行：&lt;/p&gt;</description></item></channel></rss>

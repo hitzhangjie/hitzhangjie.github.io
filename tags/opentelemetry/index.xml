@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Opentelemetry on</title><link>/tags/opentelemetry/</link><description>Recent content in Opentelemetry on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 29 Jul 2026 12:00:00 +0800</lastBuildDate><atom:link href="/tags/opentelemetry/index.xml" rel="self" type="application/rss+xml"/><item><title>OpenTelemetry 可观测性框架系统性介绍</title><link>/blog/2026-07-29-opentelemetry-introduction/</link><pubDate>Wed, 29 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-29-opentelemetry-introduction/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;微服务和云原生架构普及之后，传统的单体监控手段逐渐失效。以前排查问题，看几台机器的 CPU、内存，翻一翻应用日志就能定位；现在一个请求横跨十几个服务，每层都有自己的日志、自己的指标，出问题时单看某一层根本看不出全貌。&lt;/p&gt;
+&lt;p&gt;于是就有了&amp;quot;可观测性&amp;quot;（Observability）这个概念。它不是某种具体工具，而是一种能力——你能从系统外部，通过它输出的遥测数据，推断出它内部正在发生什么。可观测性的三个支柱（Three Pillars）大家已经比较熟悉：&lt;strong&gt;Traces（链路追踪）&lt;/strong&gt;、&lt;strong&gt;Metrics（指标）&lt;/strong&gt;、&lt;strong&gt;Logs（日志）&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;但问题来了：三大支柱各有各的实现库、各有各的协议、各有各的后端。你用 Jaeger 做 Tracing、Prometheus 做 Metrics、ELK 做 Logging，三套 SDK 打进业务代码，团队维护成本高得离谱。更致命的是，三套数据之间没有关联——你看一条错误日志，想知道它属于哪个 Trace，做不到。&lt;/p&gt;
+&lt;p&gt;OpenTelemetry 就是为了解决这个问题而生的。&lt;/p&gt;
+&lt;h1 id="opentelemetry-是什么"&gt;OpenTelemetry 是什么 &lt;a href="#opentelemetry-%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;OpenTelemetry（简称 OTel）是 CNCF 旗下的一个开源可观测性框架，目标是&lt;strong&gt;统一遥测数据的采集、生成和导出标准&lt;/strong&gt;。它不是后端，不是分析平台——它是一个&amp;quot;数据规格+工具集&amp;quot;，让你的应用产出的 Traces、Metrics、Logs 遵循同一套规范，彼此关联，并且可以导出到任意支持 OTLP 协议的后端。&lt;/p&gt;
+&lt;p&gt;它由两个历史项目合并而来：&lt;strong&gt;OpenTracing&lt;/strong&gt;（专注 Tracing API）和 &lt;strong&gt;OpenCensus&lt;/strong&gt;（Google 开源的 Metrics + Tracing 库）。合并后吸收了双方的设计经验，形成了更完整的体系。&lt;/p&gt;
+&lt;p&gt;理解 OpenTelemetry，可以从这几个维度切入：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;三大信号（Signals）&lt;/strong&gt;：Traces、Metrics、Logs 以及它们之间的关联模型&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;架构分层&lt;/strong&gt;：API → SDK → Collector → Exporter 的数据管线&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;数据模型&lt;/strong&gt;：Span、SpanContext、Resource、Instrument 等核心概念&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;采样与传播&lt;/strong&gt;：Head Sampling、Tail Sampling、W3C Trace Context 协议&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;生态定位&lt;/strong&gt;：它和其他可观测性项目（Prometheus、Jaeger、Fluentd）是什么关系&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;下面逐一展开。&lt;/p&gt;
+&lt;h1 id="三大信号signals"&gt;三大信号（Signals） &lt;a href="#%e4%b8%89%e5%a4%a7%e4%bf%a1%e5%8f%b7signals" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="traces"&gt;Traces &lt;a href="#traces" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Trace 描述一个请求在分布式系统中的完整生命周期。它由多个 &lt;strong&gt;Span&lt;/strong&gt; 组成，每个 Span 代表一次操作（RPC 调用、DB 查询、函数执行等）。Span 之间通过 &lt;code&gt;parent_span_id&lt;/code&gt; 形成树状结构：&lt;/p&gt;</description></item><item><title>SigNoz Docker Compose 配置解读：从架构到编排的映射</title><link>/blog/2026-07-29-signoz-docker-compose-analysis/</link><pubDate>Wed, 29 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-29-signoz-docker-compose-analysis/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在&lt;a href="/blog/2026-07-29-signoz-architecture/"&gt;上一篇&lt;/a&gt;中我们拆解了 SigNoz 的整体架构：OTel Collector 采数据、ClickHouse 存数据、SigNoz Server 查数据、Schema Migrator 管表结构、Zookeeper 做集群协调。&lt;/p&gt;
+&lt;p&gt;这篇我们来看这套架构是如何被翻译成一组 Docker Compose 服务的。理解了架构之后，每个 service 的配置项就不是孤立的参数，而是对架构中某个设计决策的具体实现。反过来，读配置也能帮你验证架构理解是否正确。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;本文分析的配置文件来自 &lt;code&gt;signoz/deploy/docker/docker-compose.yaml&lt;/code&gt;（&lt;code&gt;v0.107.0&lt;/code&gt; 附近版本）。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id="配置总览"&gt;配置总览 &lt;a href="#%e9%85%8d%e7%bd%ae%e6%80%bb%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;整个 compose 文件分为四个逻辑块：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;几个 YAML 锚点&lt;/strong&gt;（&lt;code&gt;x-*&lt;/code&gt;）——复用的配置片段&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;8 个 services&lt;/strong&gt;——架构中各组件的容器化实例&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;1 个 network&lt;/strong&gt;——&lt;code&gt;signoz-net&lt;/code&gt; 桥接网络&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;3 个 named volumes&lt;/strong&gt;——持久化数据卷&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;在逐个服务展开之前，先理解 YAML 锚点这个设计——它为整个配置文件奠定了可维护性的基础。&lt;/p&gt;
+&lt;h1 id="yaml-锚点dry-配置"&gt;YAML 锚点：DRY 配置 &lt;a href="#yaml-%e9%94%9a%e7%82%b9dry-%e9%85%8d%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;你会在文件中看到很多以 &lt;code&gt;x-&lt;/code&gt; 开头的块——这不是 Docker Compose 的保留字，而是 YAML 语法层面的东西。Docker Compose 会忽略以 &lt;code&gt;x-&lt;/code&gt; 开头的顶级元素，这让它们成为定义可复用配置片段的理想选择。&lt;/p&gt;
+&lt;p&gt;文件中定义了四个锚点，形成了清晰的复用层级：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;x-common (基础配置)
+└── networks, restart, logging
+x-clickhouse-defaults (ClickHouse 相关)
+└── !!merge &amp;lt;&amp;lt;: *common ← 继承 x-common
++ image, labels, depends_on, healthcheck, ulimits, environment
+x-zookeeper-defaults (Zookeeper 相关)
+└── !!merge &amp;lt;&amp;lt;: *common ← 继承 x-common
++ image, labels, healthcheck
+x-db-depend (依赖数据库的服务)
+└── !!merge &amp;lt;&amp;lt;: *common ← 继承 x-common
++ depends_on: clickhouse, schema-migrator-sync
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;!!merge &amp;lt;&amp;lt;: *common&lt;/code&gt; 是 YAML 的合并语法——&lt;code&gt;*common&lt;/code&gt; 引用锚点，&lt;code&gt;&amp;lt;&amp;lt;:&lt;/code&gt; 将其内容合并到当前位置。假设 &lt;code&gt;x-common&lt;/code&gt; 定义了 &lt;code&gt;networks&lt;/code&gt;、&lt;code&gt;restart&lt;/code&gt;、&lt;code&gt;logging&lt;/code&gt;，那么 &lt;code&gt;clickhouse&lt;/code&gt; 服务最终的配置就是这三项加上自己在 &lt;code&gt;x-clickhouse-defaults&lt;/code&gt; 和 service 定义中追加的内容。&lt;/p&gt;</description></item><item><title>SigNoz 整体架构：一个基于 OpenTelemetry 的开源可观测性平台</title><link>/blog/2026-07-29-signoz-architecture/</link><pubDate>Wed, 29 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-29-signoz-architecture/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;a href="/blog/2026-07-29-opentelemetry-introduction/"&gt;上一篇文章&lt;/a&gt; 里我们系统梳理了 OpenTelemetry 的核心概念。OTel 解决的是&amp;quot;数据怎么采、怎么传&amp;quot;的问题，但它不解决&amp;quot;数据怎么存、怎么查、怎么告警&amp;quot;的问题。你需要一个后端。&lt;/p&gt;
+&lt;p&gt;后端的选择其实不少：Jaeger（专注 Tracing）、Prometheus + Grafana（专注 Metrics）、ELK（专注 Logging），更不用提 Datadog、New Relic 这些商业 SaaS。但三件套拼在一起有几个痛点：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;数据孤岛&lt;/strong&gt;：Traces 在 Jaeger、Metrics 在 Prometheus、Logs 在 Elasticsearch，查问题时要在三套系统间跳来跳去。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;基础设施碎片化&lt;/strong&gt;：每套系统有自己的部署、配置、升级节奏，运维成本随套数线性增长。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;告警能力割裂&lt;/strong&gt;：没法在一个地方同时基于 Metrics 阈值和 Trace 延迟来定义告警规则。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;SigNoz 试图用一个统一平台解决这些痛点。它是 CNCF 生态下的开源项目，原生基于 OpenTelemetry，将三大信号的存储、查询、可视化和告警整合到一起。下面拆解它的整体架构。&lt;/p&gt;
+&lt;h1 id="整体架构"&gt;整体架构 &lt;a href="#%e6%95%b4%e4%bd%93%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;SigNoz 的架构可以从三个层次来理解：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt; ┌──────────────────────┐
+│ Applications │
+│ (OTel SDK / Agent) │
+└────────┬─────────────┘
+│ OTLP (gRPC :4317 / HTTP :4318)
+┌────────▼─────────────┐
+│ OTel Collector │
+│ (signal-collector) │
+│ - Receivers │
+│ - Processors │
+│ - Exporters │
+└────────┬─────────────┘
+│
+┌──────────────┼──────────────┐
+│ │ │
+┌────────▼─────┐ ┌──────▼──────┐ ┌─────▼──────┐
+│ ClickHouse │ │ SQLite │ │ Dashboards│
+│ (traces, │ │ (metadata, │ │ (JSON │
+│ metrics, │ │ alerts, │ │ files) │
+│ logs) │ │ users) │ │ │
+└────────┬──────┘ └──────┬──────┘ └─────┬──────┘
+│ │ │
+└───────────────┼───────────────┘
+│
+┌─────────▼──────────┐
+│ SigNoz Server │
+│ (Query + Alert) │
+│ - Query Service │
+│ - Alert Manager │
+│ - Web UI │
+└─────────┬───────────┘
+│
+┌─────────▼──────────┐
+│ Alert Channels │
+│ Slack / Email / │
+│ Webhook / Teams │
+└────────────────────┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;下面逐层拆解每个组件。&lt;/p&gt;</description></item></channel></rss>

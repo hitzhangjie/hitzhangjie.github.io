@@ -312,7 +312,26 @@ struct list_head thread_node; // 在 signal-&amp;gt;thread_head 中的节点
 &lt;p&gt;查看内核 &lt;code&gt;do_wait&lt;/code&gt; 的实现：&lt;/p&gt;
 &lt;pre&gt;&lt;code class="language-c"&gt;add_wait_queue(&amp;amp;current-&amp;gt;signal-&amp;gt;wait_chldexit, &amp;amp;wo-&amp;gt;child_wait);
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;这里 &lt;code&gt;current-&amp;gt;signal-&amp;gt;wait_chldexit&lt;/code&gt; 是关键——它是 &lt;strong&gt;进程级别&lt;/strong&gt; 的等待队列，位于 &lt;code&gt;signal_struct&lt;/code&gt; 中，被同一进程的所有线程共享。&lt;/p&gt;</description></item><item><title>Linux 信号处理流程详解</title><link>/blog/2025-07-17-linux-signal-processing/</link><pubDate>Thu, 17 Jul 2025 00:00:00 +0800</pubDate><guid>/blog/2025-07-17-linux-signal-processing/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;这里 &lt;code&gt;current-&amp;gt;signal-&amp;gt;wait_chldexit&lt;/code&gt; 是关键——它是 &lt;strong&gt;进程级别&lt;/strong&gt; 的等待队列，位于 &lt;code&gt;signal_struct&lt;/code&gt; 中，被同一进程的所有线程共享。&lt;/p&gt;</description></item><item><title>Docker 容器与宿主机 UID/GID 不匹配导致的权限问题及解决方案</title><link>/blog/2025-08-06-docker-uid-gid/</link><pubDate>Wed, 06 Aug 2025 00:00:00 +0800</pubDate><guid>/blog/2025-08-06-docker-uid-gid/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;用 Docker 做开发时，经常会遇到一个烦人的问题：容器里跑的程序创建了一堆文件，回到宿主机想编辑或删除，结果提示 &lt;code&gt;Permission denied&lt;/code&gt;。&lt;code&gt;ls -l&lt;/code&gt; 一看，文件所有者是 &lt;code&gt;root:root&lt;/code&gt;，而你的宿主机用户是 &lt;code&gt;zhangjie:zhangjie&lt;/code&gt;（UID/GID 通常是 1000:1000），自然没有写权限。&lt;/p&gt;
+&lt;p&gt;根本原因很简单：容器默认以 root（UID=0, GID=0）身份运行，在挂载到宿主机的卷上创建文件时，文件所有者就是 &lt;code&gt;root:root&lt;/code&gt;。宿主机的普通用户（UID 1000）当然动不了 root 的文件。&lt;/p&gt;
+&lt;p&gt;下面几种方案按推荐程度排列，根据场景选用即可。&lt;/p&gt;
+&lt;h1 id="方法一运行时指定---user最快捷"&gt;方法一：运行时指定 &lt;code&gt;--user&lt;/code&gt;（最快捷） &lt;a href="#%e6%96%b9%e6%b3%95%e4%b8%80%e8%bf%90%e8%a1%8c%e6%97%b6%e6%8c%87%e5%ae%9a---user%e6%9c%80%e5%bf%ab%e6%8d%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;不需要改 Dockerfile，在 &lt;code&gt;docker run&lt;/code&gt; 时直接把容器内的执行用户指定为宿主机用户的 UID/GID。&lt;/p&gt;
+&lt;p&gt;先获取 UID 和 GID：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;id -u # UID
+id -g # GID
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;启动容器时传入：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;docker run --rm -it \
+--user $(id -u):$(id -g) \
+-v /path/on/host:/path/in/container \
+your_image_name
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;优点&lt;/strong&gt;：简单直接，不需要任何准备工作。容器内生成的所有文件，其所有者 UID/GID 和宿主机一致，直接就能读写删除。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;缺点&lt;/strong&gt;：如果容器内程序需要 root 权限（比如安装软件、绑定 1024 以下的低位端口），这种方式可能导致容器启动或运行失败。&lt;/p&gt;
+&lt;h1 id="方法二修改-dockerfile创建匹配的用户推荐"&gt;方法二：修改 Dockerfile，创建匹配的用户（推荐） &lt;a href="#%e6%96%b9%e6%b3%95%e4%ba%8c%e4%bf%ae%e6%94%b9-dockerfile%e5%88%9b%e5%bb%ba%e5%8c%b9%e9%85%8d%e7%9a%84%e7%94%a8%e6%88%b7%e6%8e%a8%e8%8d%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;这是更规范的做法，尤其在团队协作和 CI 环境中。在镜像构建时创建一个与宿主机用户 ID 匹配的非 root 用户。&lt;/p&gt;</description></item><item><title>Linux 信号处理流程详解</title><link>/blog/2025-07-17-linux-signal-processing/</link><pubDate>Thu, 17 Jul 2025 00:00:00 +0800</pubDate><guid>/blog/2025-07-17-linux-signal-processing/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;信号是 Linux 系统中一种经典的异步通知机制。无论是 &lt;code&gt;Ctrl+C&lt;/code&gt; 触发 &lt;code&gt;SIGINT&lt;/code&gt;，还是子进程退出时的 &lt;code&gt;SIGCHLD&lt;/code&gt;，或是代码中的 &lt;code&gt;SIGSEGV&lt;/code&gt;，信号在系统编程中无处不在。&lt;/p&gt;
 &lt;p&gt;但信号的处理时机和流程，很多人只有一个模糊的印象——&amp;ldquo;信号会中断当前执行，跳转到 handler&amp;rdquo;。具体是怎么中断的？内核是如何在恰当的时机插入信号处理的？handler 执行完后又是如何恢复原来的代码继续执行的？&lt;/p&gt;
 &lt;p&gt;本文梳理信号从产生到处理完成的完整流程，厘清关键的内核机制。&lt;/p&gt;
@@ -424,7 +443,18 @@ struct list_head thread_node; // 在 signal-&amp;gt;thread_head 中的节点
 &lt;p&gt;第一个字符 &lt;code&gt;t&lt;/code&gt; 表示进程正被调试器跟踪（traced），或者处于停止状态（stopped）。在 Linux 中，这通常意味着进程通过 &lt;code&gt;ptrace(PTRACE_ATTACH, ...)&lt;/code&gt; 被附加到了一个 tracer 上，此时进程会收到 &lt;code&gt;SIGSTOP&lt;/code&gt; 并暂停。&lt;/p&gt;
 &lt;p&gt;&lt;strong&gt;&lt;code&gt;l&lt;/code&gt; — multi-threaded&lt;/strong&gt;&lt;/p&gt;
 &lt;p&gt;第二个字符 &lt;code&gt;l&lt;/code&gt; 表示进程是多线程的（multi-threaded）。在 Linux 中，当进程创建了多个线程时，&lt;code&gt;ps&lt;/code&gt; 会在 STAT 中标记 &lt;code&gt;l&lt;/code&gt;。&lt;/p&gt;
-&lt;p&gt;这两个标志组合在一起，&lt;code&gt;tl&lt;/code&gt; 表示的就是：&lt;strong&gt;一个被调试器暂停的多线程进程&lt;/strong&gt;。在上面的例子中，进程名 &lt;code&gt;__debug_bin2092487096&lt;/code&gt; 也印证了这一点——这是调试器（如 Delve 或 gdb）生成的临时可执行文件。&lt;/p&gt;</description></item><item><title>Bash常用命令</title><link>/blog/linux-commands/</link><pubDate>Sun, 19 May 2024 09:10:25 +0800</pubDate><guid>/blog/linux-commands/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是一些日常高频使用的Linux命令。&lt;/p&gt;
+&lt;p&gt;这两个标志组合在一起，&lt;code&gt;tl&lt;/code&gt; 表示的就是：&lt;strong&gt;一个被调试器暂停的多线程进程&lt;/strong&gt;。在上面的例子中，进程名 &lt;code&gt;__debug_bin2092487096&lt;/code&gt; 也印证了这一点——这是调试器（如 Delve 或 gdb）生成的临时可执行文件。&lt;/p&gt;</description></item><item><title>Linux load average 到底在算什么？</title><link>/blog/2024-06-18-linux-top-loadavg/</link><pubDate>Tue, 18 Jun 2024 00:00:00 +0800</pubDate><guid>/blog/2024-06-18-linux-top-loadavg/</guid><description>&lt;p&gt;&lt;code&gt;uptime&lt;/code&gt; 或者 &lt;code&gt;top&lt;/code&gt; 中显示的 load average 到底统计的是什么东西，误解不少。&lt;/p&gt;
+&lt;p&gt;最常见的说法是&amp;quot;CPU 队列长度&amp;quot;或者&amp;quot;系统忙的程度&amp;quot;。这些说法不准确——load average 算的不是所有进程，而是 &lt;strong&gt;R 状态 + D 状态&lt;/strong&gt; 的进程数，按指数移动平均平滑后的值。&lt;/p&gt;
+&lt;h2 id="load-average-算了什么"&gt;load average 算了什么 &lt;a href="#load-average-%e7%ae%97%e4%ba%86%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Linux 内核里有一个全局数组 &lt;code&gt;avenrun[3]&lt;/code&gt;，分别存 1 分钟、5 分钟、15 分钟的 load average。每次时钟中断或者调度事件触发时，内核统计当前处于 &lt;code&gt;TASK_RUNNING&lt;/code&gt;（R 状态）和 &lt;code&gt;TASK_UNINTERRUPTIBLE&lt;/code&gt;（D 状态）的进程数，然后做指数平滑更新 &lt;code&gt;avenrun&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;R 状态包括正在 CPU 上跑的和在就绪队列里等 CPU 的。D 状态就窄得多，只有不可中断睡眠。&lt;/p&gt;
+&lt;p&gt;superuser 上有个回答总结得很清楚，load average 考虑三类进程：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Actively running on a CPU —— 正在用 CPU&lt;/li&gt;
+&lt;li&gt;Runnable but waiting for a CPU —— 等 CPU&lt;/li&gt;
+&lt;li&gt;Sleeping: waiting for I/O —— 等磁盘 I/O&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;第三条说 sleeping，但实际只指 D 状态，不是所有睡眠都算。&lt;/p&gt;</description></item><item><title>Bash常用命令</title><link>/blog/linux-commands/</link><pubDate>Sun, 19 May 2024 09:10:25 +0800</pubDate><guid>/blog/linux-commands/</guid><description>&lt;p&gt;迁移自 hitzhangjie/Study 项目下的内容，本文主要总结的是一些日常高频使用的Linux命令。&lt;/p&gt;
 &lt;h2 id="navigation"&gt;Navigation &lt;a href="#navigation" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;code&gt;pwd&lt;/code&gt;: print current workdir, &lt;code&gt;print -P&lt;/code&gt; print workdir and resolves symbolic link&lt;/li&gt;
@@ -518,7 +548,35 @@ Examples:
 &lt;/ul&gt;
 &lt;h3 id="explorer"&gt;Explorer &lt;a href="#explorer" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;mc, 命令行下的文件管理器
-除了对文件的相关操作之外，还可以登录ftp服务器。&lt;/p&gt;</description></item><item><title>Linux性能问题排查60s</title><link>/blog/2023-09-08-%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5_linux%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A560s/</link><pubDate>Fri, 08 Sep 2023 16:30:30 +0800</pubDate><guid>/blog/2023-09-08-%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5_linux%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A560s/</guid><description>&lt;h3 id="简介"&gt;简介 &lt;a href="#%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+除了对文件的相关操作之外，还可以登录ftp服务器。&lt;/p&gt;</description></item><item><title>Linux 随机数是怎么生成的：从熵到 /dev/random</title><link>/blog/2024-04-30-rand-devrandom/</link><pubDate>Tue, 30 Apr 2024 00:00:00 +0800</pubDate><guid>/blog/2024-04-30-rand-devrandom/</guid><description>&lt;p&gt;写代码时用到随机数的场景太多了：生成 session ID、洗牌、密码学 nonce、测试数据构造。大多数时候就是调一下 &lt;code&gt;rand.Intn()&lt;/code&gt; 或者 &lt;code&gt;crypto/rand.Read()&lt;/code&gt;，能用就行。但你有没有想过，这些随机数到底是哪来的？&lt;/p&gt;
+&lt;p&gt;答案分两层：&lt;strong&gt;伪随机&lt;/strong&gt;和&lt;strong&gt;真随机&lt;/strong&gt;。应用层常用的 &lt;code&gt;math/rand&lt;/code&gt; 是伪随机——给定一个 seed，后面的序列就是确定的。但如果 seed 被人猜到，整个序列就透明了。所以安全场景需要&amp;quot;真随机&amp;quot;——不可预测、不可重现。&lt;/p&gt;
+&lt;p&gt;但&amp;quot;真随机&amp;quot;也是个相对概念。计算机是确定性的机器，它自己产生不了真正的随机。Linux 的做法是从物理世界&amp;quot;偷&amp;quot;随机性——也就是&lt;strong&gt;熵（entropy）&lt;/strong&gt;——然后通过 CSPRNG 把它变成可用的随机字节流。&lt;/p&gt;
+&lt;h2 id="熵从哪来"&gt;熵从哪来 &lt;a href="#%e7%86%b5%e4%bb%8e%e5%93%aa%e6%9d%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;熵的来源是系统中各种不可预测的硬件事件：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;键盘和鼠标的敲击时机&lt;/li&gt;
+&lt;li&gt;网卡中断的时间间隔&lt;/li&gt;
+&lt;li&gt;磁盘 I/O 完成的抖动&lt;/li&gt;
+&lt;li&gt;定时器中断的微小偏差&lt;/li&gt;
+&lt;li&gt;某些 CPU 提供的硬件随机数指令（RDRAND / RDSEED）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些事件的共同特点是：&lt;strong&gt;两次事件之间的时间间隔在微秒甚至纳秒级别是不可预测的&lt;/strong&gt;。内核把这些时间戳混入熵池（entropy pool），作为随机性的原材料。&lt;/p&gt;
+&lt;p&gt;内核维护一个熵的&amp;quot;水位线&amp;quot;——&lt;code&gt;entropy_avail&lt;/code&gt;。可以通过 &lt;code&gt;/proc/sys/kernel/random/entropy_avail&lt;/code&gt; 查看当前熵池还剩多少：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;cat /proc/sys/kernel/random/entropy_avail
+# 输出类似: 256
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="devrandom-vs-devurandom"&gt;/dev/random vs /dev/urandom &lt;a href="#devrandom-vs-devurandom" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;这是最容易搞混的地方。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;/dev/random&lt;/code&gt;&lt;/strong&gt;：阻塞读。如果熵池中的熵不够，&lt;code&gt;read()&lt;/code&gt; 会一直阻塞，直到收集到足够的熵才返回。设计意图是保证返回的每一个字节都有充分的熵支撑，适合生成长期密钥等对安全性要求极高的场景。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;/dev/urandom&lt;/code&gt;&lt;/strong&gt;：非阻塞读。即使熵池空了也会立即返回数据。它在熵不够时会退回到 CSPRNG 的输出——虽然不是&amp;quot;每字节都有熵保证&amp;quot;，但 CSPRNG 的安全性已经足够应对绝大多数场景。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;实际上，Linux 内核从 5.4 开始，&lt;code&gt;/dev/random&lt;/code&gt; 也不再无条件阻塞了——只在 CRNG（Cryptographic Random Number Generator）未初始化时阻塞。初始化完成后，&lt;code&gt;/dev/random&lt;/code&gt; 和 &lt;code&gt;/dev/urandom&lt;/code&gt; 的行为基本一致。所以现在纠结 &lt;code&gt;/dev/random&lt;/code&gt; 还是 &lt;code&gt;/dev/urandom&lt;/code&gt; 的意义已经不大，真正重要的是&lt;strong&gt;不要用应用层的伪随机来做安全相关的事&lt;/strong&gt;。&lt;/p&gt;</description></item><item><title>Linux性能问题排查60s</title><link>/blog/2023-09-08-%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5_linux%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A560s/</link><pubDate>Fri, 08 Sep 2023 16:30:30 +0800</pubDate><guid>/blog/2023-09-08-%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5_linux%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A560s/</guid><description>&lt;h3 id="简介"&gt;简介 &lt;a href="#%e7%ae%80%e4%bb%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;最近在阅读Gregg大佬著作《BPF Performance Tools》，其中一小节作者提到了其在Netflix工程团队中践行的一个性能排查checklist，当遇到Linux性能问题时，前60s往往是借助这个checklist来进行排查，如果有必要，缩小范围后再借助其他工具进行进一步排查。我觉得这个简短的checklist还挺实用的，特地摘录出来分享下。&lt;/p&gt;
 &lt;h3 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;这个checklist可以用来指导排查任意Linux性能问题，当我们知道有台机器性能（疑似）有问题时，我们就可以登录这台机器，按照这个checklist来进行前60s的快速分析。这也是Gregg自己以及Netflix工程团队实践中总结出来的。&lt;/p&gt;

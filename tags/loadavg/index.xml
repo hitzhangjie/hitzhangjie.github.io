@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Loadavg on</title><link>/tags/loadavg/</link><description>Recent content in Loadavg on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 18 Jun 2024 00:00:00 +0800</lastBuildDate><atom:link href="/tags/loadavg/index.xml" rel="self" type="application/rss+xml"/><item><title>Linux load average 到底在算什么？</title><link>/blog/2024-06-18-linux-top-loadavg/</link><pubDate>Tue, 18 Jun 2024 00:00:00 +0800</pubDate><guid>/blog/2024-06-18-linux-top-loadavg/</guid><description>&lt;p&gt;&lt;code&gt;uptime&lt;/code&gt; 或者 &lt;code&gt;top&lt;/code&gt; 中显示的 load average 到底统计的是什么东西，误解不少。&lt;/p&gt;
+&lt;p&gt;最常见的说法是&amp;quot;CPU 队列长度&amp;quot;或者&amp;quot;系统忙的程度&amp;quot;。这些说法不准确——load average 算的不是所有进程，而是 &lt;strong&gt;R 状态 + D 状态&lt;/strong&gt; 的进程数，按指数移动平均平滑后的值。&lt;/p&gt;
+&lt;h2 id="load-average-算了什么"&gt;load average 算了什么 &lt;a href="#load-average-%e7%ae%97%e4%ba%86%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Linux 内核里有一个全局数组 &lt;code&gt;avenrun[3]&lt;/code&gt;，分别存 1 分钟、5 分钟、15 分钟的 load average。每次时钟中断或者调度事件触发时，内核统计当前处于 &lt;code&gt;TASK_RUNNING&lt;/code&gt;（R 状态）和 &lt;code&gt;TASK_UNINTERRUPTIBLE&lt;/code&gt;（D 状态）的进程数，然后做指数平滑更新 &lt;code&gt;avenrun&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;R 状态包括正在 CPU 上跑的和在就绪队列里等 CPU 的。D 状态就窄得多，只有不可中断睡眠。&lt;/p&gt;
+&lt;p&gt;superuser 上有个回答总结得很清楚，load average 考虑三类进程：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Actively running on a CPU —— 正在用 CPU&lt;/li&gt;
+&lt;li&gt;Runnable but waiting for a CPU —— 等 CPU&lt;/li&gt;
+&lt;li&gt;Sleeping: waiting for I/O —— 等磁盘 I/O&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;第三条说 sleeping，但实际只指 D 状态，不是所有睡眠都算。&lt;/p&gt;</description></item></channel></rss>

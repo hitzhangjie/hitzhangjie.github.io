@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Logging on</title><link>/categories/logging/</link><description>Recent content in Logging on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 29 Jul 2026 12:00:00 +0800</lastBuildDate><atom:link href="/categories/logging/index.xml" rel="self" type="application/rss+xml"/><item><title>OpenTelemetry 可观测性框架系统性介绍</title><link>/blog/2026-07-29-opentelemetry-introduction/</link><pubDate>Wed, 29 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-29-opentelemetry-introduction/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;微服务和云原生架构普及之后，传统的单体监控手段逐渐失效。以前排查问题，看几台机器的 CPU、内存，翻一翻应用日志就能定位；现在一个请求横跨十几个服务，每层都有自己的日志、自己的指标，出问题时单看某一层根本看不出全貌。&lt;/p&gt;
+&lt;p&gt;于是就有了&amp;quot;可观测性&amp;quot;（Observability）这个概念。它不是某种具体工具，而是一种能力——你能从系统外部，通过它输出的遥测数据，推断出它内部正在发生什么。可观测性的三个支柱（Three Pillars）大家已经比较熟悉：&lt;strong&gt;Traces（链路追踪）&lt;/strong&gt;、&lt;strong&gt;Metrics（指标）&lt;/strong&gt;、&lt;strong&gt;Logs（日志）&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;但问题来了：三大支柱各有各的实现库、各有各的协议、各有各的后端。你用 Jaeger 做 Tracing、Prometheus 做 Metrics、ELK 做 Logging，三套 SDK 打进业务代码，团队维护成本高得离谱。更致命的是，三套数据之间没有关联——你看一条错误日志，想知道它属于哪个 Trace，做不到。&lt;/p&gt;
+&lt;p&gt;OpenTelemetry 就是为了解决这个问题而生的。&lt;/p&gt;
+&lt;h1 id="opentelemetry-是什么"&gt;OpenTelemetry 是什么 &lt;a href="#opentelemetry-%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;OpenTelemetry（简称 OTel）是 CNCF 旗下的一个开源可观测性框架，目标是&lt;strong&gt;统一遥测数据的采集、生成和导出标准&lt;/strong&gt;。它不是后端，不是分析平台——它是一个&amp;quot;数据规格+工具集&amp;quot;，让你的应用产出的 Traces、Metrics、Logs 遵循同一套规范，彼此关联，并且可以导出到任意支持 OTLP 协议的后端。&lt;/p&gt;
+&lt;p&gt;它由两个历史项目合并而来：&lt;strong&gt;OpenTracing&lt;/strong&gt;（专注 Tracing API）和 &lt;strong&gt;OpenCensus&lt;/strong&gt;（Google 开源的 Metrics + Tracing 库）。合并后吸收了双方的设计经验，形成了更完整的体系。&lt;/p&gt;
+&lt;p&gt;理解 OpenTelemetry，可以从这几个维度切入：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;三大信号（Signals）&lt;/strong&gt;：Traces、Metrics、Logs 以及它们之间的关联模型&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;架构分层&lt;/strong&gt;：API → SDK → Collector → Exporter 的数据管线&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;数据模型&lt;/strong&gt;：Span、SpanContext、Resource、Instrument 等核心概念&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;采样与传播&lt;/strong&gt;：Head Sampling、Tail Sampling、W3C Trace Context 协议&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;生态定位&lt;/strong&gt;：它和其他可观测性项目（Prometheus、Jaeger、Fluentd）是什么关系&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;下面逐一展开。&lt;/p&gt;
+&lt;h1 id="三大信号signals"&gt;三大信号（Signals） &lt;a href="#%e4%b8%89%e5%a4%a7%e4%bf%a1%e5%8f%b7signals" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="traces"&gt;Traces &lt;a href="#traces" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Trace 描述一个请求在分布式系统中的完整生命周期。它由多个 &lt;strong&gt;Span&lt;/strong&gt; 组成，每个 Span 代表一次操作（RPC 调用、DB 查询、函数执行等）。Span 之间通过 &lt;code&gt;parent_span_id&lt;/code&gt; 形成树状结构：&lt;/p&gt;</description></item></channel></rss>

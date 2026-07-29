@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Ifunc on</title><link>/tags/ifunc/</link><description>Recent content in Ifunc on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 04 Apr 2024 00:00:00 +0800</lastBuildDate><atom:link href="/tags/ifunc/index.xml" rel="self" type="application/rss+xml"/><item><title>xz 后门事件：一次教科书级的开源供应链攻击</title><link>/blog/2024-04-04-cve-xz-backdoor/</link><pubDate>Thu, 04 Apr 2024 00:00:00 +0800</pubDate><guid>/blog/2024-04-04-cve-xz-backdoor/</guid><description>&lt;p&gt;2024 年 3 月 29 日，微软的 Andres Freund 在 oss-security 邮件列表发了一封邮件，说他发现 liblzma（xz 的一部分）里面植入了后门。他注意到这件事，是因为最近几周在 Debian sid 上 &lt;code&gt;sshd&lt;/code&gt; 登录时 CPU 异常飙升，valgrind 也报了一些奇怪的错误。&lt;/p&gt;
+&lt;p&gt;顺着异常一路挖下去，最终挖出了一个 CVSS 10.0 的后门。这是迄今为止开源生态中最精心策划的供应链攻击之一，值得认真复盘。&lt;/p&gt;
+&lt;p&gt;几条关键参考资料：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="https://research.swtch.com/xz-timeline"&gt;Timeline of the xz open source attack&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://research.swtch.com/xz-script"&gt;The xz attack shell script&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://github.com/amlweems/xzbot"&gt;xzbot — 后门利用演示&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="攻击链概览"&gt;攻击链概览 &lt;a href="#%e6%94%bb%e5%87%bb%e9%93%be%e6%a6%82%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;先说清楚这条攻击链是怎么串起来的：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;攻击者 Jia Tan 通过持续贡献获得了 xz 项目的维护权限。&lt;/li&gt;
+&lt;li&gt;他往 liblzma 里植入了后门。代码不在源码树里，而是藏在 release tarball 的一些&amp;quot;测试文件&amp;quot;中——压缩、混淆后的二进制 blob。&lt;/li&gt;
+&lt;li&gt;liblzma 看起来只是压缩库，但它是 systemd 的依赖（&lt;code&gt;libsystemd&lt;/code&gt; → &lt;code&gt;liblzma&lt;/code&gt;）。&lt;/li&gt;
+&lt;li&gt;而很多 Linux 发行版（Debian、Ubuntu、Fedora 等）的 OpenSSH sshd 打了 patch，链接了 &lt;code&gt;libsystemd&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;于是一条依赖链形成了：&lt;code&gt;sshd&lt;/code&gt; → &lt;code&gt;libsystemd&lt;/code&gt; → &lt;code&gt;liblzma&lt;/code&gt;（后门）。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;PS: 这条路不是一开始就设计好的，更像是攻击者在依赖图谱里找到了一条可以利用的路径。xz 本身和 SSH 没有直接关系，但依赖链让它暴露了出来。&lt;/p&gt;</description></item></channel></rss>

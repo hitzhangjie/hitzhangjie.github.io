@@ -8,13 +8,19 @@
 本分类<span class=category-scope-btn__count>2</span>
 </button>
 <button type=button class=category-scope-btn data-scope=aggregated aria-pressed=false>
-含子分类<span class=category-scope-btn__count>24</span></button></div></div><div data-scope-panel=aggregated hidden><div class=category-tag-filter data-tag-filter-scope=aggregated><button class="category-tag-filter__all is-active" data-tag=all>全部</button>
+含子分类<span class=category-scope-btn__count>26</span></button></div></div><div data-scope-panel=aggregated hidden><div class=category-tag-filter data-tag-filter-scope=aggregated><button class="category-tag-filter__all is-active" data-tag=all>全部</button>
 <button class=category-tag-chip data-tag=coroutine>coroutine<sup>8</sup></button>
 <button class=category-tag-chip data-tag=stackless>stackless<sup>4</sup></button>
+<button class=category-tag-chip data-tag=opentelemetry>opentelemetry<sup>3</sup></button>
+<button class=category-tag-chip data-tag=observability>observability<sup>3</sup></button>
 <button class=category-tag-chip data-tag=c/c++>c/c++<sup>3</sup></button>
 <button class=category-tag-chip data-tag=loom>loom<sup>3</sup></button>
 <button class=category-tag-chip data-tag=java>java<sup>3</sup></button>
 <button class=category-tag-chip data-tag=rpc>rpc<sup>3</sup></button>
+<button class=category-tag-chip data-tag=tracing>tracing<sup>2</sup></button>
+<button class=category-tag-chip data-tag=logging>logging<sup>2</sup></button>
+<button class=category-tag-chip data-tag=signoz>signoz<sup>2</sup></button>
+<button class=category-tag-chip data-tag=clickhouse>clickhouse<sup>2</sup></button>
 <button class=category-tag-chip data-tag=kilim>kilim<sup>2</sup></button>
 <button class=category-tag-chip data-tag=quasar>quasar<sup>2</sup></button>
 <button class=category-tag-chip data-tag=concurrency>concurrency<sup>2</sup></button>
@@ -24,14 +30,10 @@
 <button class=category-tag-chip data-tag=simd>simd<sup>2</sup></button>
 <button class=category-tag-chip data-tag=排队论>排队论<sup>2</sup></button>
 <button class=category-tag-chip data-tag="little's law">little's law<sup>2</sup></button>
-<button class=category-tag-chip data-tag=cpu>cpu<sup>1</sup></button>
-<button class=category-tag-chip data-tag=gopsutil>gopsutil<sup>1</sup></button>
-<button class=category-tag-chip data-tag=/proc/stat>/proc/stat<sup>1</sup></button>
-<button class=category-tag-chip data-tag="steal time">steal time<sup>1</sup></button>
-<button class=category-tag-chip data-tag="split lock">split lock<sup>1</sup></button>
-<button class=category-tag-chip data-tag=虚拟化>虚拟化<sup>1</sup></button>
-<button class=category-tag-chip data-tag=KVM>KVM<sup>1</sup></button>
-<button class=category-tag-chip data-tag=监控>监控<sup>1</sup></button>
+<button class=category-tag-chip data-tag=metrics>metrics<sup>1</sup></button>
+<button class=category-tag-chip data-tag=docker>docker<sup>1</sup></button>
+<button class=category-tag-chip data-tag=docker-compose>docker-compose<sup>1</sup></button>
+<button class=category-tag-chip data-tag=alerting>alerting<sup>1</sup></button>
 <button class=category-tag-chip data-tag=stackful>stackful<sup>1</sup></button>
 <button class=category-tag-chip data-tag=golang>golang<sup>1</sup></button>
 <button class=category-tag-chip data-tag=libmill>libmill<sup>1</sup></button>
@@ -92,9 +94,7 @@
 <button class=category-tag-chip data-tag=Elasticsearch>Elasticsearch<sup>1</sup></button>
 <button class=category-tag-chip data-tag=Logstash>Logstash<sup>1</sup></button>
 <button class=category-tag-chip data-tag=Kibana>Kibana<sup>1</sup></button>
-<button class=category-tag-chip data-tag=logging>logging<sup>1</sup></button>
 <button class=category-tag-chip data-tag=dapper>dapper<sup>1</sup></button>
-<button class=category-tag-chip data-tag=tracing>tracing<sup>1</sup></button>
 <button class=category-tag-chip data-tag=opentracing>opentracing<sup>1</sup></button>
 <button class=category-tag-chip data-tag=rpcbind>rpcbind<sup>1</sup></button>
 <button class=category-tag-chip data-tag=portmapper>portmapper<sup>1</sup></button>
@@ -111,15 +111,21 @@
 <button class=category-tag-chip data-tag=jmp_buf>jmp_buf<sup>1</sup></button>
 <button class=category-tag-chip data-tag=setjmp>setjmp<sup>1</sup></button>
 <button class=category-tag-chip data-tag=longjmp>longjmp<sup>1</sup></button>
-<button class=category-tag-filter__toggle hidden>展开全部</button></div><article class=blog-list-entry data-tags='["cpu","gopsutil","/proc/stat","steal time","split lock","虚拟化","KVM","监控"]'><div class=blog-list-entry__date><time datetime=2026-07-24>2026/07/24</time></div><div class=blog-list-entry__title><a href=/blog/2026-07-24-cpu-accounting-splitlock/>当监控数据'说谎'：Split Lock 引发的 CPU 计量失真</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/cpu>cpu</a>
-<a href=/tags/gopsutil>gopsutil</a>
-<a href=/tags//proc/stat>/proc/stat</a>
-<a href=/tags/steal-time>steal time</a>
-<a href=/tags/split-lock>split lock</a>
-<span class=tag-more-wrap><span class=tag-more>+3</span>
-<span class=tag-tooltip><a href=/tags/%E8%99%9A%E6%8B%9F%E5%8C%96>虚拟化</a>
-<a href=/tags/kvm>KVM</a>
-<a href=/tags/%E7%9B%91%E6%8E%A7>监控</a></span></span></div></div></div></div><p class=blog-list-entry__desc>线上观察到 gopsutil 报告单核 CPU 使用率 350%+——理论上除以核数后不可能超过 100%。排查发现这与同母机另一台 VM 的 …</p></article><article class=blog-list-entry data-tags='["coroutine","stackful","stackless","golang","libmill","kilim","quasar","c/c++","loom"]'><div class=blog-list-entry__date><time datetime=2026-07-19>2026/07/19</time></div><div class=blog-list-entry__title><a href=/blog/2026-07-19-%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1_%E6%9C%89%E6%A0%88%E4%B8%8E%E6%97%A0%E6%A0%88%E5%8D%8F%E7%A8%8B%E5%AF%B9%E6%AF%94/>有栈协程与无栈协程：实现异同、优劣与典型代表</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/coroutine>coroutine</a>
+<button class=category-tag-filter__toggle hidden>展开全部</button></div><article class=blog-list-entry data-tags='["opentelemetry","observability","tracing","metrics","logging"]'><div class=blog-list-entry__date><time datetime=2026-07-29>2026/07/29</time></div><div class=blog-list-entry__title><a href=/blog/2026-07-29-opentelemetry-introduction/>OpenTelemetry 可观测性框架系统性介绍</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/opentelemetry>opentelemetry</a>
+<a href=/tags/observability>observability</a>
+<a href=/tags/tracing>tracing</a>
+<a href=/tags/metrics>metrics</a>
+<a href=/tags/logging>logging</a></div></div></div></div><p class=blog-list-entry__desc>从三大信号模型、架构组件、数据协议到采样与传播机制，系统梳理 OpenTelemetry 的核心概念与设计思想，为后续深入了解可观测性平台打下基础。</p></article><article class=blog-list-entry data-tags='["signoz","docker","docker-compose","clickhouse","opentelemetry","observability"]'><div class=blog-list-entry__date><time datetime=2026-07-29>2026/07/29</time></div><div class=blog-list-entry__title><a href=/blog/2026-07-29-signoz-docker-compose-analysis/>SigNoz Docker Compose 配置解读：从架构到编排的映射</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/signoz>signoz</a>
+<a href=/tags/docker>docker</a>
+<a href=/tags/docker-compose>docker-compose</a>
+<a href=/tags/clickhouse>clickhouse</a>
+<a href=/tags/opentelemetry>opentelemetry</a>
+<span class=tag-more-wrap><span class=tag-more>+1</span>
+<span class=tag-tooltip><a href=/tags/observability>observability</a></span></span></div></div></div></div><p class=blog-list-entry__desc>对照 SigNoz 的架构设计，逐层解读 docker-compose.yaml 中的服务、网络、存储配置，理解每个组件的角色和依赖关系。</p></article><article class=blog-list-entry data-tags='["signoz","opentelemetry","clickhouse","observability","alerting"]'><div class=blog-list-entry__date><time datetime=2026-07-29>2026/07/29</time></div><div class=blog-list-entry__title><a href=/blog/2026-07-29-signoz-architecture/>SigNoz 整体架构：一个基于 OpenTelemetry 的开源可观测性平台</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/signoz>signoz</a>
+<a href=/tags/opentelemetry>opentelemetry</a>
+<a href=/tags/clickhouse>clickhouse</a>
+<a href=/tags/observability>observability</a>
+<a href=/tags/alerting>alerting</a></div></div></div></div><p class=blog-list-entry__desc>拆解 SigNoz 的整体架构设计，理解它如何将 OpenTelemetry Collector、ClickHouse、告警引擎和可视化 UI 整合为一个统一的 …</p></article><article class=blog-list-entry data-tags='["coroutine","stackful","stackless","golang","libmill","kilim","quasar","c/c++","loom"]'><div class=blog-list-entry__date><time datetime=2026-07-19>2026/07/19</time></div><div class=blog-list-entry__title><a href=/blog/2026-07-19-%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1_%E6%9C%89%E6%A0%88%E4%B8%8E%E6%97%A0%E6%A0%88%E5%8D%8F%E7%A8%8B%E5%AF%B9%E6%AF%94/>有栈协程与无栈协程：实现异同、优劣与典型代表</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/coroutine>coroutine</a>
 <a href=/tags/stackful>stackful</a>
 <a href=/tags/stackless>stackless</a>
 <a href=/tags/golang>golang</a>
@@ -156,7 +162,7 @@
 <a href=/tags/network>network</a>
 <a href=/tags/distributed-systems>distributed-systems</a>
 <a href=/tags/go>go</a>
-<a href=/tags/rpc>rpc</a></div></div></div></div><p class=blog-list-entry__desc>拆解一个常见的认知误区：系统调用 write/send 返回成功，并不能保证对端进程收到了数据。本文从操作系统缓冲机制、TCP 协议设计、连接池幽灵连接、进程退 …</p></article><article class=blog-list-entry data-tags='["c10k","c100k","c10m"]'><div class=blog-list-entry__date><time datetime=2024-01-06>2024/01/06</time></div><div class=blog-list-entry__title><a href=/blog/2024-01-06-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F_%E8%A7%A3%E5%86%B3c10kc100kc10m%E9%97%AE%E9%A2%98/>高并发系统设计：解决c10k c100k c10m问题</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/c10k>c10k</a>
+<a href=/tags/rpc>rpc</a></div></div></div></div><p class=blog-list-entry__desc>拆解一个常见的认知误区：系统调用 write/send 返回成功，并不能保证对端进程收到了数据。本文从操作系统缓冲机制、TCP 协议设计、连接池幽灵连接、进程退 …</p></article><article class=blog-list-entry data-tags='["c10k","c100k","c10m"]'><div class=blog-list-entry__date><time datetime=2024-01-06>2024/01/06</time></div><div class=blog-list-entry__title><a href=/blog/2024-01-06-%E9%AB%98%E6%80%A7%E8%83%BD%E6%9E%B6%E6%9E%84_%E8%A7%A3%E5%86%B3c10kc100kc10m%E9%97%AE%E9%A2%98/>高并发系统设计：解决c10k c100k c10m问题</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/c10k>c10k</a>
 <a href=/tags/c100k>c100k</a>
 <a href=/tags/c10m>c10m</a></div></div></div></div><p class=blog-list-entry__desc>今天整理资料时，无意中重新碰到了c10k这个话题，然后联想到了c10m问题。虽然c10k问题大家已经看过类似文章了，但是c10m问题系统性总结的却不多。今天刚好 …</p></article><article class=blog-list-entry data-tags='["serialization","json","encoding/json","bytedance/sonic","segmentio/encoding","goccy/go-json","jsonpb","reflection","simd"]'><div class=blog-list-entry__date><time datetime=2023-10-09>2023/10/09</time></div><div class=blog-list-entry__title><a href=/blog/2023-08-23-%E5%BA%8F%E5%88%97%E5%8C%96%E6%8A%80%E6%9C%AF_json%E5%BA%93%E6%80%A7%E8%83%BD%E5%AF%B9%E6%AF%94%E5%8F%8A%E5%AE%9E%E7%8E%B0%E6%8E%A2%E7%A9%B6/>JSON库性能对比及实现探究</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/serialization>serialization</a>
 <a href=/tags/json>json</a>
@@ -241,4 +247,4 @@
 <a href=/tags/microservice>microservice</a>
 <a href=/tags/framework>framework</a>
 <a href=/tags/goneat>goneat</a>
-<a href=/tags/trpc>trpc</a></div></div></div></div><p class=blog-list-entry__desc>GoNeat框架是一款在腾讯期间开发的RPC框架，支撑了团队几千个微服务，后续PCG建设tRPC框架后，GoNeat框架也最终走向了停止后续开发的命运。虽然未来 …</p></article></div></div></div></div><br></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.2d163d4ded59a8c0f3da8841b92ed2d9704c8b95f58f2b2a155c22cdd00435156a85dae6d60e99bc99453a696faf91eadef75e33b2957a5731188122af562691.js integrity="sha512-LRY9Te1ZqMDz2ohBuS7S2XBMi5X1jysqFVwizdAENRVqhdrm1g6ZvJlFOmlvr5Hq3vdeM7KVelcxGIEir1YmkQ==" crossorigin=anonymous defer></script><script src=/js/highlight.min.1a731f820940167b6fd11a8540a1ae7c4627f4009b13e229c411e9d890612a3f6b618133d96477c2cf238d6faaa28d745cd5141e443aa34f62785510dc873430.js integrity="sha512-GnMfgglAFntv0RqFQKGufEYn9ACbE+IpxBHp2JBhKj9rYYEz2WR3ws8jjW+qoo10XNUUHkQ6o09ieFUQ3Ic0MA==" crossorigin=anonymous defer></script><script src=/main.min.2fdcd2feaeefdcd1d76985a93bfd15acc4b71558ca9abb33d68c4775bdc24e5d186d989f836740e6ec7618f0d57901e8c92b97cfaec51958e6344476865c21ba.js integrity="sha512-L9zS/q7v3NHXaYWpO/0VrMS3FVjKmrsz1oxHdb3CTl0YbZifg2dA5ux2GPDVeQHoySuXz67FGVjmNER2hlwhug==" crossorigin=anonymous defer></script><script src=/index.min.383dc9c37ad55438a7b25fcb2126a8c500427275808c94078a7e29575066ade762c3077a3bb08397e0d863a5107d392260afa7cb55abbf4b7990072b21f220b6.js integrity="sha512-OD3Jw3rVVDinsl/LISaoxQBCcnWAjJQHin4pV1Bmrediwwd6O7CDl+DYY6UQfTkiYK+ny1Wrv0t5kAcrIfIgtg==" crossorigin=anonymous defer></script></body></html>
+<a href=/tags/trpc>trpc</a></div></div></div></div><p class=blog-list-entry__desc>GoNeat框架是一款在腾讯期间开发的RPC框架，支撑了团队几千个微服务，后续PCG建设tRPC框架后，GoNeat框架也最终走向了停止后续开发的命运。虽然未来 …</p></article></div></div></div></div><br></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.2d163d4ded59a8c0f3da8841b92ed2d9704c8b95f58f2b2a155c22cdd00435156a85dae6d60e99bc99453a696faf91eadef75e33b2957a5731188122af562691.js integrity="sha512-LRY9Te1ZqMDz2ohBuS7S2XBMi5X1jysqFVwizdAENRVqhdrm1g6ZvJlFOmlvr5Hq3vdeM7KVelcxGIEir1YmkQ==" crossorigin=anonymous defer></script><script src=/js/highlight.min.1a731f820940167b6fd11a8540a1ae7c4627f4009b13e229c411e9d890612a3f6b618133d96477c2cf238d6faaa28d745cd5141e443aa34f62785510dc873430.js integrity="sha512-GnMfgglAFntv0RqFQKGufEYn9ACbE+IpxBHp2JBhKj9rYYEz2WR3ws8jjW+qoo10XNUUHkQ6o09ieFUQ3Ic0MA==" crossorigin=anonymous defer></script><script src=/main.min.2fdcd2feaeefdcd1d76985a93bfd15acc4b71558ca9abb33d68c4775bdc24e5d186d989f836740e6ec7618f0d57901e8c92b97cfaec51958e6344476865c21ba.js integrity="sha512-L9zS/q7v3NHXaYWpO/0VrMS3FVjKmrsz1oxHdb3CTl0YbZifg2dA5ux2GPDVeQHoySuXz67FGVjmNER2hlwhug==" crossorigin=anonymous defer></script><script src=/index.min.41e9f91c50b2f9cdb1cc9e42ae2ba971212da884ec9a06e342c7f73b4ebea78325d5527ccb8db55d7ea1e530c91d52614f30cc7fd3b21b8bdf4d650f56f3635f.js integrity="sha512-Qen5HFCy+c2xzJ5CriupcSEtqITsmgbjQsf3O06+p4Ml1VJ8y421XX6h5TDJHVJhTzDMf9OyG4vfTWUPVvNjXw==" crossorigin=anonymous defer></script></body></html>

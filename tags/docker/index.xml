@@ -1,4 +1,70 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Docker on</title><link>/tags/docker/</link><description>Recent content in Docker on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 28 Jun 2022 23:08:51 +0800</lastBuildDate><atom:link href="/tags/docker/index.xml" rel="self" type="application/rss+xml"/><item><title>mac/win下linux c/c++开发</title><link>/blog/2022-06-28-devcontainer_linux-cc-%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E8%AE%BE%E7%BD%AE/</link><pubDate>Tue, 28 Jun 2022 23:08:51 +0800</pubDate><guid>/blog/2022-06-28-devcontainer_linux-cc-%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E8%AE%BE%E7%BD%AE/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Docker on</title><link>/tags/docker/</link><description>Recent content in Docker on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 29 Jul 2026 12:00:00 +0800</lastBuildDate><atom:link href="/tags/docker/index.xml" rel="self" type="application/rss+xml"/><item><title>SigNoz Docker Compose 配置解读：从架构到编排的映射</title><link>/blog/2026-07-29-signoz-docker-compose-analysis/</link><pubDate>Wed, 29 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-29-signoz-docker-compose-analysis/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在&lt;a href="/blog/2026-07-29-signoz-architecture/"&gt;上一篇&lt;/a&gt;中我们拆解了 SigNoz 的整体架构：OTel Collector 采数据、ClickHouse 存数据、SigNoz Server 查数据、Schema Migrator 管表结构、Zookeeper 做集群协调。&lt;/p&gt;
+&lt;p&gt;这篇我们来看这套架构是如何被翻译成一组 Docker Compose 服务的。理解了架构之后，每个 service 的配置项就不是孤立的参数，而是对架构中某个设计决策的具体实现。反过来，读配置也能帮你验证架构理解是否正确。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;本文分析的配置文件来自 &lt;code&gt;signoz/deploy/docker/docker-compose.yaml&lt;/code&gt;（&lt;code&gt;v0.107.0&lt;/code&gt; 附近版本）。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id="配置总览"&gt;配置总览 &lt;a href="#%e9%85%8d%e7%bd%ae%e6%80%bb%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;整个 compose 文件分为四个逻辑块：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;几个 YAML 锚点&lt;/strong&gt;（&lt;code&gt;x-*&lt;/code&gt;）——复用的配置片段&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;8 个 services&lt;/strong&gt;——架构中各组件的容器化实例&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;1 个 network&lt;/strong&gt;——&lt;code&gt;signoz-net&lt;/code&gt; 桥接网络&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;3 个 named volumes&lt;/strong&gt;——持久化数据卷&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;在逐个服务展开之前，先理解 YAML 锚点这个设计——它为整个配置文件奠定了可维护性的基础。&lt;/p&gt;
+&lt;h1 id="yaml-锚点dry-配置"&gt;YAML 锚点：DRY 配置 &lt;a href="#yaml-%e9%94%9a%e7%82%b9dry-%e9%85%8d%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;你会在文件中看到很多以 &lt;code&gt;x-&lt;/code&gt; 开头的块——这不是 Docker Compose 的保留字，而是 YAML 语法层面的东西。Docker Compose 会忽略以 &lt;code&gt;x-&lt;/code&gt; 开头的顶级元素，这让它们成为定义可复用配置片段的理想选择。&lt;/p&gt;
+&lt;p&gt;文件中定义了四个锚点，形成了清晰的复用层级：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;x-common (基础配置)
+└── networks, restart, logging
+x-clickhouse-defaults (ClickHouse 相关)
+└── !!merge &amp;lt;&amp;lt;: *common ← 继承 x-common
++ image, labels, depends_on, healthcheck, ulimits, environment
+x-zookeeper-defaults (Zookeeper 相关)
+└── !!merge &amp;lt;&amp;lt;: *common ← 继承 x-common
++ image, labels, healthcheck
+x-db-depend (依赖数据库的服务)
+└── !!merge &amp;lt;&amp;lt;: *common ← 继承 x-common
++ depends_on: clickhouse, schema-migrator-sync
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;!!merge &amp;lt;&amp;lt;: *common&lt;/code&gt; 是 YAML 的合并语法——&lt;code&gt;*common&lt;/code&gt; 引用锚点，&lt;code&gt;&amp;lt;&amp;lt;:&lt;/code&gt; 将其内容合并到当前位置。假设 &lt;code&gt;x-common&lt;/code&gt; 定义了 &lt;code&gt;networks&lt;/code&gt;、&lt;code&gt;restart&lt;/code&gt;、&lt;code&gt;logging&lt;/code&gt;，那么 &lt;code&gt;clickhouse&lt;/code&gt; 服务最终的配置就是这三项加上自己在 &lt;code&gt;x-clickhouse-defaults&lt;/code&gt; 和 service 定义中追加的内容。&lt;/p&gt;</description></item><item><title>Docker Context：一套 CLI，切换多个容器运行时</title><link>/blog/2025-11-19-docker-context/</link><pubDate>Wed, 19 Nov 2025 00:00:00 +0800</pubDate><guid>/blog/2025-11-19-docker-context/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;如果你在 macOS 上用过 Docker，大概率不止用过一种方案。最早可能是 Docker Desktop，后来因为资源占用换了 Colima，又听说过 Podman 和 Lima，甚至在不同项目间来回切换。每换一次就要改 &lt;code&gt;DOCKER_HOST&lt;/code&gt; 环境变量、改 socket 路径，一不留神就连不上 daemon，然后对着 &lt;code&gt;Cannot connect to the Docker daemon&lt;/code&gt; 发呆。&lt;/p&gt;
+&lt;p&gt;其实 Docker 官方早就提供了一个机制来管理这种多后端切换——&lt;strong&gt;Docker Context&lt;/strong&gt;。一个 context 本质上就是一组 Docker daemon 的连接配置，&lt;code&gt;docker context&lt;/code&gt; 子命令让你可以在不同 daemon 之间一键切换，不用再手动折腾环境变量。&lt;/p&gt;
+&lt;h1 id="docker-context-是什么"&gt;Docker Context 是什么 &lt;a href="#docker-context-%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;简单说，一个 Docker Context 保存了：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Docker daemon 的连接地址（socket 路径或 TCP 地址）&lt;/li&gt;
+&lt;li&gt;TLS 配置（是否需要验证、CA 证书等）&lt;/li&gt;
+&lt;li&gt;可选的描述信息&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;用 &lt;code&gt;docker context ls&lt;/code&gt; 可以看到当前所有可用的 context：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;$ docker context ls
+NAME TYPE DESCRIPTION DOCKER ENDPOINT
+colima * moby colima unix:///Users/zhangjie/.colima/default/docker.sock
+default moby Current DOCKER_HOST based... unix:///var/run/docker.sock
+desktop-linux moby Docker Desktop unix:///Users/zhangjie/.docker/run/docker.sock
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;带 &lt;code&gt;*&lt;/code&gt; 的是当前激活的 context。切换只需要一行：&lt;/p&gt;</description></item><item><title>Docker 容器与宿主机 UID/GID 不匹配导致的权限问题及解决方案</title><link>/blog/2025-08-06-docker-uid-gid/</link><pubDate>Wed, 06 Aug 2025 00:00:00 +0800</pubDate><guid>/blog/2025-08-06-docker-uid-gid/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;用 Docker 做开发时，经常会遇到一个烦人的问题：容器里跑的程序创建了一堆文件，回到宿主机想编辑或删除，结果提示 &lt;code&gt;Permission denied&lt;/code&gt;。&lt;code&gt;ls -l&lt;/code&gt; 一看，文件所有者是 &lt;code&gt;root:root&lt;/code&gt;，而你的宿主机用户是 &lt;code&gt;zhangjie:zhangjie&lt;/code&gt;（UID/GID 通常是 1000:1000），自然没有写权限。&lt;/p&gt;
+&lt;p&gt;根本原因很简单：容器默认以 root（UID=0, GID=0）身份运行，在挂载到宿主机的卷上创建文件时，文件所有者就是 &lt;code&gt;root:root&lt;/code&gt;。宿主机的普通用户（UID 1000）当然动不了 root 的文件。&lt;/p&gt;
+&lt;p&gt;下面几种方案按推荐程度排列，根据场景选用即可。&lt;/p&gt;
+&lt;h1 id="方法一运行时指定---user最快捷"&gt;方法一：运行时指定 &lt;code&gt;--user&lt;/code&gt;（最快捷） &lt;a href="#%e6%96%b9%e6%b3%95%e4%b8%80%e8%bf%90%e8%a1%8c%e6%97%b6%e6%8c%87%e5%ae%9a---user%e6%9c%80%e5%bf%ab%e6%8d%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;不需要改 Dockerfile，在 &lt;code&gt;docker run&lt;/code&gt; 时直接把容器内的执行用户指定为宿主机用户的 UID/GID。&lt;/p&gt;
+&lt;p&gt;先获取 UID 和 GID：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;id -u # UID
+id -g # GID
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;启动容器时传入：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;docker run --rm -it \
+--user $(id -u):$(id -g) \
+-v /path/on/host:/path/in/container \
+your_image_name
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;优点&lt;/strong&gt;：简单直接，不需要任何准备工作。容器内生成的所有文件，其所有者 UID/GID 和宿主机一致，直接就能读写删除。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;缺点&lt;/strong&gt;：如果容器内程序需要 root 权限（比如安装软件、绑定 1024 以下的低位端口），这种方式可能导致容器启动或运行失败。&lt;/p&gt;
+&lt;h1 id="方法二修改-dockerfile创建匹配的用户推荐"&gt;方法二：修改 Dockerfile，创建匹配的用户（推荐） &lt;a href="#%e6%96%b9%e6%b3%95%e4%ba%8c%e4%bf%ae%e6%94%b9-dockerfile%e5%88%9b%e5%bb%ba%e5%8c%b9%e9%85%8d%e7%9a%84%e7%94%a8%e6%88%b7%e6%8e%a8%e8%8d%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;这是更规范的做法，尤其在团队协作和 CI 环境中。在镜像构建时创建一个与宿主机用户 ID 匹配的非 root 用户。&lt;/p&gt;</description></item><item><title>mac/win下linux c/c++开发</title><link>/blog/2022-06-28-devcontainer_linux-cc-%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E8%AE%BE%E7%BD%AE/</link><pubDate>Tue, 28 Jun 2022 23:08:51 +0800</pubDate><guid>/blog/2022-06-28-devcontainer_linux-cc-%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E8%AE%BE%E7%BD%AE/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;我们很多人主力操作系统是macOS或者Windows，用Linux作为主力操作系统的少吧，不过之前确实有连续7年多是用Fedora作为主力操作系统 :)&lt;/p&gt;
 &lt;p&gt;现在很多人开发人员使用MacBook Pro作为自己的开发机，大厂标配，我们很多后台呢，开发的程序一般最后还是要跑在Linux系统上的，尤其是c/c++开发涉及到这里的跨平台开发的问题，很多开发人员用着非常原始的方式在开发，开发体验比较差。&lt;/p&gt;
 &lt;p&gt;借这个契机，我调研了下现在比较好的一些开发方式，总结分享下。&lt;/p&gt;

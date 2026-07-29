@@ -1,0 +1,208 @@
+<!doctype html><html lang=en-US><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-regular.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-500.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-700.woff2 type=font/woff2 crossorigin><script>window.__LAYOUT_WIDTH_DEFAULT__="standard"</script><script>(()=>{(function(){var t,n={compact:1,standard:1,wide:1,fullscreen:1},s="layout-width-v",o="3",e=null,i=null;try{e=localStorage.getItem("layout-width"),i=localStorage.getItem(s)}catch{}if(i!==o){e==="standard"?e="compact":e==="compact"?e="standard":e==="normal"?e="compact":e==="reading"&&(e="wide");try{e&&localStorage.setItem("layout-width",e),localStorage.setItem(s,o)}catch{}}t=window.__LAYOUT_WIDTH_DEFAULT__||"standard",n[t]||(t="standard"),e&&!n[e]&&(e=null),document.documentElement.setAttribute("data-layout-width",e||t)})()})()</script><link rel=stylesheet href=/main.9b926d773b1921e352d67916ecfb25a725924aa3293c6fa1ad5303247d0f69425642a46daefe189bbb8d38c995be648039728be80e873a21bc6123678413ffb6.css integrity="sha512-m5JtdzsZIeNS1nkW7PslpyWSSqMpPG+hrVMDJH0PaUJWQqRtrv4Ym7uNOMmVvmSAOXKL6A6HOiG8YSNnhBP/tg==" crossorigin=anonymous><noscript><style>img.lazyload{display:none}</style></noscript><meta name=robots content="index, follow"><meta name=googlebot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><meta name=bingbot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><title>- MySpace</title><meta name=description content="Linux KVM/QEMU 虚拟化实验环境搭建 # 以 WSL2 为宿主机，搭建多实例 KVM 实验环境，用于验证 clocksource、steal time 等虚拟化行为。
+一、环境检查 # WSL2 上先确认硬件虚拟化和 KVM 是否可用：
+# 1. CPU 虚拟化支持（Intel VT-x 为 vmx，AMD-V 为 svm） grep -E 'vmx|svm' /proc/cpuinfo | head -1 # 2. /dev/kvm 设备是否存在且可读写 ls -la /dev/kvm # 3. 内核 KVM 模块是否编译 zgrep CONFIG_KVM /proc/config.gz 我这边的输出：
+flags: ... vmx ... ept vpid ept_ad ... constant_tsc nonstop_tsc tsc_known_freq tsc_reliable ... tsc_deadline_timer ... hypervisor ... /dev/kvm: crw-rw-rw- 1 root kvm 10, 232 CONFIG_KVM=y CONFIG_KVM_INTEL=y CONFIG_KVM_AMD=y 关键 flag 解读：
+"><link rel=canonical href=/blog/kvm_qemu_lab_setup/><meta property="og:locale" content="en_US"><meta property="og:type" content="article"><meta property="og:title" content><meta property="og:description" content="Linux KVM/QEMU 虚拟化实验环境搭建 #
+以 WSL2 为宿主机，搭建多实例 KVM 实验环境，用于验证 clocksource、steal time 等虚拟化行为。
+
+一、环境检查 #
+WSL2 上先确认硬件虚拟化和 KVM 是否可用：
+# 1. CPU 虚拟化支持（Intel VT-x 为 vmx，AMD-V 为 svm）
+grep -E 'vmx|svm' /proc/cpuinfo | head -1
+
+# 2. /dev/kvm 设备是否存在且可读写
+ls -la /dev/kvm
+
+# 3. 内核 KVM 模块是否编译
+zgrep CONFIG_KVM /proc/config.gz
+
+我这边的输出：
+flags: ... vmx ... ept vpid ept_ad ... constant_tsc nonstop_tsc tsc_known_freq tsc_reliable ... tsc_deadline_timer ... hypervisor ...
+
+/dev/kvm: crw-rw-rw- 1 root kvm 10, 232
+
+CONFIG_KVM=y
+CONFIG_KVM_INTEL=y
+CONFIG_KVM_AMD=y
+
+关键 flag 解读："><meta property="og:url" content="/blog/kvm_qemu_lab_setup/"><meta property="og:site_name" content="MySpace"><meta property="og:image" content="/doks.png"><meta property="og:image:alt" content="MySpace"><meta name=twitter:card content="summary_large_image"><meta name=twitter:site content="@hitzhangjie"><meta name=twitter:creator content="@hitzhangjie"><meta name=twitter:title content><meta name=twitter:description content><meta name=twitter:image content="/doks.png"><meta name=twitter:image:alt content><script type=application/ld+json>{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/1","name":"","url":"/","sameAs":["https://twitter.com/hitzhangjie","https://www.linkedin.com/in/hitzhangjie/","https://github.com/hitzhangjie"],"image":{"@type":"ImageObject","@id":"/#/schema/image/1","url":"/\u003cnil\u003e","width":null,"height":null,"caption":""}},{"@type":"WebSite","@id":"/#/schema/website/1","url":"/","name":"MySpace","description":"MySpace is a hitzhangjie\u0027s personal space, for blogs, books, journey, thinkings.","publisher":{"@id":"/#/schema/person/1"}},{"@type":"WebPage","@id":"/blog/kvm_qemu_lab_setup/","url":"/blog/kvm_qemu_lab_setup/","name":"","description":"","isPartOf":{"@id":"/#/schema/website/1"},"about":{"@id":"/#/schema/person/1"},"datePublished":"0001-01-01T00:00:00CET","dateModified":"0001-01-01T00:00:00CET","breadcrumb":{"@id":"/blog/kvm_qemu_lab_setup/#/schema/breadcrumb/1"},"primaryImageOfPage":{"@id":"/blog/kvm_qemu_lab_setup/#/schema/image/2"},"inLanguage":"","potentialAction":[{"@type":"ReadAction","target":["/blog/kvm_qemu_lab_setup/"]}]},{"@type":"BreadcrumbList","@id":"/blog/kvm_qemu_lab_setup/#/schema/breadcrumb/1","name":"Breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"item":{"@type":"WebPage","@id":"/","url":"/","name":"Home"}},{"@type":"ListItem","position":2,"item":{"@id":"/blogkvm_qemu_lab_setup/"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Article","@id":"/#/schema/article/1","headline":"","description":"","isPartOf":{"@id":"/blog/kvm_qemu_lab_setup/"},"mainEntityOfPage":{"@id":"/blog/kvm_qemu_lab_setup/"},"datePublished":"0001-01-01T00:00:00CET","dateModified":"0001-01-01T00:00:00CET","author":{"@id":"/#/schema/person/2"},"publisher":{"@id":"/#/schema/person/1"},"image":{"@id":"/blog/kvm_qemu_lab_setup/#/schema/image/2"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/2","name":null,"sameAs":[]}]},{"@context":"https://schema.org","@graph":[{"@type":"ImageObject","@id":"/blog/kvm_qemu_lab_setup/#/schema/image/2","url":"/doks.png","contentUrl":"/doks.png","caption":""}]}]}</script><meta name=theme-color content="#fff"><link rel=icon href=/favicon.ico sizes=any><link rel=icon type=image/svg+xml href=/favicon.svg><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest crossorigin=use-credentials href=/site.webmanifest><script type=text/javascript src='https://platform-api.sharethis.com/js/sharethis.js#property=607868a58d7101001829a8df&product=sop' async></script><style>[alt~=sharing]{border:0;box-shadow:none}div#st-1{text-align:unset}div#st-1 .st-btn{height:24px;padding:0 4px}div#st-1 .st-btn>img{top:4.2px}div#st-2 .st-btn{height:24px;padding:0 4px}div#st-2 .st-btn>img{top:4.2px}</style><script async src="https://www.googletagmanager.com/gtag/js?id=UA-168027530-1"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","UA-168027530-1")</script></head><body class="blog single d-flex flex-column min-vh-100"><div class=sticky-top><div class=header-bar></div><header class="navbar navbar-expand-lg navbar-light doks-navbar"><nav class="container-xxl flex-wrap flex-lg-nowrap" aria-label="Main navigation"><a class="navbar-brand order-0" href=/ aria-label=MySpace>MySpace
+</a><button class="btn btn-menu order-2 d-block d-lg-none" type=button data-bs-toggle=offcanvas data-bs-target=#offcanvasDoks aria-controls=offcanvasDoks aria-label="Open main menu">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div class="offcanvas offcanvas-end border-0 py-lg-1" tabindex=-1 id=offcanvasDoks data-bs-backdrop=true aria-labelledby=offcanvasDoksLabel><div class="header-bar d-lg-none"></div><div class="offcanvas-header d-lg-none"><h2 class="h5 offcanvas-title ps-2" id=offcanvasDoksLabel><a class=text-dark href=/>MySpace</a></h2><button type=button class="btn-close text-reset me-2" data-bs-dismiss=offcanvas aria-label="Close main menu"></button></div><div class="offcanvas-body p-4 p-lg-0"><ul class="nav flex-column flex-lg-row align-items-lg-center mt-2 mt-lg-0 ms-lg-2 me-lg-auto"><li class=nav-item><a class="nav-link ps-0 py-1 active" href=/blog/>Blog</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/books/>Books</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/landscape>Landscape</a></li></ul><hr class="text-black-50 my-4 d-lg-none"><form class="doks-search position-relative flex-grow-1 ms-lg-auto me-lg-2"><input id=search class="form-control is-search" type=search placeholder="Search docs..." aria-label="Search docs..." autocomplete=off><div id=suggestions class="shadow bg-white rounded d-none"></div></form><hr class="text-black-50 my-4 d-lg-none"><ul class="nav flex-column flex-lg-row"><li class=nav-item><a class="nav-link social-link" href=https://twitter.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg><small class="ms-2 d-lg-none">Twitter</small></a></li><li class=nav-item><a class="nav-link social-link" href=https://github.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37.0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44.0 0020 4.77 5.07 5.07.0 0019.91 1S18.73.65 16 2.48a13.38 13.38.0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07.0 005 4.77 5.44 5.44.0 003.5 8.55c0 5.42 3.3 6.61 6.44 7A3.37 3.37.0 009 18.13V22"/></svg><small class="ms-2 d-lg-none">GitHub</small></a></li><li class="nav-item layout-width-dropdown"><a class="nav-link layout-width-dropdown-btn" href=# data-bs-toggle=dropdown aria-expanded=false aria-label=切换布局宽度 title=切换布局宽度><span class=lw-icon-standard><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-compact><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-wide><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span><span class=lw-icon-fullscreen><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg></span></a><ul class="dropdown-menu dropdown-menu-end"><li><button class="dropdown-item layout-width-option" data-layout-value=compact>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span>紧凑布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=standard>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>标准布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=wide>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span>宽松布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=fullscreen>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>全屏布局</button></li></ul></li></ul></div></div></nav></header></div><div class="wrap container-xxl" role=document><div class=content><div class="row flex-xl-nowrap" data-layout-width=standard><div class="col-lg-4 col-xl-3 docs-sidebar"><nav class=docs-links aria-label="Main navigation"></nav></div><main class="docs-content col-lg-12 col-xl-10"><h1></h1><p><small>Posted 0001-01-01 00:00 +0800 by <a class="stretched-link position-relative" href>ZhangJie</a>&nbsp;&dash;&nbsp;<strong>5&nbsp;min read</strong></small><p><div style=display:flex><div>分享:&nbsp;&nbsp;</div><div><div class=sharethis-inline-share-buttons></div></div></div><hr><p class=lead></p><h1 id=linux-kvmqemu-虚拟化实验环境搭建>Linux KVM/QEMU 虚拟化实验环境搭建 <a href=#linux-kvmqemu-%e8%99%9a%e6%8b%9f%e5%8c%96%e5%ae%9e%e9%aa%8c%e7%8e%af%e5%a2%83%e6%90%ad%e5%bb%ba class=anchor aria-hidden=true>#</a></h1><p>以 WSL2 为宿主机，搭建多实例 KVM 实验环境，用于验证 clocksource、steal time 等虚拟化行为。</p><hr><h2 id=一环境检查>一、环境检查 <a href=#%e4%b8%80%e7%8e%af%e5%a2%83%e6%a3%80%e6%9f%a5 class=anchor aria-hidden=true>#</a><a href=#一环境检查 class=anchor aria-hidden=true>#</a></h2><p>WSL2 上先确认硬件虚拟化和 KVM 是否可用：</p><pre><code class=language-bash># 1. CPU 虚拟化支持（Intel VT-x 为 vmx，AMD-V 为 svm）
+grep -E 'vmx|svm' /proc/cpuinfo | head -1
+
+# 2. /dev/kvm 设备是否存在且可读写
+ls -la /dev/kvm
+
+# 3. 内核 KVM 模块是否编译
+zgrep CONFIG_KVM /proc/config.gz
+</code></pre><p>我这边的输出：</p><pre><code>flags: ... vmx ... ept vpid ept_ad ... constant_tsc nonstop_tsc tsc_known_freq tsc_reliable ... tsc_deadline_timer ... hypervisor ...
+
+/dev/kvm: crw-rw-rw- 1 root kvm 10, 232
+
+CONFIG_KVM=y
+CONFIG_KVM_INTEL=y
+CONFIG_KVM_AMD=y
+</code></pre><p>关键 flag 解读：</p><ul><li><strong><code>vmx</code></strong>：Intel VT-x 支持，嵌套 KVM 的硬件基础</li><li><strong><code>ept vpid ept_ad</code></strong>：Extended Page Table 相关，说明这是一台功能完整的虚拟化平台</li><li><strong><code>constant_tsc nonstop_tsc tsc_known_freq tsc_reliable</code></strong>：四个 flag 组合等价于 invariant TSC——不受频率变化/C-state 影响、频率已知可信，是裸 <code>tsc</code> 能被选为 clocksource 的底层原因</li><li><strong><code>tsc_deadline_timer</code></strong>：Local APIC Timer 支持 TSC-deadline 模式</li><li><strong><code>hypervisor</code></strong>：CPUID 标明运行在虚拟化环境下（Hyper-V 传入，印证 WSL2 = Hyper-V guest）</li></ul><p><code>/dev/kvm</code> 权限 <code>crw-rw-rw-</code>，所有用户可读写，无需额外加 kvm 组。</p><hr><h2 id=二安装-qemu>二、安装 QEMU <a href=#%e4%ba%8c%e5%ae%89%e8%a3%85-qemu class=anchor aria-hidden=true>#</a><a href=#二安装-qemu class=anchor aria-hidden=true>#</a></h2><pre><code class=language-bash>sudo apt update
+sudo apt install -y qemu-system-x86 qemu-utils cloud-image-utils
+</code></pre><blockquote><p>如果宿主机是 CentOS/RHEL，对应命令为 <code>sudo yum install -y qemu-kvm qemu-kvm-core qemu-img genisoimage</code>，后续 QEMU 启动命令中的 <code>qemu-system-x86_64</code> 替换为 <code>qemu-kvm</code> 即可。</p></blockquote><hr><h2 id=三创建第一台虚拟机>三、创建第一台虚拟机 <a href=#%e4%b8%89%e5%88%9b%e5%bb%ba%e7%ac%ac%e4%b8%80%e5%8f%b0%e8%99%9a%e6%8b%9f%e6%9c%ba class=anchor aria-hidden=true>#</a><a href=#三创建第一台虚拟机 class=anchor aria-hidden=true>#</a></h2><p>这里提供 CentOS 7（内核 3.10）和 CentOS 8 Stream 两种方案，按需选择。</p><h3 id=31-方案-acentos-7>3.1 方案 A：CentOS 7 <a href=#31-%e6%96%b9%e6%a1%88-acentos-7 class=anchor aria-hidden=true>#</a><a href=#31-方案-acentos-7 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-bash>mkdir -p ~/kvm-lab &amp;&amp; cd ~/kvm-lab
+
+# 下载云镜像
+wget https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2
+
+# cloud-init 配置（含 EOL 后的 vault 源切换）
+cat &gt; user-data &lt;&lt;'EOF'
+#cloud-config
+password: kvmlab
+chpasswd: { expire: False }
+ssh_pwauth: True
+
+bootcmd:
+  - sed -i 's/^mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*.repo
+  - sed -i 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*.repo
+EOF
+cloud-localds seed.img user-data
+
+# 扩容并启动
+qemu-img resize CentOS-7-x86_64-GenericCloud.qcow2 8G
+
+qemu-system-x86_64 \
+  -enable-kvm \
+  -m 2048 \
+  -smp 2 \
+  -cpu host \
+  -drive file=CentOS-7-x86_64-GenericCloud.qcow2,format=qcow2 \
+  -drive file=seed.img,format=raw \
+  -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+  -device virtio-net-pci,netdev=net0 \
+  -nographic
+</code></pre><h3 id=32-方案-bcentos-8-stream>3.2 方案 B：CentOS 8 Stream <a href=#32-%e6%96%b9%e6%a1%88-bcentos-8-stream class=anchor aria-hidden=true>#</a><a href=#32-方案-bcentos-8-stream class=anchor aria-hidden=true>#</a></h3><pre><code class=language-bash>mkdir -p ~/kvm-lab &amp;&amp; cd ~/kvm-lab
+
+# 下载云镜像（如果文件名过期，先列目录确认）
+wget https://cloud.centos.org/centos/8-stream/x86_64/images/CentOS-Stream-GenericCloud-8-latest.x86_64.qcow2
+
+# cloud-init 配置（CentOS 8 用 genisoimage 生成 seed）
+cat &gt; user-data &lt;&lt;'EOF'
+#cloud-config
+password: kvmlab
+chpasswd: { expire: False }
+ssh_pwauth: True
+EOF
+
+cat &gt; meta-data &lt;&lt;'EOF'
+instance-id: kvmlab01
+local-hostname: kvmlab
+EOF
+
+genisoimage -output seed.img -volid cidata -joliet -rock user-data meta-data
+
+# 扩容并启动
+qemu-img resize CentOS-Stream-GenericCloud-8-latest.x86_64.qcow2 8G
+
+qemu-system-x86_64 \
+  -enable-kvm \
+  -m 2048 \
+  -smp 2 \
+  -cpu host \
+  -drive file=CentOS-Stream-GenericCloud-8-latest.x86_64.qcow2,format=qcow2 \
+  -drive file=seed.img,format=raw \
+  -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+  -device virtio-net-pci,netdev=net0 \
+  -nographic
+</code></pre><h3 id=33-登录验证>3.3 登录验证 <a href=#33-%e7%99%bb%e5%bd%95%e9%aa%8c%e8%af%81 class=anchor aria-hidden=true>#</a><a href=#33-登录验证 class=anchor aria-hidden=true>#</a></h3><p>CentOS 云镜像默认用户为 <code>centos</code>，首次启动 cloud-init 会执行 SELinux relabel、生成 SSH host key 等，耐心等待 1-2 分钟。</p><pre><code class=language-bash>ssh -p 2222 centos@localhost   # 密码 kvmlab
+</code></pre><p>进去后跑验证命令：</p><pre><code class=language-bash>uname -r
+cat /sys/devices/system/clocksource/clocksource0/current_clocksource
+cat /sys/devices/system/clocksource/clocksource0/available_clocksource
+dmesg | grep -i -E &quot;kvm|clocksource&quot;
+</code></pre><hr><h2 id=四创建第二台虚拟机>四、创建第二台虚拟机 <a href=#%e5%9b%9b%e5%88%9b%e5%bb%ba%e7%ac%ac%e4%ba%8c%e5%8f%b0%e8%99%9a%e6%8b%9f%e6%9c%ba class=anchor aria-hidden=true>#</a><a href=#四创建第二台虚拟机 class=anchor aria-hidden=true>#</a></h2><p>第二台虚拟机需要<strong>独立的磁盘</strong>和<strong>独立的端口</strong>，即使用同一份 base image 也不能直接复用同一个 qcow2 文件（两边都当自己是唯一写者，会导致磁盘损坏）。</p><h3 id=41-磁盘复制两种方式>4.1 磁盘复制：两种方式 <a href=#41-%e7%a3%81%e7%9b%98%e5%a4%8d%e5%88%b6%e4%b8%a4%e7%a7%8d%e6%96%b9%e5%bc%8f class=anchor aria-hidden=true>#</a><a href=#41-磁盘复制两种方式 class=anchor aria-hidden=true>#</a></h3><p><strong>方式 A：完整复制（简单，占空间）</strong></p><pre><code class=language-bash>mkdir -p ~/kvm-lab/instance2 &amp;&amp; cd ~/kvm-lab/instance2
+
+# 直接 cp 一份完整磁盘
+cp ../CentOS-Stream-GenericCloud-8-latest.x86_64.qcow2 instance2.qcow2
+qemu-img resize instance2.qcow2 8G
+</code></pre><p><strong>方式 B：backing file 增量镜像（推荐，省空间、更快）</strong></p><pre><code class=language-bash>mkdir -p ~/kvm-lab/instance2 &amp;&amp; cd ~/kvm-lab/instance2
+
+# 基于 base image 创建增量镜像，只存差异数据
+qemu-img create -f qcow2 \
+  -b ../CentOS-Stream-GenericCloud-8-latest.x86_64.qcow2 \
+  -F qcow2 \
+  instance2.qcow2 8G
+</code></pre><blockquote><p><strong>推荐的流程</strong>：先按第三节完整配置好第一台虚拟机（安装必要软件包、配置好环境），确认一切正常后<strong>关机</strong>，再用方式 B 基于第一台的磁盘创建增量镜像作为第二台。这样第二台启动后直接就是"已配置好"的状态，不需要重复装软件、改源等操作。</p></blockquote><h3 id=42-第二份-seed-盘>4.2 第二份 seed 盘 <a href=#42-%e7%ac%ac%e4%ba%8c%e4%bb%bd-seed-%e7%9b%98 class=anchor aria-hidden=true>#</a><a href=#42-第二份-seed-盘 class=anchor aria-hidden=true>#</a></h3><p>建议修改 hostname 方便区分：</p><pre><code class=language-bash># 复用同一个 user-data（密码策略不变），只改 meta-data
+cat &gt; meta-data &lt;&lt;'EOF'
+instance-id: kvmlab02
+local-hostname: kvmlab2
+EOF
+
+genisoimage -output seed2.img -volid cidata -joliet -rock user-data meta-data
+</code></pre><h3 id=43-启动第二台端口必须换>4.3 启动第二台（端口必须换） <a href=#43-%e5%90%af%e5%8a%a8%e7%ac%ac%e4%ba%8c%e5%8f%b0%e7%ab%af%e5%8f%a3%e5%bf%85%e9%a1%bb%e6%8d%a2 class=anchor aria-hidden=true>#</a><a href=#43-启动第二台端口必须换 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-bash>qemu-system-x86_64 \
+  -enable-kvm \
+  -m 2048 \
+  -smp 2 \
+  -cpu host \
+  -drive file=instance2.qcow2,format=qcow2 \
+  -drive file=seed2.img,format=raw \
+  -netdev user,id=net0,hostfwd=tcp::2223-:22 \
+  -device virtio-net-pci,netdev=net0 \
+  -nographic
+</code></pre><p>关键差异：</p><ul><li>磁盘用第二台的独立 qcow2</li><li>seed 用 <code>seed2.img</code></li><li><code>hostfwd</code> 端口换成 <code>2223</code>（不换会跟第一台冲突）</li><li>登录：<code>ssh -p 2223 centos@localhost</code></li></ul><blockquote><p><code>-nographic</code> 模式下两个实例各占一个终端，建议用 <code>tmux</code>/<code>screen</code> 管理。</p></blockquote><h3 id=43-多实例管理速查>4.3 多实例管理速查 <a href=#43-%e5%a4%9a%e5%ae%9e%e4%be%8b%e7%ae%a1%e7%90%86%e9%80%9f%e6%9f%a5 class=anchor aria-hidden=true>#</a><a href=#43-多实例管理速查 class=anchor aria-hidden=true>#</a></h3><table><thead><tr><th>实例</th><th>磁盘</th><th>seed</th><th>SSH 端口</th></tr></thead><tbody><tr><td>VM1</td><td><code>CentOS-Stream-...qcow2</code></td><td><code>seed.img</code></td><td><code>2222</code></td></tr><tr><td>VM2</td><td><code>instance2.qcow2</code></td><td><code>seed2.img</code></td><td><code>2223</code></td></tr></tbody></table><hr><h2 id=五实例的停止与重启>五、实例的停止与重启 <a href=#%e4%ba%94%e5%ae%9e%e4%be%8b%e7%9a%84%e5%81%9c%e6%ad%a2%e4%b8%8e%e9%87%8d%e5%90%af class=anchor aria-hidden=true>#</a><a href=#五实例的停止与重启 class=anchor aria-hidden=true>#</a></h2><h3 id=停止>停止 <a href=#%e5%81%9c%e6%ad%a2 class=anchor aria-hidden=true>#</a><a href=#停止 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-bash># 方法 1：SSH 进 guest 优雅关机
+ssh -p 2222 centos@localhost sudo poweroff
+
+# 方法 2：直接发 SIGTERM（推荐，无需登录）
+kill $(pgrep -f &quot;hostfwd=tcp::2222&quot;)
+
+# 方法 3：前台运行时按 Ctrl+A 再按 X
+</code></pre><h3 id=重启复用已有磁盘和-seed只改启动参数>重启（复用已有磁盘和 seed，只改启动参数） <a href=#%e9%87%8d%e5%90%af%e5%a4%8d%e7%94%a8%e5%b7%b2%e6%9c%89%e7%a3%81%e7%9b%98%e5%92%8c-seed%e5%8f%aa%e6%94%b9%e5%90%af%e5%8a%a8%e5%8f%82%e6%95%b0 class=anchor aria-hidden=true>#</a><a href=#重启复用已有磁盘和-seed只改启动参数 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-bash>qemu-system-x86_64 \
+  -enable-kvm \
+  -m 2048 \
+  -smp 2 \
+  -cpu host \
+  -drive file=CentOS-Stream-GenericCloud-8-latest.x86_64.qcow2,format=qcow2 \
+  -drive file=seed.img,format=raw \
+  -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+  -device virtio-net-pci,netdev=net0 \
+  -nographic
+</code></pre><p>要点：</p><ul><li>磁盘和 seed 路径保持不变，数据都在</li><li>多实例时 <code>hostfwd</code> 端口和 <code>seed</code> 要对上号</li><li>用了 backing file 的实例，<code>-drive file=</code> 用增量镜像路径即可，base image 自动通过 backing file 引用</li></ul><hr><h2 id=六进阶用法>六、进阶用法 <a href=#%e5%85%ad%e8%bf%9b%e9%98%b6%e7%94%a8%e6%b3%95 class=anchor aria-hidden=true>#</a><a href=#六进阶用法 class=anchor aria-hidden=true>#</a></h2><h3 id=61-开放更多端口host--guest-端口转发>6.1 开放更多端口（host → guest 端口转发） <a href=#61-%e5%bc%80%e6%94%be%e6%9b%b4%e5%a4%9a%e7%ab%af%e5%8f%a3host--guest-%e7%ab%af%e5%8f%a3%e8%bd%ac%e5%8f%91 class=anchor aria-hidden=true>#</a><a href=#61-开放更多端口host--guest-端口转发 class=anchor aria-hidden=true>#</a></h3><p>QEMU user-mode 网络（SLIRP）默认将 guest 放在 NAT 后面，host 无法直接访问 guest 内启动的服务。如果要在 guest 内启动 TCP server 并从 host 访问，需要在 <code>-netdev</code> 中添加额外的 <code>hostfwd</code> 规则。</p><p><strong>语法</strong>：<code>hostfwd=tcp::&lt;host_port>-:&lt;guest_port></code>，多个规则用逗号分隔。</p><pre><code class=language-bash>qemu-system-x86_64 \
+  -enable-kvm \
+  -m 2048 \
+  -smp 2 \
+  -cpu host \
+  -drive file=CentOS-Stream-GenericCloud-8-latest.x86_64.qcow2,format=qcow2 \
+  -drive file=seed.img,format=raw \
+  -netdev user,id=net0,hostfwd=tcp::2222-:22,hostfwd=tcp::8080-:8080,hostfwd=tcp::9090-:9090 \
+  -device virtio-net-pci,netdev=net0 \
+  -nographic
+</code></pre><p>上面示例开放了三个端口：</p><table><thead><tr><th>host 端口</th><th>guest 端口</th><th>用途</th></tr></thead><tbody><tr><td>2222</td><td>22</td><td>SSH</td></tr><tr><td>8080</td><td>8080</td><td>HTTP / 应用服务</td></tr><tr><td>9090</td><td>9090</td><td>自定义 TCP 服务</td></tr></tbody></table><p>guest 内启动服务后，host 即可直接访问：</p><pre><code class=language-bash># guest 内
+python3 -m http.server 8080 &amp;
+nc -l 9090 &amp;
+
+# host 访问
+curl localhost:8080
+echo &quot;hello&quot; | nc localhost 9090
+</code></pre><blockquote><p><strong>注意</strong>：host 端口之间不能冲突，也不能和 host 已有服务端口冲突。如果 QEMU 已启动后想新增端口转发，只能停掉重新带新参数启动（可按第五节的重启流程操作，磁盘数据不会丢失）。</p></blockquote><h3 id=62-触发-steal-time>6.2 触发 steal time <a href=#62-%e8%a7%a6%e5%8f%91-steal-time class=anchor aria-hidden=true>#</a><a href=#62-触发-steal-time class=anchor aria-hidden=true>#</a></h3><p>需要制造 <strong>host 层面的 CPU 争抢</strong>才能看到非零的 steal time。单纯起第二个闲置 guest 看不到效果。</p><p>有效做法：</p><ol><li>明确 WSL2 环境总共给了多少 vCPU（<code>nproc</code>）</li><li>让所有 guest 的 <code>-smp</code> 之和<strong>明显超过</strong>这个核数，制造真实的资源争抢</li><li>在其中一个 guest 里跑 CPU 密集负载，同时观察另一个 guest 的 <code>/proc/stat</code> 中 <code>steal</code> 字段</li></ol><p>两种具体手段都已验证可行：</p><ul><li><strong>母机跑满核心</strong>：在 WSL2 中 <code>yes > /dev/null &</code> 跑满所有核，和 guest 争抢</li><li><strong>taskset 绑定核心</strong>：把所有 QEMU 实例绑定到相同的几个核心上</li></ul><pre><code class=language-bash># 查看 steal time
+watch -n1 &quot;head -1 /proc/stat | awk '{print \$9}'&quot;
+# top 中看 st 列
+top
+</code></pre><h3 id=63-禁用-steal-time-上报模拟云厂商行为>6.3 禁用 steal time 上报（模拟云厂商行为） <a href=#63-%e7%a6%81%e7%94%a8-steal-time-%e4%b8%8a%e6%8a%a5%e6%a8%a1%e6%8b%9f%e4%ba%91%e5%8e%82%e5%95%86%e8%a1%8c%e4%b8%ba class=anchor aria-hidden=true>#</a><a href=#63-禁用-steal-time-上报模拟云厂商行为 class=anchor aria-hidden=true>#</a></h3><p>KVM guest 的 steal time 通过 <code>kvm-steal-time</code> paravirt CPU feature 实现。去掉这个 feature 即可隐藏上报：</p><pre><code class=language-bash>qemu-system-x86_64 \
+  -enable-kvm \
+  -m 2048 \
+  -smp 2 \
+  -cpu host,-kvm-steal-time \    # ← 减号去掉 kvm-steal-time
+  -drive file=CentOS-Stream-GenericCloud-8-latest.x86_64.qcow2,format=qcow2 \
+  -drive file=seed.img,format=raw \
+  -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+  -device virtio-net-pci,netdev=net0 \
+  -nographic
+</code></pre><p>启动后 guest 内验证：<code>/proc/stat</code> 的 steal 列应始终为 0。</p><blockquote><p>注意：<code>-kvm-steal-time</code> 只是隐藏了 steal time 的<strong>上报</strong>，vCPU 被 host 调度器 deschedule 的事实不会变。当 guest 被长时间停掉后 resume，timer catchup 仍会将积压的 ticks 集中注入进程记账——这恰好复现了云厂商超卖场景下 PerCore% 破 100% 的根因。</p></blockquote><hr><h2 id=七补充软件源问题>七、补充：软件源问题 <a href=#%e4%b8%83%e8%a1%a5%e5%85%85%e8%bd%af%e4%bb%b6%e6%ba%90%e9%97%ae%e9%a2%98 class=anchor aria-hidden=true>#</a><a href=#七补充软件源问题 class=anchor aria-hidden=true>#</a></h2><p>RHEL 7 / CentOS 7 / CentOS 8 Stream 官方已停止维护，对应的 mirrorlist 已下线。首次登录后务必先修复软件源，否则 yum/dnf 无法正常使用：</p><pre><code class=language-bash>sudo sed -i 's/^mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*.repo
+sudo sed -i 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*.repo
+sudo yum clean all &amp;&amp; sudo yum makecache
+</code></pre><div class=edit-page><a href=https://github.com/hitzhangjie/myspace/blob/master/content/blog/linux/kvm/kvm_qemu_lab_setup.md><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2"><path d="M17 3a2.828 2.828.0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+Edit this page on GitHub</a></div><div class="docs-navigation d-flex justify-content-between"><a href=/blog/test/><div class="card my-1"><div class="card-body py-2">&larr;</div></div></a><a class=ms-auto href=/blog/_processor-design-learning-guide/><div class="card my-1"><div class="card-body py-2">&rarr;</div></div></a></div></main><div class="docs-toc d-none d-xl-block col-xl-3"><nav class=docs-toc-inner aria-label="Secondary navigation"><div class=page-links><h3>On this page</h3><nav id=TableOfContents><ul><li><a href=#linux-kvmqemu-虚拟化实验环境搭建>Linux KVM/QEMU 虚拟化实验环境搭建</a><ul><li><a href=#一环境检查>一、环境检查</a></li><li><a href=#二安装-qemu>二、安装 QEMU</a></li><li><a href=#三创建第一台虚拟机>三、创建第一台虚拟机</a><ul><li><a href=#31-方案-acentos-7>3.1 方案 A：CentOS 7</a></li><li><a href=#32-方案-bcentos-8-stream>3.2 方案 B：CentOS 8 Stream</a></li><li><a href=#33-登录验证>3.3 登录验证</a></li></ul></li><li><a href=#四创建第二台虚拟机>四、创建第二台虚拟机</a><ul><li><a href=#41-磁盘复制两种方式>4.1 磁盘复制：两种方式</a></li><li><a href=#42-第二份-seed-盘>4.2 第二份 seed 盘</a></li><li><a href=#43-启动第二台端口必须换>4.3 启动第二台（端口必须换）</a></li><li><a href=#43-多实例管理速查>4.3 多实例管理速查</a></li></ul></li><li><a href=#五实例的停止与重启>五、实例的停止与重启</a><ul><li><a href=#停止>停止</a></li><li><a href=#重启复用已有磁盘和-seed只改启动参数>重启（复用已有磁盘和 seed，只改启动参数）</a></li></ul></li><li><a href=#六进阶用法>六、进阶用法</a><ul><li><a href=#61-开放更多端口host--guest-端口转发>6.1 开放更多端口（host → guest 端口转发）</a></li><li><a href=#62-触发-steal-time>6.2 触发 steal time</a></li><li><a href=#63-禁用-steal-time-上报模拟云厂商行为>6.3 禁用 steal time 上报（模拟云厂商行为）</a></li></ul></li><li><a href=#七补充软件源问题>七、补充：软件源问题</a></li></ul></li></ul></nav></div></nav></div></div></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.2d163d4ded59a8c0f3da8841b92ed2d9704c8b95f58f2b2a155c22cdd00435156a85dae6d60e99bc99453a696faf91eadef75e33b2957a5731188122af562691.js integrity="sha512-LRY9Te1ZqMDz2ohBuS7S2XBMi5X1jysqFVwizdAENRVqhdrm1g6ZvJlFOmlvr5Hq3vdeM7KVelcxGIEir1YmkQ==" crossorigin=anonymous defer></script><script src=/js/highlight.min.1a731f820940167b6fd11a8540a1ae7c4627f4009b13e229c411e9d890612a3f6b618133d96477c2cf238d6faaa28d745cd5141e443aa34f62785510dc873430.js integrity="sha512-GnMfgglAFntv0RqFQKGufEYn9ACbE+IpxBHp2JBhKj9rYYEz2WR3ws8jjW+qoo10XNUUHkQ6o09ieFUQ3Ic0MA==" crossorigin=anonymous defer></script><script src=/main.min.2fdcd2feaeefdcd1d76985a93bfd15acc4b71558ca9abb33d68c4775bdc24e5d186d989f836740e6ec7618f0d57901e8c92b97cfaec51958e6344476865c21ba.js integrity="sha512-L9zS/q7v3NHXaYWpO/0VrMS3FVjKmrsz1oxHdb3CTl0YbZifg2dA5ux2GPDVeQHoySuXz67FGVjmNER2hlwhug==" crossorigin=anonymous defer></script><script src=/index.min.41e9f91c50b2f9cdb1cc9e42ae2ba971212da884ec9a06e342c7f73b4ebea78325d5527ccb8db55d7ea1e530c91d52614f30cc7fd3b21b8bdf4d650f56f3635f.js integrity="sha512-Qen5HFCy+c2xzJ5CriupcSEtqITsmgbjQsf3O06+p4Ml1VJ8y421XX6h5TDJHVJhTzDMf9OyG4vfTWUPVvNjXw==" crossorigin=anonymous defer></script></body></html>

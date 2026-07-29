@@ -1,6 +1,104 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blog on</title><link>/blog/</link><description>Recent content in Blog on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:49:55 +0000</lastBuildDate><atom:link href="/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>Split Lock (3)： 溯源CPU 占用率为何飙升到 350%</title><link>/blog/splitlock.p3.%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8cpu%E5%8D%A0%E7%94%A8358/</link><pubDate>Wed, 29 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/splitlock.p3.%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8cpu%E5%8D%A0%E7%94%A8358/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blog on</title><link>/blog/</link><description>Recent content in Blog on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:49:55 +0000</lastBuildDate><atom:link href="/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>OpenTelemetry 可观测性框架系统性介绍</title><link>/blog/2026-07-29-opentelemetry-introduction/</link><pubDate>Wed, 29 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-29-opentelemetry-introduction/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;微服务和云原生架构普及之后，传统的单体监控手段逐渐失效。以前排查问题，看几台机器的 CPU、内存，翻一翻应用日志就能定位；现在一个请求横跨十几个服务，每层都有自己的日志、自己的指标，出问题时单看某一层根本看不出全貌。&lt;/p&gt;
+&lt;p&gt;于是就有了&amp;quot;可观测性&amp;quot;（Observability）这个概念。它不是某种具体工具，而是一种能力——你能从系统外部，通过它输出的遥测数据，推断出它内部正在发生什么。可观测性的三个支柱（Three Pillars）大家已经比较熟悉：&lt;strong&gt;Traces（链路追踪）&lt;/strong&gt;、&lt;strong&gt;Metrics（指标）&lt;/strong&gt;、&lt;strong&gt;Logs（日志）&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;但问题来了：三大支柱各有各的实现库、各有各的协议、各有各的后端。你用 Jaeger 做 Tracing、Prometheus 做 Metrics、ELK 做 Logging，三套 SDK 打进业务代码，团队维护成本高得离谱。更致命的是，三套数据之间没有关联——你看一条错误日志，想知道它属于哪个 Trace，做不到。&lt;/p&gt;
+&lt;p&gt;OpenTelemetry 就是为了解决这个问题而生的。&lt;/p&gt;
+&lt;h1 id="opentelemetry-是什么"&gt;OpenTelemetry 是什么 &lt;a href="#opentelemetry-%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;OpenTelemetry（简称 OTel）是 CNCF 旗下的一个开源可观测性框架，目标是&lt;strong&gt;统一遥测数据的采集、生成和导出标准&lt;/strong&gt;。它不是后端，不是分析平台——它是一个&amp;quot;数据规格+工具集&amp;quot;，让你的应用产出的 Traces、Metrics、Logs 遵循同一套规范，彼此关联，并且可以导出到任意支持 OTLP 协议的后端。&lt;/p&gt;
+&lt;p&gt;它由两个历史项目合并而来：&lt;strong&gt;OpenTracing&lt;/strong&gt;（专注 Tracing API）和 &lt;strong&gt;OpenCensus&lt;/strong&gt;（Google 开源的 Metrics + Tracing 库）。合并后吸收了双方的设计经验，形成了更完整的体系。&lt;/p&gt;
+&lt;p&gt;理解 OpenTelemetry，可以从这几个维度切入：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;三大信号（Signals）&lt;/strong&gt;：Traces、Metrics、Logs 以及它们之间的关联模型&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;架构分层&lt;/strong&gt;：API → SDK → Collector → Exporter 的数据管线&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;数据模型&lt;/strong&gt;：Span、SpanContext、Resource、Instrument 等核心概念&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;采样与传播&lt;/strong&gt;：Head Sampling、Tail Sampling、W3C Trace Context 协议&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;生态定位&lt;/strong&gt;：它和其他可观测性项目（Prometheus、Jaeger、Fluentd）是什么关系&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;下面逐一展开。&lt;/p&gt;
+&lt;h1 id="三大信号signals"&gt;三大信号（Signals） &lt;a href="#%e4%b8%89%e5%a4%a7%e4%bf%a1%e5%8f%b7signals" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="traces"&gt;Traces &lt;a href="#traces" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Trace 描述一个请求在分布式系统中的完整生命周期。它由多个 &lt;strong&gt;Span&lt;/strong&gt; 组成，每个 Span 代表一次操作（RPC 调用、DB 查询、函数执行等）。Span 之间通过 &lt;code&gt;parent_span_id&lt;/code&gt; 形成树状结构：&lt;/p&gt;</description></item><item><title>SigNoz Docker Compose 配置解读：从架构到编排的映射</title><link>/blog/2026-07-29-signoz-docker-compose-analysis/</link><pubDate>Wed, 29 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-29-signoz-docker-compose-analysis/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在&lt;a href="/blog/2026-07-29-signoz-architecture/"&gt;上一篇&lt;/a&gt;中我们拆解了 SigNoz 的整体架构：OTel Collector 采数据、ClickHouse 存数据、SigNoz Server 查数据、Schema Migrator 管表结构、Zookeeper 做集群协调。&lt;/p&gt;
+&lt;p&gt;这篇我们来看这套架构是如何被翻译成一组 Docker Compose 服务的。理解了架构之后，每个 service 的配置项就不是孤立的参数，而是对架构中某个设计决策的具体实现。反过来，读配置也能帮你验证架构理解是否正确。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;本文分析的配置文件来自 &lt;code&gt;signoz/deploy/docker/docker-compose.yaml&lt;/code&gt;（&lt;code&gt;v0.107.0&lt;/code&gt; 附近版本）。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id="配置总览"&gt;配置总览 &lt;a href="#%e9%85%8d%e7%bd%ae%e6%80%bb%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;整个 compose 文件分为四个逻辑块：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;几个 YAML 锚点&lt;/strong&gt;（&lt;code&gt;x-*&lt;/code&gt;）——复用的配置片段&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;8 个 services&lt;/strong&gt;——架构中各组件的容器化实例&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;1 个 network&lt;/strong&gt;——&lt;code&gt;signoz-net&lt;/code&gt; 桥接网络&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;3 个 named volumes&lt;/strong&gt;——持久化数据卷&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;在逐个服务展开之前，先理解 YAML 锚点这个设计——它为整个配置文件奠定了可维护性的基础。&lt;/p&gt;
+&lt;h1 id="yaml-锚点dry-配置"&gt;YAML 锚点：DRY 配置 &lt;a href="#yaml-%e9%94%9a%e7%82%b9dry-%e9%85%8d%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;你会在文件中看到很多以 &lt;code&gt;x-&lt;/code&gt; 开头的块——这不是 Docker Compose 的保留字，而是 YAML 语法层面的东西。Docker Compose 会忽略以 &lt;code&gt;x-&lt;/code&gt; 开头的顶级元素，这让它们成为定义可复用配置片段的理想选择。&lt;/p&gt;
+&lt;p&gt;文件中定义了四个锚点，形成了清晰的复用层级：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;x-common (基础配置)
+└── networks, restart, logging
+x-clickhouse-defaults (ClickHouse 相关)
+└── !!merge &amp;lt;&amp;lt;: *common ← 继承 x-common
++ image, labels, depends_on, healthcheck, ulimits, environment
+x-zookeeper-defaults (Zookeeper 相关)
+└── !!merge &amp;lt;&amp;lt;: *common ← 继承 x-common
++ image, labels, healthcheck
+x-db-depend (依赖数据库的服务)
+└── !!merge &amp;lt;&amp;lt;: *common ← 继承 x-common
++ depends_on: clickhouse, schema-migrator-sync
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;!!merge &amp;lt;&amp;lt;: *common&lt;/code&gt; 是 YAML 的合并语法——&lt;code&gt;*common&lt;/code&gt; 引用锚点，&lt;code&gt;&amp;lt;&amp;lt;:&lt;/code&gt; 将其内容合并到当前位置。假设 &lt;code&gt;x-common&lt;/code&gt; 定义了 &lt;code&gt;networks&lt;/code&gt;、&lt;code&gt;restart&lt;/code&gt;、&lt;code&gt;logging&lt;/code&gt;，那么 &lt;code&gt;clickhouse&lt;/code&gt; 服务最终的配置就是这三项加上自己在 &lt;code&gt;x-clickhouse-defaults&lt;/code&gt; 和 service 定义中追加的内容。&lt;/p&gt;</description></item><item><title>SigNoz 整体架构：一个基于 OpenTelemetry 的开源可观测性平台</title><link>/blog/2026-07-29-signoz-architecture/</link><pubDate>Wed, 29 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/2026-07-29-signoz-architecture/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;a href="/blog/2026-07-29-opentelemetry-introduction/"&gt;上一篇文章&lt;/a&gt; 里我们系统梳理了 OpenTelemetry 的核心概念。OTel 解决的是&amp;quot;数据怎么采、怎么传&amp;quot;的问题，但它不解决&amp;quot;数据怎么存、怎么查、怎么告警&amp;quot;的问题。你需要一个后端。&lt;/p&gt;
+&lt;p&gt;后端的选择其实不少：Jaeger（专注 Tracing）、Prometheus + Grafana（专注 Metrics）、ELK（专注 Logging），更不用提 Datadog、New Relic 这些商业 SaaS。但三件套拼在一起有几个痛点：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;数据孤岛&lt;/strong&gt;：Traces 在 Jaeger、Metrics 在 Prometheus、Logs 在 Elasticsearch，查问题时要在三套系统间跳来跳去。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;基础设施碎片化&lt;/strong&gt;：每套系统有自己的部署、配置、升级节奏，运维成本随套数线性增长。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;告警能力割裂&lt;/strong&gt;：没法在一个地方同时基于 Metrics 阈值和 Trace 延迟来定义告警规则。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;SigNoz 试图用一个统一平台解决这些痛点。它是 CNCF 生态下的开源项目，原生基于 OpenTelemetry，将三大信号的存储、查询、可视化和告警整合到一起。下面拆解它的整体架构。&lt;/p&gt;
+&lt;h1 id="整体架构"&gt;整体架构 &lt;a href="#%e6%95%b4%e4%bd%93%e6%9e%b6%e6%9e%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;SigNoz 的架构可以从三个层次来理解：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt; ┌──────────────────────┐
+│ Applications │
+│ (OTel SDK / Agent) │
+└────────┬─────────────┘
+│ OTLP (gRPC :4317 / HTTP :4318)
+┌────────▼─────────────┐
+│ OTel Collector │
+│ (signal-collector) │
+│ - Receivers │
+│ - Processors │
+│ - Exporters │
+└────────┬─────────────┘
+│
+┌──────────────┼──────────────┐
+│ │ │
+┌────────▼─────┐ ┌──────▼──────┐ ┌─────▼──────┐
+│ ClickHouse │ │ SQLite │ │ Dashboards│
+│ (traces, │ │ (metadata, │ │ (JSON │
+│ metrics, │ │ alerts, │ │ files) │
+│ logs) │ │ users) │ │ │
+└────────┬──────┘ └──────┬──────┘ └─────┬──────┘
+│ │ │
+└───────────────┼───────────────┘
+│
+┌─────────▼──────────┐
+│ SigNoz Server │
+│ (Query + Alert) │
+│ - Query Service │
+│ - Alert Manager │
+│ - Web UI │
+└─────────┬───────────┘
+│
+┌─────────▼──────────┐
+│ Alert Channels │
+│ Slack / Email / │
+│ Webhook / Teams │
+└────────────────────┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;下面逐层拆解每个组件。&lt;/p&gt;</description></item><item><title>kvm(3)： 溯源CPU 占用率为何飙升到 350%</title><link>/blog/kvm_%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8cpu%E4%BD%BF%E7%94%A8%E7%8E%87358%E7%9A%84%E7%9C%9F%E7%9B%B8/</link><pubDate>Wed, 29 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/kvm_%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8cpu%E4%BD%BF%E7%94%A8%E7%8E%87358%E7%9A%84%E7%9C%9F%E7%9B%B8/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;&lt;a href="/blog/linux/processor/2025-12-22-linux_splitlock%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8CPU%E5%8D%A0%E7%94%A8358%25/"&gt;上一篇文章&lt;/a&gt; 中，我们通过逐层排查，最终定位到同母机上另一台子机的 Split Lock 是导致业务 CPU 飙高的根因。腾讯云侧确认后将我们的子机迁移到其他正常母机，问题恢复。&lt;/p&gt;
-&lt;p&gt;但排查过程中还有一个现象始终令人困惑：&lt;strong&gt;单核 CPU 占用率达到了 350%+&lt;/strong&gt;——理论上即使满载，单核算 CPU 使用率也不可能超过 100%。Split Lock 到底做了什么，能让监控数据出现如此反常识的数值？&lt;/p&gt;
+&lt;p&gt;但排查过程中还有一个现象始终令人困惑：&lt;strong&gt;单核 CPU 占用率达到了 358%+&lt;/strong&gt;——理论上即使满载，单核算 CPU 使用率也不可能超过 100%。Split Lock 到底做了什么，能让监控数据出现如此反常识的数值？&lt;/p&gt;
 &lt;p&gt;本文将顺着 Split Lock → 内存总线锁 → vCPU 调度延迟 → IRQ 积压注入 → missed timer ticks 补偿这条链路，逐一分析 CPU 占用率升高的原因，以及突破 100% 的机制。&lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;&lt;strong&gt;系列文章&lt;/strong&gt;：&lt;/p&gt;
@@ -19,13 +117,13 @@
 &lt;li&gt;从整体来看，可能会给其他子机的调度带来不可避免的调度延迟，尤其是再考虑到云服务商一般都存在轻微的超卖的情况；
 所以，很好理解，splitlock会给所有自己带来调度延迟，并且导致实际处理能力下降的问题。这根我们前期观测到的服务处理能力下降，业务侧请求处理耗时增加，也一致。&lt;/li&gt;
 &lt;/ul&gt;
-&lt;h3 id="但是为什么cpu占用率会升高呢"&gt;但是为什么CPU占用率会升高呢？ &lt;a href="#%e4%bd%86%e6%98%af%e4%b8%ba%e4%bb%80%e4%b9%88cpu%e5%8d%a0%e7%94%a8%e7%8e%87%e4%bc%9a%e5%8d%87%e9%ab%98%e5%91%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;h3 id="为什么cpu占用率升高呢"&gt;为什么CPU占用率升高呢？ &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88cpu%e5%8d%a0%e7%94%a8%e7%8e%87%e5%8d%87%e9%ab%98%e5%91%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
 &lt;ul&gt;
 &lt;li&gt;子机被调度到目标CPU上执行，自打linux 2.6引入CFS调度器以后，进程运行时间的统计就从 &amp;ldquo;timer tick采样累计执行时间&amp;rdquo; 改成了 &amp;ldquo;调度器切换时更新累计运行时间片&amp;rdquo; 的方式了；&lt;/li&gt;
 &lt;li&gt;自己被调度到目标CPU上执行，遇到内存总线锁，CPU干等，干等的这段时间也会计入运行时间，如果子机中任务在运行时间片内CPU全部在等内存总线释放，干等，那就是接近100%使用率；&lt;/li&gt;
 &lt;li&gt;在调度延迟期间，如果irq到达，会首先交给母机处理，母机再转给kvm模块，等后续vm被调度时，kvm再注入这些irq到vm内部，vm内部再处理，irq多自然也会推高CPU占用；
 &lt;blockquote&gt;
-&lt;p&gt;我们也确实看到了问题时间点大量irq情况。&lt;/p&gt;</description></item><item><title>Linux 进程 CPU 时间：调度器统计、tick 采样与虚拟化 timer 补偿</title><link>/blog/2026-07-26-linux_%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8Acpu%E5%8D%A0%E7%94%A8%E6%AD%A3%E7%A1%AE%E7%BB%9F%E8%AE%A1%E5%A7%BF%E5%8A%BF/</link><pubDate>Sun, 26 Jul 2026 21:14:13 +0800</pubDate><guid>/blog/2026-07-26-linux_%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8Acpu%E5%8D%A0%E7%94%A8%E6%AD%A3%E7%A1%AE%E7%BB%9F%E8%AE%A1%E5%A7%BF%E5%8A%BF/</guid><description>&lt;p&gt;写 &lt;a href="/blog/linux/processor/2025-12-22-linux_splitlock%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8CPU%E5%8D%A0%E7%94%A8358%25/"&gt;Split Lock 压垮母机&lt;/a&gt; 系列时，总绕不开一个问题：&lt;strong&gt;进程的 CPU 时间到底怎么记的&lt;/strong&gt;。&lt;code&gt;top&lt;/code&gt; 里看到的 CPU 使用率、&lt;code&gt;/proc/pid/stat&lt;/code&gt; 里的 &lt;code&gt;utime/stime&lt;/code&gt;，这些数字是怎么算出来的？内核里其实有两套并行的记账机制，各自基于不同的时间源，在虚拟化场景下可能产生差异。要理解这些，先从内核计时的两个基础概念说起。&lt;/p&gt;
+&lt;p&gt;我们也确实看到了问题时间点大量irq情况。&lt;/p&gt;</description></item><item><title>kvm(4)：进程运行时间+CPU占用率，如何更新、计算？</title><link>/blog/kvm-%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8Acpu%E5%8D%A0%E7%94%A8%E7%8E%87%E7%BB%9F%E8%AE%A1/</link><pubDate>Sun, 26 Jul 2026 21:14:13 +0800</pubDate><guid>/blog/kvm-%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8Acpu%E5%8D%A0%E7%94%A8%E7%8E%87%E7%BB%9F%E8%AE%A1/</guid><description>&lt;p&gt;写 &lt;a href="/blog/linux/processor/2025-12-22-linux_splitlock%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8CPU%E5%8D%A0%E7%94%A8358%25/"&gt;Split Lock 压垮母机&lt;/a&gt; 系列时，总绕不开一个问题：&lt;strong&gt;进程的 CPU 时间到底怎么记的&lt;/strong&gt;。&lt;code&gt;top&lt;/code&gt; 里看到的 CPU 使用率、&lt;code&gt;/proc/pid/stat&lt;/code&gt; 里的 &lt;code&gt;utime/stime&lt;/code&gt;，这些数字是怎么算出来的？内核里其实有两套并行的记账机制，各自基于不同的时间源，在虚拟化场景下可能产生差异。要理解这些，先从内核计时的两个基础概念说起。&lt;/p&gt;
 &lt;h1 id="一时钟源tsc-与-jiffies"&gt;一、时钟源：TSC 与 jiffies &lt;a href="#%e4%b8%80%e6%97%b6%e9%92%9f%e6%ba%90tsc-%e4%b8%8e-jiffies" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;理解记账之前，先搞清楚时间是怎么量的。&lt;/p&gt;
 &lt;h2 id="tsctime-stamp-counter"&gt;TSC（Time Stamp Counter） &lt;a href="#tsctime-stamp-counter" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
@@ -168,16 +266,7 @@
 &lt;/ul&gt;
 &lt;h2 id="核心计算引擎特性"&gt;核心计算引擎特性 &lt;a href="#%e6%a0%b8%e5%bf%83%e8%ae%a1%e7%ae%97%e5%bc%95%e6%93%8e%e7%89%b9%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;h3 id="mpp大规模并行处理"&gt;MPP（大规模并行处理） &lt;a href="#mpp%e5%a4%a7%e8%a7%84%e6%a8%a1%e5%b9%b6%e8%a1%8c%e5%a4%84%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;查询被分解为多个子查询，分发到各计算节点并行执行，各节点只处理自己分片内的数据，最后汇总。&lt;/p&gt;</description></item><item><title>当监控数据'说谎'：Split Lock 引发的 CPU 计量失真</title><link>/blog/2026-07-24-cpu-accounting-splitlock/</link><pubDate>Fri, 24 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/2026-07-24-cpu-accounting-splitlock/</guid><description>&lt;p&gt;那次线上告警，除了 &lt;a href="/blog/linux/processor/2025-12-22-cpu-splitlock-avoidance/"&gt;CPU 飙高和 IRQ 突增&lt;/a&gt;，还观察到另一个更反常的现象：&lt;strong&gt;gopsutil 报告的进程单核 CPU 使用率达到了 350%+&lt;/strong&gt;。&lt;/p&gt;
-&lt;p&gt;单核，除以了核数的，理论上不可能超过 100%。&lt;/p&gt;
-&lt;p&gt;这件事困扰了我很久。和 gopsutil 的开发者讨论过，当时我描述了我的timer irq catchup可能导致导致cpu使用率统计出错的想法，see: &lt;a href="https://github.com/shirou/gopsutil/issues/1978"&gt;#1978 VM stealtime&amp;gt;0, process.Percent(0) / cpu.Counts(true) is higher than 100%&lt;/a&gt;。 作者后来专门提交了一个commit，将最大单核CPU使用率锁定在了100%，see: &lt;a href="https://github.com/shirou/gopsutil/commit/38d13964276ced5230d6c8861b39acdd716151c8"&gt;[process]: clamp Percent() to prevent values exceeding 100% per CPU
-&lt;/a&gt;。&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;[process]: clamp Percent() to prevent values exceeding 100% per CPU
-In VM environments with steal time or clock skew, CPU jiffies can
-advance faster than wall-clock time, causing process.Percent() to
-return values greater than numcpu * 100%. Clamp the result using
-math.Min, matching the behavior of cpu.calculateBusy().&lt;/p&gt;</description></item><item><title>版本控制系统选型：Git、Git-LFS 与 Perforce 的综合对比</title><link>/blog/2026-07-22-vcs-comparison-git-lfs-perforce/</link><pubDate>Wed, 22 Jul 2026 08:19:30 +0800</pubDate><guid>/blog/2026-07-22-vcs-comparison-git-lfs-perforce/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;查询被分解为多个子查询，分发到各计算节点并行执行，各节点只处理自己分片内的数据，最后汇总。&lt;/p&gt;</description></item><item><title>版本控制系统选型：Git、Git-LFS 与 Perforce 的综合对比</title><link>/blog/2026-07-22-vcs-comparison-git-lfs-perforce/</link><pubDate>Wed, 22 Jul 2026 08:19:30 +0800</pubDate><guid>/blog/2026-07-22-vcs-comparison-git-lfs-perforce/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;团队项目最初用 SVN 管理游戏代码和资产，后来 SVN 频繁出问题，评估后切到了 Perforce。我没有直接参与这个过程，但对背后的选型逻辑很好奇：为什么不用 Git？Git-LFS 能不能解决二进制资产管理的问题？如果 Git 不适合，Perforce 又做对了什么？&lt;/p&gt;
 &lt;p&gt;这些问题其实指向一个更大的话题：&lt;strong&gt;不同版本控制系统各自的设计哲学和权衡&lt;/strong&gt;。Git 诞生于 Linux 内核社区——海量贡献者、文本为主、分布式协作；Perforce 脱胎于游戏和大型企业——巨型仓库、二进制资产、集中式管控。它们在各自的土壤里长成了完全不同的东西。&lt;/p&gt;
 &lt;p&gt;本文尝试从多个维度梳理 Git、Git-LFS 和 Perforce 的设计差异，也顺带提一下 SVN 和一些大型公司的自研方案，希望能提供一个相对完整的视角。&lt;/p&gt;
@@ -237,7 +326,33 @@ math.Min, matching the behavior of cpu.calculateBusy().&lt;/p&gt;</description><
 &lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
-&lt;p&gt;这四条覆盖了日常 90% 以上的调试场景。优先级是：&lt;code&gt;debug&lt;/code&gt; &amp;gt; &lt;code&gt;test&lt;/code&gt; &amp;gt; &lt;code&gt;exec&lt;/code&gt; &amp;gt; &lt;code&gt;attach&lt;/code&gt;。&lt;/p&gt;</description></item><item><title>有栈协程与无栈协程：实现异同、优劣与典型代表</title><link>/blog/2026-07-19-%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1_%E6%9C%89%E6%A0%88%E4%B8%8E%E6%97%A0%E6%A0%88%E5%8D%8F%E7%A8%8B%E5%AF%B9%E6%AF%94/</link><pubDate>Sun, 19 Jul 2026 17:40:10 +0800</pubDate><guid>/blog/2026-07-19-%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1_%E6%9C%89%E6%A0%88%E4%B8%8E%E6%97%A0%E6%A0%88%E5%8D%8F%E7%A8%8B%E5%AF%B9%E6%AF%94/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;这四条覆盖了日常 90% 以上的调试场景。优先级是：&lt;code&gt;debug&lt;/code&gt; &amp;gt; &lt;code&gt;test&lt;/code&gt; &amp;gt; &lt;code&gt;exec&lt;/code&gt; &amp;gt; &lt;code&gt;attach&lt;/code&gt;。&lt;/p&gt;</description></item><item><title>腾讯云 AI 解决方案全景：从底层算力到行业应用</title><link>/blog/2026-07-20-tencentcloud-ai-solutions/</link><pubDate>Mon, 20 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/2026-07-20-tencentcloud-ai-solutions/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;最近在调研云厂商的 AI 能力时，顺手整理了一份腾讯云 AI 相关解决方案的全景图。从底层的 GPU 裸金属到上层的大模型 API，腾讯云的 AI 产品矩阵覆盖面相当广，而且很多能力已经渗透到行业场景中（医疗、金融、制造等）。&lt;/p&gt;
+&lt;p&gt;写这篇文章的目的很简单：给需要选型或者了解腾讯云 AI 能力的同学一个快速索引。内容按层次组织，从 IaaS 到 SaaS，从通用能力到行业方案，尽量做到不重不漏。&lt;/p&gt;
+&lt;h1 id="一ai-核心大模型服务"&gt;一、AI 核心大模型服务 &lt;a href="#%e4%b8%80ai-%e6%a0%b8%e5%bf%83%e5%a4%a7%e6%a8%a1%e5%9e%8b%e6%9c%8d%e5%8a%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;这是离开发者最近的入口——直接调 API 就能用。&lt;/p&gt;
+&lt;h2 id="1-腾讯混元大模型tencent-hunyuan"&gt;1. 腾讯混元大模型（Tencent Hunyuan） &lt;a href="#1-%e8%85%be%e8%ae%af%e6%b7%b7%e5%85%83%e5%a4%a7%e6%a8%a1%e5%9e%8btencent-hunyuan" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;混元是腾讯自研的大模型系列，目前已经发展出多个版本：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;混元生文&lt;/strong&gt;：&lt;code&gt;hunyuan-large&lt;/code&gt;、&lt;code&gt;hunyuan-pro&lt;/code&gt;、&lt;code&gt;hunyuan-turbo&lt;/code&gt; 等多个规格，覆盖不同性价比需求&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;混元生图&lt;/strong&gt;：文生图服务，适合内容创作场景&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;混元 Vision&lt;/strong&gt;：多模态模型，支持图文理解&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;API 层面兼容 OpenAI 接口格式，迁移成本比较低。典型场景包括对话、翻译、内容创作、拍照解题、群聊摘要等。&lt;/p&gt;
+&lt;h2 id="2-腾讯元器平台"&gt;2. 腾讯元器平台 &lt;a href="#2-%e8%85%be%e8%ae%af%e5%85%83%e5%99%a8%e5%b9%b3%e5%8f%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;面向非开发者的智能体搭建平台，拖拽式配置，不需要写代码就能做出一个能对话、能调用工具、能接入知识库的 AI 应用。适合快速验证想法或者做一些内部提效的小工具。&lt;/p&gt;
+&lt;h1 id="二ai-训练与推理平台"&gt;二、AI 训练与推理平台 &lt;a href="#%e4%ba%8cai-%e8%ae%ad%e7%bb%83%e4%b8%8e%e6%8e%a8%e7%90%86%e5%b9%b3%e5%8f%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;如果不想从裸机开始搭训练环境，可以用平台层的托管服务。&lt;/p&gt;
+&lt;h2 id="1-ti-one-训练平台"&gt;1. TI-ONE 训练平台 &lt;a href="#1-ti-one-%e8%ae%ad%e7%bb%83%e5%b9%b3%e5%8f%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;一站式机器学习 / 深度学习平台，核心能力包括：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;框架支持&lt;/strong&gt;：TensorFlow、PyTorch、PySpark 等主流框架开箱即用&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;AutoML&lt;/strong&gt;：自动机器学习，适合不想手动调参的场景&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;数据标注&lt;/strong&gt;：支持 LLM 和 MLLM 数据标注，可自定义 Schema，覆盖文本、图片、视频等数据类型&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;大模型精调&lt;/strong&gt;：支持在基座模型上做 SFT 和 RLHF&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;模型部署与推理&lt;/strong&gt;：训练好的模型可以直接在平台上部署上线&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;从数据标注→训练→部署，一条链路走通，不需要在各个系统之间搬运数据和模型。&lt;/p&gt;</description></item><item><title>有栈协程与无栈协程：实现异同、优劣与典型代表</title><link>/blog/2026-07-19-%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1_%E6%9C%89%E6%A0%88%E4%B8%8E%E6%97%A0%E6%A0%88%E5%8D%8F%E7%A8%8B%E5%AF%B9%E6%AF%94/</link><pubDate>Sun, 19 Jul 2026 17:40:10 +0800</pubDate><guid>/blog/2026-07-19-%E6%A1%86%E6%9E%B6%E8%AE%BE%E8%AE%A1_%E6%9C%89%E6%A0%88%E4%B8%8E%E6%97%A0%E6%A0%88%E5%8D%8F%E7%A8%8B%E5%AF%B9%E6%AF%94/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;协程的本质只有一句话：&lt;strong&gt;控制流可以主动让出（yield），并在之后从让出点恢复（resume）&lt;/strong&gt;。&lt;br&gt;
 实现这句话的路径却分成两大流派：&lt;/p&gt;
 &lt;table&gt;
@@ -2632,7 +2747,85 @@ sudo update-alternatives --install /usr/bin/java java /opt/jdk-21/bin/java 2 --s
 &lt;li&gt;不携带任何语义信息，纯粹是一个&amp;quot;排他性编号&amp;rdquo;&lt;/li&gt;
 &lt;/ul&gt;
 &lt;h3 id="embedding可训练的语义查找表"&gt;Embedding：可训练的语义查找表 &lt;a href="#embedding%e5%8f%af%e8%ae%ad%e7%bb%83%e7%9a%84%e8%af%ad%e4%b9%89%e6%9f%a5%e6%89%be%e8%a1%a8" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;Embedding 的本质是一个&lt;strong&gt;可训练的查找表&lt;/strong&gt;。以 Word2Vec 为例：&lt;/p&gt;</description></item><item><title>Git LFS 工作机制：从3d模型文件不见了说起</title><link>/blog/2026-04-10-git-how-lfs-works/</link><pubDate>Fri, 10 Apr 2026 00:00:00 +0800</pubDate><guid>/blog/2026-04-10-git-how-lfs-works/</guid><description>&lt;p&gt;仓库里有大量 &lt;code&gt;*.glb&lt;/code&gt; 模型资源，某台机器没装 Git LFS，&lt;code&gt;git clone&lt;/code&gt; 之后发现模型目录几乎是空的。装上 Git LFS，文件又&amp;quot;自己回来了&amp;quot;。&lt;/p&gt;
+&lt;p&gt;Embedding 的本质是一个&lt;strong&gt;可训练的查找表&lt;/strong&gt;。以 Word2Vec 为例：&lt;/p&gt;</description></item><item><title>代码质量如何影响 AI 编程工具的效果</title><link>/blog/2026-05-09-cursor-code-quality-impact-on-ai-coding/</link><pubDate>Sat, 09 May 2026 00:00:00 +0800</pubDate><guid>/blog/2026-05-09-cursor-code-quality-impact-on-ai-coding/</guid><description>&lt;p&gt;很多人问：代码写得烂，AI 编程工具会不会变蠢？直觉上会，但机制是什么——是模型&amp;quot;看不懂&amp;quot;烂代码，还是别的？&lt;/p&gt;
+&lt;p&gt;结论先行：&lt;strong&gt;代码风格与工程组织会显著影响 AI 编程工具的效果，但机制主要在上下文效率、检索与工具调用成本、错误传播上&lt;/strong&gt;，而不是模型&amp;quot;懂不懂某种语法&amp;quot;。下面从训练、推理、Agent 工作流三个层面拆开说。&lt;/p&gt;
+&lt;h2 id="训练阶段坏模式会被学到但对单次任务影响有限"&gt;训练阶段：坏模式会被学到，但对单次任务影响有限 &lt;a href="#%e8%ae%ad%e7%bb%83%e9%98%b6%e6%ae%b5%e5%9d%8f%e6%a8%a1%e5%bc%8f%e4%bc%9a%e8%a2%ab%e5%ad%a6%e5%88%b0%e4%bd%86%e5%af%b9%e5%8d%95%e6%ac%a1%e4%bb%bb%e5%8a%a1%e5%bd%b1%e5%93%8d%e6%9c%89%e9%99%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;预训练语料不区分&amp;quot;这是示例代码还是生产代码&amp;quot;。如果某种反模式——巨型 God Object、&lt;code&gt;any&lt;/code&gt; 泛滥、复制粘贴分支——在语料中高频出现，且常与&amp;quot;能跑的任务&amp;quot;共现，模型在相似提示下就更可能采样到同类结构。&lt;/p&gt;
+&lt;p&gt;这不是模型记住了你的仓库，而是&lt;strong&gt;先验分布偏置&lt;/strong&gt;。规范命名、分层清晰、类型信息完整的代码，在语料里常与&amp;quot;维护、测试、文档&amp;quot;共现，模型更常学到&amp;quot;接口稳定 + 小函数&amp;quot;这些模式。反过来，高度耦合、无类型的脚本风格会强化&amp;quot;就地修补&amp;quot;的完成方式。&lt;/p&gt;
+&lt;p&gt;但训练偏置不是全部。同一个模型同一个项目，单次会话里失败的原因往往不是训练数据的问题，而是&lt;strong&gt;上下文截断、提示歧义、工具返回不完整&lt;/strong&gt;。所以单独强调&amp;quot;我们项目很乱&amp;quot;并不能让模型自动变聪明——但整理代码能改善&lt;strong&gt;当次上下文&lt;/strong&gt;。训练偏置 + 当次上下文质量，二者共同决定行为。&lt;/p&gt;
+&lt;h2 id="推理阶段上下文窗口是硬约束信噪比决定一切"&gt;推理阶段：上下文窗口是硬约束，信噪比决定一切 &lt;a href="#%e6%8e%a8%e7%90%86%e9%98%b6%e6%ae%b5%e4%b8%8a%e4%b8%8b%e6%96%87%e7%aa%97%e5%8f%a3%e6%98%af%e7%a1%ac%e7%ba%a6%e6%9d%9f%e4%bf%a1%e5%99%aa%e6%af%94%e5%86%b3%e5%ae%9a%e4%b8%80%e5%88%87" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;这是影响最直接的一层。&lt;/p&gt;
+&lt;p&gt;模型一次能可靠&amp;quot;注意&amp;quot;的 token 有限。如果你打开的文件里塞了大量无关实现、重复样板、无意义注释，&lt;strong&gt;信噪比就下来了&lt;/strong&gt;：与当前任务相关的符号、类型约束被挤到窗口边缘甚至截断，模型更容易编造不存在的 API，或者把两个名字相似的符号搞混。&lt;/p&gt;
+&lt;p&gt;反过来，显式类型、清晰的模块导出相当于&lt;strong&gt;把约束直接写在模型眼前&lt;/strong&gt;，搜索空间收窄，幻觉式 API 的概率自然下降。&lt;code&gt;any&lt;/code&gt;、动态 &lt;code&gt;require&lt;/code&gt;、字符串反射式调用这些做法会扩大合法输出集合，模型就更倾向用训练中最常见的近似答案填空。&lt;/p&gt;
+&lt;p&gt;所以&amp;quot;烂代码&amp;quot;不一定每次都让输出变差。如果任务只是&amp;quot;给这个函数加两行日志&amp;quot;，局部再乱也够用。恶化通常发生在&lt;strong&gt;跨文件推理、需要理解不变量、重构或修 bug&lt;/strong&gt; 这类需要广上下文的任务上。一句话：&lt;strong&gt;代码越乱，有效上下文越少，模型越容易猜错&lt;/strong&gt;。&lt;/p&gt;
+&lt;h2 id="agent-工作流混乱直接拉高工具调用成本"&gt;Agent 工作流：混乱直接拉高工具调用成本 &lt;a href="#agent-%e5%b7%a5%e4%bd%9c%e6%b5%81%e6%b7%b7%e4%b9%b1%e7%9b%b4%e6%8e%a5%e6%8b%89%e9%ab%98%e5%b7%a5%e5%85%b7%e8%b0%83%e7%94%a8%e6%88%90%e6%9c%ac" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Agent 不是只做一次补全。它会搜索、读文件、跳转定义、运行命令，多轮迭代。工程上的混乱在这里的代价不是模型&amp;quot;变笨&amp;quot;，而是&lt;strong&gt;工具调用链变长&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;具体怎么变长的：&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;检索命中率下降&lt;/strong&gt;。Agent 依赖语义搜索、符号 grep、跳转定义来定位代码。如果职责挤在一个文件、命名含糊（&lt;code&gt;utils.go&lt;/code&gt; 里什么都塞），该导出的没导出、循环依赖导致 IDE 也索引不好——Agent 就要多搜几次，更容易读到错误文件或旧副本，然后进入多轮纠正。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;每次搜索和读取都是成本&lt;/strong&gt;。一次工具调用 = 一次或多次 tool call = 往往对应用户可见的一轮 agent 步 = 把工具输出拼进上下文，token 持续累积。混乱的工程结构直接导致调用链拉长。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;修复循环&lt;/strong&gt;。如果生成的代码跑在一个难测试的框架里，失败时错误信息含糊（比如全局可变状态导致），Agent 就可能进入 try-fix 循环：改 A 坏 B，轮次和 token 一起涨。组织良好的分层与可运行的最小用例能缩短这个回路。&lt;/p&gt;
+&lt;p&gt;ps: 这些症状和&amp;quot;人类维护成本&amp;quot;高度一致——对人类难的，对依赖上下文与工具的 AI 通常也难。&lt;/p&gt;</description></item><item><title>告别 CPU 排序：深度解析顺序无关透明渲染（OIT）</title><link>/blog/%E6%B8%B2%E6%9F%93_%E9%A1%BA%E5%BA%8F%E6%97%A0%E5%85%B3%E9%80%8F%E6%98%8E%E6%B8%B2%E6%9F%93oit/</link><pubDate>Fri, 17 Apr 2026 00:00:00 +0800</pubDate><guid>/blog/%E6%B8%B2%E6%9F%93_%E9%A1%BA%E5%BA%8F%E6%97%A0%E5%85%B3%E9%80%8F%E6%98%8E%E6%B8%B2%E6%9F%93oit/</guid><description>&lt;p&gt;在实时渲染领域，透明物体的渲染一直是个棘手的问题。传统的透明度混合（Alpha Blending）要求片元必须按照**由远及近（Back-to-Front）**的顺序进行绘制，否则就会出现遮挡错误。这种对&amp;quot;顺序&amp;quot;的执着，给开发者带来了巨大的性能挑战。&lt;/p&gt;
+&lt;h2 id="1-传统方案的痛点cpu-是如何被拖死的"&gt;1. 传统方案的痛点：CPU 是如何被&amp;quot;拖死&amp;quot;的？ &lt;a href="#1-%e4%bc%a0%e7%bb%9f%e6%96%b9%e6%a1%88%e7%9a%84%e7%97%9b%e7%82%b9cpu-%e6%98%af%e5%a6%82%e4%bd%95%e8%a2%ab%e6%8b%96%e6%ad%bb%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在没有 OIT 支持的情况下，渲染器通常采用&lt;strong&gt;画家算法（Painter&amp;rsquo;s Algorithm）&lt;/strong&gt;。这意味着：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;物体级排序：&lt;/strong&gt; CPU 每一帧都要计算所有透明物体与相机的距离并排序。当场景中有成千上万个透明物件时，这部分开销非常可观。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;无法处理交叉：&lt;/strong&gt; 当两个透明物体互相穿插（例如水面下的水草，或交叉的烟雾粒子）时，物体级的排序失效。除非在 CPU 端将模型拆解到三角面片级进行排序，但这对于实时渲染来说简直是性能灾难。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Draw Call 压力：&lt;/strong&gt; 为了保证顺序，往往无法进行有效的批处理，导致 Draw Call 数量飙升。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="2-oit-的核心思路压力下放权力下放"&gt;2. OIT 的核心思路：压力下放，权力下放 &lt;a href="#2-oit-%e7%9a%84%e6%a0%b8%e5%bf%83%e6%80%9d%e8%b7%af%e5%8e%8b%e5%8a%9b%e4%b8%8b%e6%94%be%e6%9d%83%e5%8a%9b%e4%b8%8b%e6%94%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;OIT（Order-Independent Transparency）的核心思路非常直观：&lt;strong&gt;既然 CPU 很难在&amp;quot;宏观层面&amp;quot;排好序，那就干脆不排了，直接交给 GPU 在&amp;quot;像素层面&amp;quot;去解决。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;它的核心逻辑可以概括为两个阶段：&lt;/p&gt;
+&lt;h3 id="第一阶段信息收集accumulation"&gt;第一阶段：信息收集（Accumulation） &lt;a href="#%e7%ac%ac%e4%b8%80%e9%98%b6%e6%ae%b5%e4%bf%a1%e6%81%af%e6%94%b6%e9%9b%86accumulation" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;CPU 像对待不透明物体一样，直接把所有透明几何体一股脑扔给 GPU。GPU 在绘制每个像素时，不再直接写入颜色，而是利用原子操作（Atomic Operations）在显存中开辟一块空间，将该像素位置下所有覆盖到的片元信息（颜色、深度、透明度）像&amp;quot;存钱&amp;quot;一样存入一个**像素链表（Linked List）**中。&lt;/p&gt;
+&lt;h3 id="第二阶段像素合成composition"&gt;第二阶段：像素合成（Composition） &lt;a href="#%e7%ac%ac%e4%ba%8c%e9%98%b6%e6%ae%b5%e5%83%8f%e7%b4%a0%e5%90%88%e6%88%90composition" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;当所有透明几何体都绘制完成后，GPU 启动一个后处理阶段。针对屏幕上的每一个像素，遍历它对应的链表：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;取出该像素位置积累的所有片元。&lt;/li&gt;
+&lt;li&gt;按照深度（Z 值）进行局部排序。&lt;/li&gt;
+&lt;li&gt;严格执行由远及近的 Alpha Blending 混合公式。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;h2 id="3-进阶方案加权平均wboit"&gt;3. 进阶方案：加权平均（WBOIT） &lt;a href="#3-%e8%bf%9b%e9%98%b6%e6%96%b9%e6%a1%88%e5%8a%a0%e6%9d%83%e5%b9%b3%e5%9d%87wboit" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;虽然基于链表的 OIT 非常精确，但它对显存和带宽的消耗巨大。为了平衡性能，业界常用 &lt;strong&gt;Weighted Blended OIT (WBOIT)&lt;/strong&gt; 这种近似方案。&lt;/p&gt;
+&lt;p&gt;它通过数学加权模拟遮挡关系，完全避免了物理排序。其最终像素颜色的混合公式如下：&lt;/p&gt;
+&lt;p&gt;$$
+C_{final} = \frac{\sum (C_i \cdot \alpha_i \cdot w(z_i))}{\sum (\alpha_i \cdot w(z_i))} \cdot (1 - \prod (1 - \alpha_i))
+$$&lt;/p&gt;</description></item><item><title>X 算法对外部链接的惩罚机制与应对策略</title><link>/blog/2026-04-13-x%E6%8E%A8%E8%8D%90%E7%AE%97%E6%B3%95%E5%AF%B9%E5%A4%96%E9%93%BE%E7%9A%84%E6%83%A9%E7%BD%9A%E6%9C%BA%E5%88%B6%E4%B8%8E%E5%BA%94%E5%AF%B9%E7%AD%96%E7%95%A5/</link><pubDate>Mon, 13 Apr 2026 00:00:00 +0800</pubDate><guid>/blog/2026-04-13-x%E6%8E%A8%E8%8D%90%E7%AE%97%E6%B3%95%E5%AF%B9%E5%A4%96%E9%93%BE%E7%9A%84%E6%83%A9%E7%BD%9A%E6%9C%BA%E5%88%B6%E4%B8%8E%E5%BA%94%E5%AF%B9%E7%AD%96%E7%95%A5/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;作为一个习惯在 X（原 Twitter）上转发技术博客的人，我一直困惑为什么帖子的推荐量几乎为零。直到最近才搞清楚，这其实是 X 算法对外部链接的系统性惩罚，而不是我写的内容不够好。&lt;/p&gt;
+&lt;h2 id="核心问题外部链接惩罚"&gt;核心问题：外部链接惩罚 &lt;a href="#%e6%a0%b8%e5%bf%83%e9%97%ae%e9%a2%98%e5%a4%96%e9%83%a8%e9%93%be%e6%8e%a5%e6%83%a9%e7%bd%9a" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;X 算法强烈偏好让用户留在平台内，增加停留时间、互动和广告曝光。在主帖中直接包含外部博客链接，会被算法大幅降权：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;非 Premium 账号&lt;/strong&gt;：链接帖的互动中位数接近零，几乎不进入 For You 推荐流。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Premium 账号&lt;/strong&gt;：仍有 30%–50% 甚至更高的 reach 减少，但比免费账号好一些。&lt;/li&gt;
+&lt;li&gt;有测试数据显示：同样内容去掉链接后，impressions 可提升几倍到十几倍。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;更糟的是，重复在主帖中发链接会让早期 engagement 信号持续走弱，算法快速停止推送，甚至给账号整体信誉带来负面累积。&lt;/p&gt;
+&lt;h2 id="修复策略"&gt;修复策略 &lt;a href="#%e4%bf%ae%e5%a4%8d%e7%ad%96%e7%95%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;好消息是：不需要清空旧内容。算法更看重最近行为和整体信号恢复，旧帖会逐渐淡出推荐池。&lt;/p&gt;
+&lt;h3 id="新帖规则"&gt;新帖规则 &lt;a href="#%e6%96%b0%e5%b8%96%e8%a7%84%e5%88%99" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;主帖绝不放外部链接&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;主帖用英文写有价值的技术洞见、总结或线程，激发回复和停留。&lt;/li&gt;
+&lt;li&gt;发帖后，立即在第一条自回复中放博客链接，如 &amp;ldquo;Full article here 👇&amp;quot;。&lt;/li&gt;
+&lt;li&gt;或直接用 X 的 Articles 功能发长文，算法更喜欢平台原生内容。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id="切换英文--全球用户"&gt;切换英文 + 全球用户 &lt;a href="#%e5%88%87%e6%8d%a2%e8%8b%b1%e6%96%87--%e5%85%a8%e7%90%83%e7%94%a8%e6%88%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;所有新帖全英文，第一句用吸引全球读者的 hook。&lt;/li&gt;
+&lt;li&gt;Bio、置顶帖更新为全英文，明确技术主题。&lt;/li&gt;
+&lt;li&gt;发帖时机选全球流量高峰（UTC 早晚）。&lt;/li&gt;
+&lt;li&gt;内容形式：短线程（3–5 条）优于单长帖；加图片/图表提升 reach；用 poll 或问题鼓励互动。&lt;/li&gt;
+&lt;li&gt;避免过多 hashtag、重复内容和 rage bait。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="恢复账号整体-reach"&gt;恢复账号整体 reach &lt;a href="#%e6%81%a2%e5%a4%8d%e8%b4%a6%e5%8f%b7%e6%95%b4%e4%bd%93-reach" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;每天回复 10–20 条相关英文技术帖，提供价值，积累正面互动信号。&lt;/li&gt;
+&lt;li&gt;发帖频率不要过高，每天 2–5 条高质量即可。&lt;/li&gt;
+&lt;li&gt;坚持 1–4 周，从&amp;quot;链接重度&amp;quot;切换到&amp;quot;价值先、链接后&amp;rdquo;，逐步看到改善。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="长期思路"&gt;长期思路 &lt;a href="#%e9%95%bf%e6%9c%9f%e6%80%9d%e8%b7%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;把 X 当成讨论场而不是导流工具：在 X 上分享精华洞见，让感兴趣的人自然去找链接。也可以把博客部分内容改写为 X-native 线程或 Articles，减少对外部链接的依赖。&lt;/p&gt;</description></item><item><title>Git LFS 工作机制：从3d模型文件不见了说起</title><link>/blog/2026-04-10-git-how-lfs-works/</link><pubDate>Fri, 10 Apr 2026 00:00:00 +0800</pubDate><guid>/blog/2026-04-10-git-how-lfs-works/</guid><description>&lt;p&gt;仓库里有大量 &lt;code&gt;*.glb&lt;/code&gt; 模型资源，某台机器没装 Git LFS，&lt;code&gt;git clone&lt;/code&gt; 之后发现模型目录几乎是空的。装上 Git LFS，文件又&amp;quot;自己回来了&amp;quot;。&lt;/p&gt;
 &lt;p&gt;这背后就一个问题：&lt;strong&gt;Git 到底存了什么？LFS 又存了什么？&lt;/strong&gt;&lt;/p&gt;
 &lt;h2 id="一句话结论"&gt;一句话结论 &lt;a href="#%e4%b8%80%e5%8f%a5%e8%af%9d%e7%bb%93%e8%ae%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;Git 管&amp;quot;版本关系 + 指针文本&amp;quot;，Git LFS 管&amp;quot;大文件本体&amp;quot;。两者各干各的，靠一个 pointer 文件对接。&lt;/p&gt;
@@ -2650,7 +2843,34 @@ size 12345678
 &lt;p&gt;Git LFS 根据 pointer 里的 &lt;code&gt;oid&lt;/code&gt; 去远端 LFS 存储拉取本体，落到 &lt;code&gt;.git/lfs/objects&lt;/code&gt; 目录下。这个目录跟 &lt;code&gt;.git/objects&lt;/code&gt; 是两套体系，互不干扰。&lt;/p&gt;</description></item><item><title>iCloudDrive 严重破坏性变更</title><link>/blog/2026-04-01-iclouddrive/</link><pubDate>Wed, 01 Apr 2026 00:00:00 +0800</pubDate><guid>/blog/2026-04-01-iclouddrive/</guid><description>&lt;p&gt;前几个月言辞恳切地写了一堆信息，结果无一例外不允许发布，Apple Community被不知什么管理员给删掉了，Reddit也不允许发布，可能违反了Reddit什么规定吧 …… anyway，不管是发布渠道、违反规定发不出去，总之就是很难发出去。反馈给苹果官方算是正规渠道吧，扔进去也是没什么反馈。哈哈！总之，重要的东西一定不要依赖任何平台或者个人，全靠自己！&lt;/p&gt;
 &lt;h2 id="critical-design-flaw"&gt;CRITICAL DESIGN FLAW &lt;a href="#critical-design-flaw" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;Hello, I am writing to file a serious complaint regarding a disastrous and hazardous design change in iCloud Drive, which has directly resulted in the permanent loss of my important data.&lt;/p&gt;
-&lt;p&gt;Issue Description: Historically, files deleted via command line (rm -rf) or third-party tools (like Alfred&amp;rsquo;s &amp;ldquo;Empty Trash&amp;rdquo;) would still be retained in the &amp;ldquo;Recently Deleted&amp;rdquo; folder on iCloud.com for 30 days. This served as a critical safety net.&lt;/p&gt;</description></item><item><title>为什么 vscode-go 无法正确处理嵌套子测试</title><link>/blog/2026-03-26-vscode-go-nested-subtests/</link><pubDate>Thu, 26 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-26-vscode-go-nested-subtests/</guid><description>&lt;h2 id="问题描述"&gt;问题描述 &lt;a href="#%e9%97%ae%e9%a2%98%e6%8f%8f%e8%bf%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Issue Description: Historically, files deleted via command line (rm -rf) or third-party tools (like Alfred&amp;rsquo;s &amp;ldquo;Empty Trash&amp;rdquo;) would still be retained in the &amp;ldquo;Recently Deleted&amp;rdquo; folder on iCloud.com for 30 days. This served as a critical safety net.&lt;/p&gt;</description></item><item><title>游戏中的水体模拟：从 FFT 海洋到超写实渲染</title><link>/blog/water-simulation-fft-ocean/</link><pubDate>Wed, 01 Apr 2026 00:00:00 +0800</pubDate><guid>/blog/water-simulation-fft-ocean/</guid><description>&lt;p&gt;水体模拟是游戏渲染中极具挑战的课题。从广阔海洋到涓涓细流，不同尺度的水体需要不同的技术方案。本文从 FFT 海洋模拟入手，逐步展开到多扰动叠加和超写实渲染的挑战。&lt;/p&gt;
+&lt;h2 id="1-fft-海洋模拟原理"&gt;1. FFT 海洋模拟原理 &lt;a href="#1-fft-%e6%b5%b7%e6%b4%8b%e6%a8%a1%e6%8b%9f%e5%8e%9f%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="11-为什么需要-fft"&gt;1.1 为什么需要 FFT？ &lt;a href="#11-%e4%b8%ba%e4%bb%80%e4%b9%88%e9%9c%80%e8%a6%81-fft" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;真实的海面看起来杂乱无章：大浪、小浪、不同方向的波、风吹过的涟漪……如果用最笨的方法——一个一个正弦波去叠加（即 Gerstner 波），电脑要算成千上万个波在每个点的高度，非常慢，游戏根本跑不动。&lt;/p&gt;
+&lt;p&gt;**FFT（Fast Fourier Transform，快速傅里叶变换）**就像一个&amp;quot;魔法转换器&amp;quot;，能高效处理这种&amp;quot;很多波叠加在一起&amp;quot;的复杂情况。它让电脑能用合理的计算量，实时生成看起来自然、随机的海浪。&lt;/p&gt;
+&lt;p&gt;这个方法最早在电影里流行（比如《泰坦尼克号》、《水世界》里的海面特效），后来被游戏引擎（如 Unity、Unreal Engine）广泛采用。&lt;/p&gt;
+&lt;h3 id="12-工作流程"&gt;1.2 工作流程 &lt;a href="#12-%e5%b7%a5%e4%bd%9c%e6%b5%81%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;想象海面是一个大网格（很多小方格组成的平面），我们需要知道每个小方格在某个时刻&amp;quot;高多少&amp;quot;。FFT 方法的典型流程如下：&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;第一步：用&amp;quot;频谱&amp;quot;描述波浪的特点。&lt;/strong&gt; 不是直接画波浪，而是先在&amp;quot;频率世界&amp;quot;里描述：哪些方向的风会产生什么样的大浪、小浪？波浪的能量分布是怎样的？（参考真实海洋统计数据，比如 Phillips 频谱或 JONSWAP 谱。）这就像给海面准备一张&amp;quot;配方&amp;quot;：告诉电脑&amp;quot;要有一些长波大浪 + 一些短波碎浪 + 随机相位（让它看起来不规则）&amp;quot;。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;第二步：FFT 魔法转换。&lt;/strong&gt; FFT（实际常用它的逆变换 IFFT）把这个&amp;quot;频率描述&amp;quot;快速转换成空间里的实际高度图（heightmap）。高度图就像一张黑白照片：白色部分是波峰（水面高），黑色是波谷（水面低）。电脑不是逐个算正弦波，而是通过 FFT 一次性高效算出所有波的叠加结果。一个 512×512 或 1024×1024 的 FFT 网格就能叠加数千个波，性能远超逐波叠加。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;第三步：生成更多效果。&lt;/strong&gt; 从高度图还能快速算出法线图（告诉光线&amp;quot;这个表面朝哪个方向倾斜&amp;quot;，让水面看起来有光泽和起伏）、泡沫/白浪（波峰太陡的地方自动生成白色泡沫）、以及位移（displacement，让网格顶点真的上下移动，做出真实的波浪形状）。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;第四步：渲染。&lt;/strong&gt; 把这个动态变化的高度图应用到水面网格上，加上反射（天空、周围景物）、折射（水下模糊）、颜色衰减等，就成了我们看到的漂亮海面。整个过程可以随时间更新，让海浪&amp;quot;流动&amp;quot;起来，还能受风向、风速等参数控制。&lt;/p&gt;
+&lt;h3 id="13-优缺点"&gt;1.3 优缺点 &lt;a href="#13-%e4%bc%98%e7%bc%ba%e7%82%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;优点：&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;真实感强&lt;/strong&gt;：波浪自然、不重复，看起来像真实海洋统计模型。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;效率高&lt;/strong&gt;：FFT 算法很聪明，计算速度快，能在游戏中实时运行（尤其用 GPU 加速）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;可控&lt;/strong&gt;：可以调节风力、浪高、波长等参数，做出平静湖面到狂风暴雨的不同效果。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;可平铺&lt;/strong&gt;：生成的波浪可以无缝重复覆盖很大一片海域，不会明显看出接缝。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;局限性：&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;计算量还是比&amp;quot;平面水&amp;quot;大，所以通常只用在重要的大水面场景，小池塘可能用更简单方法。&lt;/li&gt;
+&lt;li&gt;它主要模拟表面波浪形状，不直接处理水流、物体交互（船只晃动、水花飞溅等），那些往往需要额外技术配合。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="2-进阶多扰动叠加"&gt;2. 进阶：多扰动叠加 &lt;a href="#2-%e8%bf%9b%e9%98%b6%e5%a4%9a%e6%89%b0%e5%8a%a8%e5%8f%a0%e5%8a%a0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;真实海洋不是单一方向的风吹出来的。多风向交汇、局部龙卷风、洋流等复杂扰动，能否在 FFT 框架内模拟？答案是&lt;strong&gt;大部分可以&lt;/strong&gt;。&lt;/p&gt;</description></item><item><title>为什么 vscode-go 无法正确处理嵌套子测试</title><link>/blog/2026-03-26-vscode-go-nested-subtests/</link><pubDate>Thu, 26 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-26-vscode-go-nested-subtests/</guid><description>&lt;h2 id="问题描述"&gt;问题描述 &lt;a href="#%e9%97%ae%e9%a2%98%e6%8f%8f%e8%bf%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;Go 测试文件中，常用 &lt;code&gt;t.Run&lt;/code&gt; 来组织子测试。vscode-go 的 CodeLens 功能会为每个 &lt;code&gt;t.Run&lt;/code&gt; 生成对应的 &lt;code&gt;go test -run&lt;/code&gt; 命令。但当嵌套超过 2 层时，生成的命令是错误的：&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;strong&gt;实际生成&lt;/strong&gt;：&lt;code&gt;go test -run=^TestXXX$/^t2$&lt;/code&gt;&lt;/li&gt;
@@ -2781,7 +3001,54 @@ decode → 再包装成 choices / delta 返回
 &lt;p&gt;ps: 这不是 AI 的&amp;quot;错&amp;quot;。这些问题本质上不是代码生成的问题，而是&lt;strong&gt;理解问题域&lt;/strong&gt;的问题。AI 不知道你的业务上下文、你的用户行为模式、你的运维约束——除非你用 prompt 把这些全部喂给它。但如果你能把这些全部精确地描述清楚，你实际上已经完成了软件工程中最难的部分。&lt;/p&gt;
 &lt;h2 id="修一个-bug引入两个新-bug"&gt;修一个 bug，引入两个新 bug &lt;a href="#%e4%bf%ae%e4%b8%80%e4%b8%aa-bug%e5%bc%95%e5%85%a5%e4%b8%a4%e4%b8%aa%e6%96%b0-bug" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;Vibe coding 的另一个典型陷阱是&amp;quot;让它先跑起来&amp;quot;的心态。这在小项目上没问题，但在长期维护的项目上会积累惊人的技术债务。&lt;/p&gt;
-&lt;p&gt;AI 修 bug 的方式很有意思——它倾向于&amp;quot;打补丁&amp;quot;而非&amp;quot;治根&amp;quot;。你告诉它这里有个 null pointer，它就在那里加个 nil check；你告诉它这里并发有问题，它就加个锁。至于这个 nil 是从哪里来的、为什么会有并发冲突、整个数据流是不是设计上就有问题——它不关心。它只解决你描述的那个症状。&lt;/p&gt;</description></item><item><title>从 AI Assist 到 AI First：可验证循环驱动的范式升级</title><link>/blog/2026-03-12-ai-assist-to-ai-first/</link><pubDate>Thu, 12 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-12-ai-assist-to-ai-first/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;AI 修 bug 的方式很有意思——它倾向于&amp;quot;打补丁&amp;quot;而非&amp;quot;治根&amp;quot;。你告诉它这里有个 null pointer，它就在那里加个 nil check；你告诉它这里并发有问题，它就加个锁。至于这个 nil 是从哪里来的、为什么会有并发冲突、整个数据流是不是设计上就有问题——它不关心。它只解决你描述的那个症状。&lt;/p&gt;</description></item><item><title>软件工程设计知识体系（Mindmap式结构）</title><link>/blog/2026-03-14-%E8%BD%AF%E4%BB%B6%E5%B7%A5%E7%A8%8B_%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E4%B8%80%E8%A7%88%E8%A1%A8/</link><pubDate>Sat, 14 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-14-%E8%BD%AF%E4%BB%B6%E5%B7%A5%E7%A8%8B_%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E4%B8%80%E8%A7%88%E8%A1%A8/</guid><description>&lt;p&gt;&lt;strong&gt;软件工程设计知识体系（Mindmap式结构）&lt;/strong&gt;&lt;br&gt;
+由大到小、由浅入深、从理念到落地，全链路梳理，便于你层层掌握。&lt;br&gt;
+结构采用&lt;strong&gt;树状层级&lt;/strong&gt;（主干 → 分支 → 叶子），每层都附带：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;理念&lt;/strong&gt;（为什么重要）&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;核心内容&lt;/strong&gt;（是什么）&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;落地实践&lt;/strong&gt;（怎么用 + 示例）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h3 id="根节点软件工程设计体系"&gt;&lt;strong&gt;根节点：软件工程设计体系&lt;/strong&gt; &lt;a href="#%e6%a0%b9%e8%8a%82%e7%82%b9%e8%bd%af%e4%bb%b6%e5%b7%a5%e7%a8%8b%e8%ae%be%e8%ae%a1%e4%bd%93%e7%b3%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;理念&lt;/strong&gt;：从&amp;quot;为什么要做设计&amp;quot;到&amp;quot;如何高效、可维护、可扩展地实现&amp;quot;。&lt;br&gt;
+所有分支都相互支撑：&lt;strong&gt;原则&lt;/strong&gt;是灵魂 → &lt;strong&gt;方法论&lt;/strong&gt;是流程 → &lt;strong&gt;架构&lt;/strong&gt;是骨架 → &lt;strong&gt;模式&lt;/strong&gt;是肌肉 → &lt;strong&gt;实践&lt;/strong&gt;是落地工具。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h3 id="1-核心设计原则principles-理念层最顶层指导"&gt;&lt;strong&gt;1. 核心设计原则（Principles）—— 理念层（最顶层指导）&lt;/strong&gt; &lt;a href="#1-%e6%a0%b8%e5%bf%83%e8%ae%be%e8%ae%a1%e5%8e%9f%e5%88%99principles-%e7%90%86%e5%bf%b5%e5%b1%82%e6%9c%80%e9%a1%b6%e5%b1%82%e6%8c%87%e5%af%bc" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;理念：任何设计决策都必须遵守这些&amp;quot;普适真理&amp;quot;，否则后续一切都会崩盘。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;SOLID 原则（面向对象核心）&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;S&lt;/strong&gt; 单一职责原则（Single Responsibility）&lt;br&gt;
+理念：一个类/模块只做一件事&lt;br&gt;
+落地：用户服务不要同时管支付和订单 → 分拆成 UserService + OrderService&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;O&lt;/strong&gt; 开闭原则（Open-Closed）&lt;br&gt;
+理念：对扩展开放，对修改关闭&lt;br&gt;
+落地：用策略模式/插件机制，而不是if-else改源码&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;L&lt;/strong&gt; 里氏替换原则（Liskov Substitution）&lt;br&gt;
+理念：子类必须能完全替代父类&lt;br&gt;
+落地：继承时不要破坏父类契约（避免&amp;quot;正方形不是长方形&amp;quot;陷阱）&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;I&lt;/strong&gt; 接口隔离原则（Interface Segregation）&lt;br&gt;
+理念：接口要小而专，不要胖接口&lt;br&gt;
+落地：一个大接口拆成 IUser、IPayment、IOrder&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;D&lt;/strong&gt; 依赖倒置原则（Dependency Inversion）&lt;br&gt;
+理念：高层模块不依赖底层细节，都依赖抽象&lt;br&gt;
+落地：用接口/抽象类注入，而不是new ConcreteClass()&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;其他普适原则&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;DRY（Don&amp;rsquo;t Repeat Yourself）→ 提取公共方法/组件&lt;/li&gt;
+&lt;li&gt;KISS（Keep It Simple, Stupid）→ 能用if就不要用设计模式&lt;/li&gt;
+&lt;li&gt;YAGNI（You Aren&amp;rsquo;t Gonna Need It）→ 不要提前写&amp;quot;未来可能用&amp;quot;的代码&lt;/li&gt;
+&lt;li&gt;迪米特法则（Law of Demeter）→ 只和朋友说话（减少耦合）&lt;/li&gt;
+&lt;li&gt;最小惊讶原则（Principle of Least Surprise）→ API行为要符合直觉&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;掌握技巧&lt;/strong&gt;：每写一行代码前问自己：&amp;ldquo;违背了哪条原则？&amp;rdquo;&lt;/p&gt;</description></item><item><title>从 AI Assist 到 AI First：可验证循环驱动的范式升级</title><link>/blog/2026-03-12-ai-assist-to-ai-first/</link><pubDate>Thu, 12 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-12-ai-assist-to-ai-first/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;过去一年多，AI coding 工具的能力提升是肉眼可见的。从最早的代码补全，到现在的 Agent 自主写代码、修 bug、做重构——工具越来越强，写代码越来越快。但如果只停留在&amp;quot;用 AI 写得快&amp;quot;这个层面，团队很快就会撞上一堵墙：&lt;strong&gt;代码量膨胀了，质量却没有跟上&lt;/strong&gt;。&lt;/p&gt;
 &lt;p&gt;我一直在思考一个问题：同样是使用 AI coding 工具，为什么有些团队的体验是&amp;quot;AI 帮我们写了很多代码，但也制造了更多 bug&amp;quot;，而另一些团队却能做到&amp;quot;AI 帮我们既提效又提质&amp;quot;？&lt;/p&gt;
 &lt;p&gt;答案在于一个被很多人忽视的东西：&lt;strong&gt;可验证循环（verifiable loop）&lt;/strong&gt;。&lt;/p&gt;
@@ -3637,7 +3904,42 @@ once sync.Once
 &lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
-&lt;p&gt;在绝大多数典型场景中，你都会看到 &lt;code&gt;sync.Once&lt;/code&gt; 作为值嵌入。&lt;/p&gt;</description></item><item><title>云计算领域速查手册</title><link>/blog/2025-12-25-cloud-computing-cheatsheet/</link><pubDate>Thu, 25 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-25-cloud-computing-cheatsheet/</guid><description>&lt;h1 id="云计算领域速查手册"&gt;云计算领域速查手册 &lt;a href="#%e4%ba%91%e8%ae%a1%e7%ae%97%e9%a2%86%e5%9f%9f%e9%80%9f%e6%9f%a5%e6%89%8b%e5%86%8c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在绝大多数典型场景中，你都会看到 &lt;code&gt;sync.Once&lt;/code&gt; 作为值嵌入。&lt;/p&gt;</description></item><item><title>CoD Matchmaking Intel 系列解读：Ping、SBMM与回退机制</title><link>/blog/fps%E5%8C%B9%E9%85%8D_cod%E5%8C%B9%E9%85%8D%E6%96%B9%E6%A1%88/</link><pubDate>Thu, 25 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/fps%E5%8C%B9%E9%85%8D_cod%E5%8C%B9%E9%85%8D%E6%96%B9%E6%A1%88/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;2024 年以前，CoD 的匹配系统对玩家来说基本是黑盒。社区对 SBMM（Skill-Based Matchmaking）的争议从来没停过——有人说匹配太卷，休闲局打得像排位；有人说没 SBMM 会被炸鱼。双方都没数据，纯靠体感吵架。&lt;/p&gt;
+&lt;p&gt;2024 年 1 月，Activision 突然开始发技术博客了，系列名叫 &lt;strong&gt;Matchmaking Intel&lt;/strong&gt;，到年底发了四篇。这在 AAA 游戏圈挺少见——匹配算法的细节通常算核心机密，公开意味着要么足够自信，要么社区压力实在太大。我更倾向于后者，但不管动机如何，公开的内容对做游戏后端的人来说很有参考价值。&lt;/p&gt;
+&lt;h1 id="四篇白皮书串读"&gt;四篇白皮书串读 &lt;a href="#%e5%9b%9b%e7%af%87%e7%99%bd%e7%9a%ae%e4%b9%a6%e4%b8%b2%e8%af%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="第一篇概览ping-is-king"&gt;第一篇：概览——&amp;ldquo;Ping is King&amp;rdquo; &lt;a href="#%e7%ac%ac%e4%b8%80%e7%af%87%e6%a6%82%e8%a7%88ping-is-king" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;2024 年 1 月的开篇 &lt;a href="https://www.callofduty.com/blog/2024/01/call-of-duty-update-an-Inside-look-at-matchmaking"&gt;An Inside Look at Matchmaking&lt;/a&gt; 先定了个调：&lt;strong&gt;连接速度（Ping）是第一优先级&lt;/strong&gt;。原话是 &amp;ldquo;Ping is King&amp;rdquo;。这很好理解——FPS 对延迟敏感，匹配再公平，顶着 150ms 延迟打也没意义。&lt;/p&gt;
+&lt;p&gt;官方列了匹配系统考虑的八大因素，优先级从高到低大致是：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;连接质量（Ping / Delta Ping）&lt;/li&gt;
+&lt;li&gt;匹配时间&lt;/li&gt;
+&lt;li&gt;地图和模式多样性&lt;/li&gt;
+&lt;li&gt;技能水平&lt;/li&gt;
+&lt;li&gt;输入设备（手柄 / 键鼠）&lt;/li&gt;
+&lt;li&gt;平台（PC / 主机）&lt;/li&gt;
+&lt;li&gt;语音聊天偏好&lt;/li&gt;
+&lt;li&gt;队伍规模&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;这里面最受关注的是&lt;strong&gt;第 8 项到第 4 项之间的落差&lt;/strong&gt;：从一致性角度看，输入设备和平台差异对公平性的影响不亚于技能差距，但官方把它们排在技能之后。换句话说，键鼠 PC 玩家匹配到手柄主机玩家的优先级，低于 SBMM 的优先级。这是设计选择，不是 bug。&lt;/p&gt;
+&lt;p&gt;文章还明确澄清了匹配系统&lt;strong&gt;不考虑&lt;/strong&gt;以下因素：消费金额、内容创作者身份、主播标记。这几条是社区长期流传的阴谋论，官方直接否了。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;ps:&lt;/code&gt; 社区对&amp;quot;消费金额影响匹配&amp;quot;的怀疑来自 EA 的一项专利，专利确实描述了根据消费行为调整匹配的算法。EA 后来声明未实装，但 CoD 显然不想沾这个边。&lt;/p&gt;</description></item><item><title>FPS 匹配系统设计：从 ELO 到行为分，多因素如何平衡</title><link>/blog/fps%E5%8C%B9%E9%85%8D_%E5%8C%B9%E9%85%8D%E7%AD%96%E7%95%A5%E8%80%83%E8%99%91%E5%9B%A0%E7%B4%A0/</link><pubDate>Thu, 25 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/fps%E5%8C%B9%E9%85%8D_%E5%8C%B9%E9%85%8D%E7%AD%96%E7%95%A5%E8%80%83%E8%99%91%E5%9B%A0%E7%B4%A0/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;做 FPS 的匹配系统，表面看是把一群人凑到一起开一局。实际上是在多个互相矛盾的目标之间做折中：延迟要低、技能要对等、不能等太久、别把喷子和正常玩家混在一起。每个因素单独看都有道理，但堆在一起就会互相打架。&lt;/p&gt;
+&lt;p&gt;这篇文章把 FPS 匹配系统的主要因素逐个拆一遍——它们分别解决什么问题、和哪些因素冲突、以及常见的取舍策略。&lt;/p&gt;
+&lt;h1 id="核心因素"&gt;核心因素 &lt;a href="#%e6%a0%b8%e5%bf%83%e5%9b%a0%e7%b4%a0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="技能匹配sbmm"&gt;技能匹配（SBMM） &lt;a href="#%e6%8a%80%e8%83%bd%e5%8c%b9%e9%85%8dsbmm" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;技能匹配是整个系统里争议最大、也最关键的模块。底层通常是一个评分系统——&lt;strong&gt;Elo&lt;/strong&gt;、&lt;strong&gt;Glicko&lt;/strong&gt;、&lt;strong&gt;TrueSkill&lt;/strong&gt;，或者各家自研的 &lt;strong&gt;MMR&lt;/strong&gt;（Matchmaking Rating）。&lt;/p&gt;
+&lt;p&gt;核心逻辑不复杂：每个玩家有一个隐藏分，赢了加分、输了扣分，加减幅度取决于对手的评分——赢比自己分高的加得多，输给比自己分低的扣得多。系统在匹配时把评分接近的玩家凑到一起，保证对局不会一边倒。&lt;/p&gt;
+&lt;p&gt;问题出在&amp;quot;评分接近&amp;quot;这个约束有多紧。约束太紧，匹配时间拉长，玩家等着不耐烦。约束太松，高低分段混在一起，低分段玩家体验极差——这也是 SBMM 被社区诟病最多的地方：&lt;strong&gt;不是 SBMM 本身有问题，是约束收紧的程度和社区的期望对不上。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;ps:&lt;/code&gt; Microsoft 的 TrueSkill 在 Halo 和 Gears of War 系列中大规模使用，它基于贝叶斯推断，除了技能均值还维护一个不确定性参数。新手的不确定性高，分数变化快；老玩家的不确定性低，分数趋于稳定。这个设计比纯 Elo 更适合有大量新玩家的 FPS。&lt;/p&gt;
+&lt;h2 id="延迟与地理位置"&gt;延迟与地理位置 &lt;a href="#%e5%bb%b6%e8%bf%9f%e4%b8%8e%e5%9c%b0%e7%90%86%e4%bd%8d%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;FPS 对延迟的容忍度比其他游戏类型低得多。MOBA 几十毫秒延迟还能操作，FPS 里 50ms 以上的延迟就能体感到&amp;quot;明明瞄中了但没判定&amp;quot;。&lt;/p&gt;
+&lt;p&gt;所以匹配系统的第一步通常是&lt;strong&gt;圈定延迟范围&lt;/strong&gt;——只在玩家能接受的延迟区间内搜索对手。做法上一般是维护一个数据中心列表，玩家先连到最近的测速节点，系统得到一个延迟矩阵，然后匹配时优先选延迟最低的数据中心。&lt;/p&gt;
+&lt;p&gt;和技能匹配的冲突在于：高分段玩家本来就少，再圈上严格的延迟范围，匹配池会急剧缩小。常见的折中是 &lt;strong&gt;Delta Ping&lt;/strong&gt; 策略：允许匹配到次优数据中心，但延迟增量控制在可接受范围内（比如不超过 15ms）。CoD 的 &amp;ldquo;Ping is King&amp;rdquo; 思路就是把这个优先级写死——先保延迟，再谈公平。&lt;/p&gt;
+&lt;h2 id="组队与队伍平衡"&gt;组队与队伍平衡 &lt;a href="#%e7%bb%84%e9%98%9f%e4%b8%8e%e9%98%9f%e4%bc%8d%e5%b9%b3%e8%a1%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;组队匹配比单人匹配多一层复杂度：系统不仅要给队伍找对手，还要在&lt;strong&gt;队伍内部&lt;/strong&gt;做平衡。&lt;/p&gt;
+&lt;p&gt;典型的做法是取队伍的&lt;strong&gt;加权平均 MMR&lt;/strong&gt;（高分段玩家权重更高，防止&amp;quot;带老板&amp;quot;——一个高分段拖几个低分段小号拉低平均分）。对方队伍也按同样逻辑匹配，保证两队平均分相当。&lt;/p&gt;
+&lt;p&gt;队伍平衡（Team Balancing）是另一层：匹配完成后，把 10 个玩家分成两个 5 人队。目标不是让两队平均分相等，而是让双方的&lt;strong&gt;战力分布&lt;/strong&gt;接近——比如两边各放一个高分段带四个中分段，而不是把所有高分段堆在一边。Valorant 和 Overwatch 的 MMR 系统在这方面做得比较细。&lt;/p&gt;</description></item><item><title>云计算领域速查手册</title><link>/blog/2025-12-25-cloud-computing-cheatsheet/</link><pubDate>Thu, 25 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-25-cloud-computing-cheatsheet/</guid><description>&lt;h1 id="云计算领域速查手册"&gt;云计算领域速查手册 &lt;a href="#%e4%ba%91%e8%ae%a1%e7%ae%97%e9%a2%86%e5%9f%9f%e9%80%9f%e6%9f%a5%e6%89%8b%e5%86%8c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;面向架构师的结构化参考，覆盖从虚拟化到云原生的核心技术概念、对比与选型决策。&lt;/p&gt;
 &lt;hr&gt;
 &lt;h2 id="1-概念层次与演进关系"&gt;1. 概念层次与演进关系 &lt;a href="#1-%e6%a6%82%e5%bf%b5%e5%b1%82%e6%ac%a1%e4%b8%8e%e6%bc%94%e8%bf%9b%e5%85%b3%e7%b3%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
@@ -3735,7 +4037,21 @@ once sync.Once
 │ └─ 不需要 → PaaS（Heroku/OpenShift）
 └─ 否 → 事件驱动/短期任务？ → FaaS（Lambda）
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;&lt;strong&gt;关键权衡：控制力 vs 运维负担&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>虚拟化、云计算与云原生的关系与演进</title><link>/blog/2025-12-25-cloud-computing-evolution/</link><pubDate>Thu, 25 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-25-cloud-computing-evolution/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;strong&gt;关键权衡：控制力 vs 运维负担&lt;/strong&gt;&lt;/p&gt;</description></item><item><title>使命召唤DS负载均衡：遥测、Delta Ping与一致性哈希</title><link>/blog/ds%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1_cod%E6%88%98%E6%96%97%E6%9C%8D%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1/</link><pubDate>Thu, 25 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/ds%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1_cod%E6%88%98%E6%96%97%E6%9C%8D%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;大型 FPS 的后端架构里，最吃资源的就是 DS（Dedicated Server）。每个对局跑在一个 DS 实例上，模拟枪线、弹道、物理、AI 全部在服务端计算。玩家量一大，DS 集群的负载调度就成了核心问题——调度不好，要么浪费机器，要么玩家顶着高延迟进对局。&lt;/p&gt;
+&lt;p&gt;CoD 的 DS 基础设施是 Activision 和 Demonware 一起维护的，跑在 AWS / Google Cloud / Azure 混合云上。这篇文章拆一下他们怎么检测 DS 负载、怎么做跨数据中心调度。&lt;/p&gt;
+&lt;h1 id="ds-负载检测遥测健康检查一致性哈希"&gt;DS 负载检测：遥测、健康检查、一致性哈希 &lt;a href="#ds-%e8%b4%9f%e8%bd%bd%e6%a3%80%e6%b5%8b%e9%81%a5%e6%b5%8b%e5%81%a5%e5%ba%b7%e6%a3%80%e6%9f%a5%e4%b8%80%e8%87%b4%e6%80%a7%e5%93%88%e5%b8%8c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;h2 id="遥测上报"&gt;遥测上报 &lt;a href="#%e9%81%a5%e6%b5%8b%e4%b8%8a%e6%8a%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;每个 DS 实例持续向中心管理系统（Demonware 维护）上报三类指标：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;CPU 使用率&lt;/strong&gt;：对局内的物理模拟、命中检测都是 CPU 密集型，CPU 是最直接的饱和度信号。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;RAM 利用率&lt;/strong&gt;：地图资源、玩家状态、对局上下文都在内存里，内存不够就直接 OOM。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;网络吞吐量&lt;/strong&gt;：每个 tick 要向所有玩家同步状态，64 人对局的包量不小。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些数据实时汇聚到中心系统，作为调度决策的输入。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;ps:&lt;/code&gt; 具体采集粒度没公开，但按 FPS 的 tick rate（通常 20Hz–60Hz）推测，负载采样间隔应该在秒级，不会逐 tick 上报——那会把管理通道打满。&lt;/p&gt;
+&lt;h2 id="健康检查"&gt;健康检查 &lt;a href="#%e5%81%a5%e5%ba%b7%e6%a3%80%e6%9f%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;负载均衡器对每个 DS 的应用端口做周期性健康检查。和普通 Web 服务的健康检查逻辑差不多，但阈值更保守：服务器容量超过 &lt;strong&gt;90%&lt;/strong&gt; 就标记为 &lt;code&gt;busy&lt;/code&gt;，不再分配新对局；彻底不响应则标记 &lt;code&gt;down&lt;/code&gt;，从调度池中摘除。&lt;/p&gt;</description></item><item><title>虚拟化、云计算与云原生的关系与演进</title><link>/blog/2025-12-25-cloud-computing-evolution/</link><pubDate>Thu, 25 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-25-cloud-computing-evolution/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;&amp;ldquo;虚拟化&amp;quot;&amp;ldquo;云计算&amp;quot;&amp;ldquo;云原生&amp;quot;这三个词在日常技术讨论中频繁出现，但很多初学者甚至有一定经验的工程师也未必能说清楚它们之间的区别和联系。本文用一组类比和分层解析，帮你理清这三者各自解决什么问题、彼此是什么关系、以及整个技术栈的演进脉络。&lt;/p&gt;
 &lt;h1 id="一个比喻理解三者关系"&gt;一个比喻：理解三者关系 &lt;a href="#%e4%b8%80%e4%b8%aa%e6%af%94%e5%96%bb%e7%90%86%e8%a7%a3%e4%b8%89%e8%80%85%e5%85%b3%e7%b3%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;我们先来看一个生活中的类比。&lt;/p&gt;
@@ -3809,7 +4125,7 @@ once sync.Once
 &lt;li&gt;&lt;strong&gt;商业模式与平台化&lt;/strong&gt;：在虚拟化等技术基础上，发展出云计算的商业模式和服务模型（IaaS/PaaS/SaaS），将计算资源变成了像水电一样可售卖的服务&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;应用架构进化&lt;/strong&gt;：为了充分利用云计算的弹性、敏捷性优势，催生了云原生的架构思想和技术栈。它推动应用从&amp;quot;为传统数据中心设计&amp;quot;转向&amp;quot;为云环境而设计&amp;rdquo;&lt;/li&gt;
 &lt;/ol&gt;
-&lt;p&gt;三者关系总结：&lt;/p&gt;</description></item><item><title>Split Lock (2): 是什么以及如何避免</title><link>/blog/splitlock.p2.%E6%98%AF%E4%BB%80%E4%B9%88%E4%BB%A5%E5%8F%8A%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3%E6%88%96%E9%81%BF%E5%85%8D/</link><pubDate>Mon, 22 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/splitlock.p2.%E6%98%AF%E4%BB%80%E4%B9%88%E4%BB%A5%E5%8F%8A%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3%E6%88%96%E9%81%BF%E5%85%8D/</guid><description>&lt;p&gt;那天业务告警响了：服务延迟飙高，吞吐量断崖式下跌。&lt;/p&gt;
+&lt;p&gt;三者关系总结：&lt;/p&gt;</description></item><item><title>kvm(2): splitlock有什么危害，如何避免</title><link>/blog/kvm_splitlock%E6%9C%89%E4%BB%80%E4%B9%88%E5%8D%B1%E5%AE%B3%E5%A6%82%E4%BD%95%E9%81%BF%E5%85%8D/</link><pubDate>Mon, 22 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/kvm_splitlock%E6%9C%89%E4%BB%80%E4%B9%88%E5%8D%B1%E5%AE%B3%E5%A6%82%E4%BD%95%E9%81%BF%E5%85%8D/</guid><description>&lt;p&gt;那天业务告警响了：服务延迟飙高，吞吐量断崖式下跌。&lt;/p&gt;
 &lt;p&gt;打开监控一看，CPU 使用率瞬间拉满。再看 atop，CPU 飙高的同时，IRQ（硬中断）处理量也同步暴增——两者的曲线几乎完全吻合。第一反应是网卡中断风暴或者定时器异常，但仔细看了中断分布，并没有哪个设备的中断计数特别高。问题出在别的地方。&lt;/p&gt;
 &lt;p&gt;后来才了解到，我们业务所在母机上的&lt;strong&gt;另一台子机&lt;/strong&gt;存在严重的 Split Lock 问题——那台问题子机持续触发总线锁，把母机 CPU 资源拖垮了。母机调度器在资源争抢之下，很长一段时间没调度到我们的子机，等到终于调度上时，积压的中断一次性涌入，触发了所谓的&amp;quot;IRQ catchup&amp;quot;。表现出来的就是我们的子机上 CPU 和 IRQ 同时飙升。&lt;/p&gt;
 &lt;p&gt;所以这次事件的根因不是 IRQ catchup 本身——它只是&amp;quot;果&amp;quot;——真正的&amp;quot;因&amp;quot;是同一母机上那台问题子机的 Split Lock，持续消耗物理 CPU 资源，间接把我们的子机也拖下了水。&lt;/p&gt;
@@ -3823,7 +4139,7 @@ once sync.Once
 &lt;li&gt;内存未对齐，比如在一个非 4 字节对齐的地址上做 &lt;code&gt;lock cmpxchg&lt;/code&gt;&lt;/li&gt;
 &lt;li&gt;编译器或运行时没有做 cache line padding&lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;ps: Cache Line 在 x86 上通常是 64 字节。一个 8 字节的原子变量如果起始地址是 60（mod 64），就会跨越两个 Cache Line，触发 Split Lock。&lt;/p&gt;</description></item><item><title>Split Lock (1)：一次子机 CPU 飙升的线上排查</title><link>/blog/splitlock.p1.%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8cpu%E5%8D%A0%E7%94%A8358/</link><pubDate>Fri, 19 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/splitlock.p1.%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8cpu%E5%8D%A0%E7%94%A8358/</guid><description>&lt;h2 id="背景虚拟化缺陷导致业务cpu告警"&gt;背景：虚拟化缺陷导致业务CPU告警 &lt;a href="#%e8%83%8c%e6%99%af%e8%99%9a%e6%8b%9f%e5%8c%96%e7%bc%ba%e9%99%b7%e5%af%bc%e8%87%b4%e4%b8%9a%e5%8a%a1cpu%e5%91%8a%e8%ad%a6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;ps: Cache Line 在 x86 上通常是 64 字节。一个 8 字节的原子变量如果起始地址是 60（mod 64），就会跨越两个 Cache Line，触发 Split Lock。&lt;/p&gt;</description></item><item><title>kvm(1)：子机 CPU 飙升，吞吐量斩掉一半</title><link>/blog/kvm_cpu%E4%BD%BF%E7%94%A8%E7%8E%87%E7%AA%81%E5%A2%9E%E4%B8%9A%E5%8A%A1%E5%90%9E%E5%90%90%E6%96%A9%E5%8D%8A/</link><pubDate>Fri, 19 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/kvm_cpu%E4%BD%BF%E7%94%A8%E7%8E%87%E7%AA%81%E5%A2%9E%E4%B8%9A%E5%8A%A1%E5%90%9E%E5%90%90%E6%96%A9%E5%8D%8A/</guid><description>&lt;h2 id="背景虚拟化缺陷导致业务cpu告警"&gt;背景：虚拟化缺陷导致业务CPU告警 &lt;a href="#%e8%83%8c%e6%99%af%e8%99%9a%e6%8b%9f%e5%8c%96%e7%bc%ba%e9%99%b7%e5%af%bc%e8%87%b4%e4%b8%9a%e5%8a%a1cpu%e5%91%8a%e8%ad%a6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;有一天突然收到了运维侧的告警：机器CPU使用率持续上升，造成现网请求异常。&lt;/p&gt;
 &lt;p&gt;最开始，怀疑业务侧出了什么问题，先排查业务自身有没有问题：&lt;/p&gt;
 &lt;ol&gt;
@@ -3854,11 +4170,11 @@ atop日志是分钟级粒度的，被平均后可能异常被抹平了，如CPU�
 &lt;/li&gt;
 &lt;li&gt;
 &lt;p&gt;&lt;strong&gt;线索2（母机CPU负载）：从运维监控系统来看，这台子机所在 母机 的5min平均负载从40%上升到了120%&lt;/strong&gt;；然后看1min平均负载，瞬时峰值涨40%涨到了150%。注意是128c未归一化的，这台母机上有多个业务的子机。so，这里的百分比数值没有除以128c，整体来看，除一下，母机问题不大，可能个别核心会比较高点。but，也确定不了当时我们业务子机跑在哪几个核心上吧，所以应该只能参考母机平均负载。ok，至少母机整体来看问题不大。
-&lt;img src="assets/2025-12-22-splitlock_1_%E5%8E%8B%E5%9E%AE%E6%AF%8D%E6%9C%BA/1785145807250.png" alt="1785145807250"&gt;&lt;/p&gt;
+&lt;img src="assets/kvm_cpu%E4%BD%BF%E7%94%A8%E7%8E%87%E7%AA%81%E5%A2%9E%E4%B8%9A%E5%8A%A1%E5%90%9E%E5%90%90%E6%96%A9%E5%8D%8A/1785145807250.png" alt="1785145807250"&gt;&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
 &lt;p&gt;&lt;strong&gt;线索3（子机内存扫描)：腾讯云侧反馈，在问题发生时间点，有一台我们的子机内存扫描次数比较多&lt;/strong&gt;，可能推高了CPU占用。
-&lt;img src="assets/2025-12-22-splitlock_1_%E5%8E%8B%E5%9E%AE%E6%AF%8D%E6%9C%BA/1785145556388.png" alt="1785145556388"&gt;内存扫描是子机内存压力大出现的一个扫描动作，&lt;code&gt;cat /proc/vmstat | grep -i pgscan_&lt;/code&gt; 统计的是这些输出的累加值增长情况，回收内存动作会影响一点的磁盘io，io打上去后影响cpu负载。&lt;/p&gt;
+&lt;img src="assets/kvm_cpu%E4%BD%BF%E7%94%A8%E7%8E%87%E7%AA%81%E5%A2%9E%E4%B8%9A%E5%8A%A1%E5%90%9E%E5%90%90%E6%96%A9%E5%8D%8A/1785145556388.png" alt="1785145556388"&gt;内存扫描是子机内存压力大出现的一个扫描动作，&lt;code&gt;cat /proc/vmstat | grep -i pgscan_&lt;/code&gt; 统计的是这些输出的累加值增长情况，回收内存动作会影响一点的磁盘io，io打上去后影响cpu负载。&lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;这台母机上实际上跑着连个我们的子机，1个跑c++写的网关和go写的业务网关，1个跑go写的其他逻辑服务。其中1台出现了大量内存扫描，CPU占用升高的问题则都存在。
 有可能，内存扫描次数增多，也只是&amp;quot;结果&amp;quot;而已，并不是&amp;quot;根本原因&amp;quot; …… 这两台机器理论上内存都有较多余量，即使其中1台内存有压力触发扫描，也不至于影响到另一台自己吧？&lt;/p&gt;
@@ -3868,19 +4184,19 @@ atop日志是分钟级粒度的，被平均后可能异常被抹平了，如CPU�
 &lt;li&gt;
 &lt;p&gt;&lt;strong&gt;线索4（查看子机st是否异常）：继续沟通让腾讯云侧检查自己st（steal time）有没有明显异常&lt;/strong&gt;
 在过去的类似问题排查中，母机出现明显调度问题时，子机的st非常明显，给看个问题示例：st 高大 10%，这表示自己调度存在非常大的延迟。
-&lt;img src="assets/2025-12-22-%E8%99%9A%E6%8B%9F%E5%8C%96%E5%9C%BA%E6%99%AF_CPU%E5%8D%A0%E7%94%A8%E9%A3%99%E5%8D%871/1785147039555.png" alt="1785147039555"&gt;
+&lt;img src="assets/kvm_cpu%E4%BD%BF%E7%94%A8%E7%8E%87%E7%AA%81%E5%A2%9E%E4%B8%9A%E5%8A%A1%E5%90%9E%E5%90%90%E6%96%A9%E5%8D%8A/1785147039555.png" alt="1785147039555"&gt;
 但是在我们这次案例中，查看到的子机的st并没有这么大，按腾讯云反馈这里虽然问题时间点处有st波动，但是st值较小，不像上面那样高大10%。
-&lt;img src="assets/2025-12-22-%E8%99%9A%E6%8B%9F%E5%8C%96%E5%9C%BA%E6%99%AF_CPU%E5%8D%A0%E7%94%A8%E9%A3%99%E5%8D%871/1785147134110.png" alt="1785147134110"&gt;&lt;/p&gt;
+&lt;img src="assets/kvm_cpu%E4%BD%BF%E7%94%A8%E7%8E%87%E7%AA%81%E5%A2%9E%E4%B8%9A%E5%8A%A1%E5%90%9E%E5%90%90%E6%96%A9%E5%8D%8A/1785147134110.png" alt="1785147134110"&gt;&lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;会不会，这里的st波动也只是一个&amp;quot;结果&amp;quot;呢，那&amp;quot;根本原因&amp;quot;是什么？是什么导致了调度出现延迟。&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;/li&gt;
 &lt;li&gt;
 &lt;p&gt;&lt;strong&gt;线索5（vpu调度抖动、子机cpu占用率抖动）：后续反馈提供了更多子机相关的信息，可以明显看到vcpu调度、cpu占用、网络IO方面存在抖动&lt;/strong&gt;
-&lt;img src="assets/2025-12-22-%E8%99%9A%E6%8B%9F%E5%8C%96%E5%9C%BA%E6%99%AF_CPU%E5%8D%A0%E7%94%A8%E9%A3%99%E5%8D%871/1785147568278.png" alt="1785147568278"&gt;
-&lt;img src="assets/2025-12-22-%E8%99%9A%E6%8B%9F%E5%8C%96%E5%9C%BA%E6%99%AF_CPU%E5%8D%A0%E7%94%A8%E9%A3%99%E5%8D%871/1785147593686.png" alt="1785147593686"&gt;
-&lt;img src="assets/2025-12-22-%E8%99%9A%E6%8B%9F%E5%8C%96%E5%9C%BA%E6%99%AF_CPU%E5%8D%A0%E7%94%A8%E9%A3%99%E5%8D%871/1785147610421.png" alt="1785147610421"&gt;
-&lt;img src="assets/2025-12-22-%E8%99%9A%E6%8B%9F%E5%8C%96%E5%9C%BA%E6%99%AF_CPU%E5%8D%A0%E7%94%A8%E9%A3%99%E5%8D%871/1785147647959.png" alt="1785147647959"&gt;&lt;/p&gt;
+&lt;img src="assets/kvm_cpu%E4%BD%BF%E7%94%A8%E7%8E%87%E7%AA%81%E5%A2%9E%E4%B8%9A%E5%8A%A1%E5%90%9E%E5%90%90%E6%96%A9%E5%8D%8A/1785147568278.png" alt="1785147568278"&gt;
+&lt;img src="assets/kvm_cpu%E4%BD%BF%E7%94%A8%E7%8E%87%E7%AA%81%E5%A2%9E%E4%B8%9A%E5%8A%A1%E5%90%9E%E5%90%90%E6%96%A9%E5%8D%8A/1785147593686.png" alt="1785147593686"&gt;
+&lt;img src="assets/kvm_cpu%E4%BD%BF%E7%94%A8%E7%8E%87%E7%AA%81%E5%A2%9E%E4%B8%9A%E5%8A%A1%E5%90%9E%E5%90%90%E6%96%A9%E5%8D%8A/1785147610421.png" alt="1785147610421"&gt;
+&lt;img src="assets/kvm_cpu%E4%BD%BF%E7%94%A8%E7%8E%87%E7%AA%81%E5%A2%9E%E4%B8%9A%E5%8A%A1%E5%90%9E%E5%90%90%E6%96%A9%E5%8D%8A/1785147647959.png" alt="1785147647959"&gt;&lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;
 &lt;p&gt;&lt;strong&gt;线索6（母机上有其它子机splitlock）：腾讯云后续反馈查到有其他子机splitlock，影响到了我们&lt;/strong&gt;
@@ -3890,8 +4206,36 @@ x86 架构下，当一条原子指令（比如 &lt;code&gt;lock cmpxchg&lt;/code
 &lt;/ul&gt;
 &lt;blockquote&gt;
 &lt;p&gt;&lt;strong&gt;🔗 系列文章&lt;/strong&gt;：Split Lock 的根因已经定位，但它如何会产生这种影响，将子机单核 CPU 占用率推高至 350% 的呢？这里有什么鬼故事？详见下面几篇：
-&lt;a href="/blog/linux/processor/splitlock.p2.%E6%98%AF%E4%BB%80%E4%B9%88%E4%BB%A5%E5%8F%8A%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3%E6%88%96%E9%81%BF%E5%85%8D.md"&gt;《Split Lock (2): 是什么以及如何避免》&lt;/a&gt;
-&lt;a href="/blog/linux/processor/splitlock.p2.%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8CPU%E5%8D%A0%E7%94%A8358%25.md"&gt;《Split Lock (3): 溯源CPU占用为何会到350%》&lt;/a&gt;。&lt;/p&gt;</description></item><item><title>goto 语句的争议与实践：问题真的出在 goto 本身吗</title><link>/blog/2025-12-18-goto-statement/</link><pubDate>Thu, 18 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-18-goto-statement/</guid><description>&lt;h2 id="目录"&gt;目录 &lt;a href="#%e7%9b%ae%e5%bd%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;a href="/blog/linux/processor/kvm_splitlock%E6%9C%89%E4%BB%80%E4%B9%88%E5%8D%B1%E5%AE%B3%E5%A6%82%E4%BD%95%E9%81%BF%E5%85%8D/"&gt;《Split Lock (2): 是什么以及如何避免》&lt;/a&gt;
+&lt;a href="/blog/linux/processor/kvm_%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8CPU%E4%BD%BF%E7%94%A8%E7%8E%87358%25%E7%9A%84%E7%9C%9F%E7%9B%B8/"&gt;《Split Lock (3): 溯源CPU占用为何会到350%》&lt;/a&gt;。&lt;/p&gt;</description></item><item><title>PKI：数字世界的信任基石</title><link>/blog/2025-12-19-pki-how-pki-works/</link><pubDate>Fri, 19 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-19-pki-how-pki-works/</guid><description>&lt;p&gt;互联网通信要安全，有三个问题必须解决：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;窃听&lt;/strong&gt;（加密）：坏人不能在中间偷看你发了什么。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;篡改&lt;/strong&gt;（完整性）：坏人不能在中途把&amp;quot;我爱你&amp;quot;改成&amp;quot;我恨你&amp;quot;。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;冒充&lt;/strong&gt;（身份验证）：你得确认对面真的是银行，而不是一个戴面具的骗子。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;对称加密能解决前两个——你和对方共享一把密钥，加密通信、用 HMAC 保证完整性。但问题卡在第三步：在互联网上，你连对方是谁都不知道，怎么安全地把这把密钥交给对方？&lt;/p&gt;
+&lt;p&gt;这就是 PKI 要解决的问题。&lt;/p&gt;
+&lt;h2 id="公钥私钥与证书"&gt;公钥、私钥与证书 &lt;a href="#%e5%85%ac%e9%92%a5%e7%a7%81%e9%92%a5%e4%b8%8e%e8%af%81%e4%b9%a6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;PKI（Public Key Infrastructure，公钥基础设施）不是某个单一技术，而是一套包含策略、机构和算法的完整体系。它的核心就三样东西：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;公钥（Public Key）&lt;/strong&gt;：一个可以公开分发的&amp;quot;锁头&amp;quot;，任何人拿到它都能加密信息。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;私钥（Private Key）&lt;/strong&gt;：由所有者秘密保管的&amp;quot;钥匙&amp;quot;，用来解密公钥加密的信息，或者对信息做数字签名。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;数字证书（Digital Certificate）&lt;/strong&gt;：你的&amp;quot;数字身份证&amp;quot;，把公钥和身份信息（域名、组织名等）绑定在一起，由权威机构做背书。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;关键点在于：公钥加密的信息只有对应私钥能解开，反过来，私钥签名的信息任何人都可以用公钥验证签名确实来自私钥持有者。非对称加密解决了密钥分发问题——你不需要安全信道来传密钥，只需要安全地获得对方的公钥。&lt;/p&gt;
+&lt;p&gt;但这里还有个问题：你怎么确定拿到的公钥真的属于 &lt;code&gt;mysite.com&lt;/code&gt;，而不是中间人伪造的？&lt;/p&gt;
+&lt;h2 id="ca-如何签发证书"&gt;CA 如何签发证书 &lt;a href="#ca-%e5%a6%82%e4%bd%95%e7%ad%be%e5%8f%91%e8%af%81%e4%b9%a6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;PKI 的信任基础是 CA（Certificate Authority，证书颁发机构）。CA 是整个体系的&amp;quot;信托机构&amp;quot;——浏览器和操作系统出厂时就预装了受信任的 CA 根证书，这就是信任锚点（Trust Anchor）。&lt;/p&gt;
+&lt;p&gt;证书签发流程：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;网站管理员在本地生成一对公钥和私钥。&lt;/li&gt;
+&lt;li&gt;把公钥和身份信息（域名、组织名等）打包成 CSR（Certificate Signing Request），发给 CA。&lt;/li&gt;
+&lt;li&gt;CA 核实申请者身份——通常是验证域名控制权（DV 证书）、组织信息（OV 证书）或更严格的扩展验证（EV 证书）。&lt;/li&gt;
+&lt;li&gt;CA 用自己的私钥对 CSR 中的公钥和身份信息做数字签名，生成 &lt;code&gt;.crt&lt;/code&gt; 证书发还给网站。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;数字签名本质上就是：CA 把证书内容做一次哈希，然后用 CA 私钥加密这个哈希值。验证时，浏览器用 CA 公钥解密签名得到哈希值 A，自己对证书内容算哈希得到 B，对比 A 和 B 是否一致。一致就说明证书没有被篡改，且确实由该 CA 签发。&lt;/p&gt;
+&lt;h2 id="https-握手信任如何落地"&gt;HTTPS 握手：信任如何落地 &lt;a href="#https-%e6%8f%a1%e6%89%8b%e4%bf%a1%e4%bb%bb%e5%a6%82%e4%bd%95%e8%90%bd%e5%9c%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;当浏览器访问 &lt;code&gt;https://mysite.com&lt;/code&gt; 时，TLS 握手在毫秒间完成以下步骤：&lt;/p&gt;</description></item><item><title>goto 语句的争议与实践：问题真的出在 goto 本身吗</title><link>/blog/2025-12-18-goto-statement/</link><pubDate>Thu, 18 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-18-goto-statement/</guid><description>&lt;h2 id="目录"&gt;目录 &lt;a href="#%e7%9b%ae%e5%bd%95" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;ol&gt;
 &lt;li&gt;&lt;a href="#%E5%BC%95%E8%A8%80"&gt;引言&lt;/a&gt;&lt;/li&gt;
 &lt;li&gt;&lt;a href="#%E5%8E%86%E5%8F%B2%E8%83%8C%E6%99%AFgoto-%E4%BA%89%E8%AE%AE%E7%9A%84%E8%B5%B7%E6%BA%90"&gt;历史背景：goto 争议的起源&lt;/a&gt;&lt;/li&gt;
@@ -3919,7 +4263,44 @@ x86 架构下，当一条原子指令（比如 &lt;code&gt;lock cmpxchg&lt;/code
 &lt;li&gt;&lt;strong&gt;程序正确性证明&lt;/strong&gt;：使用 &lt;code&gt;goto&lt;/code&gt; 的程序难以进行形式化证明&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;结构化编程&lt;/strong&gt;：程序应该由顺序、选择、循环三种基本结构组成&lt;/li&gt;
 &lt;/ol&gt;
-&lt;p&gt;Dijkstra 的论文发表后，引发了编程社区的大讨论。支持者认为：&lt;/p&gt;</description></item><item><title>GoTalk - Go Execution Tracer</title><link>/blog/2025-11-08-go_execution_tracer/</link><pubDate>Sat, 08 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/2025-11-08-go_execution_tracer/</guid><description>&lt;style&gt;
+&lt;p&gt;Dijkstra 的论文发表后，引发了编程社区的大讨论。支持者认为：&lt;/p&gt;</description></item><item><title>3D 重建技术演进：从摄影测量到 3D Gaussian Splatting</title><link>/blog/3d%E9%87%8D%E5%BB%BA-photogrammetry-nerf-3dgs/</link><pubDate>Thu, 27 Nov 2025 00:00:00 +0800</pubDate><guid>/blog/3d%E9%87%8D%E5%BB%BA-photogrammetry-nerf-3dgs/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;3D 重建——从多张二维照片还原出三维场景——是计算机视觉领域的核心问题之一。无论是游戏资产制作、高精地图测绘、数字孪生，还是最近火热的空间计算，都离不开这项技术。&lt;/p&gt;
+&lt;p&gt;过去二十年，3D 重建的技术路线发生了巨大变化：从基于几何原理的传统摄影测量，到 2020 年横空出世的 NeRF 神经辐射场，再到 2023 年席卷学界的 3D Gaussian Splatting。本文梳理这条技术演进脉络，帮助读者理解不同方案的核心思想、优劣和适用场景。&lt;/p&gt;
+&lt;h1 id="传统方法摄影测量photogrammetry"&gt;传统方法：摄影测量（Photogrammetry） &lt;a href="#%e4%bc%a0%e7%bb%9f%e6%96%b9%e6%b3%95%e6%91%84%e5%bd%b1%e6%b5%8b%e9%87%8fphotogrammetry" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;传统摄影测量的核心流程可以概括为两步：&lt;strong&gt;运动恢复结构（Structure from Motion, SfM）&lt;strong&gt;和&lt;/strong&gt;多视图立体匹配（Multi-View Stereo, MVS）&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;SfM（稀疏重建）&lt;/strong&gt;：从多张不同角度拍摄的照片中，分析相机的位置和姿态，同时生成稀疏的三维点云。这一步解决了&amp;quot;每张照片是从哪里拍的&amp;quot;这个问题。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;MVS（稠密重建）&lt;/strong&gt;：在已知相机参数的基础上，对场景进行像素级别的深度估计，生成稠密点云或三角网格模型（Mesh）。&lt;/p&gt;
+&lt;h2 id="开源工具colmap-与-meshroom"&gt;开源工具：Colmap 与 Meshroom &lt;a href="#%e5%bc%80%e6%ba%90%e5%b7%a5%e5%85%b7colmap-%e4%b8%8e-meshroom" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;a href="https://colmap.github.io/"&gt;Colmap&lt;/a&gt; 和 &lt;a href="https://alicevision.org/#meshroom"&gt;Meshroom&lt;/a&gt; 是这一领域最具代表性的开源软件。Colmap 更偏学术，提供完整的 SfM + MVS 管线，命令行友好；Meshroom 基于 AliceVision 框架，提供可视化节点编辑器，更适合艺术家和设计师使用。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;这两者过时了吗？&lt;/strong&gt; 并没有。它们在需要&lt;strong&gt;精确几何网格&lt;/strong&gt;的场景中仍然是首选——比如测绘、建筑信息建模（BIM）、游戏资产生成。但它们的局限也很明显：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;对光照变化、无纹理表面（白墙）、重复纹理（瓷砖地面）非常敏感，容易产生空洞或错误匹配；&lt;/li&gt;
+&lt;li&gt;难以处理动态物体，要求拍摄过程中场景完全静止；&lt;/li&gt;
+&lt;li&gt;计算过程通常非常耗时，大场景可能需要数小时甚至数天。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="辅助工具meshlab"&gt;辅助工具：MeshLab &lt;a href="#%e8%be%85%e5%8a%a9%e5%b7%a5%e5%85%b7meshlab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;a href="https://www.meshlab.net/"&gt;MeshLab&lt;/a&gt; 是点云和网格模型的后处理利器。Colmap 输出的 &lt;code&gt;.ply&lt;/code&gt; 点云文件通常带有大量噪点和离群点，需要在 MeshLab 中进行清理、简化、补洞、重网格化等操作。它也常用于格式转换和可视化预览。&lt;/p&gt;
+&lt;h2 id="商业方案realityscan-与-metashape"&gt;商业方案：RealityScan 与 Metashape &lt;a href="#%e5%95%86%e4%b8%9a%e6%96%b9%e6%a1%88realityscan-%e4%b8%8e-metashape" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Epic Games 的 RealityScan 和 Agisoft 的 Metashape 是商业化摄影测量软件的代表。它们将拍照、对齐、重建、纹理映射集成为一站式流程，在易用性和重建质量上做了大量工程优化，但底层原理与 Colmap/Meshroom 并无本质区别。&lt;/p&gt;
+&lt;h1 id="神经渲染的崛起nerf"&gt;神经渲染的崛起：NeRF &lt;a href="#%e7%a5%9e%e7%bb%8f%e6%b8%b2%e6%9f%93%e7%9a%84%e5%b4%9b%e8%b5%b7nerf" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;2020 年，NeRF（Neural Radiance Fields）的出现彻底改变了 3D 重建的游戏规则。&lt;/p&gt;</description></item><item><title>Docker Context：一套 CLI，切换多个容器运行时</title><link>/blog/2025-11-19-docker-context/</link><pubDate>Wed, 19 Nov 2025 00:00:00 +0800</pubDate><guid>/blog/2025-11-19-docker-context/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;如果你在 macOS 上用过 Docker，大概率不止用过一种方案。最早可能是 Docker Desktop，后来因为资源占用换了 Colima，又听说过 Podman 和 Lima，甚至在不同项目间来回切换。每换一次就要改 &lt;code&gt;DOCKER_HOST&lt;/code&gt; 环境变量、改 socket 路径，一不留神就连不上 daemon，然后对着 &lt;code&gt;Cannot connect to the Docker daemon&lt;/code&gt; 发呆。&lt;/p&gt;
+&lt;p&gt;其实 Docker 官方早就提供了一个机制来管理这种多后端切换——&lt;strong&gt;Docker Context&lt;/strong&gt;。一个 context 本质上就是一组 Docker daemon 的连接配置，&lt;code&gt;docker context&lt;/code&gt; 子命令让你可以在不同 daemon 之间一键切换，不用再手动折腾环境变量。&lt;/p&gt;
+&lt;h1 id="docker-context-是什么"&gt;Docker Context 是什么 &lt;a href="#docker-context-%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;简单说，一个 Docker Context 保存了：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Docker daemon 的连接地址（socket 路径或 TCP 地址）&lt;/li&gt;
+&lt;li&gt;TLS 配置（是否需要验证、CA 证书等）&lt;/li&gt;
+&lt;li&gt;可选的描述信息&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;用 &lt;code&gt;docker context ls&lt;/code&gt; 可以看到当前所有可用的 context：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;$ docker context ls
+NAME TYPE DESCRIPTION DOCKER ENDPOINT
+colima * moby colima unix:///Users/zhangjie/.colima/default/docker.sock
+default moby Current DOCKER_HOST based... unix:///var/run/docker.sock
+desktop-linux moby Docker Desktop unix:///Users/zhangjie/.docker/run/docker.sock
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;带 &lt;code&gt;*&lt;/code&gt; 的是当前激活的 context。切换只需要一行：&lt;/p&gt;</description></item><item><title>GoTalk - Go Execution Tracer</title><link>/blog/2025-11-08-go_execution_tracer/</link><pubDate>Sat, 08 Nov 2025 08:00:00 +0800</pubDate><guid>/blog/2025-11-08-go_execution_tracer/</guid><description>&lt;style&gt;
 .iframe-container {
 position: relative;
 height: 100vh;
@@ -4237,7 +4618,26 @@ struct list_head thread_node; // 在 signal-&amp;gt;thread_head 中的节点
 &lt;p&gt;查看内核 &lt;code&gt;do_wait&lt;/code&gt; 的实现：&lt;/p&gt;
 &lt;pre&gt;&lt;code class="language-c"&gt;add_wait_queue(&amp;amp;current-&amp;gt;signal-&amp;gt;wait_chldexit, &amp;amp;wo-&amp;gt;child_wait);
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;这里 &lt;code&gt;current-&amp;gt;signal-&amp;gt;wait_chldexit&lt;/code&gt; 是关键——它是 &lt;strong&gt;进程级别&lt;/strong&gt; 的等待队列，位于 &lt;code&gt;signal_struct&lt;/code&gt; 中，被同一进程的所有线程共享。&lt;/p&gt;</description></item><item><title>math/rand/v2：ChaCha8 算法与并发安全详解</title><link>/blog/2025-08-04-go-math-rand-v2/</link><pubDate>Mon, 04 Aug 2025 00:00:00 +0800</pubDate><guid>/blog/2025-08-04-go-math-rand-v2/</guid><description>&lt;p&gt;Go 1.22 版本引入了新的 &lt;code&gt;math/rand/v2&lt;/code&gt; 包，这是一次旨在提升性能、随机性质量和开发者体验的现代化升级。其核心变化之一是采用 ChaCha8 算法作为其默认的伪随机数生成器（PRNG）。&lt;/p&gt;
+&lt;p&gt;这里 &lt;code&gt;current-&amp;gt;signal-&amp;gt;wait_chldexit&lt;/code&gt; 是关键——它是 &lt;strong&gt;进程级别&lt;/strong&gt; 的等待队列，位于 &lt;code&gt;signal_struct&lt;/code&gt; 中，被同一进程的所有线程共享。&lt;/p&gt;</description></item><item><title>Docker 容器与宿主机 UID/GID 不匹配导致的权限问题及解决方案</title><link>/blog/2025-08-06-docker-uid-gid/</link><pubDate>Wed, 06 Aug 2025 00:00:00 +0800</pubDate><guid>/blog/2025-08-06-docker-uid-gid/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;用 Docker 做开发时，经常会遇到一个烦人的问题：容器里跑的程序创建了一堆文件，回到宿主机想编辑或删除，结果提示 &lt;code&gt;Permission denied&lt;/code&gt;。&lt;code&gt;ls -l&lt;/code&gt; 一看，文件所有者是 &lt;code&gt;root:root&lt;/code&gt;，而你的宿主机用户是 &lt;code&gt;zhangjie:zhangjie&lt;/code&gt;（UID/GID 通常是 1000:1000），自然没有写权限。&lt;/p&gt;
+&lt;p&gt;根本原因很简单：容器默认以 root（UID=0, GID=0）身份运行，在挂载到宿主机的卷上创建文件时，文件所有者就是 &lt;code&gt;root:root&lt;/code&gt;。宿主机的普通用户（UID 1000）当然动不了 root 的文件。&lt;/p&gt;
+&lt;p&gt;下面几种方案按推荐程度排列，根据场景选用即可。&lt;/p&gt;
+&lt;h1 id="方法一运行时指定---user最快捷"&gt;方法一：运行时指定 &lt;code&gt;--user&lt;/code&gt;（最快捷） &lt;a href="#%e6%96%b9%e6%b3%95%e4%b8%80%e8%bf%90%e8%a1%8c%e6%97%b6%e6%8c%87%e5%ae%9a---user%e6%9c%80%e5%bf%ab%e6%8d%b7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;不需要改 Dockerfile，在 &lt;code&gt;docker run&lt;/code&gt; 时直接把容器内的执行用户指定为宿主机用户的 UID/GID。&lt;/p&gt;
+&lt;p&gt;先获取 UID 和 GID：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;id -u # UID
+id -g # GID
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;启动容器时传入：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;docker run --rm -it \
+--user $(id -u):$(id -g) \
+-v /path/on/host:/path/in/container \
+your_image_name
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;优点&lt;/strong&gt;：简单直接，不需要任何准备工作。容器内生成的所有文件，其所有者 UID/GID 和宿主机一致，直接就能读写删除。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;缺点&lt;/strong&gt;：如果容器内程序需要 root 权限（比如安装软件、绑定 1024 以下的低位端口），这种方式可能导致容器启动或运行失败。&lt;/p&gt;
+&lt;h1 id="方法二修改-dockerfile创建匹配的用户推荐"&gt;方法二：修改 Dockerfile，创建匹配的用户（推荐） &lt;a href="#%e6%96%b9%e6%b3%95%e4%ba%8c%e4%bf%ae%e6%94%b9-dockerfile%e5%88%9b%e5%bb%ba%e5%8c%b9%e9%85%8d%e7%9a%84%e7%94%a8%e6%88%b7%e6%8e%a8%e8%8d%90" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;这是更规范的做法，尤其在团队协作和 CI 环境中。在镜像构建时创建一个与宿主机用户 ID 匹配的非 root 用户。&lt;/p&gt;</description></item><item><title>math/rand/v2：ChaCha8 算法与并发安全详解</title><link>/blog/2025-08-04-go-math-rand-v2/</link><pubDate>Mon, 04 Aug 2025 00:00:00 +0800</pubDate><guid>/blog/2025-08-04-go-math-rand-v2/</guid><description>&lt;p&gt;Go 1.22 版本引入了新的 &lt;code&gt;math/rand/v2&lt;/code&gt; 包，这是一次旨在提升性能、随机性质量和开发者体验的现代化升级。其核心变化之一是采用 ChaCha8 算法作为其默认的伪随机数生成器（PRNG）。&lt;/p&gt;
 &lt;h2 id="1-chacha8-算法不是哈希而是流式密码"&gt;1. ChaCha8 算法：不是哈希，而是流式密码 &lt;a href="#1-chacha8-%e7%ae%97%e6%b3%95%e4%b8%8d%e6%98%af%e5%93%88%e5%b8%8c%e8%80%8c%e6%98%af%e6%b5%81%e5%bc%8f%e5%af%86%e7%a0%81" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;首先需要明确，ChaCha8 是一种&lt;strong&gt;流式密码（Stream Cipher）&lt;/strong&gt;，而非哈希算法。&lt;/p&gt;
 &lt;ul&gt;
@@ -4492,7 +4892,65 @@ git clone --shallow-exclude=&amp;quot;v2.0&amp;quot; &amp;lt;url&amp;gt;
 &lt;li&gt;此函数&lt;strong&gt;直接、高效地&lt;/strong&gt;定位到在 &lt;code&gt;wait_chldexit&lt;/code&gt; 等待队列上睡眠的父进程。&lt;/li&gt;
 &lt;li&gt;将父进程状态改回 &lt;code&gt;TASK_RUNNING&lt;/code&gt;，使其可以被调度器再次调度执行。&lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;这是一条为 &lt;code&gt;wait&lt;/code&gt; 专门设计的&amp;quot;VIP 通道&amp;quot;，确保等待父进程能被精确唤醒，不经过信号传递的通用路径。&lt;/p&gt;</description></item><item><title>Linux 核心转储机制深度解析</title><link>/blog/2025-06-15-linux-coredump-mechanism/</link><pubDate>Sun, 15 Jun 2025 00:00:00 +0800</pubDate><guid>/blog/2025-06-15-linux-coredump-mechanism/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;这是一条为 &lt;code&gt;wait&lt;/code&gt; 专门设计的&amp;quot;VIP 通道&amp;quot;，确保等待父进程能被精确唤醒，不经过信号传递的通用路径。&lt;/p&gt;</description></item><item><title>网络割接：核心路由器的"心脏搭桥手术"</title><link>/blog/2025-07-15-network-cutover/</link><pubDate>Tue, 15 Jul 2025 00:00:00 +0800</pubDate><guid>/blog/2025-07-15-network-cutover/</guid><description>&lt;p&gt;网络割接（Network Cutover），简单说就是把正在运行的网络设备、线路或业务从旧系统&amp;quot;割断&amp;quot;，再&amp;quot;接入&amp;quot;到新系统上。&lt;/p&gt;
+&lt;p&gt;打个比方：给正在行驶的火车换一段铁轨——先让火车减速或短暂停下，快速换好，再恢复正常行驶。对核心路由器做割接，就是网络运维里风险最高的一类操作，堪称&amp;quot;网络世界的心脏搭桥手术&amp;quot;。&lt;/p&gt;
+&lt;p&gt;英文里最专业、最常用的对应术语就是 &lt;strong&gt;Network Cutover&lt;/strong&gt;。其他相关说法有 Network Migration（侧重整个迁移过程）、System Upgrade（目的，不是动作本身）、Planned Network Maintenance（更宽泛的说法，割接是其中一种）。&lt;/p&gt;
+&lt;p&gt;下面以核心路由器的割接为例，拆解整个流程。&lt;/p&gt;
+&lt;h2 id="核心理念"&gt;核心理念 &lt;a href="#%e6%a0%b8%e5%bf%83%e7%90%86%e5%bf%b5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;动手之前，先搞清楚三条底线：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;万无一失&lt;/strong&gt;：核心路由器是网络骨干，长时间中断意味着大面积瘫痪，没有试错空间。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;影响最小化&lt;/strong&gt;：所有操作的目标是把业务中断时间压缩到秒级甚至毫秒级。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;随时可回退&lt;/strong&gt;：任何一步出错，必须在几分钟内恢复到割接前的状态。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这三条决定了割接不是&amp;quot;上去改一下配置&amp;quot;这么简单，而是一套严密的工程流程。&lt;/p&gt;
+&lt;h2 id="阶段一割接前准备与规划"&gt;阶段一：割接前——准备与规划 &lt;a href="#%e9%98%b6%e6%ae%b5%e4%b8%80%e5%89%b2%e6%8e%a5%e5%89%8d%e5%87%86%e5%a4%87%e4%b8%8e%e8%a7%84%e5%88%92" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;准备阶段花的时间最长，也最重要。准备越充分，割接窗口里的操作越顺利。&lt;/p&gt;
+&lt;h3 id="1-制定-mopmethod-of-procedure"&gt;1. 制定 MOP（Method of Procedure） &lt;a href="#1-%e5%88%b6%e5%ae%9a-mopmethod-of-procedure" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;MOP 是割接的&amp;quot;剧本&amp;quot;，精确到每一条命令、每一个端口、每一个负责人、每一个时间点。它不是大纲，是指令集——执行者拿到手就能照着敲，不需要临场判断。&lt;/p&gt;
+&lt;h3 id="2-技术勘察"&gt;2. 技术勘察 &lt;a href="#2-%e6%8a%80%e6%9c%af%e5%8b%98%e5%af%9f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;分两层：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;物理层&lt;/strong&gt;：机房空间够不够、电源接口对不对、光纤类型和长度匹不匹配、端口型号兼不兼容。这些看起来琐碎，但任何一项出问题都会让割接窗口直接报废。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;逻辑层&lt;/strong&gt;：梳理这台路由器连接了哪些设备、承载了哪些业务（专线、互联网出口等）、跑了哪些路由协议（BGP、OSPF、IS-IS）和策略。漏掉任何一条，割接后可能就是业务断连。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="3-准备新设备--配置"&gt;3. 准备新设备 / 配置 &lt;a href="#3-%e5%87%86%e5%a4%87%e6%96%b0%e8%ae%be%e5%a4%87--%e9%85%8d%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;如果是换硬件，新设备先在 Lab 环境里完成完整配置和测试，模拟生产环境的流量和协议行为。不要相信&amp;quot;配置一样直接上线就行&amp;quot;，生产环境的 corner case 只有跑过才知道。&lt;/p&gt;
+&lt;p&gt;如果是软件升级或配置变更，新的配置文件必须提前写好、经过 Peer Review，并且做语法检查。&lt;/p&gt;
+&lt;h3 id="4-备份"&gt;4. 备份 &lt;a href="#4-%e5%a4%87%e4%bb%bd" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;备份当前 &lt;code&gt;running-config&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;备份 License（如果有的话）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这一步不花多少时间，但救命的概率不低。&lt;/p&gt;
+&lt;h3 id="5-采集基线数据"&gt;5. 采集基线数据 &lt;a href="#5-%e9%87%87%e9%9b%86%e5%9f%ba%e7%ba%bf%e6%95%b0%e6%8d%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;割接前记录下网络&amp;quot;健康&amp;quot;状态，作为割接后对比的依据：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;show ip route # 路由表
+show bgp summary # BGP 邻居状态
+show interfaces # 接口状态和流量
+show ip traffic # IP 流量统计
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;还要记录设备的 CPU、内存使用率，以及 &lt;code&gt;ping&lt;/code&gt;、&lt;code&gt;traceroute&lt;/code&gt; 关键业务地址的延迟。&lt;/p&gt;</description></item><item><title>GRE、IP-in-IP 隧道协议与 CLB 的 DSR 架构</title><link>/blog/2025-07-01-gre-ipinip-dsr-loadbalancer/</link><pubDate>Tue, 01 Jul 2025 00:00:00 +0800</pubDate><guid>/blog/2025-07-01-gre-ipinip-dsr-loadbalancer/</guid><description>&lt;h2 id="问题游戏测速为什么不准确"&gt;问题：游戏测速为什么不准确？ &lt;a href="#%e9%97%ae%e9%a2%98%e6%b8%b8%e6%88%8f%e6%b5%8b%e9%80%9f%e4%b8%ba%e4%bb%80%e4%b9%88%e4%b8%8d%e5%87%86%e7%a1%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;游戏客户端上线前，通常会做一次测速——通过域名解析到 CLB，然后 UDP 测速流量经过 CLB 转发到后端测速服务。理想情况下，测速服务器回包沿原路返回，客户端就能拿到准确的延迟数据，从而选择最优的游戏服务器。&lt;/p&gt;
+&lt;p&gt;但实际不是这样。&lt;/p&gt;
+&lt;p&gt;客户端请求进来时，可能走电信、联通、移动中的某一条线路——这是 DNS 智能解析的结果，保证入口最优。但测速服务器回包时，因为 CLB 采用了 GRE 封装 + DSR（Direct Server Return）架构，&lt;strong&gt;回包不经过 CLB，直接从服务器路由回客户端&lt;/strong&gt;。这导致回包路径和来包路径可能不同：来的时候走电信，回的时候可能走了联通。&lt;/p&gt;
+&lt;p&gt;路径不对称，测出来的延迟就不准。玩家基于这个数据选游戏服务器，就可能选到非最优的节点，游戏体验直接受影响。&lt;/p&gt;
+&lt;p&gt;这个问题背后，核心是 GRE 隧道协议和 DSR 架构的组合。要理解它为什么会发生，得先把 GRE 和 IP-in-IP 这两个隧道协议搞清楚。&lt;/p&gt;
+&lt;h2 id="gre-隧道协议"&gt;GRE 隧道协议 &lt;a href="#gre-%e9%9a%a7%e9%81%93%e5%8d%8f%e8%ae%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;GRE（Generic Routing Encapsulation）定义在 RFC 2784 和 RFC 2890 中。它做的事情很简单：把一种协议的数据包封装在另一种协议里传输。&lt;/p&gt;
+&lt;h3 id="封装格式"&gt;封装格式 &lt;a href="#%e5%b0%81%e8%a3%85%e6%a0%bc%e5%bc%8f" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;原始数据包经过 GRE 封装后变成这样：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;┌─────────────────┐
+│ 外层 IP 头部 │ ← 隧道端点 IP（源和目标）
+├─────────────────┤
+│ GRE 头部 │ ← 协议类型、可选字段
+├─────────────────┤
+│ 原始 IP 头部 │ ← 原始数据包完整保留
+├─────────────────┤
+│ 原始数据 │
+└─────────────────┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;封装带来的额外开销是 GRE 头部（4～16 字节，取决于可选字段）加上外层 IP 头部（20 字节），总共 24～36 字节。&lt;/p&gt;</description></item><item><title>Linux 核心转储机制深度解析</title><link>/blog/2025-06-15-linux-coredump-mechanism/</link><pubDate>Sun, 15 Jun 2025 00:00:00 +0800</pubDate><guid>/blog/2025-06-15-linux-coredump-mechanism/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;最近排查一个线上服务的崩溃问题，需要在测试环境开启 core dump 来捕获崩溃现场。本以为就是 &lt;code&gt;ulimit -c unlimited&lt;/code&gt; 改个 &lt;code&gt;core_pattern&lt;/code&gt; 的事情，结果踩了不少坑：目录权限明明设好了却写不进去、WSL2 里 &lt;code&gt;systemd-coredump&lt;/code&gt; 罢工……这些问题追下去，发现核心转储的机制比想象中要复杂。&lt;/p&gt;
 &lt;p&gt;这篇文章把核心转储的几个关键问题系统梳理一下，希望能帮到遇到类似问题的同学。&lt;/p&gt;
 &lt;h1 id="core-dump-到底是谁写入的"&gt;Core dump 到底是谁写入的？ &lt;a href="#core-dump-%e5%88%b0%e5%ba%95%e6%98%af%e8%b0%81%e5%86%99%e5%85%a5%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
@@ -4575,7 +5033,41 @@ git clone --shallow-exclude=&amp;quot;v2.0&amp;quot; &amp;lt;url&amp;gt;
 &lt;p&gt;&lt;strong&gt;关键点&lt;/strong&gt;：偶现 bug 的根因&lt;strong&gt;一定在产品侧&lt;/strong&gt;——代码本身有缺陷，只是触发条件苛刻。&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;h1 id="核心差异不止是描述对象不同"&gt;核心差异：不止是&amp;quot;描述对象不同&amp;quot; &lt;a href="#%e6%a0%b8%e5%bf%83%e5%b7%ae%e5%bc%82%e4%b8%8d%e6%ad%a2%e6%98%af%e6%8f%8f%e8%bf%b0%e5%af%b9%e8%b1%a1%e4%b8%8d%e5%90%8c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
-&lt;p&gt;表面上看，一个在说测试，一个在说产品，泾渭分明。但真正容易混淆的地方在于&lt;strong&gt;归因方向&lt;/strong&gt;和&lt;strong&gt;发现场景&lt;/strong&gt;。&lt;/p&gt;</description></item><item><title>深入理解 ptrace：进程的 tl 状态与运行中 tracee 的控制</title><link>/blog/2025-05-27-dlv-addbreakpoints-to-running-tracee/</link><pubDate>Tue, 27 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-27-dlv-addbreakpoints-to-running-tracee/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;表面上看，一个在说测试，一个在说产品，泾渭分明。但真正容易混淆的地方在于&lt;strong&gt;归因方向&lt;/strong&gt;和&lt;strong&gt;发现场景&lt;/strong&gt;。&lt;/p&gt;</description></item><item><title>服务高可用部署实践清单</title><link>/blog/2025-05-28-%E9%AB%98%E5%8F%AF%E7%94%A8_%E6%9C%8D%E5%8A%A1%E9%AB%98%E5%8F%AF%E7%94%A8%E9%83%A8%E7%BD%B2%E5%AE%9E%E8%B7%B5%E6%B8%85%E5%8D%95/</link><pubDate>Wed, 28 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-28-%E9%AB%98%E5%8F%AF%E7%94%A8_%E6%9C%8D%E5%8A%A1%E9%AB%98%E5%8F%AF%E7%94%A8%E9%83%A8%E7%BD%B2%E5%AE%9E%E8%B7%B5%E6%B8%85%E5%8D%95/</guid><description>&lt;p&gt;服务开发完了，要上线了。功能都测过了，性能也压过了，接下来要回答一个问题：&lt;strong&gt;怎么保证它上线后不挂，挂了能快速恢复？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;这个问题拆开来，至少涉及四个层面：架构怎么设计、怎么部署、怎么运维、数据怎么处理。每个层面漏了几个关键动作，都可能成为短板。&lt;/p&gt;
+&lt;p&gt;下面按这四个层面逐一梳理，当作上线前的查漏补缺清单。&lt;/p&gt;
+&lt;h2 id="一架构设计层面"&gt;一、架构设计层面 &lt;a href="#%e4%b8%80%e6%9e%b6%e6%9e%84%e8%ae%be%e8%ae%a1%e5%b1%82%e9%9d%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="1-容灾部署消除单点"&gt;1. 容灾部署：消除单点 &lt;a href="#1-%e5%ae%b9%e7%81%be%e9%83%a8%e7%bd%b2%e6%b6%88%e9%99%a4%e5%8d%95%e7%82%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;单点故障是最高频的故障模式。消除单点的办法就是冗余——关键组件不能只有一个实例。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;数据库&lt;/strong&gt;：主从架构，主挂了从顶上。MySQL 用 Orchestrator 或 Group Replication 做自动切换，Redis 用 Sentinel 或 Cluster。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;应用服务&lt;/strong&gt;：至少多副本部署。K8s Deployment 里 &lt;code&gt;replicas &amp;gt;= 2&lt;/code&gt; 是底线，一个 Pod 挂了还有其他 Pod 扛着。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;水平扩容&lt;/strong&gt;：流量上来能加节点而不是靠升级配置硬扛。扩容应该是加机器解决的事，不是重新设计架构的事。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="2-多中心部署空间隔离"&gt;2. 多中心部署：空间隔离 &lt;a href="#2-%e5%a4%9a%e4%b8%ad%e5%bf%83%e9%83%a8%e7%bd%b2%e7%a9%ba%e9%97%b4%e9%9a%94%e7%a6%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;冗余节点全在一个机房，机房断电就全挂。需要把节点分散到不同的物理风险域。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;同城多中心&lt;/strong&gt;：同城多个机房，网络延迟低（通常 &amp;lt;2ms），能扛单机房故障，成本适中。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;异地容灾&lt;/strong&gt;：跨城市部署。冷备模式（定期同步，RTO 小时级）成本低；热备模式（实时同步，RTO 分钟级）成本高但恢复快。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;两地三中心&lt;/strong&gt;：同城双活 + 异地灾备，覆盖最广。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;ps: 多数业务用&amp;quot;同城双活 + 异地冷备&amp;quot;就够了。异地多活的代价不只是机器成本，还有业务单元化改造、数据冲突处理、跨地域带宽和一支能 hold 住这套复杂度的团队。&lt;/p&gt;
+&lt;h3 id="3-流量分类处理"&gt;3. 流量分类处理 &lt;a href="#3-%e6%b5%81%e9%87%8f%e5%88%86%e7%b1%bb%e5%a4%84%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;不是所有流量都值得同等对待。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;动静分离&lt;/strong&gt;：静态资源（JS、CSS、图片）独立部署，接入 CDN，跟应用服务器解耦。动态请求走应用服务处理。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;流量清洗&lt;/strong&gt;：在网关层做第一道拦截。恶意请求、未授权请求、明显超配额的请求，直接在入口挡掉，别让它们消耗后端资源。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="4-弱依赖设计"&gt;4. 弱依赖设计 &lt;a href="#4-%e5%bc%b1%e4%be%9d%e8%b5%96%e8%ae%be%e8%ae%a1" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;核心链路依赖的外部服务挂了怎么办？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;去掉不必要的强依赖，能异步的就异步化。&lt;/li&gt;
+&lt;li&gt;必须调但可以降级的，缓存上次成功的结果或返回默认值，至少不让整个页面白屏。&lt;/li&gt;
+&lt;li&gt;超时一定要设。无超时的调用等于把服务可用性交给了下游。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="二部署策略层面"&gt;二、部署策略层面 &lt;a href="#%e4%ba%8c%e9%83%a8%e7%bd%b2%e7%ad%96%e7%95%a5%e5%b1%82%e9%9d%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="1-kubernetes-关键配置"&gt;1. Kubernetes 关键配置 &lt;a href="#1-kubernetes-%e5%85%b3%e9%94%ae%e9%85%8d%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;跑在 K8s 上，有几个配置是&amp;quot;既然用了就应该设的&amp;quot;。&lt;/p&gt;</description></item><item><title>深入理解 ptrace：进程的 tl 状态与运行中 tracee 的控制</title><link>/blog/2025-05-27-dlv-addbreakpoints-to-running-tracee/</link><pubDate>Tue, 27 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-27-dlv-addbreakpoints-to-running-tracee/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;在使用调试器时，我们经常会通过 &lt;code&gt;ps&lt;/code&gt; 查看被调试进程的状态。比如下面这个输出：&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;root 3859551 0.0 0.0 1225560 2004 pts/12 tl 18:17 0:00 /root/test/debug/__debug_bin2092487096
 &lt;/code&gt;&lt;/pre&gt;
@@ -5028,7 +5520,73 @@ g.SystemStack = true
 &lt;p&gt;但是：
 1）其他任务可能会涉及到阻塞、唤醒，也会涉及到奖励、惩罚导致的动态优先级、动态时间片调整。
 2）我们创建的线程也是系统的一部分，它的时间片也会因为其他进程动态优先级变化而变化。
-3）而且即使我们确定了任务的执行时间片，抢占检测时，只要有vruntime比它小一个时间片的，就可以被抢占，不一定执行完自己的时间片。&lt;/p&gt;</description></item><item><title>Go精进之路：从错误中学习</title><link>/blog/2025-04-12-0001-go%E5%AE%B9%E6%98%93%E4%B8%8A%E6%89%8B%E4%BD%86%E4%B8%8D%E4%BB%A3%E8%A1%A8%E8%BD%BB%E6%9D%BE%E5%B0%B1%E8%83%BD%E6%8E%8C%E6%8F%A1/</link><pubDate>Sat, 12 Apr 2025 00:05:08 +0800</pubDate><guid>/blog/2025-04-12-0001-go%E5%AE%B9%E6%98%93%E4%B8%8A%E6%89%8B%E4%BD%86%E4%B8%8D%E4%BB%A3%E8%A1%A8%E8%BD%BB%E6%9D%BE%E5%B0%B1%E8%83%BD%E6%8E%8C%E6%8F%A1/</guid><description>&lt;h1 id="go精进之路从错误中学习"&gt;Go精进之路：从错误中学习 &lt;a href="#go%e7%b2%be%e8%bf%9b%e4%b9%8b%e8%b7%af%e4%bb%8e%e9%94%99%e8%af%af%e4%b8%ad%e5%ad%a6%e4%b9%a0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+3）而且即使我们确定了任务的执行时间片，抢占检测时，只要有vruntime比它小一个时间片的，就可以被抢占，不一定执行完自己的时间片。&lt;/p&gt;</description></item><item><title>Slow Roads 无限驾驶游戏的核心优化技术</title><link>/blog/slowroads-optimization/</link><pubDate>Tue, 15 Apr 2025 00:00:00 +0800</pubDate><guid>/blog/slowroads-optimization/</guid><description>&lt;p&gt;&lt;a href="https://slowroads.io"&gt;Slow Roads&lt;/a&gt; 是一个基于 Web 技术的无限驾驶游戏，在浏览器中实现了流畅的无限地形生成和驾驶体验。它的开发者在一篇 &lt;a href="https://web.dev/case-studies/slow-roads"&gt;web.dev 案例研究&lt;/a&gt; 中分享了核心优化技术，本文对这些技术进行梳理和总结。&lt;/p&gt;
+&lt;h2 id="1-环境引擎优化"&gt;1. 环境引擎优化 &lt;a href="#1-%e7%8e%af%e5%a2%83%e5%bc%95%e6%93%8e%e4%bc%98%e5%8c%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;无限驾驶游戏的核心挑战是：世界是&amp;quot;无限&amp;quot;的，但内存和算力是有限的。Slow Roads 的做法是：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;分块（chunk）加载机制&lt;/strong&gt;：只生成玩家周围的地形，远处的地形块按需创建和销毁。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;细节级别（LoD）&lt;/strong&gt;：远处地形使用更低精度的网格和纹理，近处才渲染高细节。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;预生成道路路径&lt;/strong&gt;：提前计算和缓存道路的路径数据，避免每帧重新计算。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;高细节区域控制&lt;/strong&gt;：只对道路两侧的狭窄区域生成高细节地形，远离道路的区域使用低精度近似。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些策略的核心思想是&amp;quot;只为你看到的东西付费&amp;quot;——把计算资源集中在玩家视野范围内、对体验影响最大的区域。&lt;/p&gt;
+&lt;h2 id="2-物理引擎优化"&gt;2. 物理引擎优化 &lt;a href="#2-%e7%89%a9%e7%90%86%e5%bc%95%e6%93%8e%e4%bc%98%e5%8c%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;物理模拟通常是游戏性能的大头，但 Slow Roads 做了聪明的简化：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;简化碰撞检测&lt;/strong&gt;：使用稀疏中线（sparse midline）编码道路，实现快速碰撞检测，而非对每个三角面片做检测。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;假设车辆始终在道路上&lt;/strong&gt;：忽略道路外的碰撞检测，大幅减少不必要的物理计算。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;避免全物理模拟&lt;/strong&gt;：不使用通用的刚体物理引擎，而是针对驾驶场景定制简化的物理模型。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些取舍背后的逻辑是：玩家 99% 的时间都在道路上行驶，为那 1% 的&amp;quot;冲出道路&amp;quot;场景做全物理模拟不划算。&lt;/p&gt;
+&lt;h2 id="3-内存管理优化"&gt;3. 内存管理优化 &lt;a href="#3-%e5%86%85%e5%ad%98%e7%ae%a1%e7%90%86%e4%bc%98%e5%8c%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;JavaScript 的垃圾回收（GC）是 Web 游戏中帧率抖动的常见元凶，Slow Roads 对此非常警惕：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;对象池（object pooling）&lt;/strong&gt;：重用不再需要的地形块对象，而非销毁后新建。地形块的创建和销毁频繁，对象池能有效减少 GC 压力。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;避免在游戏循环中创建新对象&lt;/strong&gt;：不在 &lt;code&gt;requestAnimationFrame&lt;/code&gt; 回调中 &lt;code&gt;new&lt;/code&gt; 对象。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;谨慎使用便利方法&lt;/strong&gt;：&lt;code&gt;Object.keys()&lt;/code&gt;、&lt;code&gt;Array.map()&lt;/code&gt;、&lt;code&gt;Array.filter()&lt;/code&gt; 等方法会创建临时数组，在热路径中应避免使用，改用 &lt;code&gt;for&lt;/code&gt; 循环或预分配数组。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="4-资源加载优化"&gt;4. 资源加载优化 &lt;a href="#4-%e8%b5%84%e6%ba%90%e5%8a%a0%e8%bd%bd%e4%bc%98%e5%8c%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;程序化生成（procedural generation）&lt;/strong&gt;：地形、道路、植被等通过算法实时生成，而不是从硬盘加载大量美术资源。这既能保证&amp;quot;无限&amp;quot;的多样性，又大幅减少了资源体积。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;WebP 纹理压缩&lt;/strong&gt;：对必须加载的纹理资源使用 WebP 格式，显著减小文件大小。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;渐进式加载&lt;/strong&gt;：先显示简单场景，再逐步加载细节，缩短首屏时间。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="5-渲染优化"&gt;5. 渲染优化 &lt;a href="#5-%e6%b8%b2%e6%9f%93%e4%bc%98%e5%8c%96" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;自定义着色器（shader）&lt;/strong&gt;：针对场景特点编写定制 shader，而非使用通用 PBR 管线。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;视锥体剔除（frustum culling）&lt;/strong&gt;：只渲染相机视野内的物体，视野外的地形块直接跳过。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;雾效果（fog）&lt;/strong&gt;：既是氛围渲染手段，也是&amp;quot;遮丑&amp;quot;利器——远处细节不足时，用雾自然过渡，用户不会感觉到精度下降。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="6-性能监控与适配"&gt;6. 性能监控与适配 &lt;a href="#6-%e6%80%a7%e8%83%bd%e7%9b%91%e6%8e%a7%e4%b8%8e%e9%80%82%e9%85%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;内置性能分析系统&lt;/strong&gt;：收集用户设备的实际性能数据（FPS、帧时间分布），而非只在开发机上测试。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;动态质量调整&lt;/strong&gt;：根据设备性能自动调整渲染质量（阴影分辨率、植被密度、绘制距离等），让高端设备和低端设备各有合适的体验。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;用户可选质量档位&lt;/strong&gt;：同时提供手动质量设置选项，让用户根据自己的偏好调整。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="7-开发策略"&gt;7. 开发策略 &lt;a href="#7-%e5%bc%80%e5%8f%91%e7%ad%96%e7%95%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Slow Roads 是一个人的项目，开发策略也值得借鉴：&lt;/p&gt;</description></item><item><title>Python 项目依赖管理：工具选型与最佳实践</title><link>/blog/2025-04-13-python-pkg-management/</link><pubDate>Sun, 13 Apr 2025 00:00:00 +0800</pubDate><guid>/blog/2025-04-13-python-pkg-management/</guid><description>&lt;h2 id="问题"&gt;问题 &lt;a href="#%e9%97%ae%e9%a2%98" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Python 的依赖管理工具太多了。&lt;/p&gt;
+&lt;p&gt;刚接触 Python 的人大概率会遇到这种情况：克隆一个项目，&lt;code&gt;pip install -r requirements.txt&lt;/code&gt;，然后发现装不上——缺系统库、Python 版本不对、依赖冲突。折腾半天终于装好了，跑起来报 &lt;code&gt;ModuleNotFoundError&lt;/code&gt;，因为全局环境和另一个项目搅在了一起。&lt;/p&gt;
+&lt;p&gt;这不是新人的问题。Python 的打包和依赖管理经历了漫长的碎片化演进，同一个需求有多个工具在竞争，每个工具的文档都在讲&amp;quot;用我就对了&amp;quot;，但很少有人说清楚&amp;quot;什么场景该用哪个&amp;quot;。&lt;/p&gt;
+&lt;p&gt;本文把我实际用过的工具和组合整理出来，给不同项目类型一个明确的推荐。&lt;/p&gt;
+&lt;h2 id="虚拟环境先隔离再说"&gt;虚拟环境：先隔离再说 &lt;a href="#%e8%99%9a%e6%8b%9f%e7%8e%af%e5%a2%83%e5%85%88%e9%9a%94%e7%a6%bb%e5%86%8d%e8%af%b4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;第一步必须做的是隔离。每个项目要有自己独立的 Python 环境，不然依赖之间早晚打架。&lt;/p&gt;
+&lt;h3 id="venvpython-33-内置"&gt;venv（Python 3.3+ 内置） &lt;a href="#venvpython-33-%e5%86%85%e7%bd%ae" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;如果你只需要隔离依赖，venv 够用了。它是 Python 自带的，不需要额外安装。&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;python -m venv .venv
+source .venv/bin/activate # Linux/macOS
+.venv\Scripts\activate # Windows
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;优点是没有外部依赖，和 Python 版本绑定，不存在兼容问题。缺点是功能有限——只管隔离，不管依赖解析和锁定。&lt;/p&gt;
+&lt;h3 id="virtualenv"&gt;virtualenv &lt;a href="#virtualenv" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;virtualenv 是 venv 的前身，功能更强但需要单独安装：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;pip install virtualenv
+virtualenv .venv
+source .venv/bin/activate
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;比 venv 多的能力包括：更快（通过缓存和 AppData 种子）、支持 bootstrap 脚本、可指定任意 Python 解释器创建环境。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;ps: 新项目直接用 venv 就好。virtualenv 的优势主要在旧版本 Python（3.3 以前）或需要自定义创建流程的场景，日常开发不需要专门装它。&lt;/p&gt;</description></item><item><title>Go精进之路：从错误中学习</title><link>/blog/2025-04-12-0001-go%E5%AE%B9%E6%98%93%E4%B8%8A%E6%89%8B%E4%BD%86%E4%B8%8D%E4%BB%A3%E8%A1%A8%E8%BD%BB%E6%9D%BE%E5%B0%B1%E8%83%BD%E6%8E%8C%E6%8F%A1/</link><pubDate>Sat, 12 Apr 2025 00:05:08 +0800</pubDate><guid>/blog/2025-04-12-0001-go%E5%AE%B9%E6%98%93%E4%B8%8A%E6%89%8B%E4%BD%86%E4%B8%8D%E4%BB%A3%E8%A1%A8%E8%BD%BB%E6%9D%BE%E5%B0%B1%E8%83%BD%E6%8E%8C%E6%8F%A1/</guid><description>&lt;h1 id="go精进之路从错误中学习"&gt;Go精进之路：从错误中学习 &lt;a href="#go%e7%b2%be%e8%bf%9b%e4%b9%8b%e8%b7%af%e4%bb%8e%e9%94%99%e8%af%af%e4%b8%ad%e5%ad%a6%e4%b9%a0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;&lt;img src="https://fastly.jsdelivr.net/gh/bucketio/img12@main/2025/04/11/1744347781802-c70c26c3-2838-4b80-bd98-5a38c29b5ec2.png" alt=""&gt;&lt;/p&gt;
 &lt;p&gt;欢迎来到这个Go语言开发经验分享系列！&lt;/p&gt;
 &lt;p&gt;时光荏苒，转眼间Go语言已经陪伴我们走过了16个春秋。自2009年横空出世，Go语言凭借其简洁高效的特性，迅速在服务器开发、分布式系统、以及各种实用工具链的构建中获得了广泛的应用。它就像一位老朋友，默默地支撑着互联网的基石。&lt;/p&gt;
@@ -5341,7 +5899,92 @@ article String CODEC(ZSTD(10))
 ) ENGINE = MergeTree()
 ORDER BY tuple();
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;这里 &lt;code&gt;article&lt;/code&gt; 列使用了 &lt;code&gt;CODEC(ZSTD(10))&lt;/code&gt;：&lt;/p&gt;</description></item><item><title>Git Delta：在终端里 Side-by-Side 看 diff</title><link>/blog/2024-06-13-git-delta/</link><pubDate>Thu, 13 Jun 2024 00:00:00 +0800</pubDate><guid>/blog/2024-06-13-git-delta/</guid><description>&lt;p&gt;&lt;code&gt;git diff&lt;/code&gt; 的默认输出说实话不太好看。改了几行代码，跑个 &lt;code&gt;git diff&lt;/code&gt;，满屏的 &lt;code&gt;+&lt;/code&gt; &lt;code&gt;-&lt;/code&gt;，行内到底改了什么字，得瞪大眼睛去找。IDE 里 side-by-side 对比确实直观，但命令行用户不想为了看个 diff 就切到 GUI 工具——技能应该可迁移，不能被某个平台或 IDE 绑死。&lt;/p&gt;
+&lt;p&gt;这里 &lt;code&gt;article&lt;/code&gt; 列使用了 &lt;code&gt;CODEC(ZSTD(10))&lt;/code&gt;：&lt;/p&gt;</description></item><item><title>Linux /proc/stat：CPU 字段含义与更新方式</title><link>/blog/2024-06-21-linux_proc_stat/</link><pubDate>Fri, 21 Jun 2024 00:00:00 +0800</pubDate><guid>/blog/2024-06-21-linux_proc_stat/</guid><description>&lt;p&gt;&lt;code&gt;top&lt;/code&gt;、&lt;code&gt;mpstat&lt;/code&gt;、各类 agent 算 CPU 利用率，几乎都绕不开 &lt;code&gt;/proc/stat&lt;/code&gt;。字段看着简单，顺序一旦记错，steal 和 softirq 就会对调；更新机制若理解成「定时器 250Hz 写文件」，后面排障也会偏。&lt;/p&gt;
+&lt;p&gt;本文只盯 &lt;strong&gt;&lt;code&gt;cpu&lt;/code&gt; / &lt;code&gt;cpuN&lt;/code&gt; 行&lt;/strong&gt;：各列是什么、内核在哪记账、读路径怎么吐出来，以及虚拟化下的 &lt;code&gt;steal&lt;/code&gt;。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;进程级 &lt;code&gt;utime/stime&lt;/code&gt;、tick catchup 与 &lt;code&gt;sum_exec_runtime&lt;/code&gt; 的关系，见 &lt;a href="/blog/linux/processor/2026-07-26-linux_%E8%BF%9B%E7%A8%8Bcpu%E6%97%B6%E9%97%B4%E8%AE%B0%E8%B4%A6/"&gt;Linux 进程 CPU 时间记账&lt;/a&gt;。这里只讲&lt;strong&gt;整机 / 每核&lt;/strong&gt;那本账。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h1 id="一字段十列从左到右"&gt;一、字段：十列从左到右 &lt;a href="#%e4%b8%80%e5%ad%97%e6%ae%b5%e5%8d%81%e5%88%97%e4%bb%8e%e5%b7%a6%e5%88%b0%e5%8f%b3" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;示例：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;$ cat /proc/stat
+cpu 3528219 41639 1261361 2231716632 130444 0 261512 0 0 0
+cpu0 143880 243 62282 92967749 9757 0 193767 0 0 0
+...
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;cpu&lt;/code&gt; 是所有逻辑核累加；&lt;code&gt;cpuN&lt;/code&gt; 是单核。单位是 &lt;strong&gt;jiffies&lt;/strong&gt;（累计值，从开机起加，不归零）。列顺序固定：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;列序&lt;/th&gt;
+&lt;th&gt;名字&lt;/th&gt;
+&lt;th&gt;含义&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;user&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;用户态（nice 优先级正常）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;nice&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;用户态且 nice &amp;gt; 0&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;system&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;内核态（不含单独拆出的 irq/softirq）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;idle&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;空闲&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;5&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;iowait&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;有任务在等 IO 时的 idle（语义有历史包袱，见下）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;6&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;irq&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;硬中断处理&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;7&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;softirq&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;软中断处理&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;8&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;steal&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;虚拟化下被 hypervisor 偷走、本 guest 用不了的时间&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;9&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;guest&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;跑 guest 虚拟机（KVM 等）的用户态时间&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;10&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;guest_nice&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;guest 且 nice 的时间&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;对上面那行：&lt;/p&gt;</description></item><item><title>Linux load average 到底在算什么？</title><link>/blog/2024-06-18-linux-top-loadavg/</link><pubDate>Tue, 18 Jun 2024 00:00:00 +0800</pubDate><guid>/blog/2024-06-18-linux-top-loadavg/</guid><description>&lt;p&gt;&lt;code&gt;uptime&lt;/code&gt; 或者 &lt;code&gt;top&lt;/code&gt; 中显示的 load average 到底统计的是什么东西，误解不少。&lt;/p&gt;
+&lt;p&gt;最常见的说法是&amp;quot;CPU 队列长度&amp;quot;或者&amp;quot;系统忙的程度&amp;quot;。这些说法不准确——load average 算的不是所有进程，而是 &lt;strong&gt;R 状态 + D 状态&lt;/strong&gt; 的进程数，按指数移动平均平滑后的值。&lt;/p&gt;
+&lt;h2 id="load-average-算了什么"&gt;load average 算了什么 &lt;a href="#load-average-%e7%ae%97%e4%ba%86%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Linux 内核里有一个全局数组 &lt;code&gt;avenrun[3]&lt;/code&gt;，分别存 1 分钟、5 分钟、15 分钟的 load average。每次时钟中断或者调度事件触发时，内核统计当前处于 &lt;code&gt;TASK_RUNNING&lt;/code&gt;（R 状态）和 &lt;code&gt;TASK_UNINTERRUPTIBLE&lt;/code&gt;（D 状态）的进程数，然后做指数平滑更新 &lt;code&gt;avenrun&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;R 状态包括正在 CPU 上跑的和在就绪队列里等 CPU 的。D 状态就窄得多，只有不可中断睡眠。&lt;/p&gt;
+&lt;p&gt;superuser 上有个回答总结得很清楚，load average 考虑三类进程：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Actively running on a CPU —— 正在用 CPU&lt;/li&gt;
+&lt;li&gt;Runnable but waiting for a CPU —— 等 CPU&lt;/li&gt;
+&lt;li&gt;Sleeping: waiting for I/O —— 等磁盘 I/O&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;第三条说 sleeping，但实际只指 D 状态，不是所有睡眠都算。&lt;/p&gt;</description></item><item><title>Git Delta：在终端里 Side-by-Side 看 diff</title><link>/blog/2024-06-13-git-delta/</link><pubDate>Thu, 13 Jun 2024 00:00:00 +0800</pubDate><guid>/blog/2024-06-13-git-delta/</guid><description>&lt;p&gt;&lt;code&gt;git diff&lt;/code&gt; 的默认输出说实话不太好看。改了几行代码，跑个 &lt;code&gt;git diff&lt;/code&gt;，满屏的 &lt;code&gt;+&lt;/code&gt; &lt;code&gt;-&lt;/code&gt;，行内到底改了什么字，得瞪大眼睛去找。IDE 里 side-by-side 对比确实直观，但命令行用户不想为了看个 diff 就切到 GUI 工具——技能应该可迁移，不能被某个平台或 IDE 绑死。&lt;/p&gt;
 &lt;p&gt;&lt;a href="https://github.com/dandavison/delta"&gt;delta&lt;/a&gt; 就是解决这个问题的。它是一个 Rust 写的二进制程序，接受 &lt;code&gt;git diff&lt;/code&gt; 的输出，然后用更可读的方式渲染出来：side-by-side 对比、word 级别差异高亮、语法高亮、行号等等。&lt;/p&gt;
 &lt;h2 id="安装"&gt;安装 &lt;a href="#%e5%ae%89%e8%a3%85" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;各平台都有包：&lt;/p&gt;
@@ -5481,7 +6124,35 @@ dd → &amp;quot;&amp;quot; = &amp;quot;line 2&amp;quot;, &amp;quot;0 = &amp;quo
 &amp;quot;0p → 贴出 &amp;quot;line 1&amp;quot; ← 正确
 &lt;/code&gt;&lt;/pre&gt;
 &lt;blockquote&gt;
-&lt;p&gt;&lt;code&gt;&amp;quot;0&lt;/code&gt; 是 yank 寄存器，不是&amp;quot;第 0 号命名寄存器&amp;quot;。不要把它和 &lt;code&gt;&amp;quot;1&lt;/code&gt;~&lt;code&gt;&amp;quot;9&lt;/code&gt; 搞混——那些存的是删除历史。&lt;/p&gt;</description></item><item><title>Git cherry-pick 时如何将多个 commit 压缩成一个</title><link>/blog/2024-04-17-git-cherrypick-squash/</link><pubDate>Wed, 17 Apr 2024 00:00:00 +0800</pubDate><guid>/blog/2024-04-17-git-cherrypick-squash/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;code&gt;&amp;quot;0&lt;/code&gt; 是 yank 寄存器，不是&amp;quot;第 0 号命名寄存器&amp;quot;。不要把它和 &lt;code&gt;&amp;quot;1&lt;/code&gt;~&lt;code&gt;&amp;quot;9&lt;/code&gt; 搞混——那些存的是删除历史。&lt;/p&gt;</description></item><item><title>Linux 随机数是怎么生成的：从熵到 /dev/random</title><link>/blog/2024-04-30-rand-devrandom/</link><pubDate>Tue, 30 Apr 2024 00:00:00 +0800</pubDate><guid>/blog/2024-04-30-rand-devrandom/</guid><description>&lt;p&gt;写代码时用到随机数的场景太多了：生成 session ID、洗牌、密码学 nonce、测试数据构造。大多数时候就是调一下 &lt;code&gt;rand.Intn()&lt;/code&gt; 或者 &lt;code&gt;crypto/rand.Read()&lt;/code&gt;，能用就行。但你有没有想过，这些随机数到底是哪来的？&lt;/p&gt;
+&lt;p&gt;答案分两层：&lt;strong&gt;伪随机&lt;/strong&gt;和&lt;strong&gt;真随机&lt;/strong&gt;。应用层常用的 &lt;code&gt;math/rand&lt;/code&gt; 是伪随机——给定一个 seed，后面的序列就是确定的。但如果 seed 被人猜到，整个序列就透明了。所以安全场景需要&amp;quot;真随机&amp;quot;——不可预测、不可重现。&lt;/p&gt;
+&lt;p&gt;但&amp;quot;真随机&amp;quot;也是个相对概念。计算机是确定性的机器，它自己产生不了真正的随机。Linux 的做法是从物理世界&amp;quot;偷&amp;quot;随机性——也就是&lt;strong&gt;熵（entropy）&lt;/strong&gt;——然后通过 CSPRNG 把它变成可用的随机字节流。&lt;/p&gt;
+&lt;h2 id="熵从哪来"&gt;熵从哪来 &lt;a href="#%e7%86%b5%e4%bb%8e%e5%93%aa%e6%9d%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;熵的来源是系统中各种不可预测的硬件事件：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;键盘和鼠标的敲击时机&lt;/li&gt;
+&lt;li&gt;网卡中断的时间间隔&lt;/li&gt;
+&lt;li&gt;磁盘 I/O 完成的抖动&lt;/li&gt;
+&lt;li&gt;定时器中断的微小偏差&lt;/li&gt;
+&lt;li&gt;某些 CPU 提供的硬件随机数指令（RDRAND / RDSEED）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这些事件的共同特点是：&lt;strong&gt;两次事件之间的时间间隔在微秒甚至纳秒级别是不可预测的&lt;/strong&gt;。内核把这些时间戳混入熵池（entropy pool），作为随机性的原材料。&lt;/p&gt;
+&lt;p&gt;内核维护一个熵的&amp;quot;水位线&amp;quot;——&lt;code&gt;entropy_avail&lt;/code&gt;。可以通过 &lt;code&gt;/proc/sys/kernel/random/entropy_avail&lt;/code&gt; 查看当前熵池还剩多少：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;cat /proc/sys/kernel/random/entropy_avail
+# 输出类似: 256
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id="devrandom-vs-devurandom"&gt;/dev/random vs /dev/urandom &lt;a href="#devrandom-vs-devurandom" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;这是最容易搞混的地方。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;/dev/random&lt;/code&gt;&lt;/strong&gt;：阻塞读。如果熵池中的熵不够，&lt;code&gt;read()&lt;/code&gt; 会一直阻塞，直到收集到足够的熵才返回。设计意图是保证返回的每一个字节都有充分的熵支撑，适合生成长期密钥等对安全性要求极高的场景。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;&lt;code&gt;/dev/urandom&lt;/code&gt;&lt;/strong&gt;：非阻塞读。即使熵池空了也会立即返回数据。它在熵不够时会退回到 CSPRNG 的输出——虽然不是&amp;quot;每字节都有熵保证&amp;quot;，但 CSPRNG 的安全性已经足够应对绝大多数场景。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;实际上，Linux 内核从 5.4 开始，&lt;code&gt;/dev/random&lt;/code&gt; 也不再无条件阻塞了——只在 CRNG（Cryptographic Random Number Generator）未初始化时阻塞。初始化完成后，&lt;code&gt;/dev/random&lt;/code&gt; 和 &lt;code&gt;/dev/urandom&lt;/code&gt; 的行为基本一致。所以现在纠结 &lt;code&gt;/dev/random&lt;/code&gt; 还是 &lt;code&gt;/dev/urandom&lt;/code&gt; 的意义已经不大，真正重要的是&lt;strong&gt;不要用应用层的伪随机来做安全相关的事&lt;/strong&gt;。&lt;/p&gt;</description></item><item><title>Git cherry-pick 时如何将多个 commit 压缩成一个</title><link>/blog/2024-04-17-git-cherrypick-squash/</link><pubDate>Wed, 17 Apr 2024 00:00:00 +0800</pubDate><guid>/blog/2024-04-17-git-cherrypick-squash/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;日常开发中，cherry-pick 是一个高频操作——把别的分支上的某个 commit 摘过来，应用到当前分支。Git 默认会原样搬运，每个被 pick 的 commit 在当前分支上单独生成一个新 commit。&lt;/p&gt;
 &lt;p&gt;但有时候我们并不想保留原来的 commit 粒度。比如在 feature 分支上修修补补的 5 个小 commit，合到 release 分支时只想留一个干净的 commit。这时候就需要把多个 commit 压缩（squash）成一个。&lt;/p&gt;
 &lt;h1 id="方法一git-cherry-pick--n"&gt;方法一：&lt;code&gt;git cherry-pick -n&lt;/code&gt; &lt;a href="#%e6%96%b9%e6%b3%95%e4%b8%80git-cherry-pick--n" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
@@ -5614,7 +6285,24 @@ settings.json文件，user level对应的配置文件路径为：&lt;/p&gt;</des
 &lt;h2 id="通过-workspace"&gt;通过 workspace &lt;a href="#%e9%80%9a%e8%bf%87-workspace" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;vscode支持workspace，以及multi-root workspace，意思是你可以将多个独立的工程组织在一个workspace中，在一个workspace中也可以控制显示、隐藏的文件。&lt;/p&gt;
 &lt;p&gt;workspace是不同于project scope的另一种特性，可以针对同一个project配置多个workspace分别设置好隐藏、显示规则，可以近似实现project scope的功能。
-multi-root workspace还可以将多个不相干的projects组合在一个workspace里面，比如我有些个人兴趣驱动的电子书，调试器相关的、RPC框架相关的、Go语言设计实现相关的，我就可以将这几个独立的工程编排为一个workspace。&lt;/p&gt;</description></item><item><title>Protobuf 中的嵌套消息与枚举类型</title><link>/blog/2024-04-01-protobuf-nested/</link><pubDate>Mon, 01 Apr 2024 00:00:00 +0800</pubDate><guid>/blog/2024-04-01-protobuf-nested/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+multi-root workspace还可以将多个不相干的projects组合在一个workspace里面，比如我有些个人兴趣驱动的电子书，调试器相关的、RPC框架相关的、Go语言设计实现相关的，我就可以将这几个独立的工程编排为一个workspace。&lt;/p&gt;</description></item><item><title>xz 后门事件：一次教科书级的开源供应链攻击</title><link>/blog/2024-04-04-cve-xz-backdoor/</link><pubDate>Thu, 04 Apr 2024 00:00:00 +0800</pubDate><guid>/blog/2024-04-04-cve-xz-backdoor/</guid><description>&lt;p&gt;2024 年 3 月 29 日，微软的 Andres Freund 在 oss-security 邮件列表发了一封邮件，说他发现 liblzma（xz 的一部分）里面植入了后门。他注意到这件事，是因为最近几周在 Debian sid 上 &lt;code&gt;sshd&lt;/code&gt; 登录时 CPU 异常飙升，valgrind 也报了一些奇怪的错误。&lt;/p&gt;
+&lt;p&gt;顺着异常一路挖下去，最终挖出了一个 CVSS 10.0 的后门。这是迄今为止开源生态中最精心策划的供应链攻击之一，值得认真复盘。&lt;/p&gt;
+&lt;p&gt;几条关键参考资料：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="https://research.swtch.com/xz-timeline"&gt;Timeline of the xz open source attack&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://research.swtch.com/xz-script"&gt;The xz attack shell script&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://github.com/amlweems/xzbot"&gt;xzbot — 后门利用演示&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="攻击链概览"&gt;攻击链概览 &lt;a href="#%e6%94%bb%e5%87%bb%e9%93%be%e6%a6%82%e8%a7%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;先说清楚这条攻击链是怎么串起来的：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;攻击者 Jia Tan 通过持续贡献获得了 xz 项目的维护权限。&lt;/li&gt;
+&lt;li&gt;他往 liblzma 里植入了后门。代码不在源码树里，而是藏在 release tarball 的一些&amp;quot;测试文件&amp;quot;中——压缩、混淆后的二进制 blob。&lt;/li&gt;
+&lt;li&gt;liblzma 看起来只是压缩库，但它是 systemd 的依赖（&lt;code&gt;libsystemd&lt;/code&gt; → &lt;code&gt;liblzma&lt;/code&gt;）。&lt;/li&gt;
+&lt;li&gt;而很多 Linux 发行版（Debian、Ubuntu、Fedora 等）的 OpenSSH sshd 打了 patch，链接了 &lt;code&gt;libsystemd&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;于是一条依赖链形成了：&lt;code&gt;sshd&lt;/code&gt; → &lt;code&gt;libsystemd&lt;/code&gt; → &lt;code&gt;liblzma&lt;/code&gt;（后门）。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;PS: 这条路不是一开始就设计好的，更像是攻击者在依赖图谱里找到了一条可以利用的路径。xz 本身和 SSH 没有直接关系，但依赖链让它暴露了出来。&lt;/p&gt;</description></item><item><title>Protobuf 中的嵌套消息与枚举类型</title><link>/blog/2024-04-01-protobuf-nested/</link><pubDate>Mon, 01 Apr 2024 00:00:00 +0800</pubDate><guid>/blog/2024-04-01-protobuf-nested/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;在设计 Protobuf 消息结构时，有些类型天然只属于某个特定的父 message，在其他上下文中没有独立存在的意义。比如 &lt;code&gt;Address&lt;/code&gt; 可能在 &lt;code&gt;UserInfo&lt;/code&gt; 和 &lt;code&gt;OrderInfo&lt;/code&gt; 中都有，但各自的地址结构可能不同。&lt;/p&gt;
 &lt;p&gt;在这种情况下，如果将所有 message 和 enum 都定义为顶层类型，会导致命名空间污染，也失去了语义上的归属关系。Protobuf 支持嵌套类型来解决这个问题。&lt;/p&gt;
 &lt;h1 id="嵌套-message"&gt;嵌套 Message &lt;a href="#%e5%b5%8c%e5%a5%97-message" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
@@ -5775,7 +6463,7 @@ rand() -- 分片键
 );
 &lt;/code&gt;&lt;/pre&gt;
 &lt;h2 id="写入路径"&gt;写入路径 &lt;a href="#%e5%86%99%e5%85%a5%e8%b7%af%e5%be%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;&lt;strong&gt;写入分布式表&lt;/strong&gt;：&lt;/p&gt;</description></item><item><title>高并发系统设计：解决c10k c100k c10m问题</title><link>/blog/2024-01-06-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F_%E8%A7%A3%E5%86%B3c10kc100kc10m%E9%97%AE%E9%A2%98/</link><pubDate>Sat, 06 Jan 2024 20:30:24 +0800</pubDate><guid>/blog/2024-01-06-%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F_%E8%A7%A3%E5%86%B3c10kc100kc10m%E9%97%AE%E9%A2%98/</guid><description>&lt;h3 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;写入分布式表&lt;/strong&gt;：&lt;/p&gt;</description></item><item><title>高并发系统设计：解决c10k c100k c10m问题</title><link>/blog/2024-01-06-%E9%AB%98%E6%80%A7%E8%83%BD%E6%9E%B6%E6%9E%84_%E8%A7%A3%E5%86%B3c10kc100kc10m%E9%97%AE%E9%A2%98/</link><pubDate>Sat, 06 Jan 2024 20:30:24 +0800</pubDate><guid>/blog/2024-01-06-%E9%AB%98%E6%80%A7%E8%83%BD%E6%9E%B6%E6%9E%84_%E8%A7%A3%E5%86%B3c10kc100kc10m%E9%97%AE%E9%A2%98/</guid><description>&lt;h3 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
 &lt;p&gt;c10k, c100k甚至c10m，这些问题大家已经不再陌生，聊起来可能显得有点枯燥？新技术层出不穷，至少我自己对这些问题有了些新的认识，需要更新沉淀下我的“小宇宙”。&lt;/p&gt;
 &lt;h3 id="c10k问题-1999-1gbps-ethernet"&gt;c10k问题, 1999, 1Gbps Ethernet &lt;a href="#c10k%e9%97%ae%e9%a2%98-1999-1gbps-ethernet" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
 &lt;blockquote&gt;
@@ -6455,7 +7143,7 @@ time.Sleep(time.Second*5)
 &lt;li&gt;平均服务时间可视为服务平均处理延迟Latency（可细分为等待延迟+处理延迟），&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;这样可以得到另一个版本的Little&amp;rsquo;s Law，Concurrency=Throughput * Latency。&lt;/p&gt;
-&lt;p&gt;简单理解下这里的公式。假设请求都是单线程处理，每个请求只会占用一个cpu core，则服务并发度Concurrency就是cpu core的个数；每个请求的处理平均时间为Latency（单位为秒），则1秒内一个cpu core可以处理的请求数为 1/Latency；因此，1秒内可处理的总请求个数也就可以确定：Throughput = Concurrency * (1/ Latency)，进一步就可以得到公式：Concurrency = Throughput * Latency……所以，还是好理解的。&lt;/p&gt;</description></item><item><title>安全编程：检测并解决数值计算溢出问题</title><link>/blog/2023-03-03-%E5%AE%89%E5%85%A8%E7%BC%96%E7%A8%8B_%E6%A3%80%E6%B5%8B%E5%B9%B6%E8%A7%A3%E5%86%B3%E8%AE%A1%E7%AE%97%E6%BA%A2%E5%87%BA%E9%97%AE%E9%A2%98/</link><pubDate>Fri, 03 Mar 2023 02:04:11 +0800</pubDate><guid>/blog/2023-03-03-%E5%AE%89%E5%85%A8%E7%BC%96%E7%A8%8B_%E6%A3%80%E6%B5%8B%E5%B9%B6%E8%A7%A3%E5%86%B3%E8%AE%A1%E7%AE%97%E6%BA%A2%E5%87%BA%E9%97%AE%E9%A2%98/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;简单理解下这里的公式。假设请求都是单线程处理，每个请求只会占用一个cpu core，则服务并发度Concurrency就是cpu core的个数；每个请求的处理平均时间为Latency（单位为秒），则1秒内一个cpu core可以处理的请求数为 1/Latency；因此，1秒内可处理的总请求个数也就可以确定：Throughput = Concurrency * (1/ Latency)，进一步就可以得到公式：Concurrency = Throughput * Latency……所以，还是好理解的。&lt;/p&gt;</description></item><item><title>防御性编程：检测并解决数值计算溢出问题</title><link>/blog/2023-03-03-%E6%A3%80%E6%B5%8B%E5%B9%B6%E8%A7%A3%E5%86%B3%E8%AE%A1%E7%AE%97%E6%BA%A2%E5%87%BA%E9%97%AE%E9%A2%98/</link><pubDate>Fri, 03 Mar 2023 02:04:11 +0800</pubDate><guid>/blog/2023-03-03-%E6%A3%80%E6%B5%8B%E5%B9%B6%E8%A7%A3%E5%86%B3%E8%AE%A1%E7%AE%97%E6%BA%A2%E5%87%BA%E9%97%AE%E9%A2%98/</guid><description>&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;数据类型是个好东西，类型定义了一种数据组成以及允许在其上进行的操作。
 数据类型是个好东西，它定义了一种最基础的“安全”，类型安全。&lt;/p&gt;
 &lt;p&gt;我们在进行数值运算时，有可能会“超出”类型本身的值域，但是受限于位宽限制，进而表现为“上溢出”。以a+b为例：&lt;/p&gt;
@@ -16446,7 +17134,142 @@ return ! (i &amp;amp; (i-1));
 }
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;其实原理也很简单，考虑如下移位操作（移位相当于乘以2^x），1, 1&amp;laquo;1, 1&amp;laquo;2, 1&amp;laquo;3, &amp;hellip;, 1&amp;laquo;n，移位之后，除了高位为1外，低位全都是0，例如1000，减去1之后将变成0111，这样i&amp;amp;(i-1)一定是为0的！&lt;/p&gt;
-&lt;p&gt;所以判断一个数字是不是2的x次幂，就可以通过这个办法来，可以验证一下如果i不是2的幂，是不满足这样的性质的。&lt;/p&gt;</description></item><item><title/><link>/blog/_processor-design-learning-guide/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/blog/_processor-design-learning-guide/</guid><description>&lt;h1 id="处理器设计学习指南"&gt;处理器设计学习指南 &lt;a href="#%e5%a4%84%e7%90%86%e5%99%a8%e8%ae%be%e8%ae%a1%e5%ad%a6%e4%b9%a0%e6%8c%87%e5%8d%97" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;所以判断一个数字是不是2的x次幂，就可以通过这个办法来，可以验证一下如果i不是2的幂，是不满足这样的性质的。&lt;/p&gt;</description></item><item><title/><link>/blog/readme/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/blog/readme/</guid><description>&lt;h1 id="split-lock--cpu-计量失真lab-脚手架"&gt;Split Lock → CPU 计量失真：lab 脚手架 &lt;a href="#split-lock--cpu-%e8%ae%a1%e9%87%8f%e5%a4%b1%e7%9c%9flab-%e8%84%9a%e6%89%8b%e6%9e%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;配套博客系列（&lt;strong&gt;读系列再跑脚本&lt;/strong&gt;，否则容易踩路径/预期坑）：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;篇&lt;/th&gt;
+&lt;th&gt;内容&lt;/th&gt;
+&lt;th&gt;确定性&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href="../2025-12-22-kvm_splitlock%E5%BC%95%E5%8F%91CPU%E5%8D%A0%E7%94%A8%E9%A3%99%E5%8D%87.md"&gt;1 · Split Lock 压垮母机&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;邻机总线锁拖垮母机&lt;/td&gt;
+&lt;td&gt;已认&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href="../2026-07-24-splitlock_2_%E7%9B%91%E6%8E%A7%E8%AF%B4%E8%B0%8E%E4%B8%8Ecpu%E8%AE%A1%E9%87%8F%E5%A4%B1%E7%9C%9F.md"&gt;2 · 监控数据说谎&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;gopsutil 单核 350%、假说&lt;/td&gt;
+&lt;td&gt;现象真；350% 因果未证&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href="../2026-07-25-splitlock_3_kvm%E5%8F%AA%E6%B3%A81%E4%B8%AAtimer.md"&gt;3 · KVM 只注 1 个 timer&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;KVM&lt;strong&gt;只注 1 个&lt;/strong&gt; timer IRQ；periodic loop 才多记&lt;/td&gt;
+&lt;td&gt;机制允许 &amp;gt;100%&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;a href="../2026-07-26-splitlock_4_tick_catchup%E5%AE%9E%E9%AA%8C%E7%8A%B6%E6%80%81.md"&gt;4 · Tick catchup 实验&lt;/a&gt;&lt;/td&gt;
+&lt;td&gt;ftrace 坐实 catchup；&lt;strong&gt;稳定 300% 未复现&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;catchup ✓ · 300% ✗&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="待验证的假说"&gt;待验证的假说 &lt;a href="#%e5%be%85%e9%aa%8c%e8%af%81%e7%9a%84%e5%81%87%e8%af%b4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="假说1timer-irq-catchup"&gt;假说1：Timer IRQ catchup &lt;a href="#%e5%81%87%e8%af%b41timer-irq-catchup" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;最开始，受AI影响，我以为会kvm会给子机（guest）连续注入多个丢失的Timer IRQ，后面进一步确定了是注入1个Timer IRQ。后面了解到子机内核接收到Timer IRQ后会补偿进程运行时间，可能是补偿一次（oneshot）或者为missed timer ticks逐个补偿一次。我以为可能是多次补偿导致CPU使用率上升、同时steal time=0（为了方便超卖，云服务商kvm未将实际steal time同步给子机）。&lt;/p&gt;</description></item><item><title/><link>/blog/readme/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/blog/readme/</guid><description>&lt;h1 id="tick-catchup-追踪脚本"&gt;Tick catchup 追踪脚本 &lt;a href="#tick-catchup-%e8%bf%bd%e8%b8%aa%e8%84%9a%e6%9c%ac" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;在 &lt;strong&gt;guest 内&lt;/strong&gt; 看&lt;strong&gt;单次 timer IRQ&lt;/strong&gt; 上：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;补偿了多少个 lost tick（&lt;code&gt;tick_periodic&lt;/code&gt; 循环次数）&lt;/li&gt;
+&lt;li&gt;有多少次真正记到进程时间（&lt;code&gt;account_user_time&lt;/code&gt; / &lt;code&gt;account_system_time&lt;/code&gt;）&lt;/li&gt;
+&lt;li&gt;有多少次记到 idle（&lt;code&gt;account_idle_time&lt;/code&gt;）&lt;/li&gt;
+&lt;/ol&gt;
+&lt;blockquote&gt;
+&lt;p&gt;catchup 是 guest 内核路径，必须在 guest 跑。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="选哪个"&gt;选哪个 &lt;a href="#%e9%80%89%e5%93%aa%e4%b8%aa" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Guest 内核&lt;/th&gt;
+&lt;th&gt;脚本&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;CentOS 7 / 3.10&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;trace-tick-catchup-ftrace.sh&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;有 bpftrace 的较新内核&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;trace-tick-catchup.bt&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="字段含义"&gt;字段含义 &lt;a href="#%e5%ad%97%e6%ae%b5%e5%90%ab%e4%b9%89" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;每次打印一行 &lt;code&gt;CATCHUP&lt;/code&gt;：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;字段&lt;/th&gt;
+&lt;th&gt;含义&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;ticks&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;本次 &lt;code&gt;tick_handle_periodic&lt;/code&gt; 内 &lt;code&gt;tick_periodic&lt;/code&gt; 次数 = 处理的 tick &lt;strong&gt;总数&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;lost_extra&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;ticks - 1&lt;/code&gt;，相对「只处理当前这 1 个 IRQ」&lt;strong&gt;多补偿&lt;/strong&gt;的次数&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;upt&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;update_process_times&lt;/code&gt; 次数（应 ≈ &lt;code&gt;ticks&lt;/code&gt;）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;user&lt;/code&gt; / &lt;code&gt;sys&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;account_user_time&lt;/code&gt; / &lt;code&gt;account_system_time&lt;/code&gt;：真正往进程 utime/stime 走的次数&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;idle&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;account_idle_time&lt;/code&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;charged&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;user + sys&lt;/code&gt;（ftrace 脚本）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;est_ms&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;粗算：&lt;code&gt;ticks * 1000 / HZ&lt;/code&gt;（默认按 HZ=1000）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;current&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;当时 &lt;code&gt;current&lt;/code&gt;（仅 bpftrace；catchup 会记到谁头上）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;判读：&lt;/p&gt;</description></item><item><title/><link>/blog/test/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/blog/test/</guid><description>&lt;p&gt;$ sudo gdb -p 3015685 -batch -ex &amp;lsquo;set pagination off&amp;rsquo; -ex &amp;lsquo;set non-stop on&amp;rsquo; -ex &amp;lsquo;set scheduler-locking off&amp;rsquo; -ex &amp;lsquo;info threads&amp;rsquo; -ex &amp;rsquo;thread find 3015690&amp;rsquo; -ex &amp;lsquo;interrupt&amp;rsquo; -ex &amp;lsquo;shell sleep 3&amp;rsquo; -ex &amp;lsquo;continue&amp;rsquo; -ex &amp;lsquo;detach&amp;rsquo; -ex &amp;lsquo;quit&amp;rsquo;&lt;/p&gt;
+&lt;p&gt;[New LWP 3015686]
+[New LWP 3015690]
+[New LWP 3015691]
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library &amp;ldquo;/lib64/libthread_db.so.1&amp;rdquo;.
+0x00007f7225132bb6 in ppoll () from /lib64/libc.so.6
+Cannot change this setting while the inferior is running.
+Id Target Id Frame&lt;/p&gt;</description></item><item><title/><link>/blog/kvm_qemu_lab_setup/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/blog/kvm_qemu_lab_setup/</guid><description>&lt;h1 id="linux-kvmqemu-虚拟化实验环境搭建"&gt;Linux KVM/QEMU 虚拟化实验环境搭建 &lt;a href="#linux-kvmqemu-%e8%99%9a%e6%8b%9f%e5%8c%96%e5%ae%9e%e9%aa%8c%e7%8e%af%e5%a2%83%e6%90%ad%e5%bb%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;以 WSL2 为宿主机，搭建多实例 KVM 实验环境，用于验证 clocksource、steal time 等虚拟化行为。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="一环境检查"&gt;一、环境检查 &lt;a href="#%e4%b8%80%e7%8e%af%e5%a2%83%e6%a3%80%e6%9f%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;WSL2 上先确认硬件虚拟化和 KVM 是否可用：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;# 1. CPU 虚拟化支持（Intel VT-x 为 vmx，AMD-V 为 svm）
+grep -E 'vmx|svm' /proc/cpuinfo | head -1
+# 2. /dev/kvm 设备是否存在且可读写
+ls -la /dev/kvm
+# 3. 内核 KVM 模块是否编译
+zgrep CONFIG_KVM /proc/config.gz
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;我这边的输出：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;flags: ... vmx ... ept vpid ept_ad ... constant_tsc nonstop_tsc tsc_known_freq tsc_reliable ... tsc_deadline_timer ... hypervisor ...
+/dev/kvm: crw-rw-rw- 1 root kvm 10, 232
+CONFIG_KVM=y
+CONFIG_KVM_INTEL=y
+CONFIG_KVM_AMD=y
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;关键 flag 解读：&lt;/p&gt;</description></item><item><title/><link>/blog/_processor-design-learning-guide/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/blog/_processor-design-learning-guide/</guid><description>&lt;h1 id="处理器设计学习指南"&gt;处理器设计学习指南 &lt;a href="#%e5%a4%84%e7%90%86%e5%99%a8%e8%ae%be%e8%ae%a1%e5%ad%a6%e4%b9%a0%e6%8c%87%e5%8d%97" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;blockquote&gt;
 &lt;p&gt;个人学习参考文档，目标是&amp;quot;吃透处理器设计，至少核心理念理解到位&amp;quot;。
 本文档基于对 &lt;a href="https://docs.boom-core.org/en/latest/"&gt;BOOM (Berkeley Out-of-Order Machine)&lt;/a&gt; 文档的评估，
@@ -16572,50 +17395,7 @@ return ! (i &amp;amp; (i-1));
 &lt;hr&gt;
 &lt;h2 id="2-学习资源分级"&gt;2. 学习资源分级 &lt;a href="#2-%e5%ad%a6%e4%b9%a0%e8%b5%84%e6%ba%90%e5%88%86%e7%ba%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;h3 id="21-第一站boom-文档建立-ooo-心智模型"&gt;2.1 第一站：BOOM 文档（建立 OoO 心智模型） &lt;a href="#21-%e7%ac%ac%e4%b8%80%e7%ab%99boom-%e6%96%87%e6%a1%a3%e5%bb%ba%e7%ab%8b-ooo-%e5%bf%83%e6%99%ba%e6%a8%a1%e5%9e%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;精读顺序及重点：&lt;/p&gt;</description></item><item><title/><link>/blog/readme/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/blog/readme/</guid><description>&lt;h1 id="split-lock--cpu-计量失真复现"&gt;Split Lock → CPU 计量失真复现 &lt;a href="#split-lock--cpu-%e8%ae%a1%e9%87%8f%e5%a4%b1%e7%9c%9f%e5%a4%8d%e7%8e%b0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
-&lt;h2 id="问题背景"&gt;问题背景 &lt;a href="#%e9%97%ae%e9%a2%98%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;线上观察到 gopsutil 报告&lt;strong&gt;单核 CPU 使用率 350%+&lt;/strong&gt;，理论上除以核数后不应超过 100%。
-该异常与同母机另一台 VM 的 split-lock 问题时间点吻合。&lt;/p&gt;
-&lt;h2 id="假说"&gt;假说 &lt;a href="#%e5%81%87%e8%af%b4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;&lt;strong&gt;Split-lock → 母机资源争抢 → 我们的 vCPU 被反复 deschedule/resume → guest 内核 timer catchup 补偿 → &lt;code&gt;/proc/[pid]/stat&lt;/code&gt; 的进程 CPU 时间增量与 &lt;code&gt;clock_gettime&lt;/code&gt; 墙钟增量失配 → 单核使用率计算破 100%。&lt;/strong&gt;&lt;/p&gt;
-&lt;h2 id="文件说明"&gt;文件说明 &lt;a href="#%e6%96%87%e4%bb%b6%e8%af%b4%e6%98%8e" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;table&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th&gt;文件&lt;/th&gt;
-&lt;th&gt;说明&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td&gt;&lt;code&gt;splitlock.c&lt;/code&gt;&lt;/td&gt;
-&lt;td&gt;C 语言 split-lock 触发程序（跨 cache line 的 lock add）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;&lt;code&gt;main.go&lt;/code&gt;&lt;/td&gt;
-&lt;td&gt;Go 语言 CPU 监控程序（复现 gopsutil 的计算逻辑）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;&lt;code&gt;Dockerfile&lt;/code&gt;&lt;/td&gt;
-&lt;td&gt;Docker 环境（演示用，不会复现 350% 异常）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;&lt;code&gt;vm-setup.sh&lt;/code&gt;&lt;/td&gt;
-&lt;td&gt;QEMU/KVM 完整复现脚本（需要真实 VM）&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td&gt;&lt;code&gt;Makefile&lt;/code&gt;&lt;/td&gt;
-&lt;td&gt;构建脚本&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-&lt;h2 id="快速开始"&gt;快速开始 &lt;a href="#%e5%bf%ab%e9%80%9f%e5%bc%80%e5%a7%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;h3 id="1-本地编译运行不触发-split-lock"&gt;1. 本地编译运行（不触发 split-lock） &lt;a href="#1-%e6%9c%ac%e5%9c%b0%e7%bc%96%e8%af%91%e8%bf%90%e8%a1%8c%e4%b8%8d%e8%a7%a6%e5%8f%91-split-lock" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;pre&gt;&lt;code class="language-bash"&gt;make all # 编译
-./splitlock 2 &amp;amp; # 后台启动 split-lock（2 线程）
-./cpumon $(pgrep splitlock) # 监控其 CPU 使用率
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;在裸机/Docker 上，PerCore% 始终 ≤ 100%，这是&lt;strong&gt;正常基线&lt;/strong&gt;。&lt;/p&gt;</description></item><item><title/><link>/blog/2018-07-31-mysql%E8%AF%AD%E5%8F%A5/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/blog/2018-07-31-mysql%E8%AF%AD%E5%8F%A5/</guid><description>&lt;p&gt;// TODO 检查是否有保留的必要性&lt;/p&gt;
+&lt;p&gt;精读顺序及重点：&lt;/p&gt;</description></item><item><title/><link>/blog/2018-07-31-mysql%E8%AF%AD%E5%8F%A5/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/blog/2018-07-31-mysql%E8%AF%AD%E5%8F%A5/</guid><description>&lt;p&gt;// TODO 检查是否有保留的必要性&lt;/p&gt;
 &lt;h5 id="1-连接一个数据库"&gt;1 连接一个数据库 &lt;a href="#1-%e8%bf%9e%e6%8e%a5%e4%b8%80%e4%b8%aa%e6%95%b0%e6%8d%ae%e5%ba%93" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h5&gt;
 &lt;p&gt;&lt;code&gt;mysql -h{host} -P{port} -D{dbname} -u{user} -p&lt;/code&gt;，然后回车根据提示输入密码即可。&lt;/p&gt;
 &lt;h5 id="2-执行系统命令"&gt;2 执行系统命令 &lt;a href="#2-%e6%89%a7%e8%a1%8c%e7%b3%bb%e7%bb%9f%e5%91%bd%e4%bb%a4" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h5&gt;

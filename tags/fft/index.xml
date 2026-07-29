@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Fft on</title><link>/tags/fft/</link><description>Recent content in Fft on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 01 Apr 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/fft/index.xml" rel="self" type="application/rss+xml"/><item><title>游戏中的水体模拟：从 FFT 海洋到超写实渲染</title><link>/blog/water-simulation-fft-ocean/</link><pubDate>Wed, 01 Apr 2026 00:00:00 +0800</pubDate><guid>/blog/water-simulation-fft-ocean/</guid><description>&lt;p&gt;水体模拟是游戏渲染中极具挑战的课题。从广阔海洋到涓涓细流，不同尺度的水体需要不同的技术方案。本文从 FFT 海洋模拟入手，逐步展开到多扰动叠加和超写实渲染的挑战。&lt;/p&gt;
+&lt;h2 id="1-fft-海洋模拟原理"&gt;1. FFT 海洋模拟原理 &lt;a href="#1-fft-%e6%b5%b7%e6%b4%8b%e6%a8%a1%e6%8b%9f%e5%8e%9f%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="11-为什么需要-fft"&gt;1.1 为什么需要 FFT？ &lt;a href="#11-%e4%b8%ba%e4%bb%80%e4%b9%88%e9%9c%80%e8%a6%81-fft" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;真实的海面看起来杂乱无章：大浪、小浪、不同方向的波、风吹过的涟漪……如果用最笨的方法——一个一个正弦波去叠加（即 Gerstner 波），电脑要算成千上万个波在每个点的高度，非常慢，游戏根本跑不动。&lt;/p&gt;
+&lt;p&gt;**FFT（Fast Fourier Transform，快速傅里叶变换）**就像一个&amp;quot;魔法转换器&amp;quot;，能高效处理这种&amp;quot;很多波叠加在一起&amp;quot;的复杂情况。它让电脑能用合理的计算量，实时生成看起来自然、随机的海浪。&lt;/p&gt;
+&lt;p&gt;这个方法最早在电影里流行（比如《泰坦尼克号》、《水世界》里的海面特效），后来被游戏引擎（如 Unity、Unreal Engine）广泛采用。&lt;/p&gt;
+&lt;h3 id="12-工作流程"&gt;1.2 工作流程 &lt;a href="#12-%e5%b7%a5%e4%bd%9c%e6%b5%81%e7%a8%8b" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;想象海面是一个大网格（很多小方格组成的平面），我们需要知道每个小方格在某个时刻&amp;quot;高多少&amp;quot;。FFT 方法的典型流程如下：&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;第一步：用&amp;quot;频谱&amp;quot;描述波浪的特点。&lt;/strong&gt; 不是直接画波浪，而是先在&amp;quot;频率世界&amp;quot;里描述：哪些方向的风会产生什么样的大浪、小浪？波浪的能量分布是怎样的？（参考真实海洋统计数据，比如 Phillips 频谱或 JONSWAP 谱。）这就像给海面准备一张&amp;quot;配方&amp;quot;：告诉电脑&amp;quot;要有一些长波大浪 + 一些短波碎浪 + 随机相位（让它看起来不规则）&amp;quot;。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;第二步：FFT 魔法转换。&lt;/strong&gt; FFT（实际常用它的逆变换 IFFT）把这个&amp;quot;频率描述&amp;quot;快速转换成空间里的实际高度图（heightmap）。高度图就像一张黑白照片：白色部分是波峰（水面高），黑色是波谷（水面低）。电脑不是逐个算正弦波，而是通过 FFT 一次性高效算出所有波的叠加结果。一个 512×512 或 1024×1024 的 FFT 网格就能叠加数千个波，性能远超逐波叠加。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;第三步：生成更多效果。&lt;/strong&gt; 从高度图还能快速算出法线图（告诉光线&amp;quot;这个表面朝哪个方向倾斜&amp;quot;，让水面看起来有光泽和起伏）、泡沫/白浪（波峰太陡的地方自动生成白色泡沫）、以及位移（displacement，让网格顶点真的上下移动，做出真实的波浪形状）。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;第四步：渲染。&lt;/strong&gt; 把这个动态变化的高度图应用到水面网格上，加上反射（天空、周围景物）、折射（水下模糊）、颜色衰减等，就成了我们看到的漂亮海面。整个过程可以随时间更新，让海浪&amp;quot;流动&amp;quot;起来，还能受风向、风速等参数控制。&lt;/p&gt;
+&lt;h3 id="13-优缺点"&gt;1.3 优缺点 &lt;a href="#13-%e4%bc%98%e7%bc%ba%e7%82%b9" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;优点：&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;真实感强&lt;/strong&gt;：波浪自然、不重复，看起来像真实海洋统计模型。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;效率高&lt;/strong&gt;：FFT 算法很聪明，计算速度快，能在游戏中实时运行（尤其用 GPU 加速）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;可控&lt;/strong&gt;：可以调节风力、浪高、波长等参数，做出平静湖面到狂风暴雨的不同效果。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;可平铺&lt;/strong&gt;：生成的波浪可以无缝重复覆盖很大一片海域，不会明显看出接缝。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;局限性：&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;计算量还是比&amp;quot;平面水&amp;quot;大，所以通常只用在重要的大水面场景，小池塘可能用更简单方法。&lt;/li&gt;
+&lt;li&gt;它主要模拟表面波浪形状，不直接处理水流、物体交互（船只晃动、水花飞溅等），那些往往需要额外技术配合。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;h2 id="2-进阶多扰动叠加"&gt;2. 进阶：多扰动叠加 &lt;a href="#2-%e8%bf%9b%e9%98%b6%e5%a4%9a%e6%89%b0%e5%8a%a8%e5%8f%a0%e5%8a%a0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;真实海洋不是单一方向的风吹出来的。多风向交汇、局部龙卷风、洋流等复杂扰动，能否在 FFT 框架内模拟？答案是&lt;strong&gt;大部分可以&lt;/strong&gt;。&lt;/p&gt;</description></item></channel></rss>

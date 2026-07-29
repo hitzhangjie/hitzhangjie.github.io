@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>3dgs on</title><link>/tags/3dgs/</link><description>Recent content in 3dgs on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 27 Nov 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/3dgs/index.xml" rel="self" type="application/rss+xml"/><item><title>3D 重建技术演进：从摄影测量到 3D Gaussian Splatting</title><link>/blog/3d%E9%87%8D%E5%BB%BA-photogrammetry-nerf-3dgs/</link><pubDate>Thu, 27 Nov 2025 00:00:00 +0800</pubDate><guid>/blog/3d%E9%87%8D%E5%BB%BA-photogrammetry-nerf-3dgs/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;3D 重建——从多张二维照片还原出三维场景——是计算机视觉领域的核心问题之一。无论是游戏资产制作、高精地图测绘、数字孪生，还是最近火热的空间计算，都离不开这项技术。&lt;/p&gt;
+&lt;p&gt;过去二十年，3D 重建的技术路线发生了巨大变化：从基于几何原理的传统摄影测量，到 2020 年横空出世的 NeRF 神经辐射场，再到 2023 年席卷学界的 3D Gaussian Splatting。本文梳理这条技术演进脉络，帮助读者理解不同方案的核心思想、优劣和适用场景。&lt;/p&gt;
+&lt;h1 id="传统方法摄影测量photogrammetry"&gt;传统方法：摄影测量（Photogrammetry） &lt;a href="#%e4%bc%a0%e7%bb%9f%e6%96%b9%e6%b3%95%e6%91%84%e5%bd%b1%e6%b5%8b%e9%87%8fphotogrammetry" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;传统摄影测量的核心流程可以概括为两步：&lt;strong&gt;运动恢复结构（Structure from Motion, SfM）&lt;strong&gt;和&lt;/strong&gt;多视图立体匹配（Multi-View Stereo, MVS）&lt;/strong&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;SfM（稀疏重建）&lt;/strong&gt;：从多张不同角度拍摄的照片中，分析相机的位置和姿态，同时生成稀疏的三维点云。这一步解决了&amp;quot;每张照片是从哪里拍的&amp;quot;这个问题。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;MVS（稠密重建）&lt;/strong&gt;：在已知相机参数的基础上，对场景进行像素级别的深度估计，生成稠密点云或三角网格模型（Mesh）。&lt;/p&gt;
+&lt;h2 id="开源工具colmap-与-meshroom"&gt;开源工具：Colmap 与 Meshroom &lt;a href="#%e5%bc%80%e6%ba%90%e5%b7%a5%e5%85%b7colmap-%e4%b8%8e-meshroom" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;a href="https://colmap.github.io/"&gt;Colmap&lt;/a&gt; 和 &lt;a href="https://alicevision.org/#meshroom"&gt;Meshroom&lt;/a&gt; 是这一领域最具代表性的开源软件。Colmap 更偏学术，提供完整的 SfM + MVS 管线，命令行友好；Meshroom 基于 AliceVision 框架，提供可视化节点编辑器，更适合艺术家和设计师使用。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;这两者过时了吗？&lt;/strong&gt; 并没有。它们在需要&lt;strong&gt;精确几何网格&lt;/strong&gt;的场景中仍然是首选——比如测绘、建筑信息建模（BIM）、游戏资产生成。但它们的局限也很明显：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;对光照变化、无纹理表面（白墙）、重复纹理（瓷砖地面）非常敏感，容易产生空洞或错误匹配；&lt;/li&gt;
+&lt;li&gt;难以处理动态物体，要求拍摄过程中场景完全静止；&lt;/li&gt;
+&lt;li&gt;计算过程通常非常耗时，大场景可能需要数小时甚至数天。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="辅助工具meshlab"&gt;辅助工具：MeshLab &lt;a href="#%e8%be%85%e5%8a%a9%e5%b7%a5%e5%85%b7meshlab" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;a href="https://www.meshlab.net/"&gt;MeshLab&lt;/a&gt; 是点云和网格模型的后处理利器。Colmap 输出的 &lt;code&gt;.ply&lt;/code&gt; 点云文件通常带有大量噪点和离群点，需要在 MeshLab 中进行清理、简化、补洞、重网格化等操作。它也常用于格式转换和可视化预览。&lt;/p&gt;
+&lt;h2 id="商业方案realityscan-与-metashape"&gt;商业方案：RealityScan 与 Metashape &lt;a href="#%e5%95%86%e4%b8%9a%e6%96%b9%e6%a1%88realityscan-%e4%b8%8e-metashape" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;Epic Games 的 RealityScan 和 Agisoft 的 Metashape 是商业化摄影测量软件的代表。它们将拍照、对齐、重建、纹理映射集成为一站式流程，在易用性和重建质量上做了大量工程优化，但底层原理与 Colmap/Meshroom 并无本质区别。&lt;/p&gt;
+&lt;h1 id="神经渲染的崛起nerf"&gt;神经渲染的崛起：NeRF &lt;a href="#%e7%a5%9e%e7%bb%8f%e6%b8%b2%e6%9f%93%e7%9a%84%e5%b4%9b%e8%b5%b7nerf" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;2020 年，NeRF（Neural Radiance Fields）的出现彻底改变了 3D 重建的游戏规则。&lt;/p&gt;</description></item></channel></rss>

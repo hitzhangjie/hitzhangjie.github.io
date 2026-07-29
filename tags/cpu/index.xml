@@ -1,4 +1,31 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Cpu on</title><link>/tags/cpu/</link><description>Recent content in Cpu on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sun, 26 Jul 2026 21:14:13 +0800</lastBuildDate><atom:link href="/tags/cpu/index.xml" rel="self" type="application/rss+xml"/><item><title>Linux 进程 CPU 时间：调度器统计、tick 采样与虚拟化 timer 补偿</title><link>/blog/2026-07-26-linux_%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8Acpu%E5%8D%A0%E7%94%A8%E6%AD%A3%E7%A1%AE%E7%BB%9F%E8%AE%A1%E5%A7%BF%E5%8A%BF/</link><pubDate>Sun, 26 Jul 2026 21:14:13 +0800</pubDate><guid>/blog/2026-07-26-linux_%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8Acpu%E5%8D%A0%E7%94%A8%E6%AD%A3%E7%A1%AE%E7%BB%9F%E8%AE%A1%E5%A7%BF%E5%8A%BF/</guid><description>&lt;p&gt;写 &lt;a href="/blog/linux/processor/2025-12-22-linux_splitlock%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8CPU%E5%8D%A0%E7%94%A8358%25/"&gt;Split Lock 压垮母机&lt;/a&gt; 系列时，总绕不开一个问题：&lt;strong&gt;进程的 CPU 时间到底怎么记的&lt;/strong&gt;。&lt;code&gt;top&lt;/code&gt; 里看到的 CPU 使用率、&lt;code&gt;/proc/pid/stat&lt;/code&gt; 里的 &lt;code&gt;utime/stime&lt;/code&gt;，这些数字是怎么算出来的？内核里其实有两套并行的记账机制，各自基于不同的时间源，在虚拟化场景下可能产生差异。要理解这些，先从内核计时的两个基础概念说起。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Cpu on</title><link>/tags/cpu/</link><description>Recent content in Cpu on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 29 Jul 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/cpu/index.xml" rel="self" type="application/rss+xml"/><item><title>Split Lock (3)： 溯源CPU 占用率为何飙升到 350%</title><link>/blog/splitlock.p3.%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8cpu%E5%8D%A0%E7%94%A8358/</link><pubDate>Wed, 29 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/splitlock.p3.%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8cpu%E5%8D%A0%E7%94%A8358/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;a href="/blog/linux/processor/2025-12-22-linux_splitlock%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8CPU%E5%8D%A0%E7%94%A8358%25/"&gt;上一篇文章&lt;/a&gt; 中，我们通过逐层排查，最终定位到同母机上另一台子机的 Split Lock 是导致业务 CPU 飙高的根因。腾讯云侧确认后将我们的子机迁移到其他正常母机，问题恢复。&lt;/p&gt;
+&lt;p&gt;但排查过程中还有一个现象始终令人困惑：&lt;strong&gt;单核 CPU 占用率达到了 350%+&lt;/strong&gt;——理论上即使满载，单核算 CPU 使用率也不可能超过 100%。Split Lock 到底做了什么，能让监控数据出现如此反常识的数值？&lt;/p&gt;
+&lt;p&gt;本文将顺着 Split Lock → 内存总线锁 → vCPU 调度延迟 → IRQ 积压注入 → missed timer ticks 补偿这条链路，逐一分析 CPU 占用率升高的原因，以及突破 100% 的机制。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;系列文章&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="/blog/linux/processor/2025-12-22-linux_splitlock%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8CPU%E5%8D%A0%E7%94%A8358%25/"&gt;《1 · Split Lock 压垮母机：一次 CPU 飙升的线上排查》&lt;/a&gt; — 排查过程与根因定位&lt;/li&gt;
+&lt;li&gt;&lt;a href="/blog/linux/processor/2026-07-24-cpu-accounting-splitlock/"&gt;《当监控数据&amp;quot;说谎&amp;quot;：Split Lock 引发的 CPU 计量失真》&lt;/a&gt; — gopsutil 视角的 CPU 计量偏差与复现&lt;/li&gt;
+&lt;li&gt;&lt;a href="/blog/linux/processor/2026-07-26-linux_%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8ACPU%E5%8D%A0%E7%94%A8%E6%AD%A3%E7%A1%AE%E7%BB%9F%E8%AE%A1%E5%A7%BF%E5%8A%BF/"&gt;《Linux 进程 CPU 时间：调度器统计、tick 采样与虚拟化 timer 补偿》&lt;/a&gt; — 内核 CPU 时间记账机制详解&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="splitlock这会导致什么问题呢"&gt;splitlock，这会导致什么问题呢? &lt;a href="#splitlock%e8%bf%99%e4%bc%9a%e5%af%bc%e8%87%b4%e4%bb%80%e4%b9%88%e9%97%ae%e9%a2%98%e5%91%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="有哪些性能方面的影响"&gt;有哪些性能方面的影响? &lt;a href="#%e6%9c%89%e5%93%aa%e4%ba%9b%e6%80%a7%e8%83%bd%e6%96%b9%e9%9d%a2%e7%9a%84%e5%bd%b1%e5%93%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;触发splitlock的子机，加解锁内存总线，自身性能会下降，它内部也有其他访存操作；&lt;/li&gt;
+&lt;li&gt;其他子机中的访存操作，CPU也会等待内存总线就绪，也会引入访存延迟；&lt;/li&gt;
+&lt;li&gt;子机执行过程中本来可能在合适的时候进行切换，让出CPU给其他子机使用，但是现在CPU更可能被占着等内存总线就绪；&lt;/li&gt;
+&lt;li&gt;从整体来看，可能会给其他子机的调度带来不可避免的调度延迟，尤其是再考虑到云服务商一般都存在轻微的超卖的情况；
+所以，很好理解，splitlock会给所有自己带来调度延迟，并且导致实际处理能力下降的问题。这根我们前期观测到的服务处理能力下降，业务侧请求处理耗时增加，也一致。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="但是为什么cpu占用率会升高呢"&gt;但是为什么CPU占用率会升高呢？ &lt;a href="#%e4%bd%86%e6%98%af%e4%b8%ba%e4%bb%80%e4%b9%88cpu%e5%8d%a0%e7%94%a8%e7%8e%87%e4%bc%9a%e5%8d%87%e9%ab%98%e5%91%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;子机被调度到目标CPU上执行，自打linux 2.6引入CFS调度器以后，进程运行时间的统计就从 &amp;ldquo;timer tick采样累计执行时间&amp;rdquo; 改成了 &amp;ldquo;调度器切换时更新累计运行时间片&amp;rdquo; 的方式了；&lt;/li&gt;
+&lt;li&gt;自己被调度到目标CPU上执行，遇到内存总线锁，CPU干等，干等的这段时间也会计入运行时间，如果子机中任务在运行时间片内CPU全部在等内存总线释放，干等，那就是接近100%使用率；&lt;/li&gt;
+&lt;li&gt;在调度延迟期间，如果irq到达，会首先交给母机处理，母机再转给kvm模块，等后续vm被调度时，kvm再注入这些irq到vm内部，vm内部再处理，irq多自然也会推高CPU占用；
+&lt;blockquote&gt;
+&lt;p&gt;我们也确实看到了问题时间点大量irq情况。&lt;/p&gt;</description></item><item><title>Linux 进程 CPU 时间：调度器统计、tick 采样与虚拟化 timer 补偿</title><link>/blog/2026-07-26-linux_%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8Acpu%E5%8D%A0%E7%94%A8%E6%AD%A3%E7%A1%AE%E7%BB%9F%E8%AE%A1%E5%A7%BF%E5%8A%BF/</link><pubDate>Sun, 26 Jul 2026 21:14:13 +0800</pubDate><guid>/blog/2026-07-26-linux_%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8Acpu%E5%8D%A0%E7%94%A8%E6%AD%A3%E7%A1%AE%E7%BB%9F%E8%AE%A1%E5%A7%BF%E5%8A%BF/</guid><description>&lt;p&gt;写 &lt;a href="/blog/linux/processor/2025-12-22-linux_splitlock%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8CPU%E5%8D%A0%E7%94%A8358%25/"&gt;Split Lock 压垮母机&lt;/a&gt; 系列时，总绕不开一个问题：&lt;strong&gt;进程的 CPU 时间到底怎么记的&lt;/strong&gt;。&lt;code&gt;top&lt;/code&gt; 里看到的 CPU 使用率、&lt;code&gt;/proc/pid/stat&lt;/code&gt; 里的 &lt;code&gt;utime/stime&lt;/code&gt;，这些数字是怎么算出来的？内核里其实有两套并行的记账机制，各自基于不同的时间源，在虚拟化场景下可能产生差异。要理解这些，先从内核计时的两个基础概念说起。&lt;/p&gt;
 &lt;h1 id="一时钟源tsc-与-jiffies"&gt;一、时钟源：TSC 与 jiffies &lt;a href="#%e4%b8%80%e6%97%b6%e9%92%9f%e6%ba%90tsc-%e4%b8%8e-jiffies" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;理解记账之前，先搞清楚时间是怎么量的。&lt;/p&gt;
 &lt;h2 id="tsctime-stamp-counter"&gt;TSC（Time Stamp Counter） &lt;a href="#tsctime-stamp-counter" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;

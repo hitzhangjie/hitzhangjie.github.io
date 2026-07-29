@@ -1,4 +1,45 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>性能排查 on</title><link>/tags/%E6%80%A7%E8%83%BD%E6%8E%92%E6%9F%A5/</link><description>Recent content in 性能排查 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 22 Dec 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/%E6%80%A7%E8%83%BD%E6%8E%92%E6%9F%A5/index.xml" rel="self" type="application/rss+xml"/><item><title>1 · Split Lock 压垮母机：一次 CPU 飙升的线上排查</title><link>/blog/2025-12-22-linux_splitlock%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8cpu%E5%8D%A0%E7%94%A8358/</link><pubDate>Mon, 22 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-22-linux_splitlock%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8cpu%E5%8D%A0%E7%94%A8358/</guid><description>&lt;h2 id="背景虚拟化缺陷导致业务cpu告警"&gt;背景：虚拟化缺陷导致业务CPU告警 &lt;a href="#%e8%83%8c%e6%99%af%e8%99%9a%e6%8b%9f%e5%8c%96%e7%bc%ba%e9%99%b7%e5%af%bc%e8%87%b4%e4%b8%9a%e5%8a%a1cpu%e5%91%8a%e8%ad%a6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>性能排查 on</title><link>/tags/%E6%80%A7%E8%83%BD%E6%8E%92%E6%9F%A5/</link><description>Recent content in 性能排查 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Wed, 29 Jul 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/%E6%80%A7%E8%83%BD%E6%8E%92%E6%9F%A5/index.xml" rel="self" type="application/rss+xml"/><item><title>Split Lock (3)： 溯源CPU 占用率为何飙升到 350%</title><link>/blog/splitlock.p3.%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8cpu%E5%8D%A0%E7%94%A8358/</link><pubDate>Wed, 29 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/splitlock.p3.%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8cpu%E5%8D%A0%E7%94%A8358/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;a href="/blog/linux/processor/2025-12-22-linux_splitlock%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8CPU%E5%8D%A0%E7%94%A8358%25/"&gt;上一篇文章&lt;/a&gt; 中，我们通过逐层排查，最终定位到同母机上另一台子机的 Split Lock 是导致业务 CPU 飙高的根因。腾讯云侧确认后将我们的子机迁移到其他正常母机，问题恢复。&lt;/p&gt;
+&lt;p&gt;但排查过程中还有一个现象始终令人困惑：&lt;strong&gt;单核 CPU 占用率达到了 350%+&lt;/strong&gt;——理论上即使满载，单核算 CPU 使用率也不可能超过 100%。Split Lock 到底做了什么，能让监控数据出现如此反常识的数值？&lt;/p&gt;
+&lt;p&gt;本文将顺着 Split Lock → 内存总线锁 → vCPU 调度延迟 → IRQ 积压注入 → missed timer ticks 补偿这条链路，逐一分析 CPU 占用率升高的原因，以及突破 100% 的机制。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;系列文章&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="/blog/linux/processor/2025-12-22-linux_splitlock%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8CPU%E5%8D%A0%E7%94%A8358%25/"&gt;《1 · Split Lock 压垮母机：一次 CPU 飙升的线上排查》&lt;/a&gt; — 排查过程与根因定位&lt;/li&gt;
+&lt;li&gt;&lt;a href="/blog/linux/processor/2026-07-24-cpu-accounting-splitlock/"&gt;《当监控数据&amp;quot;说谎&amp;quot;：Split Lock 引发的 CPU 计量失真》&lt;/a&gt; — gopsutil 视角的 CPU 计量偏差与复现&lt;/li&gt;
+&lt;li&gt;&lt;a href="/blog/linux/processor/2026-07-26-linux_%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8ACPU%E5%8D%A0%E7%94%A8%E6%AD%A3%E7%A1%AE%E7%BB%9F%E8%AE%A1%E5%A7%BF%E5%8A%BF/"&gt;《Linux 进程 CPU 时间：调度器统计、tick 采样与虚拟化 timer 补偿》&lt;/a&gt; — 内核 CPU 时间记账机制详解&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="splitlock这会导致什么问题呢"&gt;splitlock，这会导致什么问题呢? &lt;a href="#splitlock%e8%bf%99%e4%bc%9a%e5%af%bc%e8%87%b4%e4%bb%80%e4%b9%88%e9%97%ae%e9%a2%98%e5%91%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="有哪些性能方面的影响"&gt;有哪些性能方面的影响? &lt;a href="#%e6%9c%89%e5%93%aa%e4%ba%9b%e6%80%a7%e8%83%bd%e6%96%b9%e9%9d%a2%e7%9a%84%e5%bd%b1%e5%93%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;触发splitlock的子机，加解锁内存总线，自身性能会下降，它内部也有其他访存操作；&lt;/li&gt;
+&lt;li&gt;其他子机中的访存操作，CPU也会等待内存总线就绪，也会引入访存延迟；&lt;/li&gt;
+&lt;li&gt;子机执行过程中本来可能在合适的时候进行切换，让出CPU给其他子机使用，但是现在CPU更可能被占着等内存总线就绪；&lt;/li&gt;
+&lt;li&gt;从整体来看，可能会给其他子机的调度带来不可避免的调度延迟，尤其是再考虑到云服务商一般都存在轻微的超卖的情况；
+所以，很好理解，splitlock会给所有自己带来调度延迟，并且导致实际处理能力下降的问题。这根我们前期观测到的服务处理能力下降，业务侧请求处理耗时增加，也一致。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="但是为什么cpu占用率会升高呢"&gt;但是为什么CPU占用率会升高呢？ &lt;a href="#%e4%bd%86%e6%98%af%e4%b8%ba%e4%bb%80%e4%b9%88cpu%e5%8d%a0%e7%94%a8%e7%8e%87%e4%bc%9a%e5%8d%87%e9%ab%98%e5%91%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;子机被调度到目标CPU上执行，自打linux 2.6引入CFS调度器以后，进程运行时间的统计就从 &amp;ldquo;timer tick采样累计执行时间&amp;rdquo; 改成了 &amp;ldquo;调度器切换时更新累计运行时间片&amp;rdquo; 的方式了；&lt;/li&gt;
+&lt;li&gt;自己被调度到目标CPU上执行，遇到内存总线锁，CPU干等，干等的这段时间也会计入运行时间，如果子机中任务在运行时间片内CPU全部在等内存总线释放，干等，那就是接近100%使用率；&lt;/li&gt;
+&lt;li&gt;在调度延迟期间，如果irq到达，会首先交给母机处理，母机再转给kvm模块，等后续vm被调度时，kvm再注入这些irq到vm内部，vm内部再处理，irq多自然也会推高CPU占用；
+&lt;blockquote&gt;
+&lt;p&gt;我们也确实看到了问题时间点大量irq情况。&lt;/p&gt;</description></item><item><title>Split Lock (2): 是什么以及如何避免</title><link>/blog/splitlock.p2.%E6%98%AF%E4%BB%80%E4%B9%88%E4%BB%A5%E5%8F%8A%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3%E6%88%96%E9%81%BF%E5%85%8D/</link><pubDate>Mon, 22 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/splitlock.p2.%E6%98%AF%E4%BB%80%E4%B9%88%E4%BB%A5%E5%8F%8A%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3%E6%88%96%E9%81%BF%E5%85%8D/</guid><description>&lt;p&gt;那天业务告警响了：服务延迟飙高，吞吐量断崖式下跌。&lt;/p&gt;
+&lt;p&gt;打开监控一看，CPU 使用率瞬间拉满。再看 atop，CPU 飙高的同时，IRQ（硬中断）处理量也同步暴增——两者的曲线几乎完全吻合。第一反应是网卡中断风暴或者定时器异常，但仔细看了中断分布，并没有哪个设备的中断计数特别高。问题出在别的地方。&lt;/p&gt;
+&lt;p&gt;后来才了解到，我们业务所在母机上的&lt;strong&gt;另一台子机&lt;/strong&gt;存在严重的 Split Lock 问题——那台问题子机持续触发总线锁，把母机 CPU 资源拖垮了。母机调度器在资源争抢之下，很长一段时间没调度到我们的子机，等到终于调度上时，积压的中断一次性涌入，触发了所谓的&amp;quot;IRQ catchup&amp;quot;。表现出来的就是我们的子机上 CPU 和 IRQ 同时飙升。&lt;/p&gt;
+&lt;p&gt;所以这次事件的根因不是 IRQ catchup 本身——它只是&amp;quot;果&amp;quot;——真正的&amp;quot;因&amp;quot;是同一母机上那台问题子机的 Split Lock，持续消耗物理 CPU 资源，间接把我们的子机也拖下了水。&lt;/p&gt;
+&lt;h2 id="split-lock-是什么"&gt;Split Lock 是什么 &lt;a href="#split-lock-%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;x86 架构下，当一条原子指令（比如 &lt;code&gt;lock cmpxchg&lt;/code&gt;）操作的内存地址跨越了两个 Cache Line（缓存行）边界时，CPU 无法在缓存内部保证原子性，只能锁住整个内存总线来完成操作。&lt;/p&gt;
+&lt;p&gt;正常的一次加法指令可能只消耗不到 10 个时钟周期。而一次 Split Lock 锁住总线的时间可以达到 &lt;strong&gt;1000 个时钟周期&lt;/strong&gt;——是正常操作的 100 倍以上。&lt;/p&gt;
+&lt;p&gt;在这 1000 个周期里，其他 CPU 核心无法访问内存。不是&amp;quot;慢了一点&amp;quot;，是整个总线的使用权被独占。&lt;/p&gt;
+&lt;p&gt;常见的触发场景：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;数据结构设计不当，原子操作的字段刚好跨了 64 字节边界&lt;/li&gt;
+&lt;li&gt;内存未对齐，比如在一个非 4 字节对齐的地址上做 &lt;code&gt;lock cmpxchg&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;编译器或运行时没有做 cache line padding&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;ps: Cache Line 在 x86 上通常是 64 字节。一个 8 字节的原子变量如果起始地址是 60（mod 64），就会跨越两个 Cache Line，触发 Split Lock。&lt;/p&gt;</description></item><item><title>Split Lock (1)：一次子机 CPU 飙升的线上排查</title><link>/blog/splitlock.p1.%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8cpu%E5%8D%A0%E7%94%A8358/</link><pubDate>Fri, 19 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/splitlock.p1.%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8cpu%E5%8D%A0%E7%94%A8358/</guid><description>&lt;h2 id="背景虚拟化缺陷导致业务cpu告警"&gt;背景：虚拟化缺陷导致业务CPU告警 &lt;a href="#%e8%83%8c%e6%99%af%e8%99%9a%e6%8b%9f%e5%8c%96%e7%bc%ba%e9%99%b7%e5%af%bc%e8%87%b4%e4%b8%9a%e5%8a%a1cpu%e5%91%8a%e8%ad%a6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;有一天突然收到了运维侧的告警：机器CPU使用率持续上升，造成现网请求异常。&lt;/p&gt;
 &lt;p&gt;最开始，怀疑业务侧出了什么问题，先排查业务自身有没有问题：&lt;/p&gt;
 &lt;ol&gt;
@@ -22,7 +63,7 @@ atop日志是分钟级粒度的，被平均后可能异常被抹平了，如CPU�
 &lt;blockquote&gt;
 &lt;p&gt;??? 单核CPU使用率超过350%，这么诡异的现象都出来了。&lt;/p&gt;
 &lt;/blockquote&gt;
-&lt;p&gt;有些事情你知道就是知道，不知道就是不知道。如果我的知识已经覆盖不了这个问题场景了，那就只能求助于其他“领域”的同事来看一看了。&lt;/p&gt;
+&lt;p&gt;有些事情你知道就是知道，不知道就是不知道。如果我的知识已经覆盖不了这个问题场景了，那就只能求助于其他&amp;quot;领域&amp;quot;的同事来看一看了。&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;
 &lt;p&gt;&lt;strong&gt;线索1（机型信息)：这台告警的子机，是32c64g机型&lt;/strong&gt;，&lt;code&gt;cat /proc/cpuinfo&lt;/code&gt; 显示处理器型号是 AMD EPYC 9754 128-Core Processor，我们的子机是分配了32c。&lt;/p&gt;
@@ -36,7 +77,7 @@ atop日志是分钟级粒度的，被平均后可能异常被抹平了，如CPU�
 &lt;img src="assets/2025-12-22-splitlock_1_%E5%8E%8B%E5%9E%AE%E6%AF%8D%E6%9C%BA/1785145556388.png" alt="1785145556388"&gt;内存扫描是子机内存压力大出现的一个扫描动作，&lt;code&gt;cat /proc/vmstat | grep -i pgscan_&lt;/code&gt; 统计的是这些输出的累加值增长情况，回收内存动作会影响一点的磁盘io，io打上去后影响cpu负载。&lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;这台母机上实际上跑着连个我们的子机，1个跑c++写的网关和go写的业务网关，1个跑go写的其他逻辑服务。其中1台出现了大量内存扫描，CPU占用升高的问题则都存在。
-有可能，内存扫描次数增多，也只是“结果”而已，并不是”根本原因“ …… 这两台机器理论上内存都有较多余量，即使其中1台内存有压力触发扫描，也不至于影响到另一台自己吧？&lt;/p&gt;
+有可能，内存扫描次数增多，也只是&amp;quot;结果&amp;quot;而已，并不是&amp;quot;根本原因&amp;quot; …… 这两台机器理论上内存都有较多余量，即使其中1台内存有压力触发扫描，也不至于影响到另一台自己吧？&lt;/p&gt;
 &lt;p&gt;ps: 其实涉及到的服务，是我们的基础服务，历史版本线上从未出过问题，我们也没有进行较大改动。推测，还是母机有其他问题，继续排查。&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;/li&gt;
@@ -47,7 +88,7 @@ atop日志是分钟级粒度的，被平均后可能异常被抹平了，如CPU�
 但是在我们这次案例中，查看到的子机的st并没有这么大，按腾讯云反馈这里虽然问题时间点处有st波动，但是st值较小，不像上面那样高大10%。
 &lt;img src="assets/2025-12-22-%E8%99%9A%E6%8B%9F%E5%8C%96%E5%9C%BA%E6%99%AF_CPU%E5%8D%A0%E7%94%A8%E9%A3%99%E5%8D%871/1785147134110.png" alt="1785147134110"&gt;&lt;/p&gt;
 &lt;blockquote&gt;
-&lt;p&gt;会不会，这里的st波动也只是一个”结果“呢，那”根本原因“是什么？是什么导致了调度出现延迟。&lt;/p&gt;
+&lt;p&gt;会不会，这里的st波动也只是一个&amp;quot;结果&amp;quot;呢，那&amp;quot;根本原因&amp;quot;是什么？是什么导致了调度出现延迟。&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;/li&gt;
 &lt;li&gt;
@@ -63,33 +104,7 @@ x86 架构下，当一条原子指令（比如 &lt;code&gt;lock cmpxchg&lt;/code
 当时腾讯云侧确定了母机当时只存在这个明显异常后，有检测splitlock的能力并且给对应子机打上了标记，因为不能直接迁走这台子机（不确定对业务的影响面）。所以评估后迁走了我们的子机到其他正常母机，问题恢复。&lt;/p&gt;
 &lt;/li&gt;
 &lt;/ul&gt;
-&lt;h2 id="splitlock这会导致什么问题呢"&gt;splitlock，这会导致什么问题呢? &lt;a href="#splitlock%e8%bf%99%e4%bc%9a%e5%af%bc%e8%87%b4%e4%bb%80%e4%b9%88%e9%97%ae%e9%a2%98%e5%91%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;h3 id="有哪些性能方面的影响"&gt;有哪些性能方面的影响? &lt;a href="#%e6%9c%89%e5%93%aa%e4%ba%9b%e6%80%a7%e8%83%bd%e6%96%b9%e9%9d%a2%e7%9a%84%e5%bd%b1%e5%93%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;触发splitlock的子机，加解锁内存总线，自身性能会下降，它内部也有其他访存操作；&lt;/li&gt;
-&lt;li&gt;其他子机中的访存操作，CPU也会等待内存总线就绪，也会引入访存延迟；&lt;/li&gt;
-&lt;li&gt;子机执行过程中本来可能在合适的时候进行切换，让出CPU给其他子机使用，但是现在CPU更可能被占着等内存总线就绪；&lt;/li&gt;
-&lt;li&gt;从整体来看，可能会给其他子机的调度带来不可避免的调度延迟，尤其是再考虑到云服务商一般都存在轻微的超卖的情况；
-所以，很好理解，splitlock会给所有自己带来调度延迟，并且导致实际处理能力下降的问题。这根我们前期观测到的服务处理能力下降，业务侧请求处理耗时增加，也一致。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3 id="但是为什么cpu占用率会升高呢"&gt;但是为什么CPU占用率会升高呢？ &lt;a href="#%e4%bd%86%e6%98%af%e4%b8%ba%e4%bb%80%e4%b9%88cpu%e5%8d%a0%e7%94%a8%e7%8e%87%e4%bc%9a%e5%8d%87%e9%ab%98%e5%91%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;ul&gt;
-&lt;li&gt;子机被调度到目标CPU上执行，自打linux 2.6引入CFS调度器以后，进程运行时间的统计就从 “timer tick采样累计执行时间” 改成了 “调度器切换时更新累计运行时间片” 的方式了；&lt;/li&gt;
-&lt;li&gt;自己被调度到目标CPU上执行，遇到内存总线锁，CPU干等，干等的这段时间也会计入运行时间，如果子机中任务在运行时间片内CPU全部在等内存总线释放，干等，那就是接近100%使用率；&lt;/li&gt;
-&lt;li&gt;在调度延迟期间，如果irq到达，会首先交给母机处理，母机再转给kvm模块，等后续vm被调度时，kvm再注入这些irq到vm内部，vm内部再处理，irq多自然也会推高CPU占用；
 &lt;blockquote&gt;
-&lt;p&gt;我们也确实看到了问题时间点大量irq情况。&lt;/p&gt;</description></item><item><title>Split Lock 压垮母机：一次CPU飙升的线上排查</title><link>/blog/2025-12-22-cpu-splitlock-avoidance/</link><pubDate>Mon, 22 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-22-cpu-splitlock-avoidance/</guid><description>&lt;p&gt;那天业务告警响了：服务延迟飙高，吞吐量断崖式下跌。&lt;/p&gt;
-&lt;p&gt;打开监控一看，CPU 使用率瞬间拉满。再看 atop，CPU 飙高的同时，IRQ（硬中断）处理量也同步暴增——两者的曲线几乎完全吻合。第一反应是网卡中断风暴或者定时器异常，但仔细看了中断分布，并没有哪个设备的中断计数特别高。问题出在别的地方。&lt;/p&gt;
-&lt;p&gt;后来才了解到，我们业务所在母机上的&lt;strong&gt;另一台子机&lt;/strong&gt;存在严重的 Split Lock 问题——那台问题子机持续触发总线锁，把母机 CPU 资源拖垮了。母机调度器在资源争抢之下，很长一段时间没调度到我们的子机，等到终于调度上时，积压的中断一次性涌入，触发了所谓的&amp;quot;IRQ catchup&amp;quot;。表现出来的就是我们的子机上 CPU 和 IRQ 同时飙升。&lt;/p&gt;
-&lt;p&gt;所以这次事件的根因不是 IRQ catchup 本身——它只是&amp;quot;果&amp;quot;——真正的&amp;quot;因&amp;quot;是同一母机上那台问题子机的 Split Lock，持续消耗物理 CPU 资源，间接把我们的子机也拖下了水。&lt;/p&gt;
-&lt;h2 id="split-lock-是什么"&gt;Split Lock 是什么 &lt;a href="#split-lock-%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;x86 架构下，当一条原子指令（比如 &lt;code&gt;lock cmpxchg&lt;/code&gt;）操作的内存地址跨越了两个 Cache Line（缓存行）边界时，CPU 无法在缓存内部保证原子性，只能锁住整个内存总线来完成操作。&lt;/p&gt;
-&lt;p&gt;正常的一次加法指令可能只消耗不到 10 个时钟周期。而一次 Split Lock 锁住总线的时间可以达到 &lt;strong&gt;1000 个时钟周期&lt;/strong&gt;——是正常操作的 100 倍以上。&lt;/p&gt;
-&lt;p&gt;在这 1000 个周期里，其他 CPU 核心无法访问内存。不是&amp;quot;慢了一点&amp;quot;，是整个总线的使用权被独占。&lt;/p&gt;
-&lt;p&gt;常见的触发场景：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;数据结构设计不当，原子操作的字段刚好跨了 64 字节边界&lt;/li&gt;
-&lt;li&gt;内存未对齐，比如在一个非 4 字节对齐的地址上做 &lt;code&gt;lock cmpxchg&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;编译器或运行时没有做 cache line padding&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;ps: Cache Line 在 x86 上通常是 64 字节。一个 8 字节的原子变量如果起始地址是 60（mod 64），就会跨越两个 Cache Line，触发 Split Lock。&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;&lt;strong&gt;🔗 系列文章&lt;/strong&gt;：Split Lock 的根因已经定位，但它如何会产生这种影响，将子机单核 CPU 占用率推高至 350% 的呢？这里有什么鬼故事？详见下面几篇：
+&lt;a href="/blog/linux/processor/splitlock.p2.%E6%98%AF%E4%BB%80%E4%B9%88%E4%BB%A5%E5%8F%8A%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3%E6%88%96%E9%81%BF%E5%85%8D.md"&gt;《Split Lock (2): 是什么以及如何避免》&lt;/a&gt;
+&lt;a href="/blog/linux/processor/splitlock.p2.%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8CPU%E5%8D%A0%E7%94%A8358%25.md"&gt;《Split Lock (3): 溯源CPU占用为何会到350%》&lt;/a&gt;。&lt;/p&gt;</description></item></channel></rss>

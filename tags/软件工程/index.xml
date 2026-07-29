@@ -32,7 +32,7 @@
 &lt;p&gt;系统整体的认知复杂度与“特例”的数量成正比。设标准约定下的认知复杂度基数为 $C_0$，每增加一个特例行为 $x$，所带来的非线性认知成本增量为：&lt;/p&gt;
 &lt;p&gt;$$
 \Delta C = k \cdot x^2
-$$&lt;/p&gt;</description></item><item><title>软件工程设计知识体系（Mindmap式结构）</title><link>/blog/2026-03-14-%E8%BD%AF%E4%BB%B6%E5%B7%A5%E7%A8%8B_%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E4%B8%80%E8%A7%88%E8%A1%A8/</link><pubDate>Sat, 14 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/2026-03-14-%E8%BD%AF%E4%BB%B6%E5%B7%A5%E7%A8%8B_%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB%E4%B8%80%E8%A7%88%E8%A1%A8/</guid><description>&lt;p&gt;&lt;strong&gt;软件工程设计知识体系（Mindmap式结构）&lt;/strong&gt;&lt;br&gt;
+$$&lt;/p&gt;</description></item><item><title>软件工程设计知识体系（Mindmap式结构）</title><link>/blog/%E8%BD%AF%E4%BB%B6%E5%B7%A5%E7%A8%8B_%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB/</link><pubDate>Sat, 14 Mar 2026 00:00:00 +0800</pubDate><guid>/blog/%E8%BD%AF%E4%BB%B6%E5%B7%A5%E7%A8%8B_%E7%9F%A5%E8%AF%86%E4%BD%93%E7%B3%BB/</guid><description>&lt;p&gt;&lt;strong&gt;软件工程设计知识体系（Mindmap式结构）&lt;/strong&gt;&lt;br&gt;
 由大到小、由浅入深、从理念到落地，全链路梳理，便于你层层掌握。&lt;br&gt;
 结构采用&lt;strong&gt;树状层级&lt;/strong&gt;（主干 → 分支 → 叶子），每层都附带：&lt;/p&gt;
 &lt;ul&gt;

@@ -36,12 +36,12 @@
 <button class=category-tag-chip data-tag=pvclock>pvclock<sup>1</sup></button>
 <button class=category-tag-chip data-tag=timekeeping>timekeeping<sup>1</sup></button>
 <button class=category-tag-chip data-tag="Split Lock">Split Lock<sup>1</sup></button>
-<button class=category-tag-chip data-tag=timer>timer<sup>1</sup></button>
 <button class=category-tag-chip data-tag=CFS>CFS<sup>1</sup></button>
 <button class=category-tag-chip data-tag=cputime>cputime<sup>1</sup></button>
 <button class=category-tag-chip data-tag=sum_exec_runtime>sum_exec_runtime<sup>1</sup></button>
 <button class=category-tag-chip data-tag=irq>irq<sup>1</sup></button>
 <button class=category-tag-chip data-tag=catchup>catchup<sup>1</sup></button>
+<button class=category-tag-chip data-tag=timer>timer<sup>1</sup></button>
 <button class=category-tag-chip data-tag=mfence>mfence<sup>1</sup></button>
 <button class=category-tag-chip data-tag=dmb>dmb<sup>1</sup></button>
 <button class=category-tag-chip data-tag=fence>fence<sup>1</sup></button>
@@ -86,16 +86,7 @@
 <span class=tag-tooltip><a href=/tags/pvclock>pvclock</a>
 <a href=/tags/timekeeping>timekeeping</a>
 <a href=/tags/split-lock>Split Lock</a>
-<a href=/tags/tsc>TSC</a></span></span></div></div></div></div><p class=blog-list-entry__desc>从分母（ΔT）角度分析 Split Lock 场景下 CPU 占用率异常的原因：Host timekeeper 冻结 → KVM 写入偏旧的 pvclock …</p></article><article class=blog-list-entry data-tags='["split lock","KVM","cache line","atomic","IRQ","性能排查","虚拟化","CPU","timer"]'><div class=blog-list-entry__date><time datetime=2026-07-29>2026/07/29</time></div><div class=blog-list-entry__title><a href=/blog/kvm_%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8cpu%E4%BD%BF%E7%94%A8%E7%8E%87358%E7%9A%84%E7%9C%9F%E7%9B%B8/>kvm(3)： 溯源CPU 占用率为何飙升到 350%</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/split-lock>split lock</a>
-<a href=/tags/kvm>KVM</a>
-<a href=/tags/cache-line>cache line</a>
-<a href=/tags/atomic>atomic</a>
-<a href=/tags/irq>IRQ</a>
-<span class=tag-more-wrap><span class=tag-more>+4</span>
-<span class=tag-tooltip><a href=/tags/%E6%80%A7%E8%83%BD%E6%8E%92%E6%9F%A5>性能排查</a>
-<a href=/tags/%E8%99%9A%E6%8B%9F%E5%8C%96>虚拟化</a>
-<a href=/tags/cpu>CPU</a>
-<a href=/tags/timer>timer</a></span></span></div></div></div></div><p class=blog-list-entry__desc>深入分析 Split Lock 如何通过内存总线锁、vCPU 调度延迟、IRQ 积压注入及 missed timer ticks 补偿等一连串内核机制，将子机单 …</p></article><article class=blog-list-entry data-tags='["CPU","accounting","CFS","tick","cputime","sum_exec_runtime","虚拟化","KVM","irq","catchup","TSC"]'><div class=blog-list-entry__date><time datetime=2026-07-26>2026/07/26</time></div><div class=blog-list-entry__title><a href=/blog/kvm-%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8Acpu%E5%8D%A0%E7%94%A8%E7%8E%87%E7%BB%9F%E8%AE%A1/>kvm(4)：进程运行时间+CPU占用率，如何更新、计算？</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/cpu>CPU</a>
+<a href=/tags/tsc>TSC</a></span></span></div></div></div></div><p class=blog-list-entry__desc>从分母（ΔT）角度分析 Split Lock 场景下 CPU 占用率异常的原因：Host timekeeper 冻结 → KVM 写入偏旧的 pvclock …</p></article><article class=blog-list-entry data-tags='["CPU","accounting","CFS","tick","cputime","sum_exec_runtime","虚拟化","KVM","irq","catchup","TSC"]'><div class=blog-list-entry__date><time datetime=2026-07-26>2026/07/26</time></div><div class=blog-list-entry__title><a href=/blog/kvm-%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8Acpu%E5%8D%A0%E7%94%A8%E7%8E%87%E7%BB%9F%E8%AE%A1/>kvm(4)：进程运行时间+CPU占用率，如何更新、计算？</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/cpu>CPU</a>
 <a href=/tags/accounting>accounting</a>
 <a href=/tags/cfs>CFS</a>
 <a href=/tags/tick>tick</a>
@@ -106,7 +97,16 @@
 <a href=/tags/kvm>KVM</a>
 <a href=/tags/irq>irq</a>
 <a href=/tags/catchup>catchup</a>
-<a href=/tags/tsc>TSC</a></span></span></div></div></div></div><p class=blog-list-entry__desc>介绍 Linux 进程 CPU 时间的两套记账机制：CFS 的 sum_exec_runtime 与 tick 侧 utime/stime，以及 …</p></article><article class=blog-list-entry data-tags='["memory barrier","mfence","dmb","fence","lock prefix","compiler barrier","x86","ARM","RISC-V","PowerPC"]'><div class=blog-list-entry__date><time datetime=2026-07-16>2026/07/16</time></div><div class=blog-list-entry__title><a href=/blog/2026-07-16-barrier-instructions-reference/>内存屏障指令参考：从 x86 到 ARM 的完整对照</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/memory-barrier>memory barrier</a>
+<a href=/tags/tsc>TSC</a></span></span></div></div></div></div><p class=blog-list-entry__desc>介绍 Linux 进程 CPU 时间的两套记账机制：CFS 的 sum_exec_runtime 与 tick 侧 utime/stime，以及 …</p></article><article class=blog-list-entry data-tags='["split lock","KVM","cache line","atomic","IRQ","性能排查","虚拟化","CPU","timer"]'><div class=blog-list-entry__date><time datetime=2026-07-25>2026/07/25</time></div><div class=blog-list-entry__title><a href=/blog/kvm_%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8cpu%E4%BD%BF%E7%94%A8%E7%8E%87358%E7%9A%84%E7%9C%9F%E7%9B%B8/>kvm(3)： 溯源CPU 占用率为何飙升到 350%</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/split-lock>split lock</a>
+<a href=/tags/kvm>KVM</a>
+<a href=/tags/cache-line>cache line</a>
+<a href=/tags/atomic>atomic</a>
+<a href=/tags/irq>IRQ</a>
+<span class=tag-more-wrap><span class=tag-more>+4</span>
+<span class=tag-tooltip><a href=/tags/%E6%80%A7%E8%83%BD%E6%8E%92%E6%9F%A5>性能排查</a>
+<a href=/tags/%E8%99%9A%E6%8B%9F%E5%8C%96>虚拟化</a>
+<a href=/tags/cpu>CPU</a>
+<a href=/tags/timer>timer</a></span></span></div></div></div></div><p class=blog-list-entry__desc>深入分析 Split Lock 如何通过内存总线锁、vCPU 调度延迟、IRQ 积压注入及 missed timer ticks 补偿等一连串内核机制，将子机单 …</p></article><article class=blog-list-entry data-tags='["memory barrier","mfence","dmb","fence","lock prefix","compiler barrier","x86","ARM","RISC-V","PowerPC"]'><div class=blog-list-entry__date><time datetime=2026-07-16>2026/07/16</time></div><div class=blog-list-entry__title><a href=/blog/2026-07-16-barrier-instructions-reference/>内存屏障指令参考：从 x86 到 ARM 的完整对照</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/memory-barrier>memory barrier</a>
 <a href=/tags/mfence>mfence</a>
 <a href=/tags/dmb>dmb</a>
 <a href=/tags/fence>fence</a>
@@ -193,4 +193,4 @@
 <span class=tag-more-wrap><span class=tag-more>+3</span>
 <span class=tag-tooltip><a href=/tags/steal>steal</a>
 <a href=/tags/%E8%99%9A%E6%8B%9F%E5%8C%96>虚拟化</a>
-<a href=/tags/kcpustat>kcpustat</a></span></span></div></div></div></div><p class=blog-list-entry__desc>从 /proc/stat 的 cpu 行出发，厘清 user/nice/system/idle/iowait/irq/softirq/steal/guest 的 …</p></article></div></div></div></div><br></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.2d163d4ded59a8c0f3da8841b92ed2d9704c8b95f58f2b2a155c22cdd00435156a85dae6d60e99bc99453a696faf91eadef75e33b2957a5731188122af562691.js integrity="sha512-LRY9Te1ZqMDz2ohBuS7S2XBMi5X1jysqFVwizdAENRVqhdrm1g6ZvJlFOmlvr5Hq3vdeM7KVelcxGIEir1YmkQ==" crossorigin=anonymous defer></script><script src=/js/highlight.min.1a731f820940167b6fd11a8540a1ae7c4627f4009b13e229c411e9d890612a3f6b618133d96477c2cf238d6faaa28d745cd5141e443aa34f62785510dc873430.js integrity="sha512-GnMfgglAFntv0RqFQKGufEYn9ACbE+IpxBHp2JBhKj9rYYEz2WR3ws8jjW+qoo10XNUUHkQ6o09ieFUQ3Ic0MA==" crossorigin=anonymous defer></script><script src=/main.min.835c7d4dee3649ea76718e49fdc77d48e8876175b70f321e3fa33b894ceba14a946f58edd3572c60bcf2ead75beabd5ac8401006b45bd3c18e1c5079b1648147.js integrity="sha512-g1x9Te42Sep2cY5J/cd9SOiHYXW3DzIeP6M7iUzroUqUb1jt01csYLzy6tdb6r1ayEAQBrRb08GOHFB5sWSBRw==" crossorigin=anonymous defer></script><script src=/index.min.2560ae389c08e0cc89a52606dbc7ac669407f56b5e17b615a0baae359b8ab78ec135c61ada6104d5139ed14b8d71f6bd2f85082b5b4f481323d4a4fdd9a44858.js integrity="sha512-JWCuOJwI4MyJpSYG28esZpQH9WteF7YVoLquNZuKt47BNcYa2mEE1ROe0UuNcfa9L4UIK1tPSBMj1KT92aRIWA==" crossorigin=anonymous defer></script></body></html>
+<a href=/tags/kcpustat>kcpustat</a></span></span></div></div></div></div><p class=blog-list-entry__desc>从 /proc/stat 的 cpu 行出发，厘清 user/nice/system/idle/iowait/irq/softirq/steal/guest 的 …</p></article></div></div></div></div><br></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.2d163d4ded59a8c0f3da8841b92ed2d9704c8b95f58f2b2a155c22cdd00435156a85dae6d60e99bc99453a696faf91eadef75e33b2957a5731188122af562691.js integrity="sha512-LRY9Te1ZqMDz2ohBuS7S2XBMi5X1jysqFVwizdAENRVqhdrm1g6ZvJlFOmlvr5Hq3vdeM7KVelcxGIEir1YmkQ==" crossorigin=anonymous defer></script><script src=/js/highlight.min.1a731f820940167b6fd11a8540a1ae7c4627f4009b13e229c411e9d890612a3f6b618133d96477c2cf238d6faaa28d745cd5141e443aa34f62785510dc873430.js integrity="sha512-GnMfgglAFntv0RqFQKGufEYn9ACbE+IpxBHp2JBhKj9rYYEz2WR3ws8jjW+qoo10XNUUHkQ6o09ieFUQ3Ic0MA==" crossorigin=anonymous defer></script><script src=/main.min.835c7d4dee3649ea76718e49fdc77d48e8876175b70f321e3fa33b894ceba14a946f58edd3572c60bcf2ead75beabd5ac8401006b45bd3c18e1c5079b1648147.js integrity="sha512-g1x9Te42Sep2cY5J/cd9SOiHYXW3DzIeP6M7iUzroUqUb1jt01csYLzy6tdb6r1ayEAQBrRb08GOHFB5sWSBRw==" crossorigin=anonymous defer></script><script src=/index.min.19a3fe8feed6f61b835a530c30eb3801f97aeffeaefc2c6bd537bfa38d75c41d7166740ad8b4f66438eb4522dd82efb8e883cfba21c9e35e597e411329cd6287.js integrity="sha512-GaP+j+7W9huDWlMMMOs4Afl67/6u/Cxr1Te/o411xB1xZnQK2LT2ZDjrRSLdgu+46IPPuiHJ415ZfkETKc1ihw==" crossorigin=anonymous defer></script></body></html>

@@ -8,21 +8,22 @@
 本分类<span class=category-scope-btn__count>0</span>
 </button>
 <button type=button class=category-scope-btn data-scope=aggregated aria-pressed=false>
-含子分类<span class=category-scope-btn__count>87</span></button></div></div><div data-scope-panel=aggregated hidden><div class=category-tag-filter data-tag-filter-scope=aggregated><button class="category-tag-filter__all is-active" data-tag=all>全部</button>
+含子分类<span class=category-scope-btn__count>88</span></button></div></div><div data-scope-panel=aggregated hidden><div class=category-tag-filter data-tag-filter-scope=aggregated><button class="category-tag-filter__all is-active" data-tag=all>全部</button>
 <button class=category-tag-chip data-tag=linux>linux<sup>30</sup></button>
 <button class=category-tag-chip data-tag=tcp>tcp<sup>10</sup></button>
 <button class=category-tag-chip data-tag=kernel>kernel<sup>10</sup></button>
 <button class=category-tag-chip data-tag=scheduler>scheduler<sup>10</sup></button>
+<button class=category-tag-chip data-tag=虚拟化>虚拟化<sup>6</sup></button>
 <button class=category-tag-chip data-tag=atomic>atomic<sup>6</sup></button>
 <button class=category-tag-chip data-tag="memory barrier">memory barrier<sup>6</sup></button>
 <button class=category-tag-chip data-tag=shell>shell<sup>6</sup></button>
 <button class=category-tag-chip data-tag=cfs>cfs<sup>6</sup></button>
 <button class=category-tag-chip data-tag=ebpf>ebpf<sup>6</sup></button>
-<button class=category-tag-chip data-tag=虚拟化>虚拟化<sup>5</sup></button>
+<button class=category-tag-chip data-tag=KVM>KVM<sup>5</sup></button>
 <button class=category-tag-chip data-tag=x86>x86<sup>5</sup></button>
 <button class=category-tag-chip data-tag=signal>signal<sup>5</sup></button>
 <button class=category-tag-chip data-tag=fair>fair<sup>5</sup></button>
-<button class=category-tag-chip data-tag=KVM>KVM<sup>4</sup></button>
+<button class=category-tag-chip data-tag=CPU>CPU<sup>4</sup></button>
 <button class=category-tag-chip data-tag=rst>rst<sup>4</sup></button>
 <button class=category-tag-chip data-tag=volatile>volatile<sup>4</sup></button>
 <button class=category-tag-chip data-tag=network>network<sup>4</sup></button>
@@ -33,7 +34,6 @@
 <button class=category-tag-chip data-tag="cache line">cache line<sup>3</sup></button>
 <button class=category-tag-chip data-tag=IRQ>IRQ<sup>3</sup></button>
 <button class=category-tag-chip data-tag=性能排查>性能排查<sup>3</sup></button>
-<button class=category-tag-chip data-tag=CPU>CPU<sup>3</sup></button>
 <button class=category-tag-chip data-tag=irq>irq<sup>3</sup></button>
 <button class=category-tag-chip data-tag=fin>fin<sup>3</sup></button>
 <button class=category-tag-chip data-tag=socket>socket<sup>3</sup></button>
@@ -43,6 +43,8 @@
 <button class=category-tag-chip data-tag=gofuncgraph>gofuncgraph<sup>3</sup></button>
 <button class=category-tag-chip data-tag=process>process<sup>3</sup></button>
 <button class=category-tag-chip data-tag=bash>bash<sup>3</sup></button>
+<button class=category-tag-chip data-tag=accounting>accounting<sup>2</sup></button>
+<button class=category-tag-chip data-tag=TSC>TSC<sup>2</sup></button>
 <button class=category-tag-chip data-tag=tick>tick<sup>2</sup></button>
 <button class=category-tag-chip data-tag=close>close<sup>2</sup></button>
 <button class=category-tag-chip data-tag="lock prefix">lock prefix<sup>2</sup></button>
@@ -70,13 +72,15 @@
 <button class=category-tag-chip data-tag=top>top<sup>2</sup></button>
 <button class=category-tag-chip data-tag=int80>int80<sup>2</sup></button>
 <button class=category-tag-chip data-tag=process-state>process-state<sup>2</sup></button>
+<button class=category-tag-chip data-tag=vDSO>vDSO<sup>1</sup></button>
+<button class=category-tag-chip data-tag=pvclock>pvclock<sup>1</sup></button>
+<button class=category-tag-chip data-tag=timekeeping>timekeeping<sup>1</sup></button>
+<button class=category-tag-chip data-tag="Split Lock">Split Lock<sup>1</sup></button>
 <button class=category-tag-chip data-tag=timer>timer<sup>1</sup></button>
-<button class=category-tag-chip data-tag=accounting>accounting<sup>1</sup></button>
 <button class=category-tag-chip data-tag=CFS>CFS<sup>1</sup></button>
 <button class=category-tag-chip data-tag=cputime>cputime<sup>1</sup></button>
 <button class=category-tag-chip data-tag=sum_exec_runtime>sum_exec_runtime<sup>1</sup></button>
 <button class=category-tag-chip data-tag=catchup>catchup<sup>1</sup></button>
-<button class=category-tag-chip data-tag=TSC>TSC<sup>1</sup></button>
 <button class=category-tag-chip data-tag=so_linger>so_linger<sup>1</sup></button>
 <button class=category-tag-chip data-tag=connection-termination>connection-termination<sup>1</sup></button>
 <button class=category-tag-chip data-tag=kill>kill<sup>1</sup></button>
@@ -278,7 +282,16 @@
 <button class=category-tag-chip data-tag=yum>yum<sup>1</sup></button>
 <button class=category-tag-chip data-tag=dnf>dnf<sup>1</sup></button>
 <button class=category-tag-chip data-tag=mirror>mirror<sup>1</sup></button>
-<button class=category-tag-filter__toggle hidden>展开全部</button></div><article class=blog-list-entry data-tags='["split lock","KVM","cache line","atomic","IRQ","性能排查","虚拟化","CPU","timer"]'><div class=blog-list-entry__date><time datetime=2026-07-29>2026/07/29</time></div><div class=blog-list-entry__title><a href=/blog/kvm_%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8cpu%E4%BD%BF%E7%94%A8%E7%8E%87358%E7%9A%84%E7%9C%9F%E7%9B%B8/>kvm(3)： 溯源CPU 占用率为何飙升到 350%</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/split-lock>split lock</a>
+<button class=category-tag-filter__toggle hidden>展开全部</button></div><article class=blog-list-entry data-tags='["CPU","accounting","虚拟化","KVM","vDSO","pvclock","timekeeping","Split Lock","TSC"]'><div class=blog-list-entry__date><time datetime=2026-07-30>2026/07/30</time></div><div class=blog-list-entry__title><a href=/blog/kvm-%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8Acpu%E5%8D%A0%E7%94%A8%E7%8E%87%E7%BB%9F%E8%AE%A1-part2/>kvm(5)：vDSO 时钟失真导致分母偏小，CPU% 虚高的另一种可能</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/cpu>CPU</a>
+<a href=/tags/accounting>accounting</a>
+<a href=/tags/%E8%99%9A%E6%8B%9F%E5%8C%96>虚拟化</a>
+<a href=/tags/kvm>KVM</a>
+<a href=/tags/vdso>vDSO</a>
+<span class=tag-more-wrap><span class=tag-more>+4</span>
+<span class=tag-tooltip><a href=/tags/pvclock>pvclock</a>
+<a href=/tags/timekeeping>timekeeping</a>
+<a href=/tags/split-lock>Split Lock</a>
+<a href=/tags/tsc>TSC</a></span></span></div></div></div></div><p class=blog-list-entry__desc>从分母（ΔT）角度分析 Split Lock 场景下 CPU 占用率异常的原因：Host timekeeper 冻结 → KVM 写入偏旧的 pvclock …</p></article><article class=blog-list-entry data-tags='["split lock","KVM","cache line","atomic","IRQ","性能排查","虚拟化","CPU","timer"]'><div class=blog-list-entry__date><time datetime=2026-07-29>2026/07/29</time></div><div class=blog-list-entry__title><a href=/blog/kvm_%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8cpu%E4%BD%BF%E7%94%A8%E7%8E%87358%E7%9A%84%E7%9C%9F%E7%9B%B8/>kvm(3)： 溯源CPU 占用率为何飙升到 350%</a></div><div class=blog-list-entry__tags><div class=blog-list-tags><div style=display:flex><div>🔖&nbsp;</div><div><a href=/tags/split-lock>split lock</a>
 <a href=/tags/kvm>KVM</a>
 <a href=/tags/cache-line>cache line</a>
 <a href=/tags/atomic>atomic</a>
@@ -663,4 +676,4 @@
 <a href=/tags/yum>yum</a>
 <a href=/tags/dnf>dnf</a>
 <span class=tag-more-wrap><span class=tag-more>+1</span>
-<span class=tag-tooltip><a href=/tags/mirror>mirror</a></span></span></div></div></div></div><p class=blog-list-entry__desc>对比 Debian 系（dpkg/apt）与 RHEL 系（rpm/yum/dnf）的包管理体系，并介绍如何切换清华大学镜像源加速软件安装。</p></article></div><div data-scope-panel=direct></div></div></div></div><br></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.2d163d4ded59a8c0f3da8841b92ed2d9704c8b95f58f2b2a155c22cdd00435156a85dae6d60e99bc99453a696faf91eadef75e33b2957a5731188122af562691.js integrity="sha512-LRY9Te1ZqMDz2ohBuS7S2XBMi5X1jysqFVwizdAENRVqhdrm1g6ZvJlFOmlvr5Hq3vdeM7KVelcxGIEir1YmkQ==" crossorigin=anonymous defer></script><script src=/js/highlight.min.1a731f820940167b6fd11a8540a1ae7c4627f4009b13e229c411e9d890612a3f6b618133d96477c2cf238d6faaa28d745cd5141e443aa34f62785510dc873430.js integrity="sha512-GnMfgglAFntv0RqFQKGufEYn9ACbE+IpxBHp2JBhKj9rYYEz2WR3ws8jjW+qoo10XNUUHkQ6o09ieFUQ3Ic0MA==" crossorigin=anonymous defer></script><script src=/main.min.835c7d4dee3649ea76718e49fdc77d48e8876175b70f321e3fa33b894ceba14a946f58edd3572c60bcf2ead75beabd5ac8401006b45bd3c18e1c5079b1648147.js integrity="sha512-g1x9Te42Sep2cY5J/cd9SOiHYXW3DzIeP6M7iUzroUqUb1jt01csYLzy6tdb6r1ayEAQBrRb08GOHFB5sWSBRw==" crossorigin=anonymous defer></script><script src=/index.min.0ee08f659ebf7119b5cf0315e1a019732c79bb63198de837569555ca5802f24ef33a996a51f9da4912ac4414611dab70be9ea366df2ad88fb9643a4e7447ea1a.js integrity="sha512-DuCPZZ6/cRm1zwMV4aAZcyx5u2MZjeg3VpVVylgC8k7zOplqUfnaSRKsRBRhHatwvp6jZt8q2I+5ZDpOdEfqGg==" crossorigin=anonymous defer></script></body></html>
+<span class=tag-tooltip><a href=/tags/mirror>mirror</a></span></span></div></div></div></div><p class=blog-list-entry__desc>对比 Debian 系（dpkg/apt）与 RHEL 系（rpm/yum/dnf）的包管理体系，并介绍如何切换清华大学镜像源加速软件安装。</p></article></div><div data-scope-panel=direct></div></div></div></div><br></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.2d163d4ded59a8c0f3da8841b92ed2d9704c8b95f58f2b2a155c22cdd00435156a85dae6d60e99bc99453a696faf91eadef75e33b2957a5731188122af562691.js integrity="sha512-LRY9Te1ZqMDz2ohBuS7S2XBMi5X1jysqFVwizdAENRVqhdrm1g6ZvJlFOmlvr5Hq3vdeM7KVelcxGIEir1YmkQ==" crossorigin=anonymous defer></script><script src=/js/highlight.min.1a731f820940167b6fd11a8540a1ae7c4627f4009b13e229c411e9d890612a3f6b618133d96477c2cf238d6faaa28d745cd5141e443aa34f62785510dc873430.js integrity="sha512-GnMfgglAFntv0RqFQKGufEYn9ACbE+IpxBHp2JBhKj9rYYEz2WR3ws8jjW+qoo10XNUUHkQ6o09ieFUQ3Ic0MA==" crossorigin=anonymous defer></script><script src=/main.min.835c7d4dee3649ea76718e49fdc77d48e8876175b70f321e3fa33b894ceba14a946f58edd3572c60bcf2ead75beabd5ac8401006b45bd3c18e1c5079b1648147.js integrity="sha512-g1x9Te42Sep2cY5J/cd9SOiHYXW3DzIeP6M7iUzroUqUb1jt01csYLzy6tdb6r1ayEAQBrRb08GOHFB5sWSBRw==" crossorigin=anonymous defer></script><script src=/index.min.2560ae389c08e0cc89a52606dbc7ac669407f56b5e17b615a0baae359b8ab78ec135c61ada6104d5139ed14b8d71f6bd2f85082b5b4f481323d4a4fdd9a44858.js integrity="sha512-JWCuOJwI4MyJpSYG28esZpQH9WteF7YVoLquNZuKt47BNcYa2mEE1ROe0UuNcfa9L4UIK1tPSBMj1KT92aRIWA==" crossorigin=anonymous defer></script></body></html>

@@ -85,7 +85,26 @@
 &lt;li&gt;自己被调度到目标CPU上执行，遇到内存总线锁，CPU干等，干等的这段时间也会计入运行时间，如果子机中任务在运行时间片内CPU全部在等内存总线释放，干等，那就是接近100%使用率；&lt;/li&gt;
 &lt;li&gt;在调度延迟期间，如果irq到达，会首先交给母机处理，母机再转给kvm模块，等后续vm被调度时，kvm再注入这些irq到vm内部，vm内部再处理，irq多自然也会推高CPU占用；
 &lt;blockquote&gt;
-&lt;p&gt;我们也确实看到了问题时间点大量irq情况。&lt;/p&gt;</description></item><item><title>云计算领域速查手册</title><link>/blog/2025-12-25-cloud-computing-cheatsheet/</link><pubDate>Thu, 25 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-25-cloud-computing-cheatsheet/</guid><description>&lt;h1 id="云计算领域速查手册"&gt;云计算领域速查手册 &lt;a href="#%e4%ba%91%e8%ae%a1%e7%ae%97%e9%a2%86%e5%9f%9f%e9%80%9f%e6%9f%a5%e6%89%8b%e5%86%8c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;我们也确实看到了问题时间点大量irq情况。&lt;/p&gt;</description></item><item><title>Linux KVM/QEMU 虚拟化实验环境搭建</title><link>/blog/kvm_qemu_lab_setup/</link><pubDate>Fri, 24 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/kvm_qemu_lab_setup/</guid><description>&lt;h1 id="linux-kvmqemu-虚拟化实验环境搭建"&gt;Linux KVM/QEMU 虚拟化实验环境搭建 &lt;a href="#linux-kvmqemu-%e8%99%9a%e6%8b%9f%e5%8c%96%e5%ae%9e%e9%aa%8c%e7%8e%af%e5%a2%83%e6%90%ad%e5%bb%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;以 WSL2 为宿主机，搭建多实例 KVM 实验环境，用于验证 clocksource、steal time 等虚拟化行为。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="一环境检查"&gt;一、环境检查 &lt;a href="#%e4%b8%80%e7%8e%af%e5%a2%83%e6%a3%80%e6%9f%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;WSL2 上先确认硬件虚拟化和 KVM 是否可用：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;# 1. CPU 虚拟化支持（Intel VT-x 为 vmx，AMD-V 为 svm）
+grep -E 'vmx|svm' /proc/cpuinfo | head -1
+# 2. /dev/kvm 设备是否存在且可读写
+ls -la /dev/kvm
+# 3. 内核 KVM 模块是否编译
+zgrep CONFIG_KVM /proc/config.gz
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;我这边的输出：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;flags: ... vmx ... ept vpid ept_ad ... constant_tsc nonstop_tsc tsc_known_freq tsc_reliable ... tsc_deadline_timer ... hypervisor ...
+/dev/kvm: crw-rw-rw- 1 root kvm 10, 232
+CONFIG_KVM=y
+CONFIG_KVM_INTEL=y
+CONFIG_KVM_AMD=y
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;关键 flag 解读：&lt;/p&gt;</description></item><item><title>云计算领域速查手册</title><link>/blog/2025-12-25-cloud-computing-cheatsheet/</link><pubDate>Thu, 25 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/2025-12-25-cloud-computing-cheatsheet/</guid><description>&lt;h1 id="云计算领域速查手册"&gt;云计算领域速查手册 &lt;a href="#%e4%ba%91%e8%ae%a1%e7%ae%97%e9%a2%86%e5%9f%9f%e9%80%9f%e6%9f%a5%e6%89%8b%e5%86%8c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;面向架构师的结构化参考，覆盖从虚拟化到云原生的核心技术概念、对比与选型决策。&lt;/p&gt;
 &lt;hr&gt;
 &lt;h2 id="1-概念层次与演进关系"&gt;1. 概念层次与演进关系 &lt;a href="#1-%e6%a6%82%e5%bf%b5%e5%b1%82%e6%ac%a1%e4%b8%8e%e6%bc%94%e8%bf%9b%e5%85%b3%e7%b3%bb" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;

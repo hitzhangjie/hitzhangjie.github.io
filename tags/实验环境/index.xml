@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>实验环境 on</title><link>/tags/%E5%AE%9E%E9%AA%8C%E7%8E%AF%E5%A2%83/</link><description>Recent content in 实验环境 on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 24 Jul 2026 00:00:00 +0800</lastBuildDate><atom:link href="/tags/%E5%AE%9E%E9%AA%8C%E7%8E%AF%E5%A2%83/index.xml" rel="self" type="application/rss+xml"/><item><title>Linux KVM/QEMU 虚拟化实验环境搭建</title><link>/blog/kvm_qemu_lab_setup/</link><pubDate>Fri, 24 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/kvm_qemu_lab_setup/</guid><description>&lt;h1 id="linux-kvmqemu-虚拟化实验环境搭建"&gt;Linux KVM/QEMU 虚拟化实验环境搭建 &lt;a href="#linux-kvmqemu-%e8%99%9a%e6%8b%9f%e5%8c%96%e5%ae%9e%e9%aa%8c%e7%8e%af%e5%a2%83%e6%90%ad%e5%bb%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;以 WSL2 为宿主机，搭建多实例 KVM 实验环境，用于验证 clocksource、steal time 等虚拟化行为。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="一环境检查"&gt;一、环境检查 &lt;a href="#%e4%b8%80%e7%8e%af%e5%a2%83%e6%a3%80%e6%9f%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;WSL2 上先确认硬件虚拟化和 KVM 是否可用：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;# 1. CPU 虚拟化支持（Intel VT-x 为 vmx，AMD-V 为 svm）
+grep -E 'vmx|svm' /proc/cpuinfo | head -1
+# 2. /dev/kvm 设备是否存在且可读写
+ls -la /dev/kvm
+# 3. 内核 KVM 模块是否编译
+zgrep CONFIG_KVM /proc/config.gz
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;我这边的输出：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;flags: ... vmx ... ept vpid ept_ad ... constant_tsc nonstop_tsc tsc_known_freq tsc_reliable ... tsc_deadline_timer ... hypervisor ...
+/dev/kvm: crw-rw-rw- 1 root kvm 10, 232
+CONFIG_KVM=y
+CONFIG_KVM_INTEL=y
+CONFIG_KVM_AMD=y
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;关键 flag 解读：&lt;/p&gt;</description></item></channel></rss>

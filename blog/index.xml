@@ -276,7 +276,26 @@ x-db-depend (依赖数据库的服务)
 &lt;/ul&gt;
 &lt;h2 id="核心计算引擎特性"&gt;核心计算引擎特性 &lt;a href="#%e6%a0%b8%e5%bf%83%e8%ae%a1%e7%ae%97%e5%bc%95%e6%93%8e%e7%89%b9%e6%80%a7" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;h3 id="mpp大规模并行处理"&gt;MPP（大规模并行处理） &lt;a href="#mpp%e5%a4%a7%e8%a7%84%e6%a8%a1%e5%b9%b6%e8%a1%8c%e5%a4%84%e7%90%86" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
-&lt;p&gt;查询被分解为多个子查询，分发到各计算节点并行执行，各节点只处理自己分片内的数据，最后汇总。&lt;/p&gt;</description></item><item><title>版本控制系统选型：Git、Git-LFS 与 Perforce 的综合对比</title><link>/blog/2026-07-22-vcs-comparison-git-lfs-perforce/</link><pubDate>Wed, 22 Jul 2026 08:19:30 +0800</pubDate><guid>/blog/2026-07-22-vcs-comparison-git-lfs-perforce/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;查询被分解为多个子查询，分发到各计算节点并行执行，各节点只处理自己分片内的数据，最后汇总。&lt;/p&gt;</description></item><item><title>Linux KVM/QEMU 虚拟化实验环境搭建</title><link>/blog/kvm_qemu_lab_setup/</link><pubDate>Fri, 24 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/kvm_qemu_lab_setup/</guid><description>&lt;h1 id="linux-kvmqemu-虚拟化实验环境搭建"&gt;Linux KVM/QEMU 虚拟化实验环境搭建 &lt;a href="#linux-kvmqemu-%e8%99%9a%e6%8b%9f%e5%8c%96%e5%ae%9e%e9%aa%8c%e7%8e%af%e5%a2%83%e6%90%ad%e5%bb%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;以 WSL2 为宿主机，搭建多实例 KVM 实验环境，用于验证 clocksource、steal time 等虚拟化行为。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="一环境检查"&gt;一、环境检查 &lt;a href="#%e4%b8%80%e7%8e%af%e5%a2%83%e6%a3%80%e6%9f%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;WSL2 上先确认硬件虚拟化和 KVM 是否可用：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-bash"&gt;# 1. CPU 虚拟化支持（Intel VT-x 为 vmx，AMD-V 为 svm）
+grep -E 'vmx|svm' /proc/cpuinfo | head -1
+# 2. /dev/kvm 设备是否存在且可读写
+ls -la /dev/kvm
+# 3. 内核 KVM 模块是否编译
+zgrep CONFIG_KVM /proc/config.gz
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;我这边的输出：&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;flags: ... vmx ... ept vpid ept_ad ... constant_tsc nonstop_tsc tsc_known_freq tsc_reliable ... tsc_deadline_timer ... hypervisor ...
+/dev/kvm: crw-rw-rw- 1 root kvm 10, 232
+CONFIG_KVM=y
+CONFIG_KVM_INTEL=y
+CONFIG_KVM_AMD=y
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;关键 flag 解读：&lt;/p&gt;</description></item><item><title>版本控制系统选型：Git、Git-LFS 与 Perforce 的综合对比</title><link>/blog/2026-07-22-vcs-comparison-git-lfs-perforce/</link><pubDate>Wed, 22 Jul 2026 08:19:30 +0800</pubDate><guid>/blog/2026-07-22-vcs-comparison-git-lfs-perforce/</guid><description>&lt;h1 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;团队项目最初用 SVN 管理游戏代码和资产，后来 SVN 频繁出问题，评估后切到了 Perforce。我没有直接参与这个过程，但对背后的选型逻辑很好奇：为什么不用 Git？Git-LFS 能不能解决二进制资产管理的问题？如果 Git 不适合，Perforce 又做对了什么？&lt;/p&gt;
 &lt;p&gt;这些问题其实指向一个更大的话题：&lt;strong&gt;不同版本控制系统各自的设计哲学和权衡&lt;/strong&gt;。Git 诞生于 Linux 内核社区——海量贡献者、文本为主、分布式协作；Perforce 脱胎于游戏和大型企业——巨型仓库、二进制资产、集中式管控。它们在各自的土壤里长成了完全不同的东西。&lt;/p&gt;
 &lt;p&gt;本文尝试从多个维度梳理 Git、Git-LFS 和 Perforce 的设计差异，也顺带提一下 SVN 和一些大型公司的自研方案，希望能提供一个相对完整的视角。&lt;/p&gt;
@@ -17260,26 +17279,7 @@ return ! (i &amp;amp; (i-1));
 Using host libthread_db library &amp;ldquo;/lib64/libthread_db.so.1&amp;rdquo;.
 0x00007f7225132bb6 in ppoll () from /lib64/libc.so.6
 Cannot change this setting while the inferior is running.
-Id Target Id Frame&lt;/p&gt;</description></item><item><title/><link>/blog/kvm_qemu_lab_setup/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/blog/kvm_qemu_lab_setup/</guid><description>&lt;h1 id="linux-kvmqemu-虚拟化实验环境搭建"&gt;Linux KVM/QEMU 虚拟化实验环境搭建 &lt;a href="#linux-kvmqemu-%e8%99%9a%e6%8b%9f%e5%8c%96%e5%ae%9e%e9%aa%8c%e7%8e%af%e5%a2%83%e6%90%ad%e5%bb%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
-&lt;p&gt;以 WSL2 为宿主机，搭建多实例 KVM 实验环境，用于验证 clocksource、steal time 等虚拟化行为。&lt;/p&gt;
-&lt;hr&gt;
-&lt;h2 id="一环境检查"&gt;一、环境检查 &lt;a href="#%e4%b8%80%e7%8e%af%e5%a2%83%e6%a3%80%e6%9f%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
-&lt;p&gt;WSL2 上先确认硬件虚拟化和 KVM 是否可用：&lt;/p&gt;
-&lt;pre&gt;&lt;code class="language-bash"&gt;# 1. CPU 虚拟化支持（Intel VT-x 为 vmx，AMD-V 为 svm）
-grep -E 'vmx|svm' /proc/cpuinfo | head -1
-# 2. /dev/kvm 设备是否存在且可读写
-ls -la /dev/kvm
-# 3. 内核 KVM 模块是否编译
-zgrep CONFIG_KVM /proc/config.gz
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;我这边的输出：&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;flags: ... vmx ... ept vpid ept_ad ... constant_tsc nonstop_tsc tsc_known_freq tsc_reliable ... tsc_deadline_timer ... hypervisor ...
-/dev/kvm: crw-rw-rw- 1 root kvm 10, 232
-CONFIG_KVM=y
-CONFIG_KVM_INTEL=y
-CONFIG_KVM_AMD=y
-&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;关键 flag 解读：&lt;/p&gt;</description></item><item><title/><link>/blog/_processor-design-learning-guide/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/blog/_processor-design-learning-guide/</guid><description>&lt;h1 id="处理器设计学习指南"&gt;处理器设计学习指南 &lt;a href="#%e5%a4%84%e7%90%86%e5%99%a8%e8%ae%be%e8%ae%a1%e5%ad%a6%e4%b9%a0%e6%8c%87%e5%8d%97" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+Id Target Id Frame&lt;/p&gt;</description></item><item><title/><link>/blog/_processor-design-learning-guide/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/blog/_processor-design-learning-guide/</guid><description>&lt;h1 id="处理器设计学习指南"&gt;处理器设计学习指南 &lt;a href="#%e5%a4%84%e7%90%86%e5%99%a8%e8%ae%be%e8%ae%a1%e5%ad%a6%e4%b9%a0%e6%8c%87%e5%8d%97" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;blockquote&gt;
 &lt;p&gt;个人学习参考文档，目标是&amp;quot;吃透处理器设计，至少核心理念理解到位&amp;quot;。
 本文档基于对 &lt;a href="https://docs.boom-core.org/en/latest/"&gt;BOOM (Berkeley Out-of-Order Machine)&lt;/a&gt; 文档的评估，

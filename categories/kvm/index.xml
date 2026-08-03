@@ -1,4 +1,91 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Kvm on</title><link>/categories/kvm/</link><description>Recent content in Kvm on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 24 Jul 2026 00:00:00 +0800</lastBuildDate><atom:link href="/categories/kvm/index.xml" rel="self" type="application/rss+xml"/><item><title>Linux KVM/QEMU 虚拟化实验环境搭建</title><link>/blog/kvm_qemu_lab_setup/</link><pubDate>Fri, 24 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/kvm_qemu_lab_setup/</guid><description>&lt;h1 id="linux-kvmqemu-虚拟化实验环境搭建"&gt;Linux KVM/QEMU 虚拟化实验环境搭建 &lt;a href="#linux-kvmqemu-%e8%99%9a%e6%8b%9f%e5%8c%96%e5%ae%9e%e9%aa%8c%e7%8e%af%e5%a2%83%e6%90%ad%e5%bb%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Kvm on</title><link>/categories/kvm/</link><description>Recent content in Kvm on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 30 Jul 2026 12:00:00 +0800</lastBuildDate><atom:link href="/categories/kvm/index.xml" rel="self" type="application/rss+xml"/><item><title>kvm(5)：vDSO 时钟失真导致分母偏小，CPU% 虚高的另一种可能</title><link>/blog/kvm-%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8Acpu%E5%8D%A0%E7%94%A8%E7%8E%87%E7%BB%9F%E8%AE%A1-part2/</link><pubDate>Thu, 30 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/kvm-%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8Acpu%E5%8D%A0%E7%94%A8%E7%8E%87%E7%BB%9F%E8%AE%A1-part2/</guid><description>&lt;p&gt;前几节的推演都围绕着&lt;strong&gt;分子偏大&lt;/strong&gt;这条思路——tick catchup、steal time 未同步、两点采样时序错位，都是试图解释 &lt;code&gt;Δ(utime + stime)&lt;/code&gt; 的异常膨胀。但换个角度想：&lt;code&gt;CPU% = Δcputime / (ΔT × N)&lt;/code&gt; 这个公式里，分母 &lt;code&gt;ΔT&lt;/code&gt; 出问题也能导致同样的结果。&lt;/p&gt;
+&lt;p&gt;这里我们就来讨论CPU虚高的另一种可能，&lt;strong&gt;vDSO 时钟失真导致分母（ΔT）偏小&lt;/strong&gt;。&lt;/p&gt;
+&lt;h2 id="1-分子和分母是两条完全独立的时钟链"&gt;1 分子和分母是两条完全独立的时钟链 &lt;a href="#1-%e5%88%86%e5%ad%90%e5%92%8c%e5%88%86%e6%af%8d%e6%98%af%e4%b8%a4%e6%9d%a1%e5%ae%8c%e5%85%a8%e7%8b%ac%e7%ab%8b%e7%9a%84%e6%97%b6%e9%92%9f%e9%93%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 Go 程序的监控代码里：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;分子&lt;/strong&gt; &lt;code&gt;Δ(utime + stime)&lt;/code&gt;：来自 &lt;code&gt;/proc/self/stat&lt;/code&gt;，由内核 tick / 调度器在 task_struct 上硬记账，基于 jiffies，走的是 &lt;strong&gt;Host 侧物理时钟 → KVM timer 注入 → Guest 内核记账&lt;/strong&gt; 这条链&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;分母&lt;/strong&gt; &lt;code&gt;ΔT&lt;/code&gt;：来自 Go 的 &lt;code&gt;time.Now()&lt;/code&gt;，走 &lt;strong&gt;vDSO（pvclock）用户态快速路径&lt;/strong&gt;，完全不经过内核 syscall&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;正常场景下两者应当反映同一个物理时间流逝。但在虚拟化环境中，这&lt;strong&gt;两条链完全解耦&lt;/strong&gt;——Split Lock 可能只击穿了其中一条。如果分母 ΔT 被严重压缩（Go 以为只过了 0.1s，物理世界实际过了 1s），即使分子完全正常，计算结果也能达到数倍于 100%。&lt;/p&gt;
+&lt;h2 id="2-vdsopvclock的时间是怎么算的"&gt;2 vDSO（pvclock）的时间是怎么算的 &lt;a href="#2-vdsopvclock%e7%9a%84%e6%97%b6%e9%97%b4%e6%98%af%e6%80%8e%e4%b9%88%e7%ae%97%e7%9a%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;在 KVM 子机中，&lt;code&gt;clock_gettime()&lt;/code&gt;（Go &lt;code&gt;time.Now()&lt;/code&gt; 的底层调用）通常走 pvclock 路径。pvclock 页由 KVM 维护在 guest 物理内存中，用户态通过 vDSO 映射直接读取：&lt;/p&gt;</description></item><item><title>kvm(4)：进程运行时间+CPU占用率，如何更新、计算？</title><link>/blog/kvm-%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8Acpu%E5%8D%A0%E7%94%A8%E7%8E%87%E7%BB%9F%E8%AE%A1/</link><pubDate>Sun, 26 Jul 2026 21:14:13 +0800</pubDate><guid>/blog/kvm-%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8Acpu%E5%8D%A0%E7%94%A8%E7%8E%87%E7%BB%9F%E8%AE%A1/</guid><description>&lt;p&gt;写 &lt;a href="/blog/linux/processor/2025-12-22-linux_splitlock%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8CPU%E5%8D%A0%E7%94%A8358%25/"&gt;Split Lock 压垮母机&lt;/a&gt; 系列时，总绕不开一个问题：&lt;strong&gt;进程的 CPU 时间到底怎么记的&lt;/strong&gt;。&lt;code&gt;top&lt;/code&gt; 里看到的 CPU 使用率、&lt;code&gt;/proc/pid/stat&lt;/code&gt; 里的 &lt;code&gt;utime/stime&lt;/code&gt;，这些数字是怎么算出来的？内核里其实有两套并行的记账机制，各自基于不同的时间源，在虚拟化场景下可能产生差异。要理解这些，先从内核计时的两个基础概念说起。&lt;/p&gt;
+&lt;h1 id="一时钟源tsc-与-jiffies"&gt;一、时钟源：TSC 与 jiffies &lt;a href="#%e4%b8%80%e6%97%b6%e9%92%9f%e6%ba%90tsc-%e4%b8%8e-jiffies" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;理解记账之前，先搞清楚时间是怎么量的。&lt;/p&gt;
+&lt;h2 id="tsctime-stamp-counter"&gt;TSC（Time Stamp Counter） &lt;a href="#tsctime-stamp-counter" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;x86 CPU 内部的 64 位寄存器，从上电复位后&lt;strong&gt;按固定频率单调递增&lt;/strong&gt;。&lt;code&gt;RDTSC&lt;/code&gt; 指令读取，用户态可用。&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;特性&lt;/th&gt;
+&lt;th&gt;说明&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;精度&lt;/td&gt;
+&lt;td&gt;纳秒级&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;频率&lt;/td&gt;
+&lt;td&gt;通常等于 CPU 标称频率（2.5GHz = 每秒 +25 亿）&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;虚拟化&lt;/td&gt;
+&lt;td&gt;KVM 通过 TSC offset 控制 guest 视角：vCPU 运行时 TSC 正常走，deschedule 时&amp;quot;暂停&amp;quot;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h2 id="jiffies--tick"&gt;jiffies / tick &lt;a href="#jiffies--tick" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;概念&lt;/th&gt;
+&lt;th&gt;含义&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;tick&lt;/td&gt;
+&lt;td&gt;一次 timer 中断事件&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;jiffy&lt;/td&gt;
+&lt;td&gt;两次 tick 间的时间间隔，值 =&lt;code&gt;1/HZ&lt;/code&gt; 秒&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;TICK_NSEC&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;&lt;code&gt;account_process_tick()&lt;/code&gt; 每次加给 utime/stime 的时间量，等于 1 jiffy 对应的纳秒数&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;常见 &lt;code&gt;CONFIG_HZ&lt;/code&gt; 下 1 jiffy 的时长：&lt;/p&gt;</description></item><item><title>kvm(3)： 溯源CPU 占用率为何飙升到 350%</title><link>/blog/kvm_%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8cpu%E4%BD%BF%E7%94%A8%E7%8E%87358%E7%9A%84%E7%9C%9F%E7%9B%B8/</link><pubDate>Sat, 25 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/kvm_%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8cpu%E4%BD%BF%E7%94%A8%E7%8E%87358%E7%9A%84%E7%9C%9F%E7%9B%B8/</guid><description>&lt;h2 id="背景"&gt;背景 &lt;a href="#%e8%83%8c%e6%99%af" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;&lt;a href="/blog/linux/processor/2025-12-22-linux_splitlock%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8CPU%E5%8D%A0%E7%94%A8358%25/"&gt;上一篇文章&lt;/a&gt; 中，我们通过逐层排查，最终定位到同母机上另一台子机的 Split Lock 是导致业务 CPU 飙高的根因。腾讯云侧确认后将我们的子机迁移到其他正常母机，问题恢复。&lt;/p&gt;
+&lt;p&gt;但排查过程中还有一个现象始终令人困惑：&lt;strong&gt;单核 CPU 占用率达到了 358%+&lt;/strong&gt;——理论上即使满载，单核算 CPU 使用率也不可能超过 100%。Split Lock 到底做了什么，能让监控数据出现如此反常识的数值？&lt;/p&gt;
+&lt;p&gt;本文将顺着 Split Lock → 内存总线锁 → vCPU 调度延迟 → IRQ 积压注入 → missed timer ticks 补偿这条链路，逐一分析 CPU 占用率升高的原因，以及突破 100% 的机制。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;系列文章&lt;/strong&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href="/blog/linux/processor/2025-12-22-linux_splitlock%E5%AF%BC%E8%87%B4%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8CPU%E5%8D%A0%E7%94%A8358%25/"&gt;《1 · Split Lock 压垮母机：一次 CPU 飙升的线上排查》&lt;/a&gt; — 排查过程与根因定位&lt;/li&gt;
+&lt;li&gt;&lt;a href="/blog/linux/processor/2026-07-24-cpu-accounting-splitlock/"&gt;《当监控数据&amp;quot;说谎&amp;quot;：Split Lock 引发的 CPU 计量失真》&lt;/a&gt; — gopsutil 视角的 CPU 计量偏差与复现&lt;/li&gt;
+&lt;li&gt;&lt;a href="/blog/linux/processor/2026-07-26-linux_%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8ACPU%E5%8D%A0%E7%94%A8%E6%AD%A3%E7%A1%AE%E7%BB%9F%E8%AE%A1%E5%A7%BF%E5%8A%BF/"&gt;《Linux 进程 CPU 时间：调度器统计、tick 采样与虚拟化 timer 补偿》&lt;/a&gt; — 内核 CPU 时间记账机制详解&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="splitlock这会导致什么问题呢"&gt;splitlock，这会导致什么问题呢? &lt;a href="#splitlock%e8%bf%99%e4%bc%9a%e5%af%bc%e8%87%b4%e4%bb%80%e4%b9%88%e9%97%ae%e9%a2%98%e5%91%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;h3 id="有哪些性能方面的影响"&gt;有哪些性能方面的影响? &lt;a href="#%e6%9c%89%e5%93%aa%e4%ba%9b%e6%80%a7%e8%83%bd%e6%96%b9%e9%9d%a2%e7%9a%84%e5%bd%b1%e5%93%8d" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;触发splitlock的子机，加解锁内存总线，自身性能会下降，它内部也有其他访存操作；&lt;/li&gt;
+&lt;li&gt;其他子机中的访存操作，CPU也会等待内存总线就绪，也会引入访存延迟；&lt;/li&gt;
+&lt;li&gt;子机执行过程中本来可能在合适的时候进行切换，让出CPU给其他子机使用，但是现在CPU更可能被占着等内存总线就绪；&lt;/li&gt;
+&lt;li&gt;从整体来看，可能会给其他子机的调度带来不可避免的调度延迟，尤其是再考虑到云服务商一般都存在轻微的超卖的情况；
+所以，很好理解，splitlock会给所有自己带来调度延迟，并且导致实际处理能力下降的问题。这根我们前期观测到的服务处理能力下降，业务侧请求处理耗时增加，也一致。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id="为什么cpu占用率升高呢"&gt;为什么CPU占用率升高呢？ &lt;a href="#%e4%b8%ba%e4%bb%80%e4%b9%88cpu%e5%8d%a0%e7%94%a8%e7%8e%87%e5%8d%87%e9%ab%98%e5%91%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;子机被调度到目标CPU上执行，自打linux 2.6引入CFS调度器以后，进程运行时间的统计就从 &amp;ldquo;timer tick采样累计执行时间&amp;rdquo; 改成了 &amp;ldquo;调度器切换时更新累计运行时间片&amp;rdquo; 的方式了；&lt;/li&gt;
+&lt;li&gt;自己被调度到目标CPU上执行，遇到内存总线锁，CPU干等，干等的这段时间也会计入运行时间，如果子机中任务在运行时间片内CPU全部在等内存总线释放，干等，那就是接近100%使用率；&lt;/li&gt;
+&lt;li&gt;在调度延迟期间，如果irq到达，会首先交给母机处理，母机再转给kvm模块，等后续vm被调度时，kvm再注入这些irq到vm内部，vm内部再处理，irq多自然也会推高CPU占用；
+&lt;blockquote&gt;
+&lt;p&gt;我们也确实看到了问题时间点大量irq情况。&lt;/p&gt;</description></item><item><title>Linux KVM/QEMU 虚拟化实验环境搭建</title><link>/blog/kvm_qemu_lab_setup/</link><pubDate>Fri, 24 Jul 2026 00:00:00 +0800</pubDate><guid>/blog/kvm_qemu_lab_setup/</guid><description>&lt;h1 id="linux-kvmqemu-虚拟化实验环境搭建"&gt;Linux KVM/QEMU 虚拟化实验环境搭建 &lt;a href="#linux-kvmqemu-%e8%99%9a%e6%8b%9f%e5%8c%96%e5%ae%9e%e9%aa%8c%e7%8e%af%e5%a2%83%e6%90%ad%e5%bb%ba" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;以 WSL2 为宿主机，搭建多实例 KVM 实验环境，用于验证 clocksource、steal time 等虚拟化行为。&lt;/p&gt;
 &lt;hr&gt;
 &lt;h2 id="一环境检查"&gt;一、环境检查 &lt;a href="#%e4%b8%80%e7%8e%af%e5%a2%83%e6%a3%80%e6%9f%a5" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
@@ -17,4 +104,86 @@ CONFIG_KVM=y
 CONFIG_KVM_INTEL=y
 CONFIG_KVM_AMD=y
 &lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;关键 flag 解读：&lt;/p&gt;</description></item></channel></rss>
+&lt;p&gt;关键 flag 解读：&lt;/p&gt;</description></item><item><title>kvm(2): splitlock有什么危害，如何避免</title><link>/blog/kvm_splitlock%E6%9C%89%E4%BB%80%E4%B9%88%E5%8D%B1%E5%AE%B3%E5%A6%82%E4%BD%95%E9%81%BF%E5%85%8D/</link><pubDate>Mon, 22 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/kvm_splitlock%E6%9C%89%E4%BB%80%E4%B9%88%E5%8D%B1%E5%AE%B3%E5%A6%82%E4%BD%95%E9%81%BF%E5%85%8D/</guid><description>&lt;p&gt;那天业务告警响了：服务延迟飙高，吞吐量断崖式下跌。&lt;/p&gt;
+&lt;p&gt;打开监控一看，CPU 使用率瞬间拉满。再看 atop，CPU 飙高的同时，IRQ（硬中断）处理量也同步暴增——两者的曲线几乎完全吻合。第一反应是网卡中断风暴或者定时器异常，但仔细看了中断分布，并没有哪个设备的中断计数特别高。问题出在别的地方。&lt;/p&gt;
+&lt;p&gt;后来才了解到，我们业务所在母机上的&lt;strong&gt;另一台子机&lt;/strong&gt;存在严重的 Split Lock 问题——那台问题子机持续触发总线锁，把母机 CPU 资源拖垮了。母机调度器在资源争抢之下，很长一段时间没调度到我们的子机，等到终于调度上时，积压的中断一次性涌入，触发了所谓的&amp;quot;IRQ catchup&amp;quot;。表现出来的就是我们的子机上 CPU 和 IRQ 同时飙升。&lt;/p&gt;
+&lt;p&gt;所以这次事件的根因不是 IRQ catchup 本身——它只是&amp;quot;果&amp;quot;——真正的&amp;quot;因&amp;quot;是同一母机上那台问题子机的 Split Lock，持续消耗物理 CPU 资源，间接把我们的子机也拖下了水。&lt;/p&gt;
+&lt;h2 id="split-lock-是什么"&gt;Split Lock 是什么 &lt;a href="#split-lock-%e6%98%af%e4%bb%80%e4%b9%88" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;x86 架构下，当一条原子指令（比如 &lt;code&gt;lock cmpxchg&lt;/code&gt;）操作的内存地址跨越了两个 Cache Line（缓存行）边界时，CPU 无法在缓存内部保证原子性，只能锁住整个内存总线来完成操作。&lt;/p&gt;
+&lt;p&gt;正常的一次加法指令可能只消耗不到 10 个时钟周期。而一次 Split Lock 锁住总线的时间可以达到 &lt;strong&gt;1000 个时钟周期&lt;/strong&gt;——是正常操作的 100 倍以上。&lt;/p&gt;
+&lt;p&gt;在这 1000 个周期里，其他 CPU 核心无法访问内存。不是&amp;quot;慢了一点&amp;quot;，是整个总线的使用权被独占。&lt;/p&gt;
+&lt;p&gt;常见的触发场景：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;数据结构设计不当，原子操作的字段刚好跨了 64 字节边界&lt;/li&gt;
+&lt;li&gt;内存未对齐，比如在一个非 4 字节对齐的地址上做 &lt;code&gt;lock cmpxchg&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;编译器或运行时没有做 cache line padding&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;ps: Cache Line 在 x86 上通常是 64 字节。一个 8 字节的原子变量如果起始地址是 60（mod 64），就会跨越两个 Cache Line，触发 Split Lock。&lt;/p&gt;</description></item><item><title>kvm(1)：子机 CPU 飙升，吞吐量斩掉一半</title><link>/blog/kvm_cpu%E4%BD%BF%E7%94%A8%E7%8E%87%E7%AA%81%E5%A2%9E%E4%B8%9A%E5%8A%A1%E5%90%9E%E5%90%90%E6%96%A9%E5%8D%8A/</link><pubDate>Fri, 19 Dec 2025 00:00:00 +0800</pubDate><guid>/blog/kvm_cpu%E4%BD%BF%E7%94%A8%E7%8E%87%E7%AA%81%E5%A2%9E%E4%B8%9A%E5%8A%A1%E5%90%9E%E5%90%90%E6%96%A9%E5%8D%8A/</guid><description>&lt;h2 id="背景虚拟化缺陷导致业务cpu告警"&gt;背景：虚拟化缺陷导致业务CPU告警 &lt;a href="#%e8%83%8c%e6%99%af%e8%99%9a%e6%8b%9f%e5%8c%96%e7%bc%ba%e9%99%b7%e5%af%bc%e8%87%b4%e4%b8%9a%e5%8a%a1cpu%e5%91%8a%e8%ad%a6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;有一天突然收到了运维侧的告警：机器CPU使用率持续上升，造成现网请求异常。&lt;/p&gt;
+&lt;p&gt;最开始，怀疑业务侧出了什么问题，先排查业务自身有没有问题：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;业务侧监控显示，对这个服务实例的调用量并没有明显激增（一致性hash调用，说明不是特定玩家正常请求、或者刷脚本导致）；&lt;/li&gt;
+&lt;li&gt;业务侧走读代码这个版本并没有什么变更，也没有什么高频循环等可能导致CPU占用率高的代码；&lt;/li&gt;
+&lt;li&gt;业务侧发现出现CPU使用率突增的子机有两台，一个是接入网关（c++写的），一个是业务逻辑服务（golang写的），久经考验了，巧在它们CPU使用率高的时间点一致，它们确实在同一台母机上。&lt;/li&gt;
+&lt;li&gt;atop监控：怀疑过这两台子机是不是代码问题导致它们互相影响了，当时记得看过atop监控，因为是分钟粒度的，平均后只能看到CPU占用确实上升了，但是没有非常突出。
+atop日志是分钟级粒度的，被平均后可能异常被抹平了，如CPU使用率几秒内的瞬时CPU飙升被抹平到分钟粒度后不明显了。&lt;/li&gt;
+&lt;li&gt;5）atop监控：发现其中一台业务逻辑服务的irq异常高，这说明应该是母机因为一段时间没有调度我们子机导致，预期内会出现的一个现象，kvm注入vm未调度期间到达的中断给自己。
+我们子机未调度期间，各种类型的中断来了，中断都是先交给母机去处理，然后母机后面交给kvm内核模块处理，kvm后面调度子机时再注入给子机。&lt;/li&gt;
+&lt;li&gt;查看框架日志，发现有打印单核CPU使用率达到350%+的情况，超过85%服务就会拒绝请求（过载保护）。
+所以业务侧QPS下降也是符合预期的，因为服务主动拒绝了一些。&lt;/li&gt;
+&lt;li&gt;服务运行数周一直也比较稳定，这种问题也是第一次。但是同类问题我们已经遇到过几次了，多数情况下跟虚拟化技术中的vcpu调度有关。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;先说结论，这次依旧是平台侧虚拟化这块问题处置方案不到位导致的。这次排查了解到些更深层次的虚拟化技术、内核的细节，算是一个不错的查缺补漏。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;ps：实际上这类问题并不总是很容易复现，错误是五花八门的组合，而不总是相同的。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2 id="排查收集业务侧运维侧云侧的线索"&gt;排查：收集业务侧、运维侧、云侧的线索 &lt;a href="#%e6%8e%92%e6%9f%a5%e6%94%b6%e9%9b%86%e4%b8%9a%e5%8a%a1%e4%be%a7%e8%bf%90%e7%bb%b4%e4%be%a7%e4%ba%91%e4%be%a7%e7%9a%84%e7%ba%bf%e7%b4%a2" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;导致CPU使用率上升的原因，有很多。正常情况下，请求量上涨、GC开销、计算循环……等都可能导致这些问题。但是我们要说的是异常的我们把控之外的情况。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;??? 单核CPU使用率超过350%，这么诡异的现象都出来了。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;有些事情你知道就是知道，不知道就是不知道。如果我的知识已经覆盖不了这个问题场景了，那就只能求助于其他&amp;quot;领域&amp;quot;的同事来看一看了。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;线索1（机型信息)：这台告警的子机，是32c64g机型&lt;/strong&gt;，&lt;code&gt;cat /proc/cpuinfo&lt;/code&gt; 显示处理器型号是 AMD EPYC 9754 128-Core Processor，我们的子机是分配了32c。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;线索2（母机CPU负载）：从运维监控系统来看，这台子机所在 母机 的5min平均负载从40%上升到了120%&lt;/strong&gt;；然后看1min平均负载，瞬时峰值涨40%涨到了150%。注意是128c未归一化的，这台母机上有多个业务的子机。so，这里的百分比数值没有除以128c，整体来看，除一下，母机问题不大，可能个别核心会比较高点。but，也确定不了当时我们业务子机跑在哪几个核心上吧，所以应该只能参考母机平均负载。ok，至少母机整体来看问题不大。
+&lt;img src="assets/kvm_cpu%E4%BD%BF%E7%94%A8%E7%8E%87%E7%AA%81%E5%A2%9E%E4%B8%9A%E5%8A%A1%E5%90%9E%E5%90%90%E6%96%A9%E5%8D%8A/1785145807250.png" alt="1785145807250"&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;线索3（子机内存扫描)：腾讯云侧反馈，在问题发生时间点，有一台我们的子机内存扫描次数比较多&lt;/strong&gt;，可能推高了CPU占用。
+&lt;img src="assets/kvm_cpu%E4%BD%BF%E7%94%A8%E7%8E%87%E7%AA%81%E5%A2%9E%E4%B8%9A%E5%8A%A1%E5%90%9E%E5%90%90%E6%96%A9%E5%8D%8A/1785145556388.png" alt="1785145556388"&gt;内存扫描是子机内存压力大出现的一个扫描动作，&lt;code&gt;cat /proc/vmstat | grep -i pgscan_&lt;/code&gt; 统计的是这些输出的累加值增长情况，回收内存动作会影响一点的磁盘io，io打上去后影响cpu负载。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;这台母机上实际上跑着连个我们的子机，1个跑c++写的网关和go写的业务网关，1个跑go写的其他逻辑服务。其中1台出现了大量内存扫描，CPU占用升高的问题则都存在。
+有可能，内存扫描次数增多，也只是&amp;quot;结果&amp;quot;而已，并不是&amp;quot;根本原因&amp;quot; …… 这两台机器理论上内存都有较多余量，即使其中1台内存有压力触发扫描，也不至于影响到另一台自己吧？&lt;/p&gt;
+&lt;p&gt;ps: 其实涉及到的服务，是我们的基础服务，历史版本线上从未出过问题，我们也没有进行较大改动。推测，还是母机有其他问题，继续排查。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;线索4（查看子机st是否异常）：继续沟通让腾讯云侧检查自己st（steal time）有没有明显异常&lt;/strong&gt;
+在过去的类似问题排查中，母机出现明显调度问题时，子机的st非常明显，给看个问题示例：st 高大 10%，这表示自己调度存在非常大的延迟。
+&lt;img src="assets/kvm_cpu%E4%BD%BF%E7%94%A8%E7%8E%87%E7%AA%81%E5%A2%9E%E4%B8%9A%E5%8A%A1%E5%90%9E%E5%90%90%E6%96%A9%E5%8D%8A/1785147039555.png" alt="1785147039555"&gt;
+但是在我们这次案例中，查看到的子机的st并没有这么大，按腾讯云反馈这里虽然问题时间点处有st波动，但是st值较小，不像上面那样高大10%。
+&lt;img src="assets/kvm_cpu%E4%BD%BF%E7%94%A8%E7%8E%87%E7%AA%81%E5%A2%9E%E4%B8%9A%E5%8A%A1%E5%90%9E%E5%90%90%E6%96%A9%E5%8D%8A/1785147134110.png" alt="1785147134110"&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;会不会，这里的st波动也只是一个&amp;quot;结果&amp;quot;呢，那&amp;quot;根本原因&amp;quot;是什么？是什么导致了调度出现延迟。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;线索5（vpu调度抖动、子机cpu占用率抖动）：后续反馈提供了更多子机相关的信息，可以明显看到vcpu调度、cpu占用、网络IO方面存在抖动&lt;/strong&gt;
+&lt;img src="assets/kvm_cpu%E4%BD%BF%E7%94%A8%E7%8E%87%E7%AA%81%E5%A2%9E%E4%B8%9A%E5%8A%A1%E5%90%9E%E5%90%90%E6%96%A9%E5%8D%8A/1785147568278.png" alt="1785147568278"&gt;
+&lt;img src="assets/kvm_cpu%E4%BD%BF%E7%94%A8%E7%8E%87%E7%AA%81%E5%A2%9E%E4%B8%9A%E5%8A%A1%E5%90%9E%E5%90%90%E6%96%A9%E5%8D%8A/1785147593686.png" alt="1785147593686"&gt;
+&lt;img src="assets/kvm_cpu%E4%BD%BF%E7%94%A8%E7%8E%87%E7%AA%81%E5%A2%9E%E4%B8%9A%E5%8A%A1%E5%90%9E%E5%90%90%E6%96%A9%E5%8D%8A/1785147610421.png" alt="1785147610421"&gt;
+&lt;img src="assets/kvm_cpu%E4%BD%BF%E7%94%A8%E7%8E%87%E7%AA%81%E5%A2%9E%E4%B8%9A%E5%8A%A1%E5%90%9E%E5%90%90%E6%96%A9%E5%8D%8A/1785147647959.png" alt="1785147647959"&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;线索6（母机上有其它子机splitlock）：腾讯云后续反馈查到有其他子机splitlock，影响到了我们&lt;/strong&gt;
+x86 架构下，当一条原子指令（比如 &lt;code&gt;lock cmpxchg&lt;/code&gt;）操作的内存地址跨越了两个 Cache Line（缓存行）边界时，CPU 无法在缓存内部保证原子性，只能锁住整个内存总线来完成操作。
+当时腾讯云侧确定了母机当时只存在这个明显异常后，有检测splitlock的能力并且给对应子机打上了标记，因为不能直接迁走这台子机（不确定对业务的影响面）。所以评估后迁走了我们的子机到其他正常母机，问题恢复。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;🔗 系列文章&lt;/strong&gt;：Split Lock 的根因已经定位，但它如何会产生这种影响，将子机单核 CPU 占用率推高至 350% 的呢？这里有什么鬼故事？详见下面几篇：
+&lt;a href="/blog/linux/processor/kvm_splitlock%E6%9C%89%E4%BB%80%E4%B9%88%E5%8D%B1%E5%AE%B3%E5%A6%82%E4%BD%95%E9%81%BF%E5%85%8D/"&gt;《Split Lock (2): 是什么以及如何避免》&lt;/a&gt;
+&lt;a href="/blog/linux/processor/kvm_%E6%9C%8D%E5%8A%A1%E5%8D%95%E6%A0%B8CPU%E4%BD%BF%E7%94%A8%E7%8E%87358%25%E7%9A%84%E7%9C%9F%E7%9B%B8/"&gt;《Split Lock (3): 溯源CPU占用为何会到350%》&lt;/a&gt;。&lt;/p&gt;</description></item></channel></rss>

@@ -1,4 +1,20 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>My Books on</title><link>/books/</link><description>Recent content in My Books on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:48:23 +0000</lastBuildDate><atom:link href="/books/index.xml" rel="self" type="application/rss+xml"/><item><title>Go语言设计模式实战</title><link>/books/design-patterns/</link><pubDate>Thu, 17 Oct 2024 08:30:00 +0000</pubDate><guid>/books/design-patterns/</guid><description>&lt;p&gt;2022年4月份开始，鉴于团队成员在工程实践方面存在的问题，我写了一些设计模式方面的demos让大家借鉴，目的很简单，就是训练开发人员复用经得起实践检验的解决方案来解决工程复杂度逐渐扩大的问题。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>My Books on</title><link>/books/</link><description>Recent content in My Books on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:48:23 +0000</lastBuildDate><atom:link href="/books/index.xml" rel="self" type="application/rss+xml"/><item><title>Go 安全编程</title><link>/books/go-safe-programming/</link><pubDate>Fri, 11 Sep 2026 13:02:00 +0800</pubDate><guid>/books/go-safe-programming/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/aio/DYkhCTUV1bmt3cXFV?p=M7kWRQH8b3p4H4N7Uo6W3t"/&gt;
+&lt;/div&gt;</description></item><item><title>Go语言设计模式实战</title><link>/books/design-patterns/</link><pubDate>Thu, 17 Oct 2024 08:30:00 +0000</pubDate><guid>/books/design-patterns/</guid><description>&lt;p&gt;2022年4月份开始，鉴于团队成员在工程实践方面存在的问题，我写了一些设计模式方面的demos让大家借鉴，目的很简单，就是训练开发人员复用经得起实践检验的解决方案来解决工程复杂度逐渐扩大的问题。&lt;/p&gt;
 &lt;div class="center" align="center" style="padding-bottom: 1rem;"&gt;
 &lt;img alt="design patterns" src="/books/assets/design-patterns.png"/&gt;
 &lt;/div&gt;

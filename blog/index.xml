@@ -51,23 +51,7 @@
 &lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
-&lt;p&gt;&lt;code&gt;d&lt;/code&gt; / &lt;code&gt;c&lt;/code&gt; / &lt;code&gt;s&lt;/code&gt; 经常被混着说，其实只是「删」的三种外壳：&lt;/p&gt;</description></item><item><title>Go 安全编程</title><link>/blog/2026-09-11-go%E5%AE%89%E5%85%A8%E7%BC%96%E7%A8%8B/</link><pubDate>Fri, 11 Sep 2026 13:02:00 +0800</pubDate><guid>/blog/2026-09-11-go%E5%AE%89%E5%85%A8%E7%BC%96%E7%A8%8B/</guid><description>&lt;style&gt;
-.iframe-container {
-position: relative;
-height: 100vh;
-overflow: hidden;
-}
-.iframe-container iframe {
-width: 100%;
-height: 100%;
-border: none;
-position: absolute;
-top: -170px;
-}
-&lt;/style&gt;
-&lt;div class="iframe-container"&gt;
-&lt;iframe src="https://docs.qq.com/aio/DYkhCTUV1bmt3cXFV?p=M7kWRQH8b3p4H4N7Uo6W3t"/&gt;
-&lt;/div&gt;</description></item><item><title>Go 调度器 M 的诞生与消亡：从一次 go 语句到线程创建/复用的完整路径</title><link>/blog/2026-08-15-go-scheduler-m-lifecycle/</link><pubDate>Sat, 15 Aug 2026 13:40:49 +0800</pubDate><guid>/blog/2026-08-15-go-scheduler-m-lifecycle/</guid><description>&lt;h1 id="go-调度器-m-的诞生与消亡从一次-go-语句到线程创建复用的完整路径"&gt;Go 调度器 M 的诞生与消亡：从一次 go 语句到线程创建/复用的完整路径 &lt;a href="#go-%e8%b0%83%e5%ba%a6%e5%99%a8-m-%e7%9a%84%e8%af%9e%e7%94%9f%e4%b8%8e%e6%b6%88%e4%ba%a1%e4%bb%8e%e4%b8%80%e6%ac%a1-go-%e8%af%ad%e5%8f%a5%e5%88%b0%e7%ba%bf%e7%a8%8b%e5%88%9b%e5%bb%ba%e5%a4%8d%e7%94%a8%e7%9a%84%e5%ae%8c%e6%95%b4%e8%b7%af%e5%be%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;&lt;code&gt;d&lt;/code&gt; / &lt;code&gt;c&lt;/code&gt; / &lt;code&gt;s&lt;/code&gt; 经常被混着说，其实只是「删」的三种外壳：&lt;/p&gt;</description></item><item><title>Go 调度器 M 的诞生与消亡：从一次 go 语句到线程创建/复用的完整路径</title><link>/blog/2026-08-15-go-scheduler-m-lifecycle/</link><pubDate>Sat, 15 Aug 2026 13:40:49 +0800</pubDate><guid>/blog/2026-08-15-go-scheduler-m-lifecycle/</guid><description>&lt;h1 id="go-调度器-m-的诞生与消亡从一次-go-语句到线程创建复用的完整路径"&gt;Go 调度器 M 的诞生与消亡：从一次 go 语句到线程创建/复用的完整路径 &lt;a href="#go-%e8%b0%83%e5%ba%a6%e5%99%a8-m-%e7%9a%84%e8%af%9e%e7%94%9f%e4%b8%8e%e6%b6%88%e4%ba%a1%e4%bb%8e%e4%b8%80%e6%ac%a1-go-%e8%af%ad%e5%8f%a5%e5%88%b0%e7%ba%bf%e7%a8%8b%e5%88%9b%e5%bb%ba%e5%a4%8d%e7%94%a8%e7%9a%84%e5%ae%8c%e6%95%b4%e8%b7%af%e5%be%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;blockquote&gt;
 &lt;p&gt;源码版本：go1.22.2（&lt;code&gt;release-branch.go1.22&lt;/code&gt;）。所有行号均对应该版本的 &lt;code&gt;src/runtime/proc.go&lt;/code&gt; 等文件。
 阅读本文前建议先了解 G/M/P 三件套的基本概念：G 是 goroutine，M 是 OS 线程（机器），P 是执行 Go 代码所必需的&amp;quot;处理器&amp;quot;资源（&lt;code&gt;proc.go:24-29&lt;/code&gt;）。&lt;/p&gt;

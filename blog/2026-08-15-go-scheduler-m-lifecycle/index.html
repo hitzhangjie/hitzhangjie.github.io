@@ -1,0 +1,227 @@
+<!doctype html><html lang=en-US><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-regular.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-500.woff2 type=font/woff2 crossorigin><link rel=preload as=font href=/fonts/vendor/jost/jost-v4-latin-700.woff2 type=font/woff2 crossorigin><script>(()=>{var t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,e=localStorage.getItem("theme");t&&e===null&&(localStorage.setItem("theme","dark"),document.documentElement.setAttribute("data-dark-mode","")),t&&e==="dark"&&document.documentElement.setAttribute("data-dark-mode",""),e==="dark"&&document.documentElement.setAttribute("data-dark-mode","")})()</script><script>window.__LAYOUT_WIDTH_DEFAULT__="standard"</script><script>(()=>{(function(){var t,n={compact:1,standard:1,wide:1,fullscreen:1},s="layout-width-v",o="3",e=null,i=null;try{e=localStorage.getItem("layout-width"),i=localStorage.getItem(s)}catch{}if(i!==o){e==="standard"?e="compact":e==="compact"?e="standard":e==="normal"?e="compact":e==="reading"&&(e="wide");try{e&&localStorage.setItem("layout-width",e),localStorage.setItem(s,o)}catch{}}t=window.__LAYOUT_WIDTH_DEFAULT__||"standard",n[t]||(t="standard"),e&&!n[e]&&(e=null),document.documentElement.setAttribute("data-layout-width",e||t)})()})()</script><link rel=stylesheet href=/main.9b926d773b1921e352d67916ecfb25a725924aa3293c6fa1ad5303247d0f69425642a46daefe189bbb8d38c995be648039728be80e873a21bc6123678413ffb6.css integrity="sha512-m5JtdzsZIeNS1nkW7PslpyWSSqMpPG+hrVMDJH0PaUJWQqRtrv4Ym7uNOMmVvmSAOXKL6A6HOiG8YSNnhBP/tg==" crossorigin=anonymous><noscript><style>img.lazyload{display:none}</style></noscript><meta name=robots content="index, follow"><meta name=googlebot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><meta name=bingbot content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"><title>Go 调度器 M 的诞生与消亡：从一次 go 语句到线程创建/复用的完整路径 - MySpace</title><meta name=description content="以 go 语句为主线，对着 go1.22.2 的 runtime/proc.go 源码，梳理 M 的创建决策、复用机制与退出条件：P 全量预创建、M 惰性创建且只增不减，服务线程数等于历史并发峰值。"><link rel=canonical href=/blog/2026-08-15-go-scheduler-m-lifecycle/><meta property="og:locale" content="en_US"><meta property="og:type" content="article"><meta property="og:title" content="Go 调度器 M 的诞生与消亡：从一次 go 语句到线程创建/复用的完整路径"><meta property="og:description" content="以 go 语句为主线，对着 go1.22.2 的 runtime/proc.go 源码，梳理 M 的创建决策、复用机制与退出条件：P 全量预创建、M 惰性创建且只增不减，服务线程数等于历史并发峰值。"><meta property="og:url" content="/blog/2026-08-15-go-scheduler-m-lifecycle/"><meta property="og:site_name" content="MySpace"><meta property="article:published_time" content="2026-08-15T13:40:49+08:00"><meta property="article:modified_time" content="2026-09-12T08:35:56+08:00"><meta property="og:image" content="/doks.png"><meta property="og:image:alt" content="MySpace"><meta name=twitter:card content="summary_large_image"><meta name=twitter:site content="@hitzhangjie"><meta name=twitter:creator content="@hitzhangjie"><meta name=twitter:title content="Go 调度器 M 的诞生与消亡：从一次 go 语句到线程创建/复用的完整路径"><meta name=twitter:description content="以 go 语句为主线，对着 go1.22.2 的 runtime/proc.go 源码，梳理 M 的创建决策、复用机制与退出条件：P 全量预创建、M 惰性创建且只增不减，服务线程数等于历史并发峰值。"><meta name=twitter:image content="/doks.png"><meta name=twitter:image:alt content="Go 调度器 M 的诞生与消亡：从一次 go 语句到线程创建/复用的完整路径"><script type=application/ld+json>{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/1","name":"","url":"/","sameAs":["https://twitter.com/hitzhangjie","https://www.linkedin.com/in/hitzhangjie/","https://github.com/hitzhangjie"],"image":{"@type":"ImageObject","@id":"/#/schema/image/1","url":"/\u003cnil\u003e","width":null,"height":null,"caption":""}},{"@type":"WebSite","@id":"/#/schema/website/1","url":"/","name":"MySpace","description":"MySpace is a hitzhangjie\u0027s personal space, for blogs, books, journey, thinkings.","publisher":{"@id":"/#/schema/person/1"}},{"@type":"WebPage","@id":"/blog/2026-08-15-go-scheduler-m-lifecycle/","url":"/blog/2026-08-15-go-scheduler-m-lifecycle/","name":"Go 调度器 M 的诞生与消亡：从一次 go 语句到线程创建\/复用的完整路径","description":"以 go 语句为主线，对着 go1.22.2 的 runtime\/proc.go 源码，梳理 M 的创建决策、复用机制与退出条件：P 全量预创建、M 惰性创建且只增不减，服务线程数等于历史并发峰值。","isPartOf":{"@id":"/#/schema/website/1"},"about":{"@id":"/#/schema/person/1"},"datePublished":"2026-08-15T13:40:49CET","dateModified":"2026-09-12T08:35:56CET","breadcrumb":{"@id":"/blog/2026-08-15-go-scheduler-m-lifecycle/#/schema/breadcrumb/1"},"primaryImageOfPage":{"@id":"/blog/2026-08-15-go-scheduler-m-lifecycle/#/schema/image/2"},"inLanguage":"","potentialAction":[{"@type":"ReadAction","target":["/blog/2026-08-15-go-scheduler-m-lifecycle/"]}]},{"@type":"BreadcrumbList","@id":"/blog/2026-08-15-go-scheduler-m-lifecycle/#/schema/breadcrumb/1","name":"Breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"item":{"@type":"WebPage","@id":"/","url":"/","name":"Home"}},{"@type":"ListItem","position":2,"item":{"@id":"/blog2026-08-15-go-scheduler-m-lifecycle/"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Article","@id":"/#/schema/article/1","headline":"Go 调度器 M 的诞生与消亡：从一次 go 语句到线程创建\/复用的完整路径","description":"以 go 语句为主线，对着 go1.22.2 的 runtime\/proc.go 源码，梳理 M 的创建决策、复用机制与退出条件：P 全量预创建、M 惰性创建且只增不减，服务线程数等于历史并发峰值。","isPartOf":{"@id":"/blog/2026-08-15-go-scheduler-m-lifecycle/"},"mainEntityOfPage":{"@id":"/blog/2026-08-15-go-scheduler-m-lifecycle/"},"datePublished":"2026-08-15T13:40:49CET","dateModified":"2026-09-12T08:35:56CET","author":{"@id":"/#/schema/person/2"},"publisher":{"@id":"/#/schema/person/1"},"image":{"@id":"/blog/2026-08-15-go-scheduler-m-lifecycle/#/schema/image/2"}}]},{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"/#/schema/person/2","name":null,"sameAs":[]}]},{"@context":"https://schema.org","@graph":[{"@type":"ImageObject","@id":"/blog/2026-08-15-go-scheduler-m-lifecycle/#/schema/image/2","url":"/doks.png","contentUrl":"/doks.png","caption":"Go 调度器 M 的诞生与消亡：从一次 go 语句到线程创建\/复用的完整路径"}]}]}</script><meta name=theme-color content="#fff"><link rel=icon href=/favicon.ico sizes=any><link rel=icon type=image/svg+xml href=/favicon.svg><link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png><link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png><link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png><link rel=manifest crossorigin=use-credentials href=/site.webmanifest><script type=text/javascript src='https://platform-api.sharethis.com/js/sharethis.js#property=607868a58d7101001829a8df&product=sop' async></script><style>[alt~=sharing]{border:0;box-shadow:none}div#st-1{text-align:unset}div#st-1 .st-btn{height:24px;padding:0 4px}div#st-1 .st-btn>img{top:4.2px}div#st-2 .st-btn{height:24px;padding:0 4px}div#st-2 .st-btn>img{top:4.2px}</style><script async src="https://www.googletagmanager.com/gtag/js?id=UA-168027530-1"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag("js",new Date),gtag("config","UA-168027530-1")</script></head><body class="blog single d-flex flex-column min-vh-100"><div class=sticky-top><div class=header-bar></div><header class="navbar navbar-expand-lg navbar-light doks-navbar"><nav class="container-xxl flex-wrap flex-lg-nowrap" aria-label="Main navigation"><a class="navbar-brand order-0" href=/ aria-label=MySpace>MySpace
+</a><button class="btn btn-menu order-2 d-block d-lg-none" type=button data-bs-toggle=offcanvas data-bs-target=#offcanvasDoks aria-controls=offcanvasDoks aria-label="Open main menu">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button><div class="offcanvas offcanvas-end border-0 py-lg-1" tabindex=-1 id=offcanvasDoks data-bs-backdrop=true aria-labelledby=offcanvasDoksLabel><div class="header-bar d-lg-none"></div><div class="offcanvas-header d-lg-none"><h2 class="h5 offcanvas-title ps-2" id=offcanvasDoksLabel><a class=text-dark href=/>MySpace</a></h2><button type=button class="btn-close text-reset me-2" data-bs-dismiss=offcanvas aria-label="Close main menu"></button></div><div class="offcanvas-body p-4 p-lg-0"><ul class="nav flex-column flex-lg-row align-items-lg-center mt-2 mt-lg-0 ms-lg-2 me-lg-auto"><li class=nav-item><a class="nav-link ps-0 py-1 active" href=/blog/>Blog</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/books/>Books</a></li><li class=nav-item><a class="nav-link ps-0 py-1" href=/landscape>Landscape</a></li></ul><hr class="text-black-50 my-4 d-lg-none"><form class="doks-search position-relative flex-grow-1 ms-lg-auto me-lg-2"><input id=search class="form-control is-search" type=search placeholder="Search docs..." aria-label="Search docs..." autocomplete=off><div id=suggestions class="shadow bg-white rounded d-none"></div></form><hr class="text-black-50 my-4 d-lg-none"><ul class="nav flex-column flex-lg-row"><li class=nav-item><a class="nav-link social-link" href=https://twitter.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg><small class="ms-2 d-lg-none">Twitter</small></a></li><li class=nav-item><a class="nav-link social-link" href=https://github.com/hitzhangjie><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37.0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44.0 0020 4.77 5.07 5.07.0 0019.91 1S18.73.65 16 2.48a13.38 13.38.0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07.0 005 4.77 5.44 5.44.0 003.5 8.55c0 5.42 3.3 6.61 6.44 7A3.37 3.37.0 009 18.13V22"/></svg><small class="ms-2 d-lg-none">GitHub</small></a></li><li class="nav-item layout-width-dropdown"><a class="nav-link layout-width-dropdown-btn" href=# data-bs-toggle=dropdown aria-expanded=false aria-label=切换布局宽度 title=切换布局宽度><span class=lw-icon-standard><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-compact><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span><span class=lw-icon-wide><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span><span class=lw-icon-fullscreen><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg></span></a><ul class="dropdown-menu dropdown-menu-end"><li><button class="dropdown-item layout-width-option" data-layout-value=compact>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="5" height="14" rx="1.5"/><rect x="6" y="0" width="8" height="14" rx="1.5"/><rect x="15" y="0" width="2" height="14" rx="1"/></svg>
+</span>紧凑布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=standard>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="3" height="14" rx="1.5"/><rect x="4" y="0" width="11" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>标准布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=wide>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1.5"/><rect x="3" y="0" width="14" height="14" rx="1.5"/></svg>
+</span>宽松布局</button></li><li><button class="dropdown-item layout-width-option" data-layout-value=fullscreen>
+<span class=lw-option-icon><svg width="18" height="14" viewBox="0 0 18 14"><rect x="0" y="0" width="2" height="14" rx="1"/><rect x="5" y="0" width="8" height="14" rx="1.5"/><rect x="16" y="0" width="2" height="14" rx="1"/></svg>
+</span>全屏布局</button></li></ul></li></ul><hr class="text-black-50 my-4 d-lg-none"><button id=mode class="btn btn-link" type=button aria-label="Toggle user interface mode">
+<span class=toggle-dark><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-moon"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></span>
+<span class=toggle-light><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sun"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span></button></div></div></nav></header></div><div class="wrap container-xxl" role=document><div class=content><div class="row flex-xl-nowrap" data-layout-width=standard><div class="col-lg-4 col-xl-3 docs-sidebar"><nav class=docs-links aria-label="Main navigation"><h3>Tag List</h3><ol><li><a href=/tags/go/>go</a></li><li><a href=/tags/runtime/>runtime</a></li><li><a href=/tags/scheduler/>scheduler</a></li><li><a href=/tags/goroutine/>goroutine</a></li></ol></nav></div><main class="docs-content col-lg-12 col-xl-10"><h1>Go 调度器 M 的诞生与消亡：从一次 go 语句到线程创建/复用的完整路径</h1><p><small>Posted 2026-08-15 13:40 +0800 by <a class="stretched-link position-relative" href>ZhangJie</a>&nbsp;&dash;&nbsp;<strong>9&nbsp;min read</strong></small><p><div style=display:flex><div>分享:&nbsp;&nbsp;</div><div><div class=sharethis-inline-share-buttons></div></div></div><hr><p class=lead></p><h1 id=go-调度器-m-的诞生与消亡从一次-go-语句到线程创建复用的完整路径>Go 调度器 M 的诞生与消亡：从一次 go 语句到线程创建/复用的完整路径 <a href=#go-%e8%b0%83%e5%ba%a6%e5%99%a8-m-%e7%9a%84%e8%af%9e%e7%94%9f%e4%b8%8e%e6%b6%88%e4%ba%a1%e4%bb%8e%e4%b8%80%e6%ac%a1-go-%e8%af%ad%e5%8f%a5%e5%88%b0%e7%ba%bf%e7%a8%8b%e5%88%9b%e5%bb%ba%e5%a4%8d%e7%94%a8%e7%9a%84%e5%ae%8c%e6%95%b4%e8%b7%af%e5%be%84 class=anchor aria-hidden=true>#</a></h1><blockquote><p>源码版本：go1.22.2（<code>release-branch.go1.22</code>）。所有行号均对应该版本的 <code>src/runtime/proc.go</code> 等文件。
+阅读本文前建议先了解 G/M/P 三件套的基本概念：G 是 goroutine，M 是 OS 线程（机器），P 是执行 Go 代码所必需的"处理器"资源（<code>proc.go:24-29</code>）。</p></blockquote><p>很多人问过这样一个问题：<strong>一个 Go HTTP 服务，从 0 请求到请求量变大，那些执行 goroutine 的线程（M）到底是怎么冒出来的？</strong></p><p>直觉上可能是"每创建一个 goroutine 就创建一条线程"——错；也可能是"启动时就把线程都建好"——也错。真相是：</p><blockquote><p><strong>P 启动时全量预创建（GOMAXPROCS 个），M 一个都不预创建（只有进程自带的 m0），全部按需惰性创建，且创建后几乎永不销毁。</strong></p></blockquote><p>下面从 <code>go</code> 语句这条主线出发，把 M 的<strong>创建路径、创建决策依据、复用机制、退出条件</strong>对着源码过一遍，最后用 HTTP 服务把整个生命周期串起来。</p><hr><h2 id=一启动时p-全量预创建m-只此一家>一、启动时：P 全量预创建，M 只此一家 <a href=#%e4%b8%80%e5%90%af%e5%8a%a8%e6%97%b6p-%e5%85%a8%e9%87%8f%e9%a2%84%e5%88%9b%e5%bb%bam-%e5%8f%aa%e6%ad%a4%e4%b8%80%e5%ae%b6 class=anchor aria-hidden=true>#</a><a href=#一启动时p-全量预创建m-只此一家 class=anchor aria-hidden=true>#</a></h2><p>程序一启动，<code>schedinit()</code>（<code>proc.go:750</code>）里执行：</p><pre><code class=language-go>procs := ncpu
+if n, ok := atoi32(gogetenv(&quot;GOMAXPROCS&quot;)); ok &amp;&amp; n &gt; 0 {
+    procs = n
+}
+if procresize(procs) != nil {   // proc.go:827
+    throw(&quot;unknown runnable goroutine during bootstrap&quot;)
+}
+</code></pre><p><code>procresize</code> 一次性分配 <strong>GOMAXPROCS 个 P</strong>，状态全部是 <code>_Pidle</code>，挂在 <code>sched.pidle</code> 空闲链表上。注意：<strong>此时一个 M 都没有</strong>。进程只有一个 OS 线程——<code>m0</code>（<code>proc.go:116</code> 的全局变量），它跑着 <code>g0</code> 和 main goroutine。</p><p>随后 <code>runtime.main</code>（<code>proc.go:168-173</code>）做了两件事：</p><pre><code class=language-go>// Allow newproc to start new Ms.
+mainStarted = true
+if GOARCH != &quot;wasm&quot; { // no threads on wasm yet, so no sysmon
+    systemstack(func() {
+        newm(sysmon, nil, -1)   // 创建 sysmon 监控线程
+    })
+}
+</code></pre><p><code>sysmon</code> 是唯一的"预置"线程：它不占 P，负责抢占、把卡在 syscall 里的 P 抢回来、netpoll 超时等。除此之外，<strong>所有 M 都是按需创建的</strong>。</p><p>所以 0 请求时：8 核机器 = 8 个 idle P + 1 个 m0 + 1 个 sysmon。</p><hr><h2 id=二go-语句的完整路径newproc--入队--wakep>二、<code>go</code> 语句的完整路径：newproc → 入队 → wakep <a href=#%e4%ba%8cgo-%e8%af%ad%e5%8f%a5%e7%9a%84%e5%ae%8c%e6%95%b4%e8%b7%af%e5%be%84newproc--%e5%85%a5%e9%98%9f--wakep class=anchor aria-hidden=true>#</a><a href=#二go-语句的完整路径newproc--入队--wakep class=anchor aria-hidden=true>#</a></h2><p><code>go f()</code> 会被编译器翻译成对 <code>runtime.newproc(f)</code> 的调用（Go 1.17 起是寄存器 ABI，直接把函数值指针传进去）。它的完整实现（<code>proc.go:4874</code>）：</p><pre><code class=language-go>// Create a new g running fn.
+// Put it on the queue of g's waiting to run.
+// The compiler turns a go statement into a call to this.
+func newproc(fn *funcval) {
+    gp := getg()
+    pc := getcallerpc()
+    systemstack(func() {            // 切到系统栈（g0）执行
+        newg := newproc1(fn, gp, pc)    // ① 造出 G（状态 _Grunnable）
+
+        pp := getg().m.p.ptr()
+        runqput(pp, newg, true)         // ② 入队（next=true → runnext）
+
+        if mainStarted {
+            wakep()                     // ③ 尝试多拉一个 M 来跑
+        }
+    })
+}
+</code></pre><h3 id=21-newproc1造-gprocgo4892>2.1 newproc1：造 G（proc.go:4892） <a href=#21-newproc1%e9%80%a0-gprocgo4892 class=anchor aria-hidden=true>#</a><a href=#21-newproc1造-gprocgo4892 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-go>newg := gfget(pp)            // ① 先从 P 的 gFree 空闲池捞，池子空才新建
+if newg == nil {
+    newg = malg(stackMin)    // 分配 2KB 栈（stackMin）
+    casgstatus(newg, _Gidle, _Gdead)
+    allgadd(newg)            // 挂进 allg 全局 G 表（GC 可见）
+}
+...
+newg.sched.pc = abi.FuncPCABI0(goexit) + sys.PCQuantum  // 返回地址是 goexit
+gostartcallfn(&amp;newg.sched, fn)         // 压入要执行的函数
+...
+casgstatus(newg, _Gdead, _Grunnable)   // ★ 状态置为可运行
+...
+newg.goid = pp.goidcache               // goid 每 P 批量缓存，避免全局原子
+</code></pre><p>两个细节：</p><ul><li><strong>G 也是池化复用的</strong>：<code>gfget</code>（<code>proc.go:5072</code>）优先从 P 的 <code>gFree</code> 池取，取不到才 <code>malg</code> 新分配。这也是并发量回落后再涨时开销极低的原因。</li><li>goid 按 <code>GoidCacheBatch</code> 批量从全局计数器领到每个 P 上，避免每次创建都打全局原子。</li></ul><h3 id=22-runqput入队决策procgo6635>2.2 runqput：入队决策（proc.go:6635） <a href=#22-runqput%e5%85%a5%e9%98%9f%e5%86%b3%e7%ad%96procgo6635 class=anchor aria-hidden=true>#</a><a href=#22-runqput入队决策procgo6635 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-go>func runqput(pp *p, gp *g, next bool) {
+    if next {                       // ★ newproc 传 true
+    retryNext:
+        oldnext := pp.runnext
+        if !pp.runnext.cas(oldnext, guintptr(unsafe.Pointer(gp))) {
+            goto retryNext          // 自旋 CAS：别的 P 可能并发偷 runnext
+        }
+        if oldnext == 0 {
+            return                  // runnext 本来空 → 完事
+        }
+        gp = oldnext.ptr()          // 原 runnext 被挤到普通队列
+    }
+
+retry:
+    h := atomic.LoadAcq(&amp;pp.runqhead)
+    t := pp.runqtail
+    if t-h &lt; uint32(len(pp.runq)) {        // local 256 格没满
+        pp.runq[t%uint32(len(pp.runq))].set(gp)
+        atomic.StoreRel(&amp;pp.runqtail, t+1) // 无锁入队
+        return
+    }
+    if runqputslow(pp, gp, h, t) {         // 满了 → 挪一半 + 新 G 到 global
+        return
+    }
+    goto retry
+}
+</code></pre><p><strong>入队优先级：新 G 先进当前 P 的 <code>runnext</code>（下一条立即被调度），其次 local 环形队列（<code>runtime2.go:668</code> 的 <code>runq [256]guintptr</code>），满了才由 <code>runqputslow</code>（<code>proc.go:6670</code>）把 local 里一半 + 新 G 一起溢出到 global 队列（<code>sched.runq</code>，受 <code>sched.lock</code> 保护）。</strong></p><h3 id=23-wakep要不要多拉一个-mprocgo2975>2.3 wakep：要不要多拉一个 M（proc.go:2975） <a href=#23-wakep%e8%a6%81%e4%b8%8d%e8%a6%81%e5%a4%9a%e6%8b%89%e4%b8%80%e4%b8%aa-mprocgo2975 class=anchor aria-hidden=true>#</a><a href=#23-wakep要不要多拉一个-mprocgo2975 class=anchor aria-hidden=true>#</a></h3><p>这是 <strong>M 创建决策的第一道闸门</strong>：</p><pre><code class=language-go>func wakep() {
+    // Be conservative about spinning threads, only start one if none exist
+    // already.
+    if sched.nmspinning.Load() != 0 || !sched.nmspinning.CompareAndSwap(0, 1) {
+        return                        // 已有 spinning M / CAS 竞争失败 → 不创建
+    }
+
+    mp := acquirem()
+    var pp *p
+    lock(&amp;sched.lock)
+    pp, _ = pidlegetSpinning(0)       // 必须能拿到一个 idle P
+    if pp == nil {
+        ... 回滚 nmspinning ...
+        return                        // 没有 idle P → 不创建
+    }
+    unlock(&amp;sched.lock)
+
+    startm(pp, true, false)           // spinning=true：新 M 起来后先去&quot;偷活&quot;
+    releasem(mp)
+}
+</code></pre><p><strong><code>wakep</code> 的创建条件（两条同时满足）</strong>：</p><ol><li><strong>当前没有 spinning M</strong>（<code>sched.nmspinning == 0</code>，且 CAS 成功抢到"增员名额"）；</li><li><strong>存在 idle P</strong> 可以分给新 M。</li></ol><p>如果系统里已经有一个 M 正在 spinning（自旋找活干），说明"马上会有人来拿这份工作"，就不再拉新线程——这是防止线程抖动（thrashing）的关键。</p><h3 id=24-startmm-复用还是新建procgo2809>2.4 startm：M 复用还是新建（proc.go:2809） <a href=#24-startmm-%e5%a4%8d%e7%94%a8%e8%bf%98%e6%98%af%e6%96%b0%e5%bb%baprocgo2809 class=anchor aria-hidden=true>#</a><a href=#24-startmm-复用还是新建procgo2809 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-go>nmp := mget()                    // ★ 先看空闲 M 池（sched.midle）
+if nmp == nil {
+    // No M is available, we must drop sched.lock and call newm.
+    id := mReserveID()           // 预占 id：提前标记&quot;M 正在来&quot;
+    unlock(&amp;sched.lock)          //   防止 checkdead 误判死锁（sysmon 不算 running M）
+
+    var fn func()
+    if spinning {
+        fn = mspinning           // 新 M 入口先执行它 → m.spinning = true
+    }
+    newm(fn, pp, id)             // ★★ 池子空了 → 才真正创建新 OS 线程
+    ...
+    return
+}
+...
+nmp.spinning = spinning
+nmp.nextp.set(pp)
+notewakeup(&amp;nmp.park)            // 池子里有 → 直接唤醒睡着的 M，不建线程
+</code></pre><p><strong>M 创建的真正决策点就在这里：<code>mget()</code> 空闲池为空才 <code>newm</code>。</strong> 有新工作 + 有 idle P + 没有空闲 M 可复用 → 建线程。这是全程唯一"依据"。</p><h3 id=25-newm--newm1--newosproc真正建线程>2.5 newm → newm1 → newosproc：真正建线程 <a href=#25-newm--newm1--newosproc%e7%9c%9f%e6%ad%a3%e5%bb%ba%e7%ba%bf%e7%a8%8b class=anchor aria-hidden=true>#</a><a href=#25-newm--newm1--newosproc真正建线程 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-go>// proc.go:2631
+func newm(fn func(), pp *p, id int64) {
+    acquirem()                       // 关抢占，保证 allm 里新 M 必然会被启动
+    mp := allocm(pp, fn, id)         // new(m) + mcommoninit（挂 allm）+ 分配 g0 栈
+    mp.nextp.set(pp)                 // ★ 把要接管的 P 存在 nextp
+    mp.sigmask = initSigmask
+    if gp := getg(); ...(lockedExt != 0 || gp.m.incgo) ... {
+        ...交给 templateThread...    // 在锁定线程/cgo 线程上不能自己 clone
+    }
+    newm1(mp)
+    releasem(getg().m)
+}
+</code></pre><pre><code class=language-go>// proc.go:2680
+func newm1(mp *m) {
+    if iscgo {
+        ... _cgo_thread_start ...    // cgo 程序用 pthread_create
+        return
+    }
+    execLock.rlock() // Prevent process clone.
+    newosproc(mp)                    // 非 cgo → 直接 clone 系统调用
+    execLock.runlock()
+}
+</code></pre><p>Linux 上的落地（<code>os_linux.go:180</code>）：</p><pre><code class=language-go>r := clone(cloneFlags, stk, unsafe.Pointer(mp), unsafe.Pointer(mp.g0),
+    unsafe.Pointer(abi.FuncPCABI0(mstart)))
+//              ^栈顶      ^m        ^g0            ^线程入口 = mstart
+</code></pre><h3 id=26-新线程的入口mstart>2.6 新线程的入口：mstart <a href=#26-%e6%96%b0%e7%ba%bf%e7%a8%8b%e7%9a%84%e5%85%a5%e5%8f%a3mstart class=anchor aria-hidden=true>#</a><a href=#26-新线程的入口mstart class=anchor aria-hidden=true>#</a></h3><p>新 OS 线程从 <code>mstart</code> 进来：<code>mstart0</code>（<code>proc.go:1660</code>）→ <code>mstart1</code>（<code>proc.go:1702</code>）→ 先执行 <code>mstartfn</code>（这里是 <code>mspinning</code>，把自己标记为 spinning）→ <code>acquirep(mp.nextp.ptr())</code> 接管 <code>newm</code> 时预留的那个 P → <code>schedule()</code>，永不返回，进入"取 G → 跑 G → 取 G"的大循环。</p><p><code>mstart1</code> 里有一行很关键（<code>proc.go:1715-1717</code>），先记住它，后面讲 M 退出要用：</p><pre><code class=language-go>// Set up m.g0.sched as a label returning to just
+// after the mstart1 call in mstart0 above, for use by goexit0 and mcall.
+gp.sched.g = guintptr(unsafe.Pointer(gp))
+gp.sched.pc = getcallerpc()   // 即 mstart0 里 mstart1 调用点的返回地址
+gp.sched.sp = getcallersp()
+</code></pre><h3 id=27-一图总结创建路径>2.7 一图总结创建路径 <a href=#27-%e4%b8%80%e5%9b%be%e6%80%bb%e7%bb%93%e5%88%9b%e5%bb%ba%e8%b7%af%e5%be%84 class=anchor aria-hidden=true>#</a><a href=#27-一图总结创建路径 class=anchor aria-hidden=true>#</a></h3><pre><code>go f()                          // 编译器 → runtime.newproc(f)
+  └─ newproc (systemstack)
+       ├─ newproc1:  gfget 复用G / malg 新建G → _Grunnable → 分配 goid
+       ├─ runqput(next=true):  runnext → local[256] → (满了) runqputslow → global
+       └─ wakep():  nmspinning==0 &amp;&amp; 有idleP ?
+            └─ startm(spinning=true)
+                 ├─ mget() 有空闲M → notewakeup 唤醒（不建线程）
+                 └─ 没有 → mReserveID → newm → newm1 → newosproc
+                        └─ clone(mstart)   ← 新OS线程
+                              └─ mstart1 → mspinning → acquirep(nextp) → schedule()
+</code></pre><p>两个容易记错的点：</p><ol><li><strong><code>newproc</code> 本身从不直接建线程</strong>，它只负责入队 + 调 <code>wakep</code>；建不建线程的决策下放到 <code>startm</code> 的 <code>mget()</code> 分支。</li><li>热路径无锁：<code>runqput</code> 入 local 队列是无锁 CAS；只有真正要唤醒/创建线程时才拿 <code>sched.lock</code>。</li></ol><hr><h2 id=三决策依据spinning-与工作守恒>三、决策依据：spinning 与"工作守恒" <a href=#%e4%b8%89%e5%86%b3%e7%ad%96%e4%be%9d%e6%8d%aespinning-%e4%b8%8e%e5%b7%a5%e4%bd%9c%e5%ae%88%e6%81%92 class=anchor aria-hidden=true>#</a><a href=#三决策依据spinning-与工作守恒 class=anchor aria-hidden=true>#</a></h2><p>为什么 <code>wakep</code> 要检查 <code>sched.nmspinning</code>？这是 Go 调度器最核心的设计，<code>proc.go:33-100</code> 顶部的大段注释专门讲它，我提炼如下。</p><p><strong>什么是 spinning M</strong>：一个 M 在 <code>findRunnable</code> 里找遍了 local 队列、global 队列、netpoll 都没活，就进入"偷活"状态——从其他 P 的队列里随机偷 goroutine 来跑，此时它标记为 spinning（<code>becomeSpinning</code>，<code>proc.go:927</code>，计数 <code>sched.nmspinning</code>）。</p><p><strong>为什么要保守</strong>：如果每提交一个工作就拉一个线程（注释里否决过的方案 3），会出现"线程刚被拉起来，活儿已经被别人抢走，又立刻睡回去"的抖动。所以策略是：</p><blockquote><p><strong>提交工作时，只要系统里还有一个 spinning 线程在找活，就不再拉新线程</strong>——反正马上有人会来拿。</p></blockquote><p><strong>怎么保证最终并行度</strong>：如果 spinning 线程找到了活、退出 spinning 状态（<code>resetspinning</code>，<code>proc.go:3737</code>），它必须再 <code>wakep()</code> 一次补一个名额，保证"工作提交侧不拉、消费侧补拉"这套守恒不破。这是经典的"delicate dance"（<code>proc.go:3344</code> 附近的注释），本质是两道 <code>#StoreLoad</code> 屏障之间的竞态处理。</p><p><strong>spinning 线程数量上限</strong>：<code>findRunnable</code> 里 <code>2*sched.nmspinning &lt; gomaxprocs - sched.npidle</code>（<code>proc.go:3249</code>），即最多一半的忙 P 可以有 spinning M，防止低并行度程序空转 CPU。</p><hr><h2 id=四m-的复用空闲池与-parkwakeup>四、M 的复用：空闲池与 park/wakeup <a href=#%e5%9b%9bm-%e7%9a%84%e5%a4%8d%e7%94%a8%e7%a9%ba%e9%97%b2%e6%b1%a0%e4%b8%8e-parkwakeup class=anchor aria-hidden=true>#</a><a href=#四m-的复用空闲池与-parkwakeup class=anchor aria-hidden=true>#</a></h2><p>新 M 跑完手头所有 goroutine 后怎么办？看 <code>findRunnable</code> 的末尾（<code>proc.go:3322-3342</code>）：</p><pre><code class=language-go>// return P and block
+lock(&amp;sched.lock)
+...
+if releasep() != pp {
+    throw(&quot;findrunnable: wrong p&quot;)
+}
+now = pidleput(pp, now)     // ① 把 P 还回 sched.pidle 空闲池
+unlock(&amp;sched.lock)
+...（delicate dance：再检查一遍有没有新工作）...
+stopm()                     // ② 把自己挂起
+</code></pre><p><code>stopm</code>（<code>proc.go:2766</code>）：</p><pre><code class=language-go>lock(&amp;sched.lock)
+mput(gp.m)                  // ① 把自己放回 sched.midle 空闲 M 池（proc.go:6363）
+unlock(&amp;sched.lock)
+mPark()                     // ② notesleep(&amp;m.park) 睡在 park note 上
+acquirep(gp.m.nextp.ptr())  // ③ 被唤醒后接管 startm 预留的 P
+gp.m.nextp = 0
+</code></pre><p>唤醒侧就是前面 <code>startm</code> 里的 <code>notewakeup(&amp;nmp.park)</code>。</p><p><strong>关键结论：空闲 M 只 park、不销毁，也没有"空闲超时回收"机制。</strong> 线程数量只增不减，水位线 = 历史并发峰值。这也是为什么压测结束后进程的线程数不会降下来——它们在池子里睡觉，等下一波流量直接复用。</p><hr><h2 id=五m-的退出什么时候线程真的消失>五、M 的退出：什么时候线程真的消失 <a href=#%e4%ba%94m-%e7%9a%84%e9%80%80%e5%87%ba%e4%bb%80%e4%b9%88%e6%97%b6%e5%80%99%e7%ba%bf%e7%a8%8b%e7%9c%9f%e7%9a%84%e6%b6%88%e5%a4%b1 class=anchor aria-hidden=true>#</a><a href=#五m-的退出什么时候线程真的消失 class=anchor aria-hidden=true>#</a></h2><p>既然空闲 M 不销毁，那 M 到底什么时候退出？答案是：<strong>正常 worker M 永不主动退出</strong>，只有少数特殊路径会退出。</p><h3 id=51-为什么正常-worker-m-永不退出>5.1 为什么正常 worker M 永不退出 <a href=#51-%e4%b8%ba%e4%bb%80%e4%b9%88%e6%ad%a3%e5%b8%b8-worker-m-%e6%b0%b8%e4%b8%8d%e9%80%80%e5%87%ba class=anchor aria-hidden=true>#</a><a href=#51-为什么正常-worker-m-永不退出 class=anchor aria-hidden=true>#</a></h3><p>goroutine 执行完（或调用 <code>runtime.Goexit</code>）后走 <code>goexit0</code>（<code>proc.go:4179</code>）：</p><pre><code class=language-go>func goexit0(gp *g) {
+    gdestroy(gp)     // 清理、回收 G 到 gFree 池
+    schedule()       // ★ 直接回到调度器，继续跑下一个 G，不是退出线程！
+}
+</code></pre><p>M 的大循环是 <code>schedule() → 跑 G → goexit0 → schedule() → ...</code>，除非走下面的特殊路径，否则 <code>schedule()</code> 永不返回，线程永不退出。</p><h3 id=52-真正会退出-m-的三条路径>5.2 真正会退出 M 的三条路径 <a href=#52-%e7%9c%9f%e6%ad%a3%e4%bc%9a%e9%80%80%e5%87%ba-m-%e7%9a%84%e4%b8%89%e6%9d%a1%e8%b7%af%e5%be%84 class=anchor aria-hidden=true>#</a><a href=#52-真正会退出-m-的三条路径 class=anchor aria-hidden=true>#</a></h3><p><strong>① locked M：goroutine 锁了线程，退出时把 M 一起带走（最常见）</strong></p><p><code>gdestroy</code> 里（<code>proc.go:4229-4243</code>）：</p><pre><code class=language-go>if locked {
+    // The goroutine may have locked this thread because
+    // it put it in an unusual kernel state. Kill it
+    // rather than returning it to the thread pool.
+    if GOOS != &quot;plan9&quot; {
+        gogo(&amp;mp.g0.sched)   // ★ 回到 mstart0，走 mexit
+    }
+}
+</code></pre><p>原因注释写得很清楚：<code>runtime.LockOSThread</code> 的 goroutine 可能把线程的内核状态搞得很"奇怪"（比如调过 C 的线程 API），这种线程不适合还给池子复用，直接杀掉。<code>gogo(&amp;mp.g0.sched)</code> 用的是 2.6 节里 <code>mstart1</code> 预留的 g0.sched——一跳就回到 <code>mstart0</code> 中 <code>mstart1</code> 调用之后，于是 <code>mstart0</code> 返回，调用 <code>mexit</code>（<code>proc.go:1695</code>）。</p><p><strong>② m0：main 线程，楔死（wedge）而不是退出</strong></p><p><code>mexit</code> 开头特判（<code>proc.go:1778-1797</code>）：main 线程不能真正退出（Linux 上会变成不可 wait 的 zombie 进程），所以把 P 交出去后 <code>mPark()</code> 永久睡死。</p><p><strong>③ 进程退出</strong>：所有线程随进程消亡，无需单独处理。</p><p>另外两个容易被误认为"退出"的路径，其实都不退出：</p><ul><li><strong>syscall 返回后 P 被抢走</strong>：<code>exitsyscall0</code>（<code>proc.go:4704</code>）把 G 丢进 global 队列（<code>globrunqput</code>），自己 <code>stopm()</code> 进池睡觉，继续复用。</li><li><strong>cgo 回调的 extra M</strong>：<code>needm</code> 从 extra 池借、<code>dropm</code>（<code>proc.go:2363</code>）归还（<code>putExtraM</code>，<code>proc.go:2570</code>），<strong>也不销毁</strong>，池化复用；extra M 池在 cgo 程序启动时由 <code>newextram</code>（<code>proc.go:2266</code>）预建。</li></ul><h3 id=53-mexit-内部流程procgo1775>5.3 mexit 内部流程（proc.go:1775） <a href=#53-mexit-%e5%86%85%e9%83%a8%e6%b5%81%e7%a8%8bprocgo1775 class=anchor aria-hidden=true>#</a><a href=#53-mexit-内部流程procgo1775 class=anchor aria-hidden=true>#</a></h3><pre><code class=language-go>func mexit(osStack bool) {
+    ...m0 特判 wedge...
+    sigblock(true); unminit()
+    stackfree(mp.gsignal.stack)      // ① 释放信号栈
+
+    // ② 从 allm 全局链表中摘除自己
+    lock(&amp;sched.lock)
+    for pprev := &amp;allm; *pprev != nil; pprev = &amp;(*pprev).alllink {
+        if *pprev == mp { *pprev = mp.alllink; goto found }
+    }
+found:
+    // ③ 挂到 sched.freem 延迟回收链表（freeWait=freeMWait）
+    mp.freeWait.Store(freeMWait)
+    mp.freelink = sched.freem
+    sched.freem = mp
+    unlock(&amp;sched.lock)
+
+    handoffp(releasep())             // ④ 交还 P（可能因此 startm 拉新 M 顶班）
+
+    lock(&amp;sched.lock)
+    sched.nmfreed++
+    checkdead()                      // ⑤ 死锁检测
+    unlock(&amp;sched.lock)
+    ...
+    exitThread()                     // ⑥ OS 线程真正退出
+}
+</code></pre><p>注意第 ③ 步的<strong>延迟回收</strong>设计：M 不能立即释放自己 g0 栈（自己还在栈上跑着呢），所以先挂到 <code>sched.freem</code> 链表、标记 <code>freeWait = freeMWait</code>，等下一次 <code>allocm</code> 创建新 M 时（<code>proc.go:2072-2106</code>）再真正 <code>stackfree(g0.stack)</code> 并释放 m 结构体。<code>allm</code> 上已经看不到这个 M 了，所以对调度器来说它已经"死了"。</p><h3 id=54-死锁检测checkdead>5.4 死锁检测：checkdead <a href=#54-%e6%ad%bb%e9%94%81%e6%a3%80%e6%b5%8bcheckdead class=anchor aria-hidden=true>#</a><a href=#54-死锁检测checkdead class=anchor aria-hidden=true>#</a></h3><p><code>checkdead</code>（<code>proc.go:5857</code> 附近）在 <code>mexit</code>、<code>stopm</code>、<code>sysmon</code> 等路径都会调用：如果所有 M 都退出/挂起、所有 P 都 idle、还有 runnable 的 G，就 panic：</p><pre><code>fatal error: all goroutines are asleep - deadlock!
+</code></pre><p><code>mexit</code> 里特别强调要先 <code>handoffp</code> 再 <code>checkdead</code>，因为 handoffp 可能已经拉起了新 M 来接手释放的 P 上的工作（<code>proc.go:1848-1850</code> 注释）。</p><h3 id=55-上限>5.5 上限 <a href=#55-%e4%b8%8a%e9%99%90 class=anchor aria-hidden=true>#</a><a href=#55-上限 class=anchor aria-hidden=true>#</a></h3><p><code>newm</code> 前还有个数量上限：<code>sched.maxmcount = 10000</code>（<code>proc.go:777</code>），<code>checkmcount</code>（<code>proc.go:854</code>）超限直接 throw <code>"runtime: program exceeds 10000-thread limit"</code>。</p><hr><h2 id=六local-还是-global入队与取队规则汇总>六、local 还是 global：入队与取队规则汇总 <a href=#%e5%85%adlocal-%e8%bf%98%e6%98%af-global%e5%85%a5%e9%98%9f%e4%b8%8e%e5%8f%96%e9%98%9f%e8%a7%84%e5%88%99%e6%b1%87%e6%80%bb class=anchor aria-hidden=true>#</a><a href=#六local-还是-global入队与取队规则汇总 class=anchor aria-hidden=true>#</a></h2><p><strong>入队（谁负责放）</strong>：</p><table><thead><tr><th>来源</th><th>去向</th><th>代码</th></tr></thead><tbody><tr><td><code>go</code> 语句新 G</td><td>本 P <code>runnext</code> → local[256] →（满）global</td><td><code>runqput(next=true)</code>，proc.go:6635</td></tr><tr><td>channel/锁/netpoll 唤醒（<code>goready</code>）</td><td>唤醒者 P <code>runnext</code> → local →（满）global</td><td><code>ready</code> → <code>runqput(next=true)</code>，proc.go:411/952</td></tr><tr><td>netpoll 批量唤醒</td><td>无当前 P 时进 global，有则当前 P local</td><td><code>injectglist</code>，proc.go:3761</td></tr><tr><td>从 syscall 返回但 P 被抢</td><td>直接 global</td><td><code>exitsyscall0</code> → <code>globrunqput</code>，proc.go:4730</td></tr></tbody></table><p><strong>取队（谁来取、按什么顺序）</strong>——<code>findRunnable</code>（<code>proc.go:3139</code>）：</p><ol><li>GC worker / trace reader 等特殊 G（<code>proc.go:3163-3183</code>）；</li><li><strong>每 61 个 <code>schedtick</code> 强制看一次 global 队列</strong>（<code>proc.go:3188</code>）——公平性，防止两个 G 互相 <code>go</code> 把 local 占死、饿死 global；</li><li>本 P <code>runnext</code> → local（<code>runqget</code>，<code>proc.go:3208</code>）；</li><li>global 队列（<code>proc.go:3213</code>，<code>globrunqget</code> 一次取 <code>runqsize/gomaxprocs + 1</code> 个摊到各 P，proc.go:6435）；</li><li>netpoll 非阻塞轮询（<code>proc.go:3229</code>）；</li><li><strong>偷活</strong>：从随机 P 偷 local 队列一半（<code>stealWork</code>/<code>runqsteal</code>，<code>proc.go:6868</code>）——这就是 spinning 线程干的事；</li><li>全空 → 放弃 P（<code>pidleput</code>），阻塞在 netpoll 等事件，或 <code>stopm</code> 进空闲池睡觉。</li></ol><hr><h2 id=七http-服务全流程复盘>七、HTTP 服务全流程复盘 <a href=#%e4%b8%83http-%e6%9c%8d%e5%8a%a1%e5%85%a8%e6%b5%81%e7%a8%8b%e5%a4%8d%e7%9b%98 class=anchor aria-hidden=true>#</a><a href=#七http-服务全流程复盘 class=anchor aria-hidden=true>#</a></h2><p>以 <code>net/http</code> 的 accept 循环为例（<code>src/net/http/server.go:3254</code>）：</p><pre><code class=language-go>for {
+    rw, err := l.Accept()      // netpoll 阻塞，无连接时挂起
+    ...
+    go c.serve(connCtx)        // server.go:3285，每连接一个 goroutine
+}
+</code></pre><p><strong>0 请求</strong>：m0 + sysmon，8 个 P 全 idle。accept goroutine 阻塞在 <code>Accept</code> 的 netpoll 上。</p><p><strong>第 1 个请求</strong>：连接到达 → netpoll 唤醒（<code>netpollgoready</code>，<code>netpoll.go:538</code> → <code>goready</code> → <code>ready(next=true)</code>）→ accept goroutine 进 m0 所在 P 的 <code>runnext</code> → m0 自己立刻执行，<strong>不需要新 M</strong>。<code>go c.serve(connCtx)</code> 创建连接处理 G → 进当前 P 的 <code>runnext</code> → 立刻跑。</p><p><strong>请求量变大</strong>：每连接一个 G，但绝大多数时间这些 G 都阻塞在 socket 读写上。阻塞 → <code>gopark</code> → M 释放 P → <code>handoffp</code>（<code>proc.go:2905</code>）。关键分支：</p><ul><li>P 上还有 runnable G（local 非空）→ <code>startm(pp)</code> → 空闲池有 M 就唤醒，<strong>没有就 <code>newm</code> 建新线程</strong>；</li><li>P 上没活了 → P 进 idle 池，M 去 <code>findRunnable</code> 偷活或睡觉。</li></ul><p><strong>线程数涨上去的典型节奏</strong>：第 1 个 M 阻塞在 I/O → 它的 P 被 <code>handoffp</code> 交给新 M（第 2 条线程）→ 又阻塞 → 第 3 条……直到每个 P 都有一个 M 在跑。之后即使再创建 goroutine，<code>newproc</code> 的 <code>wakep()</code> 会发现要么没有 idle P、要么已有 spinning M，<strong>不再创建线程</strong>，G 只是排队。有些 syscall 卡太久（> 20µs），sysmon 的 <code>retake</code>（<code>proc.go:6136</code> 附近）会把 P 抢回来交给别人，原 M 从 syscall 返回后 <code>exitsyscall0</code> 排队睡觉。</p><p><strong>请求降下来</strong>：M 在 <code>findRunnable</code> 找不到活 → <code>stopm</code> 进空闲池（<code>sched.nmidle</code> 上涨）——<strong>线程不销毁</strong>，下波流量直接复用。这就是 Go 服务"线程数 = 历史峰值"现象的由来。</p><hr><h2 id=八如何观察godebugschedtrace>八、如何观察：GODEBUG=schedtrace <a href=#%e5%85%ab%e5%a6%82%e4%bd%95%e8%a7%82%e5%af%9fgodebugschedtrace class=anchor aria-hidden=true>#</a><a href=#八如何观察godebugschedtrace class=anchor aria-hidden=true>#</a></h2><p>用 <code>GODEBUG=schedtrace=1000,scheddetail=1</code> 跑服务，每 1s 打印一行（<code>proc.go:6241</code>）：</p><pre><code>SCHED 1000ms: gomaxprocs=8 idleprocs=6 threads=5 spinningthreads=1 idlethreads=1 runqueue=0
+</code></pre><table><thead><tr><th>字段</th><th>含义</th><th>对应源码</th></tr></thead><tbody><tr><td><code>threads=</code></td><td>当前 M 总数（mcount）</td><td><code>mcount()</code></td></tr><tr><td><code>idleprocs=</code></td><td>idle P 数</td><td><code>sched.npidle</code></td></tr><tr><td><code>spinningthreads=</code></td><td>在偷活的 M 数</td><td><code>sched.nmspinning</code></td></tr><tr><td><code>idlethreads=</code></td><td>在空闲池睡觉的 M 数</td><td><code>sched.nmidle</code></td></tr><tr><td><code>runqueue=</code></td><td>global 队列长度</td><td><code>sched.runqsize</code></td></tr></tbody></table><p>配合 <code>scheddetail=1</code> 还能看到每个 P 的 <code>runqsize</code>（local 队列长度）。观察请求量从 0 涨到峰值再回落的全程，你会发现 <code>threads</code> 只增不减、<code>idlethreads</code> 先涨后稳——这就是本文讲的机制在真实进程里的样子。</p><hr><h2 id=九小结>九、小结 <a href=#%e4%b9%9d%e5%b0%8f%e7%bb%93 class=anchor aria-hidden=true>#</a><a href=#九小结 class=anchor aria-hidden=true>#</a></h2><ol><li><strong>P 预创建、M 惰性创建</strong>：启动时只有 m0（+sysmon），P 全量就位但全 idle。</li><li><strong>M 创建的充要条件链</strong>：有新工作（<code>newproc</code>/<code>ready</code>/<code>handoffp</code>）→ <code>wakep</code> 判定"有 idle P 且无 spinning M"→ <code>startm</code> 判定"空闲 M 池为空"→ <code>newm</code> 建线程。本质是<strong>惰性 + 保守</strong>：能复用绝不新建，有线程在找活（spinning）就绝不添乱。</li><li><strong>M 只增不减</strong>：空闲 M 在 <code>stopm</code>/<code>mPark</code> 里睡觉等 <code>notewakeup</code>，没有超时回收；线程数水位 = 历史并发峰值（上限 10000）。</li><li><strong>M 退出的三种真实路径</strong>：locked M 随锁定 goroutine 退出（<code>gogo</code> → <code>mexit</code>）；m0 楔死；进程退出。cgo extra M 与 syscall 滞留 M 都不退出，池化复用。</li><li><strong>local vs global</strong>：<code>go</code> 语句默认进本 P <code>runnext</code> → local 256 格；满了才溢出 global；取时 local 优先、每 61 tick 掺一次 global 保证公平、空了才偷别人的 local。</li></ol><h2 id=参考>参考 <a href=#%e5%8f%82%e8%80%83 class=anchor aria-hidden=true>#</a><a href=#参考 class=anchor aria-hidden=true>#</a></h2><ul><li>Go 调度器设计文档（2012）：https://golang.org/s/go11sched</li><li><code>proc.go</code> 顶部 &ldquo;Worker thread parking/unparking&rdquo; 注释（<code>proc.go:33-100</code>），以及 <code>wakep</code>/<code>startm</code>/<code>findRunnable</code> 三个函数的注释，值得通读一遍。</li><li>本文所有行号基于 go1.22.2 的 <code>src/runtime/proc.go</code> / <code>runtime2.go</code> / <code>os_linux.go</code> / <code>netpoll.go</code> / <code>src/net/http/server.go</code></li></ul><div class=edit-page><a href=https://github.com/hitzhangjie/myspace/blob/master/content/blog/languages/golang/5-go%e8%ae%be%e8%ae%a1%e5%ae%9e%e7%8e%b0/2026-08-15-go-scheduler-m-lifecycle.md><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-edit-2"><path d="M17 3a2.828 2.828.0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+Edit this page on GitHub</a></div><div class="docs-navigation d-flex justify-content-between"><a href=/blog/2026-09-11-go%E5%AE%89%E5%85%A8%E7%BC%96%E7%A8%8B/><div class="card my-1"><div class="card-body py-2">&larr; Go 安全编程</div></div></a><a class=ms-auto href=/blog/2026-08-06-vscode-port-forwarding-explained/><div class="card my-1"><div class="card-body py-2">VS Code 端口转发（Port Forwarding）原理解析 &rarr;</div></div></a></div></main><div class="docs-toc d-none d-xl-block col-xl-3"><nav class=docs-toc-inner aria-label="Secondary navigation"><div class=page-links><h3>On this page</h3><nav id=TableOfContents><ul><li><a href=#go-调度器-m-的诞生与消亡从一次-go-语句到线程创建复用的完整路径>Go 调度器 M 的诞生与消亡：从一次 go 语句到线程创建/复用的完整路径</a><ul><li><a href=#一启动时p-全量预创建m-只此一家>一、启动时：P 全量预创建，M 只此一家</a></li><li><a href=#二go-语句的完整路径newproc--入队--wakep>二、<code>go</code> 语句的完整路径：newproc → 入队 → wakep</a><ul><li><a href=#21-newproc1造-gprocgo4892>2.1 newproc1：造 G（proc.go:4892）</a></li><li><a href=#22-runqput入队决策procgo6635>2.2 runqput：入队决策（proc.go:6635）</a></li><li><a href=#23-wakep要不要多拉一个-mprocgo2975>2.3 wakep：要不要多拉一个 M（proc.go:2975）</a></li><li><a href=#24-startmm-复用还是新建procgo2809>2.4 startm：M 复用还是新建（proc.go:2809）</a></li><li><a href=#25-newm--newm1--newosproc真正建线程>2.5 newm → newm1 → newosproc：真正建线程</a></li><li><a href=#26-新线程的入口mstart>2.6 新线程的入口：mstart</a></li><li><a href=#27-一图总结创建路径>2.7 一图总结创建路径</a></li></ul></li><li><a href=#三决策依据spinning-与工作守恒>三、决策依据：spinning 与"工作守恒"</a></li><li><a href=#四m-的复用空闲池与-parkwakeup>四、M 的复用：空闲池与 park/wakeup</a></li><li><a href=#五m-的退出什么时候线程真的消失>五、M 的退出：什么时候线程真的消失</a><ul><li><a href=#51-为什么正常-worker-m-永不退出>5.1 为什么正常 worker M 永不退出</a></li><li><a href=#52-真正会退出-m-的三条路径>5.2 真正会退出 M 的三条路径</a></li><li><a href=#53-mexit-内部流程procgo1775>5.3 mexit 内部流程（proc.go:1775）</a></li><li><a href=#54-死锁检测checkdead>5.4 死锁检测：checkdead</a></li><li><a href=#55-上限>5.5 上限</a></li></ul></li><li><a href=#六local-还是-global入队与取队规则汇总>六、local 还是 global：入队与取队规则汇总</a></li><li><a href=#七http-服务全流程复盘>七、HTTP 服务全流程复盘</a></li><li><a href=#八如何观察godebugschedtrace>八、如何观察：GODEBUG=schedtrace</a></li><li><a href=#九小结>九、小结</a></li><li><a href=#参考>参考</a></li></ul></li></ul></nav></div></nav></div></div></div></div><footer class="footer text-muted mt-auto"><div class=container-xxl><div class=row><div class="col-lg-8 order-last order-lg-first"><ul class=list-inline><li class=list-inline-item>Powered by <a class=text-muted href=https://www.netlify.com/>Netlify</a>, <a class=text-muted href=https://gohugo.io/>Hugo</a>, and <a class=text-muted href=https://getdoks.org/>Doks</a></li></ul></div><div class="col-lg-8 order-first order-lg-last text-lg-end"><ul class=list-inline></ul></div><div class=col-lg-8 align=right><p><font size=-1>站点构建版本：v0.2.3</font></p></div></div></div></footer><script src=/js/bootstrap.min.2d163d4ded59a8c0f3da8841b92ed2d9704c8b95f58f2b2a155c22cdd00435156a85dae6d60e99bc99453a696faf91eadef75e33b2957a5731188122af562691.js integrity="sha512-LRY9Te1ZqMDz2ohBuS7S2XBMi5X1jysqFVwizdAENRVqhdrm1g6ZvJlFOmlvr5Hq3vdeM7KVelcxGIEir1YmkQ==" crossorigin=anonymous defer></script><script src=/js/highlight.min.1a731f820940167b6fd11a8540a1ae7c4627f4009b13e229c411e9d890612a3f6b618133d96477c2cf238d6faaa28d745cd5141e443aa34f62785510dc873430.js integrity="sha512-GnMfgglAFntv0RqFQKGufEYn9ACbE+IpxBHp2JBhKj9rYYEz2WR3ws8jjW+qoo10XNUUHkQ6o09ieFUQ3Ic0MA==" crossorigin=anonymous defer></script><script src=/main.min.835c7d4dee3649ea76718e49fdc77d48e8876175b70f321e3fa33b894ceba14a946f58edd3572c60bcf2ead75beabd5ac8401006b45bd3c18e1c5079b1648147.js integrity="sha512-g1x9Te42Sep2cY5J/cd9SOiHYXW3DzIeP6M7iUzroUqUb1jt01csYLzy6tdb6r1ayEAQBrRb08GOHFB5sWSBRw==" crossorigin=anonymous defer></script><script src=/index.min.3dadbdfa0f8d97464da5cd6f4139ada308016255b48976f88663f76d9760923e79c5c86c0dbe094fd6ba6ab16d5900ba8c58187a2d3c3169fd829727239108ee.js integrity="sha512-Pa29+g+Nl0ZNpc1vQTmtowgBYlW0iXb4hmP3bZdgkj55xchsDb4JT9a6arFtWQC6jFgYei08MWn9gpcnI5EI7g==" crossorigin=anonymous defer></script></body></html>

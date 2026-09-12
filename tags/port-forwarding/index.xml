@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Port-Forwarding on</title><link>/tags/port-forwarding/</link><description>Recent content in Port-Forwarding on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Thu, 06 Aug 2026 11:04:29 +0800</lastBuildDate><atom:link href="/tags/port-forwarding/index.xml" rel="self" type="application/rss+xml"/><item><title>VS Code 端口转发（Port Forwarding）原理解析</title><link>/blog/2026-08-06-vscode-port-forwarding-explained/</link><pubDate>Thu, 06 Aug 2026 11:04:29 +0800</pubDate><guid>/blog/2026-08-06-vscode-port-forwarding-explained/</guid><description>&lt;p&gt;如果你用过 VS Code 的 Remote 系列扩展（Remote-SSH / Dev Containers / Tunnels / Codespaces），大概率打开过底部那个 Ports 面板：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;它能把远端机器上某个端口的服务，「搬」到你本地的 &lt;code&gt;127.0.0.1&lt;/code&gt; 上&lt;/li&gt;
+&lt;li&gt;你在本地浏览器访问 &lt;code&gt;http://localhost:9876&lt;/code&gt;，请求其实被偷偷送到了远端&lt;/li&gt;
+&lt;li&gt;一些端口不用手动加，VS Code 会自动嗅探并帮你转发（标为 &lt;code&gt;Auto Forwarded&lt;/code&gt;）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;用起来很顺，但背后的实现涉及控制信道、端口嗅探、本地代理三层协作。下面把这套机制讲清楚。&lt;/p&gt;
+&lt;h2 id="1-整体架构三端协作"&gt;1. 整体架构：三端协作 &lt;a href="#1-%e6%95%b4%e4%bd%93%e6%9e%b6%e6%9e%84%e4%b8%89%e7%ab%af%e5%8d%8f%e4%bd%9c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;端口转发的本质，是在你&lt;strong&gt;已经建立的远端连接&lt;/strong&gt;（SSH 会话 / WebSocket 隧道）之上，再「搭便车」开一条 TCP 流。整体结构：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;┌──────────────┐ 控制信道 (RPC/WS) ┌──────────────────┐
+│ VS Code UI │ ◀────────────────────────────▶ │ Local Proxy / │
+│ (本地客户端) │ │ Tunnel Client │
+└──────────────┘ └──────────┬────────┘
+│
+本地监听 127.0.0.1
+（你访问的入口）
+│
+═══ 安全隧道 ═══
+│
+┌────────────▼─────────────┐
+│ Remote Server │
+│ (code-server / sshd) │
+│ + Port Forwarding Mgr │
+└──────────────────────────┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;关键认知&lt;/strong&gt;：你在本地访问 &lt;code&gt;127.0.0.1:9876&lt;/code&gt; 时，请求&lt;strong&gt;不会直达&lt;/strong&gt;远端服务进程。它先到本地 VS Code 的代理层，被封装进一条已存在的控制信道，由远端 side 拆包后再转发给真正的服务。这条控制信道本身就是 SSH 连接或 WebSocket 隧道，不需要为端口转发额外打洞。&lt;/p&gt;</description></item></channel></rss>

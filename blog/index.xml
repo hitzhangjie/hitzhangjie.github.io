@@ -1,4 +1,120 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blog on</title><link>/blog/</link><description>Recent content in Blog on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:49:55 +0000</lastBuildDate><atom:link href="/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>kvm(5)：vDSO 时钟失真导致分母偏小，CPU% 虚高的另一种可能</title><link>/blog/kvm-%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8Acpu%E5%8D%A0%E7%94%A8%E7%8E%87%E7%BB%9F%E8%AE%A1-part2/</link><pubDate>Thu, 30 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/kvm-%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8Acpu%E5%8D%A0%E7%94%A8%E7%8E%87%E7%BB%9F%E8%AE%A1-part2/</guid><description>&lt;p&gt;前几节的推演都围绕着&lt;strong&gt;分子偏大&lt;/strong&gt;这条思路——tick catchup、steal time 未同步、两点采样时序错位，都是试图解释 &lt;code&gt;Δ(utime + stime)&lt;/code&gt; 的异常膨胀。但换个角度想：&lt;code&gt;CPU% = Δcputime / (ΔT × N)&lt;/code&gt; 这个公式里，分母 &lt;code&gt;ΔT&lt;/code&gt; 出问题也能导致同样的结果。&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blog on</title><link>/blog/</link><description>Recent content in Blog on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 06 Oct 2020 08:49:55 +0000</lastBuildDate><atom:link href="/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>用了这么多年 Vim，才搞清 p 到底贴的是什么</title><link>/blog/2026-09-12-vim-p-always-last-y-or-x/</link><pubDate>Sat, 12 Sep 2026 08:25:21 +0800</pubDate><guid>/blog/2026-09-12-vim-p-always-last-y-or-x/</guid><description>&lt;p&gt;用 Vim 很多年了，&lt;code&gt;y&lt;/code&gt; / &lt;code&gt;p&lt;/code&gt; / &lt;code&gt;x&lt;/code&gt; / &lt;code&gt;dd&lt;/code&gt; 每天都在按，按出肌肉记忆了。但有一件事一直没真正想清楚：&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;y&lt;/code&gt; 复制一段代码，中间随手 &lt;code&gt;dd&lt;/code&gt; 两行、&lt;code&gt;cw&lt;/code&gt; 改个名字，再按 &lt;code&gt;p&lt;/code&gt;——贴出来的经常不是刚才 yank 的内容。&lt;/p&gt;
+&lt;p&gt;2024 年写过一篇 &lt;a href="/blog/2024-05-02-vim-clipboard/"&gt;Vim 复制粘贴丢内容？寄存器机制详解&lt;/a&gt;，结论是：默认 &lt;code&gt;p&lt;/code&gt; 读的是无名寄存器 &lt;code&gt;&amp;quot;&amp;quot;&lt;/code&gt;，而 &lt;code&gt;y&lt;/code&gt; / &lt;code&gt;d&lt;/code&gt; / &lt;code&gt;c&lt;/code&gt; / &lt;code&gt;x&lt;/code&gt; / &lt;code&gt;s&lt;/code&gt; 都会写它。想保住 yank，粘贴用 &lt;code&gt;&amp;quot;0p&lt;/code&gt;。&lt;/p&gt;
+&lt;p&gt;那篇把 &lt;code&gt;x&lt;/code&gt; 也算进「会弄丢复制内容的操作」。后来发现这不是我想要的契约。真正想要的是：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;不管 &lt;code&gt;y&lt;/code&gt; 或 &lt;code&gt;x&lt;/code&gt; 之后执行了什么，&lt;code&gt;p&lt;/code&gt; 永远贴最近一次 &lt;code&gt;y&lt;/code&gt; 或 &lt;code&gt;x&lt;/code&gt; 的内容。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;code&gt;d&lt;/code&gt; / &lt;code&gt;c&lt;/code&gt; / &lt;code&gt;s&lt;/code&gt; 是编辑，不该抢剪贴板；&lt;code&gt;x&lt;/code&gt; 是剪切，该和 &lt;code&gt;y&lt;/code&gt; 一样成为 &lt;code&gt;p&lt;/code&gt; 的来源。&lt;/p&gt;
+&lt;p&gt;下面把这套机制拆开。拆完之后，那几行 &lt;code&gt;.vimrc&lt;/code&gt; 就不是玄学映射了。&lt;/p&gt;
+&lt;h2 id="先把按键分成两类意图"&gt;先把按键分成两类意图 &lt;a href="#%e5%85%88%e6%8a%8a%e6%8c%89%e9%94%ae%e5%88%86%e6%88%90%e4%b8%a4%e7%b1%bb%e6%84%8f%e5%9b%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;很多人（包括用了很久的我）下意识把下面这些都当成「剪贴板操作」：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;键&lt;/th&gt;
+&lt;th&gt;实际在干什么&lt;/th&gt;
+&lt;th&gt;原文还在吗&lt;/th&gt;
+&lt;th&gt;会不会进插入模式&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;y&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;yank，复制&lt;/td&gt;
+&lt;td&gt;在&lt;/td&gt;
+&lt;td&gt;否&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;x&lt;/code&gt; / &lt;code&gt;X&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;删当前 / 左边一个字符&lt;/td&gt;
+&lt;td&gt;不在&lt;/td&gt;
+&lt;td&gt;否&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;d&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;delete，删一段（&lt;code&gt;dw&lt;/code&gt; / &lt;code&gt;dd&lt;/code&gt; / &lt;code&gt;d$&lt;/code&gt; …）&lt;/td&gt;
+&lt;td&gt;不在&lt;/td&gt;
+&lt;td&gt;否&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;c&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;change，删一段然后进入插入模式（&lt;code&gt;cw&lt;/code&gt; / &lt;code&gt;cc&lt;/code&gt; …）&lt;/td&gt;
+&lt;td&gt;不在&lt;/td&gt;
+&lt;td&gt;是&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;code&gt;s&lt;/code&gt;&lt;/td&gt;
+&lt;td&gt;substitute，删当前字符然后进入插入模式（等价 &lt;code&gt;cl&lt;/code&gt;）&lt;/td&gt;
+&lt;td&gt;不在&lt;/td&gt;
+&lt;td&gt;是&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;&lt;code&gt;d&lt;/code&gt; / &lt;code&gt;c&lt;/code&gt; / &lt;code&gt;s&lt;/code&gt; 经常被混着说，其实只是「删」的三种外壳：&lt;/p&gt;</description></item><item><title>Go 安全编程</title><link>/blog/2026-09-11-go%E5%AE%89%E5%85%A8%E7%BC%96%E7%A8%8B/</link><pubDate>Fri, 11 Sep 2026 13:02:00 +0800</pubDate><guid>/blog/2026-09-11-go%E5%AE%89%E5%85%A8%E7%BC%96%E7%A8%8B/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/aio/DYkhCTUV1bmt3cXFV?p=M7kWRQH8b3p4H4N7Uo6W3t"/&gt;
+&lt;/div&gt;</description></item><item><title>Go 调度器 M 的诞生与消亡：从一次 go 语句到线程创建/复用的完整路径</title><link>/blog/2026-08-15-go-scheduler-m-lifecycle/</link><pubDate>Sat, 15 Aug 2026 13:40:49 +0800</pubDate><guid>/blog/2026-08-15-go-scheduler-m-lifecycle/</guid><description>&lt;h1 id="go-调度器-m-的诞生与消亡从一次-go-语句到线程创建复用的完整路径"&gt;Go 调度器 M 的诞生与消亡：从一次 go 语句到线程创建/复用的完整路径 &lt;a href="#go-%e8%b0%83%e5%ba%a6%e5%99%a8-m-%e7%9a%84%e8%af%9e%e7%94%9f%e4%b8%8e%e6%b6%88%e4%ba%a1%e4%bb%8e%e4%b8%80%e6%ac%a1-go-%e8%af%ad%e5%8f%a5%e5%88%b0%e7%ba%bf%e7%a8%8b%e5%88%9b%e5%bb%ba%e5%a4%8d%e7%94%a8%e7%9a%84%e5%ae%8c%e6%95%b4%e8%b7%af%e5%be%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;源码版本：go1.22.2（&lt;code&gt;release-branch.go1.22&lt;/code&gt;）。所有行号均对应该版本的 &lt;code&gt;src/runtime/proc.go&lt;/code&gt; 等文件。
+阅读本文前建议先了解 G/M/P 三件套的基本概念：G 是 goroutine，M 是 OS 线程（机器），P 是执行 Go 代码所必需的&amp;quot;处理器&amp;quot;资源（&lt;code&gt;proc.go:24-29&lt;/code&gt;）。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;很多人问过这样一个问题：&lt;strong&gt;一个 Go HTTP 服务，从 0 请求到请求量变大，那些执行 goroutine 的线程（M）到底是怎么冒出来的？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;直觉上可能是&amp;quot;每创建一个 goroutine 就创建一条线程&amp;quot;——错；也可能是&amp;quot;启动时就把线程都建好&amp;quot;——也错。真相是：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;P 启动时全量预创建（GOMAXPROCS 个），M 一个都不预创建（只有进程自带的 m0），全部按需惰性创建，且创建后几乎永不销毁。&lt;/strong&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;下面从 &lt;code&gt;go&lt;/code&gt; 语句这条主线出发，把 M 的&lt;strong&gt;创建路径、创建决策依据、复用机制、退出条件&lt;/strong&gt;对着源码过一遍，最后用 HTTP 服务把整个生命周期串起来。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="一启动时p-全量预创建m-只此一家"&gt;一、启动时：P 全量预创建，M 只此一家 &lt;a href="#%e4%b8%80%e5%90%af%e5%8a%a8%e6%97%b6p-%e5%85%a8%e9%87%8f%e9%a2%84%e5%88%9b%e5%bb%bam-%e5%8f%aa%e6%ad%a4%e4%b8%80%e5%ae%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;程序一启动，&lt;code&gt;schedinit()&lt;/code&gt;（&lt;code&gt;proc.go:750&lt;/code&gt;）里执行：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;procs := ncpu
+if n, ok := atoi32(gogetenv(&amp;quot;GOMAXPROCS&amp;quot;)); ok &amp;amp;&amp;amp; n &amp;gt; 0 {
+procs = n
+}
+if procresize(procs) != nil { // proc.go:827
+throw(&amp;quot;unknown runnable goroutine during bootstrap&amp;quot;)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;procresize&lt;/code&gt; 一次性分配 &lt;strong&gt;GOMAXPROCS 个 P&lt;/strong&gt;，状态全部是 &lt;code&gt;_Pidle&lt;/code&gt;，挂在 &lt;code&gt;sched.pidle&lt;/code&gt; 空闲链表上。注意：&lt;strong&gt;此时一个 M 都没有&lt;/strong&gt;。进程只有一个 OS 线程——&lt;code&gt;m0&lt;/code&gt;（&lt;code&gt;proc.go:116&lt;/code&gt; 的全局变量），它跑着 &lt;code&gt;g0&lt;/code&gt; 和 main goroutine。&lt;/p&gt;</description></item><item><title>VS Code 端口转发（Port Forwarding）原理解析</title><link>/blog/2026-08-06-vscode-port-forwarding-explained/</link><pubDate>Thu, 06 Aug 2026 11:04:29 +0800</pubDate><guid>/blog/2026-08-06-vscode-port-forwarding-explained/</guid><description>&lt;p&gt;如果你用过 VS Code 的 Remote 系列扩展（Remote-SSH / Dev Containers / Tunnels / Codespaces），大概率打开过底部那个 Ports 面板：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;它能把远端机器上某个端口的服务，「搬」到你本地的 &lt;code&gt;127.0.0.1&lt;/code&gt; 上&lt;/li&gt;
+&lt;li&gt;你在本地浏览器访问 &lt;code&gt;http://localhost:9876&lt;/code&gt;，请求其实被偷偷送到了远端&lt;/li&gt;
+&lt;li&gt;一些端口不用手动加，VS Code 会自动嗅探并帮你转发（标为 &lt;code&gt;Auto Forwarded&lt;/code&gt;）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;用起来很顺，但背后的实现涉及控制信道、端口嗅探、本地代理三层协作。下面把这套机制讲清楚。&lt;/p&gt;
+&lt;h2 id="1-整体架构三端协作"&gt;1. 整体架构：三端协作 &lt;a href="#1-%e6%95%b4%e4%bd%93%e6%9e%b6%e6%9e%84%e4%b8%89%e7%ab%af%e5%8d%8f%e4%bd%9c" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;端口转发的本质，是在你&lt;strong&gt;已经建立的远端连接&lt;/strong&gt;（SSH 会话 / WebSocket 隧道）之上，再「搭便车」开一条 TCP 流。整体结构：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-text"&gt;┌──────────────┐ 控制信道 (RPC/WS) ┌──────────────────┐
+│ VS Code UI │ ◀────────────────────────────▶ │ Local Proxy / │
+│ (本地客户端) │ │ Tunnel Client │
+└──────────────┘ └──────────┬────────┘
+│
+本地监听 127.0.0.1
+（你访问的入口）
+│
+═══ 安全隧道 ═══
+│
+┌────────────▼─────────────┐
+│ Remote Server │
+│ (code-server / sshd) │
+│ + Port Forwarding Mgr │
+└──────────────────────────┘
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;strong&gt;关键认知&lt;/strong&gt;：你在本地访问 &lt;code&gt;127.0.0.1:9876&lt;/code&gt; 时，请求&lt;strong&gt;不会直达&lt;/strong&gt;远端服务进程。它先到本地 VS Code 的代理层，被封装进一条已存在的控制信道，由远端 side 拆包后再转发给真正的服务。这条控制信道本身就是 SSH 连接或 WebSocket 隧道，不需要为端口转发额外打洞。&lt;/p&gt;</description></item><item><title>kvm(5)：vDSO 时钟失真导致分母偏小，CPU% 虚高的另一种可能</title><link>/blog/kvm-%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8Acpu%E5%8D%A0%E7%94%A8%E7%8E%87%E7%BB%9F%E8%AE%A1-part2/</link><pubDate>Thu, 30 Jul 2026 12:00:00 +0800</pubDate><guid>/blog/kvm-%E8%BF%9B%E7%A8%8B%E8%BF%90%E8%A1%8C%E6%97%B6%E9%97%B4%E5%8F%8Acpu%E5%8D%A0%E7%94%A8%E7%8E%87%E7%BB%9F%E8%AE%A1-part2/</guid><description>&lt;p&gt;前几节的推演都围绕着&lt;strong&gt;分子偏大&lt;/strong&gt;这条思路——tick catchup、steal time 未同步、两点采样时序错位，都是试图解释 &lt;code&gt;Δ(utime + stime)&lt;/code&gt; 的异常膨胀。但换个角度想：&lt;code&gt;CPU% = Δcputime / (ΔT × N)&lt;/code&gt; 这个公式里，分母 &lt;code&gt;ΔT&lt;/code&gt; 出问题也能导致同样的结果。&lt;/p&gt;
 &lt;p&gt;这里我们就来讨论CPU虚高的另一种可能，&lt;strong&gt;vDSO 时钟失真导致分母（ΔT）偏小&lt;/strong&gt;。&lt;/p&gt;
 &lt;h2 id="1-分子和分母是两条完全独立的时钟链"&gt;1 分子和分母是两条完全独立的时钟链 &lt;a href="#1-%e5%88%86%e5%ad%90%e5%92%8c%e5%88%86%e6%af%8d%e6%98%af%e4%b8%a4%e6%9d%a1%e5%ae%8c%e5%85%a8%e7%8b%ac%e7%ab%8b%e7%9a%84%e6%97%b6%e9%92%9f%e9%93%be" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;p&gt;在 Go 程序的监控代码里：&lt;/p&gt;
@@ -5615,7 +5731,7 @@ source .venv/bin/activate
 &lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;比 venv 多的能力包括：更快（通过缓存和 AppData 种子）、支持 bootstrap 脚本、可指定任意 Python 解释器创建环境。&lt;/p&gt;
 &lt;blockquote&gt;
-&lt;p&gt;ps: 新项目直接用 venv 就好。virtualenv 的优势主要在旧版本 Python（3.3 以前）或需要自定义创建流程的场景，日常开发不需要专门装它。&lt;/p&gt;</description></item><item><title>Go精进之路：从错误中学习</title><link>/blog/2025-04-12-0001-go%E5%AE%B9%E6%98%93%E4%B8%8A%E6%89%8B%E4%BD%86%E4%B8%8D%E4%BB%A3%E8%A1%A8%E8%BD%BB%E6%9D%BE%E5%B0%B1%E8%83%BD%E6%8E%8C%E6%8F%A1/</link><pubDate>Sat, 12 Apr 2025 00:05:08 +0800</pubDate><guid>/blog/2025-04-12-0001-go%E5%AE%B9%E6%98%93%E4%B8%8A%E6%89%8B%E4%BD%86%E4%B8%8D%E4%BB%A3%E8%A1%A8%E8%BD%BB%E6%9D%BE%E5%B0%B1%E8%83%BD%E6%8E%8C%E6%8F%A1/</guid><description>&lt;h1 id="go精进之路从错误中学习"&gt;Go精进之路：从错误中学习 &lt;a href="#go%e7%b2%be%e8%bf%9b%e4%b9%8b%e8%b7%af%e4%bb%8e%e9%94%99%e8%af%af%e4%b8%ad%e5%ad%a6%e4%b9%a0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;ps: 新项目直接用 venv 就好。virtualenv 的优势主要在旧版本 Python（3.3 以前）或需要自定义创建流程的场景，日常开发不需要专门装它。&lt;/p&gt;</description></item><item><title>Go精进之路：从错误中学习</title><link>/blog/2025-04-12-go%E5%AE%B9%E6%98%93%E4%B8%8A%E6%89%8B%E4%BD%86%E4%B8%8D%E4%BB%A3%E8%A1%A8%E8%BD%BB%E6%9D%BE%E5%B0%B1%E8%83%BD%E6%8E%8C%E6%8F%A1/</link><pubDate>Sat, 12 Apr 2025 00:05:08 +0800</pubDate><guid>/blog/2025-04-12-go%E5%AE%B9%E6%98%93%E4%B8%8A%E6%89%8B%E4%BD%86%E4%B8%8D%E4%BB%A3%E8%A1%A8%E8%BD%BB%E6%9D%BE%E5%B0%B1%E8%83%BD%E6%8E%8C%E6%8F%A1/</guid><description>&lt;h1 id="go精进之路从错误中学习"&gt;Go精进之路：从错误中学习 &lt;a href="#go%e7%b2%be%e8%bf%9b%e4%b9%8b%e8%b7%af%e4%bb%8e%e9%94%99%e8%af%af%e4%b8%ad%e5%ad%a6%e4%b9%a0" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
 &lt;p&gt;&lt;img src="https://fastly.jsdelivr.net/gh/bucketio/img12@main/2025/04/11/1744347781802-c70c26c3-2838-4b80-bd98-5a38c29b5ec2.png" alt=""&gt;&lt;/p&gt;
 &lt;p&gt;欢迎来到这个Go语言开发经验分享系列！&lt;/p&gt;
 &lt;p&gt;时光荏苒，转眼间Go语言已经陪伴我们走过了16个春秋。自2009年横空出世，Go语言凭借其简洁高效的特性，迅速在服务器开发、分布式系统、以及各种实用工具链的构建中获得了广泛的应用。它就像一位老朋友，默默地支撑着互联网的基石。&lt;/p&gt;

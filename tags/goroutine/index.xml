@@ -1,4 +1,26 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Goroutine on</title><link>/tags/goroutine/</link><description>Recent content in Goroutine on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Tue, 20 May 2025 00:00:00 +0800</lastBuildDate><atom:link href="/tags/goroutine/index.xml" rel="self" type="application/rss+xml"/><item><title>Go runtime 中的 g0：调度器的特殊协程</title><link>/blog/2025-05-20-go-runtime-g0/</link><pubDate>Tue, 20 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-20-go-runtime-g0/</guid><description>&lt;p&gt;Go runtime 中的 g0 是不是就类似于 Linux 操作系统中的 idle 进程，它主要是用来做调度相关的工作，比如没有 goroutine 可执行时就切换到 g0，g0 执行调度相关的工作？&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Goroutine on</title><link>/tags/goroutine/</link><description>Recent content in Goroutine on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Sat, 15 Aug 2026 13:40:49 +0800</lastBuildDate><atom:link href="/tags/goroutine/index.xml" rel="self" type="application/rss+xml"/><item><title>Go 调度器 M 的诞生与消亡：从一次 go 语句到线程创建/复用的完整路径</title><link>/blog/2026-08-15-go-scheduler-m-lifecycle/</link><pubDate>Sat, 15 Aug 2026 13:40:49 +0800</pubDate><guid>/blog/2026-08-15-go-scheduler-m-lifecycle/</guid><description>&lt;h1 id="go-调度器-m-的诞生与消亡从一次-go-语句到线程创建复用的完整路径"&gt;Go 调度器 M 的诞生与消亡：从一次 go 语句到线程创建/复用的完整路径 &lt;a href="#go-%e8%b0%83%e5%ba%a6%e5%99%a8-m-%e7%9a%84%e8%af%9e%e7%94%9f%e4%b8%8e%e6%b6%88%e4%ba%a1%e4%bb%8e%e4%b8%80%e6%ac%a1-go-%e8%af%ad%e5%8f%a5%e5%88%b0%e7%ba%bf%e7%a8%8b%e5%88%9b%e5%bb%ba%e5%a4%8d%e7%94%a8%e7%9a%84%e5%ae%8c%e6%95%b4%e8%b7%af%e5%be%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h1&gt;
+&lt;blockquote&gt;
+&lt;p&gt;源码版本：go1.22.2（&lt;code&gt;release-branch.go1.22&lt;/code&gt;）。所有行号均对应该版本的 &lt;code&gt;src/runtime/proc.go&lt;/code&gt; 等文件。
+阅读本文前建议先了解 G/M/P 三件套的基本概念：G 是 goroutine，M 是 OS 线程（机器），P 是执行 Go 代码所必需的&amp;quot;处理器&amp;quot;资源（&lt;code&gt;proc.go:24-29&lt;/code&gt;）。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;很多人问过这样一个问题：&lt;strong&gt;一个 Go HTTP 服务，从 0 请求到请求量变大，那些执行 goroutine 的线程（M）到底是怎么冒出来的？&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;直觉上可能是&amp;quot;每创建一个 goroutine 就创建一条线程&amp;quot;——错；也可能是&amp;quot;启动时就把线程都建好&amp;quot;——也错。真相是：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;P 启动时全量预创建（GOMAXPROCS 个），M 一个都不预创建（只有进程自带的 m0），全部按需惰性创建，且创建后几乎永不销毁。&lt;/strong&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;下面从 &lt;code&gt;go&lt;/code&gt; 语句这条主线出发，把 M 的&lt;strong&gt;创建路径、创建决策依据、复用机制、退出条件&lt;/strong&gt;对着源码过一遍，最后用 HTTP 服务把整个生命周期串起来。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2 id="一启动时p-全量预创建m-只此一家"&gt;一、启动时：P 全量预创建，M 只此一家 &lt;a href="#%e4%b8%80%e5%90%af%e5%8a%a8%e6%97%b6p-%e5%85%a8%e9%87%8f%e9%a2%84%e5%88%9b%e5%bb%bam-%e5%8f%aa%e6%ad%a4%e4%b8%80%e5%ae%b6" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
+&lt;p&gt;程序一启动，&lt;code&gt;schedinit()&lt;/code&gt;（&lt;code&gt;proc.go:750&lt;/code&gt;）里执行：&lt;/p&gt;
+&lt;pre&gt;&lt;code class="language-go"&gt;procs := ncpu
+if n, ok := atoi32(gogetenv(&amp;quot;GOMAXPROCS&amp;quot;)); ok &amp;amp;&amp;amp; n &amp;gt; 0 {
+procs = n
+}
+if procresize(procs) != nil { // proc.go:827
+throw(&amp;quot;unknown runnable goroutine during bootstrap&amp;quot;)
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;procresize&lt;/code&gt; 一次性分配 &lt;strong&gt;GOMAXPROCS 个 P&lt;/strong&gt;，状态全部是 &lt;code&gt;_Pidle&lt;/code&gt;，挂在 &lt;code&gt;sched.pidle&lt;/code&gt; 空闲链表上。注意：&lt;strong&gt;此时一个 M 都没有&lt;/strong&gt;。进程只有一个 OS 线程——&lt;code&gt;m0&lt;/code&gt;（&lt;code&gt;proc.go:116&lt;/code&gt; 的全局变量），它跑着 &lt;code&gt;g0&lt;/code&gt; 和 main goroutine。&lt;/p&gt;</description></item><item><title>Go runtime 中的 g0：调度器的特殊协程</title><link>/blog/2025-05-20-go-runtime-g0/</link><pubDate>Tue, 20 May 2025 00:00:00 +0800</pubDate><guid>/blog/2025-05-20-go-runtime-g0/</guid><description>&lt;p&gt;Go runtime 中的 g0 是不是就类似于 Linux 操作系统中的 idle 进程，它主要是用来做调度相关的工作，比如没有 goroutine 可执行时就切换到 g0，g0 执行调度相关的工作？&lt;/p&gt;
 &lt;p&gt;答案是肯定的。下面详细解释。&lt;/p&gt;
 &lt;h2 id="1-g0-与-idle-进程的相似之处"&gt;1. g0 与 idle 进程的相似之处 &lt;a href="#1-g0-%e4%b8%8e-idle-%e8%bf%9b%e7%a8%8b%e7%9a%84%e7%9b%b8%e4%bc%bc%e4%b9%8b%e5%a4%84" class="anchor" aria-hidden="true"&gt;#&lt;/a&gt;&lt;/h2&gt;
 &lt;ul&gt;

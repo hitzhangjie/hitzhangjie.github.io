@@ -1,4 +1,20 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Security on</title><link>/tags/security/</link><description>Recent content in Security on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Mon, 13 Jul 2026 20:30:01 +0800</lastBuildDate><atom:link href="/tags/security/index.xml" rel="self" type="application/rss+xml"/><item><title>系统测试：Benchmark+性能测试+可用性测试+安全性测试+BVT测试</title><link>/blog/2020-07-01-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/</link><pubDate>Mon, 13 Jul 2026 20:30:01 +0800</pubDate><guid>/blog/2020-07-01-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/</guid><description>&lt;style type="text/css" rel="stylesheet"&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Security on</title><link>/tags/security/</link><description>Recent content in Security on</description><generator>Hugo -- gohugo.io</generator><language>en-US</language><lastBuildDate>Fri, 11 Sep 2026 13:02:00 +0800</lastBuildDate><atom:link href="/tags/security/index.xml" rel="self" type="application/rss+xml"/><item><title>Go 安全编程</title><link>/blog/2026-09-11-go%E5%AE%89%E5%85%A8%E7%BC%96%E7%A8%8B/</link><pubDate>Fri, 11 Sep 2026 13:02:00 +0800</pubDate><guid>/blog/2026-09-11-go%E5%AE%89%E5%85%A8%E7%BC%96%E7%A8%8B/</guid><description>&lt;style&gt;
+.iframe-container {
+position: relative;
+height: 100vh;
+overflow: hidden;
+}
+.iframe-container iframe {
+width: 100%;
+height: 100%;
+border: none;
+position: absolute;
+top: -170px;
+}
+&lt;/style&gt;
+&lt;div class="iframe-container"&gt;
+&lt;iframe src="https://docs.qq.com/aio/DYkhCTUV1bmt3cXFV?p=M7kWRQH8b3p4H4N7Uo6W3t"/&gt;
+&lt;/div&gt;</description></item><item><title>系统测试：Benchmark+性能测试+可用性测试+安全性测试+BVT测试</title><link>/blog/2020-07-01-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/</link><pubDate>Mon, 13 Jul 2026 20:30:01 +0800</pubDate><guid>/blog/2020-07-01-%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95_%E7%B3%BB%E7%BB%9F%E6%B5%8B%E8%AF%95%E5%85%A8%E6%99%AF%E6%8C%87%E5%8D%97/</guid><description>&lt;style type="text/css" rel="stylesheet"&gt;
 /* Three image containers (use 25% for four, and 50% for two, etc) */
 .column {
 float: left;
